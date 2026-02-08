@@ -1,6 +1,17 @@
+<div align="center">
+
 # DBWarden
 
-**DBWarden** is a database migration system for Python/SQLAlchemy projects.
+A database migration system for Python/SQLAlchemy projects.
+
+<a href="https://emiliano-gandini-outeda.github.io/DBWarden/">
+  <img src="https://img.shields.io/badge/docs-mkdocs-blue.svg" alt="Documentation">
+</a>
+<a href="https://deepwiki.com/emiliano-gandini-outeda/DBWarden">
+  <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
+</a>
+
+</div>
 
 ## Installation
 
