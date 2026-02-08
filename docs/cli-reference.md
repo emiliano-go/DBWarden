@@ -15,11 +15,31 @@ dbwarden [OPTIONS] COMMAND [ARGS]...
 | `--help`, `-h` | Show help message |
 | `--version` | Show version information |
 
-## Commands
+## Commands Overview
 
-### Initialization
+| Command | Description | Flags |
+|---------|-------------|-------|
+| `init` | Initialize migrations directory | None |
+| `make-migrations` | Auto-generate SQL from models | `-v` |
+| `new` | Create manual migration | `--version` |
+| `migrate` | Apply pending migrations | `-v`, `-c`, `-t` |
+| `rollback` | Revert migrations | `-v`, `-c`, `-t` |
+| `history` | Show migration history | None |
+| `status` | Show applied/pending status | None |
+| `check-db` | Inspect database schema | `-o` |
+| `diff` | Compare models vs database | `-v` |
+| `squash` | Merge consecutive migrations | `-v` |
+| `mode` | Show sync/async mode | None |
+| `env` | Display config (masked) | None |
+| `version` | Show DBWarden version | None |
+| `lock-status` | Check migration lock | None |
+| `unlock` | Release stuck lock | None |
 
-#### init
+---
+
+## Initialization Commands
+
+### init
 
 Initialize the migrations directory.
 
@@ -31,9 +51,9 @@ dbwarden init
 
 ---
 
-### Migration Management
+## Migration Generation Commands
 
-#### make-migrations
+### make-migrations
 
 Auto-generate SQL migration from SQLAlchemy models.
 
@@ -45,7 +65,7 @@ dbwarden make-migrations [DESCRIPTION] [OPTIONS]
 - `DESCRIPTION`: Description for the migration (optional)
 
 **Options:**
-- `--verbose`, `-v`: Enable verbose logging
+- `-v, --verbose`: Enable verbose logging
 
 **Examples:**
 ```bash
@@ -56,7 +76,7 @@ dbwarden make-migrations
 
 ---
 
-#### new
+### new
 
 Create a new manual migration file.
 
@@ -68,7 +88,7 @@ dbwarden new DESCRIPTION [OPTIONS]
 - `DESCRIPTION`: Description of the migration (required)
 
 **Options:**
-- `--version`, `-v: Version of the migration
+- `--version VERSION`, `-v VERSION`: Version number for the migration (optional)
 
 **Examples:**
 ```bash
@@ -78,7 +98,9 @@ dbwarden new "custom migration" --version 2.0.0
 
 ---
 
-#### migrate
+## Migration Execution Commands
+
+### migrate
 
 Apply pending migrations to the database.
 
@@ -87,21 +109,22 @@ dbwarden migrate [OPTIONS]
 ```
 
 **Options:**
-- `--count`, `-c`: Number of migrations to apply
-- `--to-version`, `-t`: Migrate to a specific version
-- `--verbose`, `-v`: Enable verbose logging
+- `-c, --count COUNT`: Number of migrations to apply (optional)
+- `-t, --to-version VERSION`: Migrate to a specific version (optional)
+- `-v, --verbose`: Enable verbose logging (optional)
 
 **Examples:**
 ```bash
 dbwarden migrate
 dbwarden migrate --verbose
 dbwarden migrate --count 2
-dbwarden migrate --to-version 20240215_143000
+dbwarden migrate --to-version 0003
+dbwarden migrate -c 1 -t 0002 -v
 ```
 
 ---
 
-#### rollback
+### rollback
 
 Rollback the last applied migration.
 
@@ -110,20 +133,22 @@ dbwarden rollback [OPTIONS]
 ```
 
 **Options:**
-- `--count`, `-c: Number of migrations to rollback
-- `--to-version`, `-t`: Rollback to a specific version
-- `--verbose`, `-v: Enable verbose logging
+- `-c, --count COUNT`: Number of migrations to rollback (optional)
+- `-t, --to-version VERSION`: Rollback to a specific version (optional)
+- `-v, --verbose`: Enable verbose logging (optional)
 
 **Examples:**
 ```bash
 dbwarden rollback
+dbwarden rollback --verbose
 dbwarden rollback --count 2
-dbwarden rollback --to-version 20240215_143000
+dbwarden rollback --to-version 0001
+dbwarden rollback -c 1 -t 0001 -v
 ```
 
 ---
 
-#### squash
+### squash
 
 Merge multiple consecutive migrations into one.
 
@@ -132,18 +157,19 @@ dbwarden squash [OPTIONS]
 ```
 
 **Options:**
-- `--verbose`, `-v`: Enable verbose logging
+- `-v, --verbose`: Enable verbose logging (optional)
 
 **Example:**
 ```bash
 dbwarden squash
+dbwarden squash --verbose
 ```
 
 ---
 
-### Status and Information
+## Status Commands
 
-#### history
+### history
 
 Show the full migration history.
 
@@ -155,7 +181,7 @@ dbwarden history
 
 ---
 
-#### status
+### status
 
 Show migration status (applied and pending).
 
@@ -167,7 +193,7 @@ dbwarden status
 
 ---
 
-#### mode
+### mode
 
 Display whether execution is sync or async.
 
@@ -179,7 +205,7 @@ dbwarden mode
 
 ---
 
-#### version
+### version
 
 Display DBWarden version and compatibility information.
 
@@ -191,7 +217,7 @@ dbwarden version
 
 ---
 
-#### env
+### env
 
 Display relevant environment variables without leaking secrets.
 
@@ -203,9 +229,9 @@ dbwarden env
 
 ---
 
-### Database Inspection
+## Database Inspection Commands
 
-#### check-db
+### check-db
 
 Inspect the live database schema.
 
@@ -214,18 +240,19 @@ dbwarden check-db [OPTIONS]
 ```
 
 **Options:**
-- `--out`, `-o: Output format (json, yaml, txt)
+- `-o, --out FORMAT`: Output format (json, yaml, sql, txt) (optional, default: txt)
 
 **Examples:**
 ```bash
 dbwarden check-db
 dbwarden check-db --out json
 dbwarden check-db --out yaml
+dbwarden check-db -o sql
 ```
 
 ---
 
-#### diff
+### diff
 
 Show structural differences between models and database.
 
@@ -234,23 +261,24 @@ dbwarden diff [TYPE] [OPTIONS]
 ```
 
 **Arguments:**
-- `TYPE`: Type of diff (models, migrations, all) - default: all
+- `TYPE`: Type of diff - one of: models, migrations, all (optional, default: all)
 
 **Options:**
-- `--verbose`, `-v: Enable verbose logging
+- `-v, --verbose`: Enable verbose logging (optional)
 
 **Examples:**
 ```bash
 dbwarden diff
 dbwarden diff --verbose
 dbwarden diff models
+dbwarden diff migrations -v
 ```
 
 ---
 
-### Lock Management
+## Lock Management Commands
 
-#### lock-status
+### lock-status
 
 Check if migration is currently locked.
 
@@ -262,7 +290,7 @@ dbwarden lock-status
 
 ---
 
-#### unlock
+### unlock
 
 Release the migration lock.
 
@@ -271,6 +299,41 @@ dbwarden unlock
 ```
 
 **No arguments or options.**
+
+---
+
+## Flag Reference
+
+### `-v, --verbose`
+
+Enable verbose logging. Available on:
+- `make-migrations`
+- `migrate`
+- `rollback`
+- `squash`
+- `diff`
+
+### `-c, --count`
+
+Limit number of migrations. Available on:
+- `migrate`
+- `rollback`
+
+### `-t, --to-version`
+
+Target specific version. Available on:
+- `migrate`
+- `rollback`
+
+### `-o, --out`
+
+Output format selection. Available on:
+- `check-db`
+
+### `--version, -v`
+
+Set migration version number. Available on:
+- `new`
 
 ---
 
@@ -302,18 +365,6 @@ DBWARDEN_ASYNC=false
 DBWARDEN_MODEL_PATHS=models/
 DBWARDEN_POSTGRES_SCHEMA=public
 ```
-
-## Shortcuts
-
-Some commands have shortcuts:
-
-| Command | Shortcut |
-|---------|-----------|
-| `dbwarden --help` | `dbwarden -h` |
-| `dbwarden --verbose` | `dbwarden -v` |
-| `dbwarden --count` | `dbwarden -c` |
-| `dbwarden --to-version` | `dbwarden -t` |
-| `dbwarden --out` | `dbwarden -o` |
 
 ## Tab Completion
 

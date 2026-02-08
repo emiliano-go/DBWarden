@@ -9,16 +9,18 @@ The `rollback` command undoes migrations that have been applied to the database,
 ## Usage
 
 ```bash
-dbwarden rollback
+dbwarden rollback [OPTIONS]
 ```
 
 ## Options
 
-| Option | Description |
-|--------|-------------|
-| `--count`, `-c` | Number of migrations to rollback |
-| `--to-version`, `-t` | Rollback to a specific version |
-| `--verbose`, `-v` | Enable verbose logging |
+| Short | Long | Description |
+|-------|------|-------------|
+| `-c` | `--count COUNT` | Number of migrations to rollback |
+| `-t` | `--to-version VERSION` | Rollback to a specific version |
+| `-v` | `--verbose` | Enable verbose logging |
+
+**None of these options are required. All are optional.**
 
 ## Examples
 
@@ -33,12 +35,22 @@ dbwarden rollback
 ```bash
 # Rollback last 3 migrations
 dbwarden rollback --count 3
+# or
+dbwarden rollback -c 3
 ```
 
 ### Rollback to Specific Version
 
 ```bash
-dbwarden rollback --to-version 20240215_143000
+dbwarden rollback --to-version 0001
+# or
+dbwarden rollback -t 0001
+```
+
+### Combined Options
+
+```bash
+dbwarden rollback -c 1 -t 0001 -v
 ```
 
 ## How It Works
@@ -63,22 +75,22 @@ dbwarden rollback --to-version 20240215_143000
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  3. Parse rollback statements from migration file       │
+│  3. Parse rollback statements from migration file        │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  4. Execute rollback SQL statements                     │
+│  4. Execute rollback SQL statements                      │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  5. Remove migration record from database               │
+│  5. Remove migration record from database                │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  6. Release lock                                         │
+│  6. Release lock                                        │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -95,10 +107,10 @@ Rolls back the last 2 migrations in reverse order.
 ### With --to-version
 
 ```bash
-dbwarden rollback --to-version 20240215_143000
+dbwarden rollback --to-version 0001
 ```
 
-Rolls back all migrations after and including the specified version.
+Rolls back all migrations after and including the specified version, leaving the database at the state just before that version.
 
 ### Default Behavior
 
@@ -117,9 +129,10 @@ Rollback completed successfully: 1 migrations reverted.
 ### Verbose Output
 
 ```
-[INFO] Mode: sync
-[INFO] Rolling back migration: 0003_create_posts.sql
-[INFO] SQL Statement: DROP TABLE posts
+Detected execution mode: sync
+Rolling back migration: 0003_create_posts.sql (version: 0003)
+DROP TABLE posts;
+Rollback completed: 0003_create_posts.sql in 0.03s
 Rollback completed successfully: 1 migrations reverted.
 ```
 
@@ -224,18 +237,18 @@ dbwarden migrate
 ```bash
 # Wrong migration applied
 dbwarden status
-# Shows: V2.0.0__breaking_change applied (should be V1.9.0)
+# Shows: 0003_create_posts applied (should be 0002)
 
 # Rollback to correct version
-dbwarden rollback --to-version 1.9.0
-# Correct migrations now at V1.9.0
+dbwarden rollback --to-version 0002
+# Correct migrations now at 0002
 ```
 
 ### Scenario 3: Complete Reset
 
 ```bash
 # Rollback all migrations
-dbwarden rollback --count $(dbwarden status | grep "Applied" | wc -l)
+dbwarden rollback --count 999
 # All migrations reverted to clean state
 ```
 
@@ -294,7 +307,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Rollback
         run: dbwarden rollback --to-version ${{ github.event.inputs.version }}
         env:

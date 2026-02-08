@@ -9,57 +9,33 @@ The `check-db` command connects to your database and displays information about 
 ## Usage
 
 ```bash
-dbwarden check-db
+dbwarden check-db [OPTIONS]
 ```
 
 ## Options
 
-| Option | Description |
-|--------|-------------|
-| `--out`, `-o` | Output format: `txt` (default), `json`, `yaml` |
+| Short | Long | Description |
+|-------|------|-------------|
+| `-o` | `--out FORMAT` | Output format: `txt` (default), `json`, `yaml`, `sql` |
+
+**This option is not required. Default is `txt`.**
 
 ## Examples
 
 ### Text Output (Default)
 
 ```bash
-$ dbwarden check-db
-
-Table: users
-----------
-  id: INTEGER PRIMARY KEY AUTOINCREMENT
-  username: VARCHAR(50) NOT NULL UNIQUE
-  email: VARCHAR(255) NOT NULL UNIQUE
-  created_at: DATETIME NULL
-
-  Indexes:
-    - idx_users_email: email
-
-Table: posts
-----------
-  id: INTEGER PRIMARY KEY AUTOINCREMENT
-  user_id: INTEGER NOT NULL
-  title: VARCHAR(200) NOT NULL
-  content: TEXT NULL
-
-  Foreign Keys:
-    - fk_posts_user_id: user_id -> users(id)
+dbwarden check-db
+# or
+dbwarden check-db --out txt
 ```
 
 ### JSON Output
 
 ```bash
-$ dbwarden check-db --out json
-{
-  "users": {
-    "columns": [
-      {"name": "id", "type": "INTEGER", "nullable": false, "default": null},
-      {"name": "username", "type": "VARCHAR(50)", "nullable": false, "default": null}
-    ],
-    "indexes": [{"name": "idx_users_email", "columns": ["email"]}],
-    "foreign_keys": []
-  }
-}
+dbwarden check-db --out json
+# or
+dbwarden check-db -o json
 ```
 
 ### YAML Output
@@ -73,6 +49,35 @@ users:
   foreign_keys: []
   indexes:
   - {columns: [email], name: idx_users_email}
+```
+
+### SQL Output
+
+```bash
+$ dbwarden check-db --out sql
+-- Table: users
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    created_at DATETIME
+);
+
+-- Table: posts
+CREATE TABLE posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    content TEXT
+);
+```
+
+### SQL Output
+
+```bash
+dbwarden check-db --out sql
+# or
+dbwarden check-db -o sql
 ```
 
 ## What It Inspects

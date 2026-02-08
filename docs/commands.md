@@ -1,6 +1,6 @@
 # Commands Overview
 
-DBWarden provides a comprehensive set of commands for managing database migrations. This page provides an overview of all available commands.
+DBWarden provides a comprehensive set of commands for managing database migrations.
 
 ## Command Categories
 
@@ -44,14 +44,48 @@ DBWarden provides a comprehensive set of commands for managing database migratio
 | [lock-status](commands/lock.md) | Check migration lock status |
 | [unlock](commands/lock.md) | Release the migration lock |
 
-## Global Options
+---
 
-All commands support the following options:
+## Global Options
 
 | Option | Description |
 |--------|-------------|
 | `--help`, `-h` | Show help message |
-| `--verbose`, `-v` | Enable verbose logging |
+
+## Command Flags Reference
+
+### Commands with `-v, --verbose`
+
+Enable verbose logging:
+- `make-migrations`
+- `migrate`
+- `rollback`
+- `squash`
+- `diff`
+
+### Commands with `-c, --count`
+
+Limit number of migrations:
+- `migrate`
+- `rollback`
+
+### Commands with `-t, --to-version`
+
+Target specific version:
+- `migrate`
+- `rollback`
+
+### Commands with `-o, --out`
+
+Output format selection:
+- `check-db` (formats: json, yaml, sql, txt)
+
+### Commands with `--version`
+
+Set migration version number:
+- `new`
+
+---
 
 ## Usage Patterns
 
@@ -68,7 +102,7 @@ dbwarden migrate --verbose
 dbwarden migrate --count 2
 
 # Migrate to a specific version
-dbwarden migrate --to-version 20240215_143000
+dbwarden migrate --to-version 0003
 ```
 
 ### Generate Migrations
@@ -81,6 +115,16 @@ dbwarden make-migrations "create users table"
 dbwarden make-migrations "add posts table" --verbose
 ```
 
+### Manual Migration
+
+```bash
+# Create manual migration with auto version
+dbwarden new "add index to users email"
+
+# Create with specific version
+dbwarden new "custom migration" --version 0005
+```
+
 ### Rollback Migrations
 
 ```bash
@@ -91,7 +135,7 @@ dbwarden rollback
 dbwarden rollback --count 2
 
 # Rollback to specific version
-dbwarden rollback --to-version 20240215_143000
+dbwarden rollback --to-version 0001
 ```
 
 ### Check Status
@@ -103,9 +147,42 @@ dbwarden status
 # View migration history
 dbwarden history
 
-# Check database schema
+# Check database schema (various formats)
+dbwarden check-db
 dbwarden check-db --out json
+dbwarden check-db --out yaml
 ```
+
+---
+
+## Migration File Types
+
+| Prefix | Type | Behavior |
+|--------|------|----------|
+| `NNNN_*.sql` | Versioned | Run once, in sequential order |
+| `RA__*.sql` | Runs Always | Run on every migrate execution |
+| `ROC__*.sql` | Runs On Change | Run when file checksum changes |
+
+### Versioned Migrations (NNNN_*.sql)
+
+Sequential migrations that run once in order:
+- `0001_create_users.sql`
+- `0002_add_posts.sql`
+- `0003_create_comments.sql`
+
+### Runs-Always Migrations (RA__*.sql)
+
+Repeatable migrations that run every execution:
+- `RA__create_audit_views.sql`
+- `RA__seed_reference_data.sql`
+
+### Runs-On-Change Migrations (ROC__*.sql)
+
+Migrations that only run when their checksum changes:
+- `ROC__update_config.sql`
+- `ROC__add_triggers.sql`
+
+---
 
 ## Command Execution Flow
 
@@ -116,7 +193,7 @@ dbwarden check-db --out json
                     │
                     ▼
 ┌─────────────────────────────────────────────────┐
-│  1. Load Configuration (.env)                  │
+│  1. Load Configuration (.env)                    │
 └─────────────────────────────────────────────────┘
                     │
                     ▼
@@ -135,29 +212,34 @@ dbwarden check-db --out json
 └─────────────────────────────────────────────────┘
 ```
 
+---
+
 ## Error Handling
 
 DBWarden provides clear error messages for common issues:
 
 - **Missing .env file**: "DBWARDEN_SQLALCHEMY_URL is required"
 - **Migrations directory not found**: "Please run 'dbwarden init' first"
-- **Pending migrations**: "Cannot generate migrations while X migrations are pending"
 - **Lock active**: "Migration is currently locked"
+- **Duplicate SQL**: Skips tables already in existing migrations
+
+---
 
 ## Output Formats
 
-Some commands support different output formats:
-
 | Command | Formats |
 |---------|---------|
-| `check-db` | `txt` (default), `json`, `yaml` |
+| `check-db` | txt (default), json, yaml, sql |
 
 Example:
 
 ```bash
 dbwarden check-db --out json
 dbwarden check-db --out yaml
+dbwarden check-db --out sql
 ```
+
+---
 
 ## Getting Help
 
@@ -170,4 +252,5 @@ dbwarden --help
 # Command-specific help
 dbwarden migrate --help
 dbwarden make-migrations --help
+dbwarden rollback --help
 ```

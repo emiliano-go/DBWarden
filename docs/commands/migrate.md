@@ -9,16 +9,18 @@ The `migrate` command executes all pending migration files, updating the databas
 ## Usage
 
 ```bash
-dbwarden migrate
+dbwarden migrate [OPTIONS]
 ```
 
 ## Options
 
-| Option | Description |
-|--------|-------------|
-| `--count`, `-c` | Number of migrations to apply |
-| `--to-version`, `-t` | Migrate to a specific version |
-| `--verbose`, `-v` | Enable verbose logging |
+| Short | Long | Description |
+|-------|------|-------------|
+| `-c` | `--count COUNT` | Number of migrations to apply |
+| `-t` | `--to-version VERSION` | Migrate to a specific version |
+| `-v` | `--verbose` | Enable verbose logging |
+
+**None of these options are required. All are optional.**
 
 ## Examples
 
@@ -32,6 +34,8 @@ dbwarden migrate
 
 ```bash
 dbwarden migrate --verbose
+# or
+dbwarden migrate -v
 ```
 
 ### Apply Specific Number of Migrations
@@ -39,12 +43,22 @@ dbwarden migrate --verbose
 ```bash
 # Apply next 2 migrations
 dbwarden migrate --count 2
+# or
+dbwarden migrate -c 2
 ```
 
 ### Migrate to Specific Version
 
 ```bash
-dbwarden migrate --to-version 20240215_143000
+dbwarden migrate --to-version 0003
+# or
+dbwarden migrate -t 0003
+```
+
+### Combined Options
+
+```bash
+dbwarden migrate -c 1 -t 0002 -v
 ```
 
 ## How It Works
@@ -52,7 +66,7 @@ dbwarden migrate --to-version 20240215_143000
 1. **Creates migrations tracking table**: Creates `dbwarden_migrations` table if it doesn't exist
 2. **Creates lock table**: Creates `dbwarden_lock` table for concurrency control
 3. **Finds pending migrations**: Identifies migrations not yet applied
-4. **Applies migrations**: Executes each migration in order
+4. **Applies migrations**: Executes each migration in order (versioned, then RA__, then ROC__)
 5. **Records execution**: Stores migration metadata in database
 
 ## Internal Process
@@ -64,27 +78,27 @@ dbwarden migrate --to-version 20240215_143000
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  2. Create dbwarden_lock table (if not exists)        │
+│  2. Create dbwarden_lock table (if not exists)         │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  3. Acquire migration lock                             │
+│  3. Acquire migration lock                              │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  4. Find pending migrations                             │
+│  4. Find pending migrations                              │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  5. Parse migration files (upgrade statements)         │
+│  5. Parse migration files (upgrade statements)          │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  6. Execute SQL statements                              │
+│  6. Execute SQL statements                               │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
@@ -94,7 +108,7 @@ dbwarden migrate --to-version 20240215_143000
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│  8. Release lock                                         │
+│  8. Release lock                                        │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -105,12 +119,18 @@ DBWarden creates a `dbwarden_migrations` table to track applied migrations:
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | INTEGER | Auto-increment ID |
-| `version` | VARCHAR | Migration version |
+| `version` | VARCHAR | Migration version (NULL for repeatables) |
 | `description` | VARCHAR | Migration description |
 | `filename` | VARCHAR | Migration filename |
-| `migration_type` | VARCHAR | Type (versioned) |
+| `migration_type` | VARCHAR | Type (versioned, runs_always, runs_on_change) |
 | `checksum` | VARCHAR | File checksum for validation |
 | `applied_at` | DATETIME | Timestamp of application |
+
+## Migration Execution Order
+
+1. **Versioned migrations** (NNNN_*.sql): In sequential order
+2. **Runs-Always migrations** (RA__*.sql): Every execution
+3. **Runs-On-Change migrations** (ROC__*.sql): Only when checksum changes
 
 ## Locking Mechanism
 
@@ -139,30 +159,26 @@ dbwarden unlock
 ### Successful Migration
 
 ```
-[INFO] Applying migration: 0001_create_users.sql
-[INFO] Applying migration: 0002_create_posts.sql
-Migrations completed successfully: 2 migrations applied.
+Pending migrations (1):
+  - 0001
+Starting migration: 0001_create_users.sql
+Completed migration: 0001_create_users.sql in 0.05s
+Migrations completed successfully: 1 migrations applied.
 ```
 
 ### Verbose Output
 
 ```
-[INFO] Mode: sync
-[INFO] Pending migrations: 0001_create_users, 0002_create_posts
-[INFO] Starting migration: 0001_create_users.sql
+Detected execution mode: sync
+Pending migrations (1):
+  - 0001
+Starting migration: 0001_create_users.sql (version: 0001)
 CREATE TABLE users (
-    id INTEGER PRIMARY KEY,
+    id INTEGER NOT NULL PRIMARY KEY,
     username VARCHAR(50) NOT NULL
 )
-[INFO] Migration completed: 0001_create_users.sql in 0.05s
-[INFO] Starting migration: 0002_create_posts.sql
-CREATE TABLE posts (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER,
-    title VARCHAR(200) NOT NULL
-)
-[INFO] Migration completed: 0002_create_posts.sql in 0.03s
-Migrations completed successfully: 2 migrations applied.
+Completed migration: 0001_create_users.sql (version: 0001) in 0.05s
+Migrations completed successfully: 1 migrations applied.
 ```
 
 ### No Pending Migrations
@@ -185,7 +201,7 @@ If a migration fails:
 
 DBWarden validates migration file checksums to ensure integrity:
 
-- **Before execution**: Verifies file hasn't been modified
+- **Before execution**: Verifies file hasn't been modified (for ROC__)
 - **Integrity check**: Compares stored checksum with current file
 
 ## Best Practices
@@ -223,16 +239,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
-      
+          python-version: '3.12'
+
       - name: Install dependencies
         run: |
           pip install dbwarden
-      
+
       - name: Run migrations
         run: dbwarden migrate --verbose
         env:

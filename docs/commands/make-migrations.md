@@ -100,15 +100,6 @@ Before running `make-migrations`:
 
 The command performs several validations:
 
-### Pending Migrations Check
-
-If migrations are pending, the command will fail:
-
-```
-Error: Cannot generate migrations while 3 migrations are pending.
-Please run 'dbwarden migrate' first.
-```
-
 ### No Models Found
 
 If no models are found:
@@ -118,6 +109,16 @@ No SQLAlchemy models found. Please:
   1. Create models/ directory with your SQLAlchemy models
   2. Or set DBWARDEN_MODEL_PATHS in .env
 ```
+
+### No New Migrations
+
+If all models are already covered by existing migrations:
+
+```
+No new migrations to generate - all models already covered by existing migrations.
+```
+
+DBWarden automatically deduplicates SQL by checking against all existing migration files.
 
 ## Model Discovery Process
 

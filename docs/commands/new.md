@@ -9,7 +9,7 @@ The `new` command creates a blank migration file for manual SQL authoring. Use t
 ## Usage
 
 ```bash
-dbwarden new "description of migration"
+dbwarden new DESCRIPTION [OPTIONS]
 ```
 
 ## Arguments
@@ -20,9 +20,11 @@ dbwarden new "description of migration"
 
 ## Options
 
-| Option | Description |
-|--------|-------------|
-| `--version`, `-v` | Specific version number for the migration |
+| Short | Long | Description |
+|-------|------|-------------|
+| | `--version VERSION` | Specific version number for the migration |
+
+**Note: The `--version` option does not have a short form. Use `--version` or `--version VERSION`.**
 
 ## Examples
 
