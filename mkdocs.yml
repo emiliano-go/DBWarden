@@ -1,7 +1,7 @@
 site_name: DBWarden Documentation
-site_description: Professional database migration system for Python/SQLAlchemy projects
-site_author: DBWarden
-repo_url: https://github.com/yourusername/dbwarden
+site_description: Database migration system for Python/SQLAlchemy projects
+site_author: Emiliano Gandini Outeda
+repo_url: https://github.com/emiliano-gandini-outeda/dbwarden
 edit_uri: edit/main/docs
 
 nav:
