@@ -82,6 +82,10 @@ dbwarden history
 - SQLite (sync + async)
 - MySQL (sync)
 
+## Docs
+
+For more information, see [DBWarden Docs](http://emiliano-gandini-outeda.me/DBWarden/)
+
 ## License
 
-MIT
+This Project is Licensed under the MIT License. See [LICENSE](https://github.com/emiliano-gandini-outeda/DBWarden/blob/main/LICENSE)
