@@ -1,40 +1,40 @@
 # DBWarden - Python Database Migrations
 
-**DBWarden** es un sistema de migraciones de base de datos profesional para proyectos Python/SQLAlchemy.
+**DBWarden** is a professional database migration system for Python/SQLAlchemy projects.
 
-## Instalación
+## Installation
 
 ```bash
 pip install dbwarden
 ```
 
-## Configuración
+## Configuration
 
-Crear `.env` en tu proyecto:
+Create `.env` in your project:
 
 ```env
 STRATA_SQLALCHEMY_URL=postgresql://user:pass@localhost/db
-STRATA_ASYNC=false  # o true para modo async
+STRATA_ASYNC=false  # or true for async mode
 ```
 
-## Comandos Básicos
+## Basic Commands
 
-| Comando | Descripción |
+| Command | Description |
 |---------|-------------|
-| `dbwarden init` | Inicializa el directorio de migraciones |
-| `dbwarden make-migrations "nombre"` | Genera SQL desde modelos SQLAlchemy |
-| `dbwarden migrate` | Aplica migraciones pendientes |
-| `dbwarden migrate --verbose` | Aplica con logging detallado |
-| `dbwarden rollback` | Revierte la última migración |
-| `dbwarden history` | Muestra historial de migraciones |
-| `dbwarden status` | Muestra estado actual |
-| `dbwarden mode` | Muestra modo sync/async |
-| `dbwarden check-db` | Inspecciona el schema de la DB |
-| `dbwarden diff` | Muestra diferencias modelos vs DB |
+| `dbwarden init` | Initialize migrations directory |
+| `dbwarden make-migrations "name"` | Generate SQL from SQLAlchemy models |
+| `dbwarden migrate` | Apply pending migrations |
+| `dbwarden migrate --verbose` | Apply with detailed logging |
+| `dbwarden rollback` | Revert the last migration |
+| `dbwarden history` | Show migration history |
+| `dbwarden status` | Show current status |
+| `dbwarden mode` | Show sync/async mode |
+| `dbwarden check-db` | Inspect DB schema |
+| `dbwarden diff` | Show models vs DB differences |
 
-## Modelos SQLAlchemy
+## SQLAlchemy Models
 
-DBWarden detecta automáticamente modelos en `models/`:
+DBWarden automatically detects models in `models/`:
 
 ```python
 # models/user.py
@@ -50,38 +50,38 @@ class User(Base):
     email = Column(String(255), unique=True)
 ```
 
-## Ejemplo Completo
+## Complete Example
 
 ```bash
-# 1. Inicializar
+# 1. Initialize
 dbwarden init
 
-# 2. Crear modelos en models/
+# 2. Create models in models/
 
-# 3. Generar migración desde modelos
+# 3. Generate migration from models
 dbwarden make-migrations "create users table"
 
-# 4. Aplicar
+# 4. Apply
 dbwarden migrate --verbose
 
-# 5. Ver historial
+# 5. View history
 dbwarden history
 ```
 
-## Variables de Entorno
+## Environment Variables
 
-| Variable | Descripción |
+| Variable | Description |
 |----------|-------------|
-| `STRATA_SQLALCHEMY_URL` | URL de conexión a la DB |
-| `STRATA_ASYNC` | Modo async (`true`/`false`) |
-| `STRATA_MODEL_PATHS` | Paths a modelos SQLAlchemy |
+| `STRATA_SQLALCHEMY_URL` | DB connection URL |
+| `STRATA_ASYNC` | Async mode (`true`/`false`) |
+| `STRATA_MODEL_PATHS` | Paths to SQLAlchemy models |
 
-## Bases de Datos Soportadas
+## Supported Databases
 
 - PostgreSQL (sync + async)
 - SQLite (sync + async)
 - MySQL (sync)
 
-## Licencia
+## License
 
 MIT
