@@ -1,12 +1,12 @@
 [project]
-name = "strata"
-version = "2.0.0"
+name = "dbwarden"
+version = "1.0.0"
 description = "Professional database migration system for Python/SQLAlchemy projects"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
-    { name = "Strata", email = "strata@example.com" }
+    { name = "DBWarden", email = "dbwarden@example.com" }
 ]
 keywords = ["database", "migrations", "sqlalchemy", "fastapi", "postgres"]
 classifiers = [
@@ -30,7 +30,7 @@ dependencies = [
 ]
 
 [project.scripts]
-strata = "strata.cli.main:main"
+dbwarden = "dbwarden.cli.main:main"
 
 [project.optional-dependencies]
 dev = [
@@ -54,7 +54,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["strata"]
+packages = ["dbwarden"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
