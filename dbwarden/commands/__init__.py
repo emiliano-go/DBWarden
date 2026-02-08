@@ -32,9 +32,19 @@ def handle_migrate(
     count: int | None,
     to_version: str | None,
     verbose: bool,
+    baseline: bool = False,
+    with_backup: bool = False,
+    backup_dir: str | None = None,
 ) -> None:
     """Handle migrate command."""
-    migrate_cmd(count=count, to_version=to_version, verbose=verbose)
+    migrate_cmd(
+        count=count,
+        to_version=to_version,
+        verbose=verbose,
+        baseline=baseline,
+        with_backup=with_backup,
+        backup_dir=backup_dir,
+    )
 
 
 def handle_rollback(

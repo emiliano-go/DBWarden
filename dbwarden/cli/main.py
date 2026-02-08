@@ -47,9 +47,7 @@ def make_migrations(
 @app.command()
 def new(
     description: str = typer.Argument(..., help="Description of the migration"),
-    version: str = typer.Option(
-        None, "--version", "-v", help="Version of the migration"
-    ),
+    version: str = typer.Option(None, "--version", help="Version of the migration"),
 ):
     """Create a new manual migration file."""
     validate_directory()
@@ -67,10 +65,26 @@ def migrate(
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
     ),
+    baseline: bool = typer.Option(
+        False, "--baseline", help="Mark migrations as applied without executing"
+    ),
+    with_backup: bool = typer.Option(
+        False, "--with-backup", "-b", help="Create a backup before migrating"
+    ),
+    backup_dir: str = typer.Option(
+        None, "--backup-dir", help="Directory for backup files"
+    ),
 ):
     """Apply pending migrations to the database."""
     validate_directory()
-    handle_migrate(count=count, to_version=to_version, verbose=verbose)
+    handle_migrate(
+        count=count,
+        to_version=to_version,
+        verbose=verbose,
+        baseline=baseline,
+        with_backup=with_backup,
+        backup_dir=backup_dir,
+    )
 
 
 @app.command()
