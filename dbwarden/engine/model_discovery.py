@@ -1,5 +1,6 @@
 import os
 import importlib.util
+import sys
 from pathlib import Path
 from types import ModuleType
 from typing import List, Optional, Type
@@ -137,6 +138,16 @@ def get_all_model_tables(
     if model_paths is None:
         model_paths = auto_discover_model_paths()
 
+    # Ensure project root is in sys.path for proper imports
+    cwd = str(Path.cwd().resolve())
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+
+    # Also check parent directories for project roots
+    for potential_root in [cwd, str(Path(cwd).parent)]:
+        if potential_root not in sys.path:
+            sys.path.insert(0, potential_root)
+
     for model_path in model_paths:
         if not os.path.exists(model_path):
             continue
@@ -173,22 +184,80 @@ def auto_discover_model_paths() -> List[str]:
     """
     Auto-discover model paths by looking for models/ or model/ directories.
 
+    Searches:
+    1. Current directory for models/ or model/
+    2. All subdirectories for models/ or model/ folders
+    3. Parent directories (up to 5 levels)
+    4. Ignores common lib folders (.venv, node_modules, __pycache__, etc.)
+
     Returns:
         List of directories that may contain models.
     """
     model_paths = []
     current = Path.cwd().resolve()
 
-    for _ in range(5):  # Search up to 5 levels up
+    IGNORED_DIRS = {
+        ".venv",
+        "node_modules",
+        "__pycache__",
+        ".git",
+        ".hg",
+        ".svn",
+        "build",
+        "dist",
+        "egg-info",
+        ".tox",
+        ".nox",
+        "venv",
+        "ENV",
+        ".env",
+        ".egg",
+        ".cache",
+        "coverage",
+        ".pytest_cache",
+        "site-packages",
+        "Lib",
+        "Scripts",
+        "bin",
+        "include",
+    }
+
+    def find_model_dirs_in(directory: Path) -> List[str]:
+        """Find models/ or model/ folders inside a directory."""
+        found = []
+        try:
+            if not directory.exists() or not directory.is_dir():
+                return found
+
+            for item in directory.iterdir():
+                try:
+                    if item.is_dir() and item.name not in IGNORED_DIRS:
+                        for model_name in ["models", "model"]:
+                            model_dir = item / model_name
+                            if model_dir.exists() and model_dir.is_dir():
+                                found.append(str(model_dir))
+                except PermissionError:
+                    continue
+        except PermissionError:
+            pass
+        return found
+
+    for _ in range(5):
+        # Check for models/ or model/ in current directory
         for dirname in ["models", "model"]:
             model_dir = current / dirname
             if model_dir.exists() and model_dir.is_dir():
-                model_paths.append(str(model_dir))
-                break
-        else:
-            if current.parent == current:
-                break
-            current = current.parent
+                if str(model_dir) not in model_paths:
+                    model_paths.append(str(model_dir))
+
+        # Check all subdirectories for models/model folders
+        for subdir in find_model_dirs_in(current):
+            if subdir not in model_paths:
+                model_paths.append(subdir)
+
+        if current.parent == current:
+            break
+        current = current.parent
 
     return model_paths
 
