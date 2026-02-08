@@ -13,8 +13,8 @@ pip install dbwarden
 Create `.env` in your project:
 
 ```env
-STRATA_SQLALCHEMY_URL=postgresql://user:pass@localhost/db
-STRATA_ASYNC=false  # or true for async mode
+DBWARDEN_SQLALCHEMY_URL=postgresql://user:pass@localhost/db
+DBWARDEN_ASYNC=false  # or true for async mode
 ```
 
 ## Basic Commands
@@ -72,9 +72,9 @@ dbwarden history
 
 | Variable | Description |
 |----------|-------------|
-| `STRATA_SQLALCHEMY_URL` | DB connection URL |
-| `STRATA_ASYNC` | Async mode (`true`/`false`) |
-| `STRATA_MODEL_PATHS` | Paths to SQLAlchemy models |
+| `DBWARDEN_SQLALCHEMY_URL` | DB connection URL |
+| `DBWARDEN_ASYNC` | Async mode (`true`/`false`) |
+| `DBWARDEN_MODEL_PATHS` | Paths to SQLAlchemy models |
 
 ## Supported Databases
 
