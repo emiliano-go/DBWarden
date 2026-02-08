@@ -172,7 +172,7 @@ class TestSQLGeneration:
         table = ModelTable(name="users", columns=columns)
         sql = generate_create_table_sql(table)
 
-        assert "CREATE TABLE users" in sql
+        assert "CREATE TABLE IF NOT EXISTS users" in sql
         assert "NOT NULL" in sql
         assert "PRIMARY KEY" in sql
         assert "UNIQUE" in sql

@@ -302,12 +302,47 @@ def extract_column_info(column) -> Optional[ModelColumn]:
         nullable = column.nullable
         primary_key = column.primary_key
         unique = column.unique
-        default = str(column.default) if column.default else None
+        default = None
+        if column.default:
+            default_str = str(column.default)
+            # SQLite doesn't support complex default expressions
+            if default_str.startswith("ScalarElementColumnDefault"):
+                # Extract the actual value from ScalarElementColumnDefault(True/False)
+                import re
+
+                match = re.search(r"ScalarElementColumnDefault\((.+)\)", default_str)
+                if match:
+                    value = match.group(1)
+                    if value.lower() == "true":
+                        default = "TRUE"
+                    elif value.lower() == "false":
+                        default = "FALSE"
+                    elif value.isdigit():
+                        default = value
+                    else:
+                        # Keep as-is for other simple values
+                        default = value
+            elif default_str.startswith("ColumnDefault"):
+                # Handle ColumnDefault format
+                import re
+
+                match = re.search(r"ColumnDefault\((.+)\)", default_str)
+                if match:
+                    default = match.group(1)
+            else:
+                default = default_str
 
         foreign_key = None
         if column.foreign_keys:
             fk = list(column.foreign_keys)[0]
-            foreign_key = f"{fk._colspec}"
+            colspec = fk._colspec
+            # SQLite doesn't support table.column in REFERENCES, convert to format
+            # SQLite expects: REFERENCES table(column) instead of table.column
+            if "." in colspec:
+                table, col = colspec.rsplit(".", 1)
+                foreign_key = f"{table}({col})"
+            else:
+                foreign_key = colspec
 
         return ModelColumn(
             name=name,
@@ -398,7 +433,7 @@ def generate_create_table_sql(table: ModelTable) -> str:
 
     columns_sql = ",\n".join(column_defs)
 
-    return f"CREATE TABLE {table.name} (\n{columns_sql}\n)"
+    return f"CREATE TABLE IF NOT EXISTS {table.name} (\n{columns_sql}\n)"
 
 
 def generate_drop_table_sql(table_name: str) -> str:
