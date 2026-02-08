@@ -199,6 +199,82 @@ def get_next_migration_number(directory: str) -> str:
     return f"{next_num:04d}"
 
 
+def get_all_migrations_with_metadata(
+    directory: str,
+) -> list[tuple[str, str, list[str], bool]]:
+    """
+    Get all migration files with their metadata.
+
+    Returns:
+        list[tuple]: [(version, filepath, depends_on, is_seed), ...]
+    """
+    from dbwarden.engine.file_parser import parse_migration_header
+
+    migrations: list[tuple[str, str, list[str], bool]] = []
+
+    if not os.path.exists(directory):
+        return []
+
+    for filename in sorted(os.listdir(directory)):
+        match = MIGRATION_PATTERN.match(filename)
+        if match:
+            version = match.group(1)
+            filepath = os.path.join(directory, filename)
+            metadata = parse_migration_header(filepath)
+            migrations.append(
+                (version, filepath, metadata.depends_on, metadata.is_seed)
+            )
+
+    return migrations
+
+
+def resolve_migration_order(
+    directory: str, applied_versions: set[str]
+) -> list[tuple[str, str, list[str], bool]]:
+    """
+    Resolve migration order based on dependencies.
+
+    Args:
+        directory: Path to migrations directory.
+        applied_versions: Set of already applied migration versions.
+
+    Returns:
+        list[tuple]: [(version, filepath, depends_on, is_seed), ...] in execution order.
+    """
+    all_migrations = get_all_migrations_with_metadata(directory)
+
+    pending = [
+        (v, fp, deps, seed)
+        for v, fp, deps, seed in all_migrations
+        if v not in applied_versions
+    ]
+
+    resolved: list[tuple[str, str, list[str], bool]] = []
+    remaining = pending.copy()
+    iterations = 0
+    max_iterations = len(pending) * 2
+
+    while remaining and iterations < max_iterations:
+        iterations += 1
+        for migration in remaining[:]:
+            version, filepath, deps, seed = migration
+            deps_met = all(
+                d in applied_versions or d in [m[0] for m in resolved] for d in deps
+            )
+            if deps_met:
+                resolved.append(migration)
+                remaining.remove(migration)
+
+    if remaining:
+        unresolved_versions = [m[0] for m in remaining]
+        raise ValueError(
+            f"Cannot resolve migration dependencies. Unresolved migrations: {unresolved_versions}. "
+            f"Missing dependencies for: {[m[0] for m in remaining if not all(d in applied_versions or d in [mm[0] for mm in resolved] for d in m[2])]}"
+        )
+
+    return resolved
+
+
 def parse_version_string(version: str) -> tuple[int, ...]:
     """Parse a version string into a tuple of integers."""
     return tuple(int(x) for x in version.split("."))
