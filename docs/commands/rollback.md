@@ -305,5 +305,5 @@ jobs:
 
 - [migrate](migrate.md): Apply migrations forward
 - [history](history.md): View migration history
-- [status](commands/status.md): Check current status
+- [status](status.md): Check current status
 - [Migration Files](../migration-files.md): Understanding rollback SQL
