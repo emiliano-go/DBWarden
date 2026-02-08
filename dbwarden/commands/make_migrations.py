@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from dbwarden.config import get_config
+from dbwarden.engine.file_parser import parse_upgrade_statements
 from dbwarden.engine.model_discovery import (
     get_all_model_tables,
     auto_discover_model_paths,
@@ -14,10 +15,36 @@ from dbwarden.engine.model_discovery import (
 from dbwarden.engine.version import (
     get_migrations_directory,
     get_next_migration_number,
-    get_migration_filepaths_by_version,
 )
 from dbwarden.logging import get_logger
-from dbwarden.repositories import get_migrated_versions
+
+
+def get_pending_migration_statements(migrations_dir: str) -> set[str]:
+    """
+    Get all SQL statements from all migration files (for deduplication).
+
+    Args:
+        migrations_dir: Path to migrations directory.
+
+    Returns:
+        Set of normalized SQL statements from all migration files.
+    """
+    all_statements = set()
+
+    if not os.path.exists(migrations_dir):
+        return all_statements
+
+    for filename in os.listdir(migrations_dir):
+        if not filename.endswith(".sql"):
+            continue
+        filepath = os.path.join(migrations_dir, filename)
+        statements = parse_upgrade_statements(filepath)
+        for stmt in statements:
+            normalized = stmt.strip()
+            if normalized:
+                all_statements.add(normalized)
+
+    return all_statements
 
 
 def make_migrations_cmd(
@@ -32,21 +59,6 @@ def make_migrations_cmd(
         verbose: Enable verbose logging.
     """
     logger = get_logger(verbose=verbose)
-
-    applied_versions = get_migrated_versions()
-
-    migrations_dir = get_migrations_directory()
-    pending_migrations = get_migration_filepaths_by_version(migrations_dir)
-
-    pending_to_apply = {
-        v: p for v, p in pending_migrations.items() if v not in applied_versions
-    }
-
-    if pending_to_apply:
-        raise ValueError(
-            f"Cannot generate migrations while {len(pending_to_apply)} migrations are pending. "
-            f"Please run 'dbwarden migrate' first."
-        )
 
     logger.log_execution_mode("async" if is_async_enabled() else "sync")
 
@@ -78,7 +90,13 @@ def make_migrations_cmd(
     safe_desc = re.sub(r"[^a-zA-Z0-9]", "_", description or "auto_generated").lower()
     filename = f"{next_number}_{safe_desc}.sql"
 
-    upgrade_sql, rollback_sql = generate_migration_sql(tables)
+    upgrade_sql, rollback_sql = generate_migration_sql(tables, migrations_dir)
+
+    if not upgrade_sql.strip():
+        print(
+            "No new migrations to generate - all models already covered by existing migrations."
+        )
+        return
 
     filepath = os.path.join(migrations_dir, filename)
 
@@ -99,22 +117,34 @@ def make_migrations_cmd(
     print(f"Tables included: {', '.join(t.name for t in tables)}")
 
 
-def generate_migration_sql(tables: list) -> tuple[str, str]:
+def generate_migration_sql(
+    tables: list, migrations_dir: str | None = None
+) -> tuple[str, str]:
     """
     Generate upgrade and rollback SQL from table definitions.
 
     Args:
         tables: List of ModelTable objects.
+        migrations_dir: Path to migrations directory for deduplication.
 
     Returns:
         Tuple of (upgrade_sql, rollback_sql).
     """
+    pending_statements = set()
+    if migrations_dir:
+        pending_statements = get_pending_migration_statements(migrations_dir)
+
     upgrade_parts = []
     rollback_parts = []
 
     for table in tables:
-        upgrade_parts.append(generate_create_table_sql(table))
-        rollback_parts.append(generate_drop_table_sql(table.name))
+        create_sql = generate_create_table_sql(table)
+        drop_sql = generate_drop_table_sql(table.name)
+
+        normalized_create = create_sql.strip()
+        if normalized_create not in pending_statements:
+            upgrade_parts.append(create_sql)
+            rollback_parts.append(drop_sql)
 
     rollback_parts.reverse()
 

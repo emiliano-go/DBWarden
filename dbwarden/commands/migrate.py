@@ -148,19 +148,18 @@ def _get_filepaths_by_version(
 ) -> dict[str, str]:
     """Get pending migration file paths."""
     from dbwarden.engine.version import get_migration_filepaths_by_version
+    from dbwarden.repositories import get_migrated_versions
 
     if migrations_dir is None:
         migrations_dir = get_migrations_directory()
 
     filepaths = get_migration_filepaths_by_version(
         directory=migrations_dir,
-        version_to_start_from=latest_migration.version if latest_migration else None,
     )
 
-    if latest_migration:
-        versions = list(filepaths.keys())
-        if versions and versions[0] == latest_migration.version:
-            filepaths = dict(list(filepaths.items())[1:])
+    applied_versions = set(get_migrated_versions())
+
+    filepaths = {v: p for v, p in filepaths.items() if v not in applied_versions}
 
     if count:
         filepaths = dict(list(filepaths.items())[:count])
