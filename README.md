@@ -1,4 +1,4 @@
-# DBWarden - Python Database Migrations
+# DBWarden
 
 **DBWarden** is a professional database migration system for Python/SQLAlchemy projects.
 
