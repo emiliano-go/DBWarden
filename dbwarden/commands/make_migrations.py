@@ -11,7 +11,11 @@ from dbwarden.engine.model_discovery import (
     generate_create_table_sql,
     generate_drop_table_sql,
 )
-from dbwarden.engine.version import get_migrations_directory, get_next_migration_number
+from dbwarden.engine.version import (
+    get_migrations_directory,
+    get_next_migration_number,
+    get_migration_filepaths_by_version,
+)
 from dbwarden.logging import get_logger
 from dbwarden.repositories import get_migrated_versions
 
@@ -30,10 +34,18 @@ def make_migrations_cmd(
     logger = get_logger(verbose=verbose)
 
     applied_versions = get_migrated_versions()
-    if applied_versions:
+
+    migrations_dir = get_migrations_directory()
+    pending_migrations = get_migration_filepaths_by_version(migrations_dir)
+
+    pending_to_apply = {
+        v: p for v, p in pending_migrations.items() if v not in applied_versions
+    }
+
+    if pending_to_apply:
         raise ValueError(
-            f"Cannot generate migrations while {len(applied_versions)} migrations are pending. "
-            "Please run 'dbwarden migrate' first."
+            f"Cannot generate migrations while {len(pending_to_apply)} migrations are pending. "
+            f"Please run 'dbwarden migrate' first."
         )
 
     logger.log_execution_mode("async" if is_async_enabled() else "sync")

@@ -19,6 +19,10 @@ class QueryMethod(Enum):
     GET_TABLE_NAMES = "get_table_names"
     GET_TABLE_COLUMNS = "get_table_columns"
     GET_TABLE_INDEXES = "get_table_indexes"
+    GET_RUNS_ON_CHANGE_CHECKSUMS = "get_runs_on_change_checksums"
+    GET_RUNS_ALWAYS_FILENAMES = "get_runs_always_filenames"
+    UPSERT_REPEATABLE_MIGRATION = "upsert_repeatable_migration"
+    DELETE_REPEATABLE_BY_FILENAME = "delete_repeatable_by_filename"
 
 
 SQL_QUERIES = {
@@ -84,6 +88,23 @@ SQL_QUERIES = {
     """,
     QueryMethod.GET_TABLE_INDEXES: """
         SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name=:table_name
+    """,
+    QueryMethod.GET_RUNS_ON_CHANGE_CHECKSUMS: """
+        SELECT filename, checksum FROM dbwarden_migrations
+        WHERE migration_type = 'runs_on_change'
+    """,
+    QueryMethod.GET_RUNS_ALWAYS_FILENAMES: """
+        SELECT filename FROM dbwarden_migrations
+        WHERE migration_type = 'runs_always'
+    """,
+    QueryMethod.UPSERT_REPEATABLE_MIGRATION: """
+        INSERT OR REPLACE INTO dbwarden_migrations
+        (version, description, filename, migration_type, checksum)
+        VALUES (NULL, :description, :filename, :migration_type, :checksum)
+    """,
+    QueryMethod.DELETE_REPEATABLE_BY_FILENAME: """
+        DELETE FROM dbwarden_migrations
+        WHERE filename = :filename AND migration_type IN ('runs_always', 'runs_on_change')
     """,
 }
 
