@@ -18,9 +18,12 @@ dbwarden migrate [OPTIONS]
 |-------|------|-------------|
 | `-c` | `--count COUNT` | Number of migrations to apply |
 | `-t` | `--to-version VERSION` | Migrate to a specific version |
-| `-v` | `--verbose` | Enable verbose logging |
+| `-v` | `--verbose` | Enable verbose logging with SQL highlighting |
+| | `--baseline` | Mark migrations as applied without executing |
+| `-b` | `--with-backup` | Create a backup before migrating |
+| | `--backup-dir DIRECTORY` | Directory for backup files |
 
-**None of these options are required. All are optional.**
+**All options are optional.**
 
 ## Examples
 
@@ -30,7 +33,7 @@ dbwarden migrate [OPTIONS]
 dbwarden migrate
 ```
 
-### Apply with Verbose Output
+### Apply with Verbose Output (Colored SQL)
 
 ```bash
 dbwarden migrate --verbose
@@ -41,7 +44,6 @@ dbwarden migrate -v
 ### Apply Specific Number of Migrations
 
 ```bash
-# Apply next 2 migrations
 dbwarden migrate --count 2
 # or
 dbwarden migrate -c 2
@@ -55,10 +57,36 @@ dbwarden migrate --to-version 0003
 dbwarden migrate -t 0003
 ```
 
+### Baseline Existing Database
+
+Mark existing database as migrated without executing SQL:
+
+```bash
+dbwarden migrate --baseline --to-version 0001
+```
+
+This is useful when:
+- Starting with an existing database that wasn't tracked by DBWarden
+- Integrating DBWarden into an existing project
+
+### Create Backup Before Migrating
+
+```bash
+dbwarden migrate --with-backup
+# or
+dbwarden migrate -b
+```
+
+### Backup to Specific Directory
+
+```bash
+dbwarden migrate --with-backup --backup-dir /path/to/backups
+```
+
 ### Combined Options
 
 ```bash
-dbwarden migrate -c 1 -t 0002 -v
+dbwarden migrate -c 1 -t 0002 -v -b --backup-dir ./backups
 ```
 
 ## How It Works

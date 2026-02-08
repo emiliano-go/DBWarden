@@ -306,7 +306,7 @@ dbwarden unlock
 
 ### `-v, --verbose`
 
-Enable verbose logging. Available on:
+Enable verbose logging with SQL syntax highlighting. Available on:
 - `make-migrations`
 - `migrate`
 - `rollback`
@@ -330,10 +330,102 @@ Target specific version. Available on:
 Output format selection. Available on:
 - `check-db`
 
-### `--version, -v`
+### `--version`
 
 Set migration version number. Available on:
 - `new`
+
+### `--baseline`
+
+Mark migrations as applied without executing them. Available on:
+- `migrate`
+
+### `-b, --with-backup`
+
+Create a backup before running migrations. Available on:
+- `migrate`
+
+### `--backup-dir`
+
+Specify backup directory for `--with-backup`. Available on:
+- `migrate`
+
+---
+
+## New Features
+
+### Colored Output
+
+DBWarden now displays colored output for better readability:
+
+- `[PENDING]` - Yellow status for pending migrations
+- `[APPLIED]` - Green status for successfully applied migrations
+- `[ROLLED_BACK]` - Red status for rolled back migrations
+- SQL keywords are highlighted in magenta
+- SQL strings are highlighted in green
+- SQL comments are highlighted in cyan
+
+### Migration Dependencies
+
+Specify dependencies between migrations using the header:
+
+```sql
+-- depends_on: ["0001", "0002"]
+
+-- upgrade
+
+CREATE TABLE posts (...);
+
+-- rollback
+
+DROP TABLE posts;
+```
+
+DBWarden will resolve dependencies and execute migrations in the correct order.
+
+### Seed Data Migrations
+
+Mark migrations as seed data using the `-- seed` marker:
+
+```sql
+-- seed
+
+-- upgrade
+
+INSERT INTO service_types (name, kind) VALUES
+('Web Service', 'api'),
+('Database', 'db');
+
+-- rollback
+
+DELETE FROM service_types WHERE name IN ('Web Service', 'Database');
+```
+
+Seed migrations run after all versioned migrations.
+
+### Baseline Migrations
+
+Mark an existing database as already migrated without executing SQL:
+
+```bash
+dbwarden migrate --baseline --to-version 0001
+```
+
+This is useful when:
+- Starting with an existing database
+- Integrating DBWarden into an existing project
+- Recovering from migration tracking issues
+
+### Backup Before Migration
+
+Automatically create a backup before running migrations:
+
+```bash
+dbwarden migrate --with-backup
+dbwarden migrate --with-backup --backup-dir /path/to/backups
+```
+
+Backups are stored in the `backups/` directory by default.
 
 ---
 

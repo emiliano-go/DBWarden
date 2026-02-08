@@ -54,6 +54,54 @@ dbwarden new "migrate data from old schema" --version 9999
 -- add index to users email
 ```
 
+## Migration Headers
+
+### Dependencies
+
+Specify dependencies on other migrations:
+
+```sql
+-- depends_on: ["0001", "0002"]
+
+-- upgrade
+
+CREATE TABLE posts (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    title VARCHAR(200) NOT NULL
+);
+
+-- rollback
+
+DROP TABLE posts;
+```
+
+DBWarden will execute migrations in dependency order.
+
+### Seed Migrations
+
+Mark migrations as seed data (runs after all versioned migrations):
+
+```sql
+-- seed
+
+-- upgrade
+
+INSERT INTO service_types (name, kind) VALUES
+('Web Service', 'api'),
+('Database', 'db'),
+('Cache', 'cache');
+
+-- rollback
+
+DELETE FROM service_types WHERE name IN ('Web Service', 'Database', 'Cache');
+```
+
+Seed migrations are useful for:
+- Reference data
+- Lookup tables
+- Configuration data
+
 ## When to Use Manual Migrations
 
 Use `new` instead of `make-migrations` when you need to:

@@ -184,6 +184,69 @@ Migrations that only run when their checksum changes:
 
 ---
 
+## Migration Headers
+
+### Dependencies
+
+Specify dependencies on other migrations:
+
+```sql
+-- depends_on: ["0001", "0002"]
+
+-- upgrade
+
+CREATE TABLE posts (...);
+
+-- rollback
+
+DROP TABLE posts;
+```
+
+### Seed Migrations
+
+Mark migrations as seed data:
+
+```sql
+-- seed
+
+-- upgrade
+
+INSERT INTO service_types (name, kind) VALUES
+('Web Service', 'api'),
+('Database', 'db');
+
+-- rollback
+
+DELETE FROM service_types WHERE name IN ('Web Service', 'Database');
+```
+
+---
+
+## New Command Options
+
+### Baseline Migrations
+
+Mark existing database as migrated without executing SQL:
+
+```bash
+dbwarden migrate --baseline --to-version 0001
+```
+
+Use when:
+- Starting with an existing database
+- Integrating DBWarden into an existing project
+
+### Backup Before Migration
+
+Create automatic backups:
+
+```bash
+dbwarden migrate --with-backup
+dbwarden migrate --with-backup --backup-dir /path/to/backups
+```
+
+---
+
 ## Command Execution Flow
 
 ```
