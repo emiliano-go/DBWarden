@@ -95,7 +95,7 @@ dbwarden history
 
 ## Docs
 
-For more information, see [DBWarden Docs](http://emiliano-gandini-outeda.me/DBWarden/)
+For more information, see [DBWarden Docs](http://emiliano-gandini-outeda.me/DBWarden/) or [DBWarden DeepWiki page](https://deepwiki.com/emiliano-gandini-outeda/DBWarden)
 
 ## License
 
