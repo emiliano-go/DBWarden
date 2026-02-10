@@ -4,16 +4,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
+import tomllib
 
-from dbwarden.constants import ENV_FILE
-from dbwarden.exceptions import ConfigurationError, EnvFileNotFoundError
-
-
-def _reload_dotenv() -> None:
-    """Reload .env file from current working directory."""
-    env_path = get_env_path()
-    load_dotenv(dotenv_path=env_path)
+from dbwarden.constants import TOML_FILE
+from dbwarden.exceptions import ConfigurationError
 
 
 @dataclass
@@ -43,71 +37,80 @@ class DbwardenConfig:
             )
 
 
-def get_env_path() -> Path:
+def get_toml_path() -> Path | None:
     """
-    Find the .env file by searching up the directory tree.
+    Find the warden.toml file by searching up the directory tree.
 
     Returns:
-        Path: The path to the .env file.
-
-    Raises:
-        EnvFileNotFoundError: If .env file is not found.
+        Path | None: The path to warden.toml if found, None otherwise.
     """
     current = Path.cwd().resolve()
 
     while True:
-        env_path = current / ENV_FILE
-        if env_path.exists():
-            return env_path
+        toml_path = current / TOML_FILE
+        if toml_path.exists():
+            return toml_path
 
         if current.parent == current:
             break
         current = current.parent
 
-    raise EnvFileNotFoundError(
-        f".env file not found. Please create a .env file in {Path.cwd()} or a parent directory. "
-        f"Required variables: DBWARDEN_SQLALCHEMY_URL"
-    )
-
-
-def validate_env_file() -> None:
-    """
-    Validate that .env file exists in the current directory or parent.
-
-    Raises:
-        EnvFileNotFoundError: If .env file is not found.
-    """
-    get_env_path()
+    return None
 
 
 def get_config() -> DbwardenConfig:
     """
-    Load configuration from .env file.
+    Load configuration from warden.toml file.
 
     Returns:
         DbwardenConfig: Configuration dataclass with all required values.
 
     Raises:
-        ConfigurationError: If required configuration is missing.
+        ConfigurationError: If warden.toml is not found or is missing required values.
     """
-    _reload_dotenv()
+    toml_path = get_toml_path()
 
-    sqlalchemy_url = os.getenv("DBWARDEN_SQLALCHEMY_URL")
-    if not sqlalchemy_url:
+    if not toml_path:
         raise ConfigurationError(
-            "DBWARDEN_SQLALCHEMY_URL is required in .env file. "
-            'Example: DBWARDEN_SQLALCHEMY_URL="postgresql://user:password@localhost:5432/mydb"'
+            f"warden.toml not found. Please create a warden.toml file in {Path.cwd()} or a parent directory. "
+            f"Required: sqlalchemy_url\n"
+            f'Example: sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"'
         )
 
-    async_mode_str = os.getenv("DBWARDEN_ASYNC", "").lower()
-    async_mode = async_mode_str in ("true", "1", "yes")
+    return _load_from_toml(toml_path)
 
-    model_paths_str = os.getenv("DBWARDEN_MODEL_PATHS", "")
+
+def _load_from_toml(path: Path) -> DbwardenConfig:
+    """
+    Load configuration from warden.toml file.
+
+    Args:
+        path: Path to warden.toml file.
+
+    Returns:
+        DbwardenConfig: Configuration dataclass.
+    """
+    with open(path, "rb") as f:
+        config_data = tomllib.load(f)
+
+    toml_config = config_data.get("warden", config_data)
+
+    sqlalchemy_url = toml_config.get("sqlalchemy_url")
+    if not sqlalchemy_url:
+        raise ConfigurationError(
+            "sqlalchemy_url is required in warden.toml. "
+            'Example: sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"'
+        )
+
+    async_mode = toml_config.get("async", False)
+
     model_paths = None
-    if model_paths_str:
-        model_paths = [p.strip() for p in model_paths_str.split(",") if p.strip()]
+    if "model_paths" in toml_config:
+        model_paths = toml_config["model_paths"]
+        if isinstance(model_paths, str):
+            model_paths = [p.strip() for p in model_paths.split(",") if p.strip()]
 
-    postgres_schema = os.getenv("DBWARDEN_POSTGRES_SCHEMA", None)
+    postgres_schema = toml_config.get("postgres_schema", None)
 
     return DbwardenConfig(
         sqlalchemy_url=sqlalchemy_url,
@@ -119,17 +122,18 @@ def get_config() -> DbwardenConfig:
 
 def get_non_secret_env_vars() -> dict[str, str]:
     """
-    Get environment variables for display (excluding secrets).
+    Get configuration info for display (excluding secrets).
 
     Returns:
-        dict: Non-sensitive environment variables.
+        dict: Non-sensitive configuration info.
     """
-    public_vars = {
-        "DBWARDEN_SQLALCHEMY_URL": "***"
-        if os.getenv("DBWARDEN_SQLALCHEMY_URL")
-        else None,
-        "DBWARDEN_ASYNC": os.getenv("DBWARDEN_ASYNC", "false"),
-        "DBWARDEN_MODEL_PATHS": os.getenv("DBWARDEN_MODEL_PATHS", ""),
-        "DBWARDEN_POSTGRES_SCHEMA": os.getenv("DBWARDEN_POSTGRES_SCHEMA", ""),
-    }
-    return {k: v for k, v in public_vars.items() if v}
+    try:
+        config = get_config()
+        return {
+            "sqlalchemy_url": "***",
+            "async": str(config.async_mode).lower(),
+            "model_paths": ", ".join(config.model_paths) if config.model_paths else "",
+            "postgres_schema": config.postgres_schema or "",
+        }
+    except ConfigurationError:
+        return {"error": "warden.toml not found or invalid"}
