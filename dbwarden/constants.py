@@ -2,6 +2,7 @@ from typing import Final
 
 MIGRATIONS_DIR: Final[str] = "migrations"
 ENV_FILE: Final[str] = ".env"
+TOML_FILE: Final[str] = "warden.toml"
 RUNS_ALWAYS_FILE_PREFIX: Final[str] = "RA__"
 RUNS_ON_CHANGE_FILE_PREFIX: Final[str] = "ROC__"
 VERSION_FILE_PREFIX: Final[str] = "V"
