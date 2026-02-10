@@ -1,64 +1,73 @@
 # Configuration
 
-DBWarden is configured through environment variables stored in a `.env` file. This guide covers all configuration options.
+DBWarden is configured through a `warden.toml` file. This guide covers all configuration options.
 
-## Environment File
+## Configuration File
 
-DBWarden looks for a `.env` file in the current working directory or any parent directory. This file must contain at minimum the database connection URL.
+DBWarden looks for a `warden.toml` file in the current working directory or any parent directory.
 
-### Creating the .env File
+### Creating the warden.toml File
 
-Create a `.env` file in your project root:
+Run `dbwarden init` to create a starter configuration:
 
-```env
-DBWARDEN_SQLALCHEMY_URL=postgresql://user:password@localhost:5432/mydb
+```bash
+dbwarden init
 ```
 
-### .env File Location
+This creates both the `migrations/` directory and a `warden.toml` file.
 
-DBWarden searches for `.env` in the following order:
+### warden.toml File Location
+
+DBWarden searches for `warden.toml` in the following order:
 
 1. Current working directory
 2. Parent directories (up to the filesystem root)
 
-This allows you to have a single `.env` file at your project root that applies to all subdirectories.
+This allows you to have a single `warden.toml` file at your project root that applies to all subdirectories.
 
 ## Required Configuration
 
-### DBWARDEN_SQLALCHEMY_URL
+### sqlalchemy_url
 
-The SQLAlchemy database connection URL. This is the only required configuration variable.
+The SQLAlchemy database connection URL. This is the only required configuration option.
 
 **Format:**
 
-```
-DBWARDEN_SQLALCHEMY_URL=dialect+driver://username:password@host:port/database
+```toml
+sqlalchemy_url = "dialect+driver://username:password@host:port/database"
 ```
 
 **Examples:**
 
-```env
+```toml
 # PostgreSQL
-DBWARDEN_SQLALCHEMY_URL=postgresql://user:password@localhost:5432/mydb
+sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"
 
 # PostgreSQL with async
-DBWARDEN_SQLALCHEMY_URL=postgresql+asyncpg://user:password@localhost:5432/mydb
+sqlalchemy_url = "postgresql+asyncpg://user:password@localhost:5432/mydb"
 
 # MySQL
-DBWARDEN_SQLALCHEMY_URL=mysql://user:password@localhost:3306/mydb
+sqlalchemy_url = "mysql://user:password@localhost:3306/mydb"
 
 # SQLite
-DBWARDEN_SQLALCHEMY_URL=sqlite:///./mydb.db
+sqlalchemy_url = "sqlite:///./mydb.db"
 
 # SQLite in memory
-DBWARDEN_SQLALCHEMY_URL=sqlite:///:memory:
+sqlalchemy_url = "sqlite:///:memory:"
+
+# SQLite async
+sqlalchemy_url = "sqlite+aiosqlite:///./mydb.db"
 ```
 
 ## Optional Configuration
 
-### DBWARDEN_ASYNC
+### async
 
 Enable or disable asynchronous database operations.
+
+```toml
+async = true
+```
 
 | Value | Mode |
 |-------|------|
@@ -67,19 +76,17 @@ Enable or disable asynchronous database operations.
 
 **Example:**
 
-```env
-DBWARDEN_ASYNC=true
-DBWARDEN_SQLALCHEMY_URL=postgresql+asyncpg://user:password@localhost:5432/mydb
+```toml
+async = true
+sqlalchemy_url = "postgresql+asyncpg://user:password@localhost:5432/mydb"
 ```
 
-### DBWARDEN_MODEL_PATHS
+### model_paths
 
-Comma-separated list of paths to directories containing SQLAlchemy models.
+List of paths to directories containing SQLAlchemy models.
 
-**Example:**
-
-```env
-DBWARDEN_MODEL_PATHS=models/,app/models/,core/database/models/
+```toml
+model_paths = ["models/", "app/models/"]
 ```
 
 If not specified, DBWarden will automatically discover models by:
@@ -88,51 +95,49 @@ If not specified, DBWarden will automatically discover models by:
 - Searching up to 5 parent directories from current working directory
 - Ignoring common library folders (`.venv`, `node_modules`, `__pycache__`, etc.)
 
-### DBWARDEN_POSTGRES_SCHEMA
+### postgres_schema
 
 PostgreSQL schema to use (PostgreSQL only).
 
-**Example:**
-
-```env
-DBWARDEN_POSTGRES_SCHEMA=public
+```toml
+postgres_schema = "public"
 ```
 
-## Complete .env Example
+## Complete warden.toml Example
 
-```env
+```toml
 # Database Connection
-DBWARDEN_SQLALCHEMY_URL=postgresql://myuser:mypassword@localhost:5432/myapp
-DBWARDEN_ASYNC=true
+sqlalchemy_url = "postgresql://myuser:mypassword@localhost:5432/myapp"
+async = true
 
 # Model Discovery
-DBWARDEN_MODEL_PATHS=app/models/,models/
+model_paths = ["app/models/", "models/"]
 
 # PostgreSQL Schema
-DBWARDEN_POSTGRES_SCHEMA=public
+postgres_schema = "public"
 ```
 
 ## Configuration in Different Environments
 
 ### Development Environment
 
-```env
-DBWARDEN_SQLALCHEMY_URL=postgresql://dev:dev123@localhost:5432/dev_db
-DBWARDEN_ASYNC=false
+```toml
+sqlalchemy_url = "postgresql://dev:dev123@localhost:5432/dev_db"
+async = false
 ```
 
 ### Staging Environment
 
-```env
-DBWARDEN_SQLALCHEMY_URL=postgresql://staging:staging123@staging.example.com:5432/staging_db
-DBWARDEN_ASYNC=true
+```toml
+sqlalchemy_url = "postgresql://staging:staging123@staging.example.com:5432/staging_db"
+async = true
 ```
 
 ### Production Environment
 
-```env
-DBWARDEN_SQLALCHEMY_URL=postgresql://prod:securepass@prod.example.com:5432/prod_db
-DBWARDEN_ASYNC=true
+```toml
+sqlalchemy_url = "postgresql://prod:securepass@prod.example.com:5432/prod_db"
+async = true
 ```
 
 ## Configuration Validation
@@ -146,40 +151,30 @@ dbwarden env
 Output:
 
 ```
-DBWARDEN_SQLALCHEMY_URL: ***
-DBWARDEN_ASYNC: true
-DBWARDEN_MODEL_PATHS: models/
-DBWARDEN_POSTGRES_SCHEMA: public
+sqlalchemy_url: ***
+async: true
+model_paths: models/
+postgres_schema: public
 ```
-
-## Environment Variables Precedence
-
-DBWarden checks environment variables in the following order:
-
-1. System environment variables (highest priority)
-2. `.env` file in current directory
-3. `.env` file in parent directories
-
-This means you can override `.env` file values with system environment variables if needed.
 
 ## Special Characters in Passwords
 
 If your database password contains special characters, URL-encode them:
 
-```env
+```toml
 # Password: p@ss:word/123
-DBWARDEN_SQLALCHEMY_URL=postgresql://user:p%40ss%3Aword%2F123@localhost:5432/mydb
+sqlalchemy_url = "postgresql://user:p%40ss%3Aword%2F123@localhost:5432/mydb"
 ```
 
 ## Troubleshooting Configuration
 
-### Missing DBWARDEN_SQLALCHEMY_URL
+### Missing sqlalchemy_url
 
 ```
-Error: DBWARDEN_SQLALCHEMY_URL is required in .env file.
+Error: sqlalchemy_url is required in warden.toml.
 ```
 
-Make sure your `.env` file exists and contains the required variable.
+Make sure your `warden.toml` file exists and contains the required option.
 
 ### Invalid URL Format
 
@@ -203,7 +198,7 @@ Verify that:
 
 ## Best Practices
 
-1. **Never commit `.env` to version control**: Add `.env` to your `.gitignore` file
-2. **Use different configurations per environment**: Create `.env.example` as a template
+1. **Never commit `warden.toml` to version control with secrets**: Add `warden.toml` to your `.gitignore` file if it contains credentials, or use a separate `warden.toml.example` as a template
+2. **Use different configurations per environment**: Create environment-specific configuration files
 3. **Secure your credentials**: Use secrets management in production
 4. **Validate configuration**: Run `dbwarden env` before applying migrations

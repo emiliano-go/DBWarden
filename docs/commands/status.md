@@ -127,7 +127,7 @@ dbwarden migrate --verbose
 If applied count is unexpected:
 
 1. Check `dbwarden history` for applied migrations
-2. Verify database connection in `.env`
+2. Verify database connection in `warden.toml`
 3. Check for migrations in wrong location
 
 ### No Migrations Directory

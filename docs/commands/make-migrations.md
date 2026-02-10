@@ -93,7 +93,7 @@ DROP TABLE users
 Before running `make-migrations`:
 
 1. Run `dbwarden init` to create migrations directory
-2. Create `.env` with `DBWARDEN_SQLALCHEMY_URL`
+2. Create `warden.toml` with `sqlalchemy_url`
 3. Define SQLAlchemy models with `__tablename__` attribute
 
 ## Validation Checks
@@ -107,7 +107,7 @@ If no models are found:
 ```
 No SQLAlchemy models found. Please:
   1. Create models/ directory with your SQLAlchemy models
-  2. Or set DBWARDEN_MODEL_PATHS in .env
+  2. Or set model_paths in warden.toml
 ```
 
 ### No New Migrations
@@ -124,7 +124,7 @@ DBWarden automatically deduplicates SQL by checking against all existing migrati
 
 DBWarden searches for models in this order:
 
-1. **Explicit paths**: Paths in `DBWARDEN_MODEL_PATHS` (comma-separated)
+1. **Explicit paths**: Paths in `model_paths` (comma-separated in TOML)
 2. **Auto-discovery**: Looks for `models/` or `model/` directories
 
 The search traverses up to 5 parent directories from the current working directory.
@@ -169,7 +169,7 @@ The search traverses up to 5 parent directories from the current working directo
 
 ### Models Not Being Discovered
 
-1. Check `DBWARDEN_MODEL_PATHS` in `.env`
+1. Check `model_paths` in `warden.toml`
 2. Ensure models have `__tablename__` attribute
 3. Verify models inherit from `declarative_base()`
 

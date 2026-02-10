@@ -35,23 +35,22 @@ Async
 
 ## How Mode Is Determined
 
-1. **Environment variable**: `DBWARDEN_ASYNC=true/false`
-2. **Configuration**: From `.env` file
+1. **Configuration**: `async` setting from `warden.toml`
 
 ## Configuration
 
 ### Enable Async Mode
 
-```env
-DBWARDEN_ASYNC=true
-DBWARDEN_SQLALCHEMY_URL=postgresql+asyncpg://user:pass@host/db
+```toml
+async = true
+sqlalchemy_url = "postgresql+asyncpg://user:pass@host/db"
 ```
 
 ### Disable Async Mode
 
-```env
-DBWARDEN_ASYNC=false
-DBWARDEN_SQLALCHEMY_URL=postgresql://user:pass@host/db
+```toml
+async = false
+sqlalchemy_url = "postgresql://user:pass@host/db"
 ```
 
 ## Use Cases

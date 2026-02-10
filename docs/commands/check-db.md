@@ -161,9 +161,9 @@ diff before.json after.json
 ### Connection Used
 
 Uses the same database connection as other commands:
-- Reads from `.env` configuration
-- Uses `DBWARDEN_SQLALCHEMY_URL`
-- Respects `DBWARDEN_ASYNC` setting
+- Reads from `warden.toml` configuration
+- Uses `sqlalchemy_url`
+- Respects `async` setting
 
 ### Schema Inspection
 
@@ -182,7 +182,7 @@ Verify database connection:
 
 ```bash
 dbwarden env
-# Check DBWARDEN_SQLALCHEMY_URL is correct
+# Check sqlalchemy_url is correct
 
 # Test connection
 python -c "from sqlalchemy import create_engine; engine = create_engine('$URL'); engine.connect()"
@@ -193,7 +193,7 @@ python -c "from sqlalchemy import create_engine; engine = create_engine('$URL');
 No tables found:
 1. Check migrations were applied: `dbwarden history`
 2. Verify correct database: Check connection URL
-3. Check PostgreSQL schema: Set `DBWARDEN_POSTGRES_SCHEMA`
+3. Check PostgreSQL schema: Set `postgres_schema` in warden.toml
 
 ## Best Practices
 

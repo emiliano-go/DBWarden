@@ -18,7 +18,7 @@ pip install dbwarden
 
 ```
 myproject/
-├── .env
+├── warden.toml
 ├── models/
 │   └── __init__.py
 ├── migrations/
@@ -27,17 +27,17 @@ myproject/
 
 ## Step 3: Configure Database Connection
 
-Create a `.env` file:
+Create a `warden.toml` file:
 
-```env
-DBWARDEN_SQLALCHEMY_URL=postgresql://user:password@localhost:5432/myapp
-DBWARDEN_ASYNC=false
+```toml
+sqlalchemy_url = "postgresql://user:password@localhost:5432/myapp"
+async = false
 ```
 
 For SQLite:
 
-```env
-DBWARDEN_SQLALCHEMY_URL=sqlite:///./myapp.db
+```toml
+sqlalchemy_url = "sqlite:///./myapp.db"
 ```
 
 ## Step 4: Define Your SQLAlchemy Models
@@ -70,10 +70,11 @@ dbwarden init
 Output:
 
 ```
+Created configuration file: /home/user/myproject/warden.toml
 DBWarden migrations directory created: /home/user/myproject/migrations
 
 Next steps:
-  1. Create a .env file with DBWARDEN_SQLALCHEMY_URL
+  1. Edit warden.toml with your database connection URL
   2. Run 'dbwarden make-migrations' to generate migrations from your models
 ```
 

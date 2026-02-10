@@ -139,8 +139,6 @@ CMD ["dbwarden", "--help"]
 services:
   app:
     build: .
-    env_file:
-      - .env
     volumes:
       - .:/app
     depends_on:
@@ -158,6 +156,8 @@ services:
 volumes:
   postgres_data:
 ```
+
+Note: Create a `warden.toml` file for DBWarden configuration instead of using `.env` for database settings.
 
 ## System Requirements
 

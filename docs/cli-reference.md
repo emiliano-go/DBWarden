@@ -219,13 +219,19 @@ dbwarden version
 
 ### env
 
-Display relevant environment variables without leaking secrets.
+Display configuration without leaking secrets.
 
 ```bash
 dbwarden env
 ```
 
 **No arguments or options.**
+
+Shows:
+- `sqlalchemy_url` (masked)
+- `async` setting
+- `model_paths`
+- `postgres_schema`
 
 ---
 
@@ -438,25 +444,18 @@ Backups are stored in the `backups/` directory by default.
 | 2 | Configuration error |
 | 3 | Migration error |
 
-## Environment Variables
+## Configuration
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DBWARDEN_SQLALCHEMY_URL` | Yes | Database connection URL |
-| `DBWARDEN_ASYNC` | No | Enable async mode (true/false) |
-| `DBWARDEN_MODEL_PATHS` | No | Paths to SQLAlchemy models |
-| `DBWARDEN_POSTGRES_SCHEMA` | No | PostgreSQL schema |
+DBWarden uses `warden.toml` file for configuration:
 
-## Configuration File
-
-DBWarden uses `.env` file for configuration:
-
-```env
-DBWARDEN_SQLALCHEMY_URL=postgresql://user:pass@localhost:5432/db
-DBWARDEN_ASYNC=false
-DBWARDEN_MODEL_PATHS=models/
-DBWARDEN_POSTGRES_SCHEMA=public
+```toml
+sqlalchemy_url = "postgresql://user:pass@localhost:5432/db"
+async = false
+model_paths = ["models/"]
+postgres_schema = "public"
 ```
+
+Run `dbwarden init` to create a starter configuration file.
 
 ## Tab Completion
 
@@ -503,15 +502,15 @@ chmod +x /path/to/dbwarden
 ### Invalid Configuration
 
 ```bash
-# Validate .env file
+# Validate warden.toml file
 dbwarden env
 
 # Check file exists
-ls -la .env
+ls -la warden.toml
 ```
 
 ## See Also
 
 - [Commands Overview](commands.md): Command categories and usage patterns
-- [Configuration](configuration.md): Environment variable details
+- [Configuration](configuration.md): warden.toml configuration guide
 - [Installation](installation.md): Installation troubleshooting

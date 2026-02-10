@@ -275,7 +275,7 @@ project/
 │   └── .gitkeep          # Keep directory in git
 ├── models/
 │   └── user.py
-├── .env
+├── warden.toml
 └── pyproject.toml
 ```
 

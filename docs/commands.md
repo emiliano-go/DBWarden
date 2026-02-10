@@ -256,7 +256,7 @@ dbwarden migrate --with-backup --backup-dir /path/to/backups
                     │
                     ▼
 ┌─────────────────────────────────────────────────┐
-│  1. Load Configuration (.env)                    │
+│  1. Load Configuration (warden.toml)           │
 └─────────────────────────────────────────────────┘
                     │
                     ▼
@@ -281,7 +281,7 @@ dbwarden migrate --with-backup --backup-dir /path/to/backups
 
 DBWarden provides clear error messages for common issues:
 
-- **Missing .env file**: "DBWARDEN_SQLALCHEMY_URL is required"
+- **Missing warden.toml file**: "sqlalchemy_url is required in warden.toml"
 - **Migrations directory not found**: "Please run 'dbwarden init' first"
 - **Lock active**: "Migration is currently locked"
 - **Duplicate SQL**: Skips tables already in existing migrations

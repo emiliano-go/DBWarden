@@ -219,10 +219,10 @@ Searches up to 5 parent directories from current working directory.
 
 ### Manual Path Configuration
 
-Set custom paths in `.env`:
+Set custom paths in `warden.toml`:
 
-```env
-DBWARDEN_MODEL_PATHS=app/models/,core/database/models/,shared/models/
+```toml
+model_paths = ["app/models/", "core/database/models/", "shared/models/"]
 ```
 
 ### Import Patterns
@@ -368,7 +368,7 @@ class Model(Base):
 
 ### Model Not Discovered
 
-1. Check `DBWARDEN_MODEL_PATHS` in `.env`
+1. Check `model_paths` in `warden.toml`
 2. Verify file is in `models/` directory
 3. Ensure model inherits from `Base`
 4. Check `__tablename__` is defined

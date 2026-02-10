@@ -115,7 +115,7 @@ This means either:
 If migrations were applied but history is empty:
 
 1. Check you're connecting to the correct database
-2. Verify `.env` configuration
+2. Verify `warden.toml` configuration
 3. Check `dbwarden_migrations` table exists:
 
 ```bash
