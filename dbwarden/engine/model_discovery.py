@@ -329,6 +329,26 @@ def extract_column_info(column) -> Optional[ModelColumn]:
                 match = re.search(r"ColumnDefault\((.+)\)", default_str)
                 if match:
                     default = match.group(1)
+            elif default_str.startswith("CallableColumnDefault"):
+                # Handle CallableColumnDefault for Python callables like uuid4
+                import re
+
+                match = re.search(
+                    r"CallableColumnDefault\(<function (\w+) at 0x[0-9a-f]+>\)",
+                    default_str,
+                )
+                if match:
+                    func_name = match.group(1)
+                    # SQLite doesn't support Python callables as defaults
+                    # For uuid4, we use a database-specific approach or omit
+                    # Setting default to None so the column is created without a default
+                    # The application must handle default value generation
+                    default = None
+                else:
+                    # Try alternative pattern for callable defaults
+                    match = re.search(r"CallableColumnDefault\((.+)\)", default_str)
+                    if match:
+                        default = None
             else:
                 default = default_str
 
