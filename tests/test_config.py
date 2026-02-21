@@ -3,7 +3,7 @@ import tempfile
 import os
 from pathlib import Path
 
-from dbwarden.config import get_config, get_env_path, validate_env_file
+from dbwarden.config import get_config
 from dbwarden.database.connection import is_async_enabled, get_mode
 from dbwarden.logging import get_logger, DBWardenLogger
 
@@ -12,10 +12,7 @@ from dbwarden.logging import get_logger, DBWardenLogger
 def clean_env():
     """Clean environment variables before each test."""
     env_vars = [
-        "STRATA_SQLALCHEMY_URL",
-        "STRATA_ASYNC",
-        "STRATA_MODEL_PATHS",
-        "STRATA_POSTGRES_SCHEMA",
+        "DBWARDEN_ASYNC",
     ]
     old_vals = {}
     for var in env_vars:
@@ -30,16 +27,16 @@ def clean_env():
 class TestConfig:
     """Tests for configuration loading."""
 
-    def test_get_config_from_env_file(self):
-        """Test loading configuration from .env file."""
+    def test_get_config_from_toml_file(self):
+        """Test loading configuration from warden.toml file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
 
             try:
-                with open(".env", "w") as f:
-                    f.write("STRATA_SQLALCHEMY_URL=sqlite:///./test.db\n")
-                    f.write("STRATA_ASYNC=false\n")
+                with open("warden.toml", "w") as f:
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
+                    f.write("async = false\n")
 
                 config = get_config()
 
@@ -55,11 +52,11 @@ class TestConfig:
             os.chdir(tmpdir)
 
             try:
-                with open(".env", "w") as f:
+                with open("warden.toml", "w") as f:
                     f.write(
-                        "STRATA_SQLALCHEMY_URL=postgresql+asyncpg://user:pass@localhost/db\n"
+                        'sqlalchemy_url = "postgresql+asyncpg://user:pass@localhost/db"\n'
                     )
-                    f.write("STRATA_ASYNC=true\n")
+                    f.write("async = true\n")
 
                 config = get_config()
 
@@ -74,9 +71,9 @@ class TestConfig:
             os.chdir(tmpdir)
 
             try:
-                with open(".env", "w") as f:
-                    f.write("STRATA_SQLALCHEMY_URL=sqlite:///./test.db\n")
-                    f.write("STRATA_MODEL_PATHS=./models/user.py,./models/post.py\n")
+                with open("warden.toml", "w") as f:
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
+                    f.write('model_paths = ["./models/user.py", "./models/post.py"]\n')
 
                 config = get_config()
 
@@ -94,8 +91,8 @@ class TestConfig:
             os.chdir(tmpdir)
 
             try:
-                with open(".env", "w") as f:
-                    f.write("STRATA_ASYNC=false\n")
+                with open("warden.toml", "w") as f:
+                    f.write("async = false\n")
 
                 from dbwarden.exceptions import ConfigurationError
 
@@ -115,8 +112,8 @@ class TestAsyncSyncDetection:
             os.chdir(tmpdir)
 
             try:
-                with open(".env", "w") as f:
-                    f.write("STRATA_SQLALCHEMY_URL=sqlite:///./test.db\n")
+                with open("warden.toml", "w") as f:
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
                 result = is_async_enabled()
                 assert result == False
@@ -124,37 +121,37 @@ class TestAsyncSyncDetection:
                 os.chdir(old_cwd)
 
     def test_is_async_enabled_true(self):
-        """Test async detection with STRATA_ASYNC=true."""
+        """Test async detection with DBWARDEN_ASYNC=true."""
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
-            os.environ["STRATA_ASYNC"] = "true"
+            os.environ["DBWARDEN_ASYNC"] = "true"
             os.chdir(tmpdir)
 
             try:
-                with open(".env", "w") as f:
-                    f.write("STRATA_SQLALCHEMY_URL=sqlite:///./test.db\n")
+                with open("warden.toml", "w") as f:
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
                 result = is_async_enabled()
                 assert result == True
             finally:
-                os.environ.pop("STRATA_ASYNC", None)
+                os.environ.pop("DBWARDEN_ASYNC", None)
                 os.chdir(old_cwd)
 
     def test_is_async_enabled_false(self):
-        """Test async detection with STRATA_ASYNC=false."""
+        """Test async detection with DBWARDEN_ASYNC=false."""
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
-            os.environ["STRATA_ASYNC"] = "false"
+            os.environ["DBWARDEN_ASYNC"] = "false"
             os.chdir(tmpdir)
 
             try:
-                with open(".env", "w") as f:
-                    f.write("STRATA_SQLALCHEMY_URL=sqlite:///./test.db\n")
+                with open("warden.toml", "w") as f:
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
                 result = is_async_enabled()
                 assert result == False
             finally:
-                os.environ.pop("STRATA_ASYNC", None)
+                os.environ.pop("DBWARDEN_ASYNC", None)
                 os.chdir(old_cwd)
 
     def test_get_mode_sync(self):
@@ -164,8 +161,8 @@ class TestAsyncSyncDetection:
             os.chdir(tmpdir)
 
             try:
-                with open(".env", "w") as f:
-                    f.write("STRATA_SQLALCHEMY_URL=sqlite:///./test.db\n")
+                with open("warden.toml", "w") as f:
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
                 mode = get_mode()
                 assert mode == "sync"
@@ -176,17 +173,17 @@ class TestAsyncSyncDetection:
         """Test get_mode returns 'async' for async mode."""
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
-            os.environ["STRATA_ASYNC"] = "true"
+            os.environ["DBWARDEN_ASYNC"] = "true"
             os.chdir(tmpdir)
 
             try:
-                with open(".env", "w") as f:
-                    f.write("STRATA_SQLALCHEMY_URL=sqlite+aiosqlite:///./test.db\n")
+                with open("warden.toml", "w") as f:
+                    f.write('sqlalchemy_url = "sqlite+aiosqlite:///./test.db"\n')
 
                 mode = get_mode()
                 assert mode == "async"
             finally:
-                os.environ.pop("STRATA_ASYNC", None)
+                os.environ.pop("DBWARDEN_ASYNC", None)
                 os.chdir(old_cwd)
 
 

@@ -49,9 +49,9 @@ class TestDatabaseOperations:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
 
-            with open(".env", "w") as f:
-                f.write(f"STRATA_SQLALCHEMY_URL=sqlite:///{temp_db}\n")
-                f.write("STRATA_ASYNC=false\n")
+            with open("warden.toml", "w") as f:
+                f.write(f'sqlalchemy_url = "sqlite:///{temp_db}"\n')
+                f.write("async = false\n")
 
             yield {"db_path": temp_db}
 
