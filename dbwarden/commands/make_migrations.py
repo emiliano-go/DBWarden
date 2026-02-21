@@ -69,10 +69,10 @@ def make_migrations_cmd(
         model_paths = auto_discover_model_paths()
 
     if not model_paths:
-        logger.warning("No model paths found. Please set DBWARDEN_MODEL_PATHS in .env")
+        logger.warning("No model paths found. Please set model_paths in warden.toml")
         print("No SQLAlchemy models found. Please:")
         print("  1. Create models/ directory with your SQLAlchemy models")
-        print("  2. Or set DBWARDEN_MODEL_PATHS in .env")
+        print("  2. Or set model_paths in warden.toml")
         return
 
     logger.info(f"Discovering models in: {model_paths}")
