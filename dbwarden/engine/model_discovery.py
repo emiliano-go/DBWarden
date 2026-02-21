@@ -1,4 +1,5 @@
 import os
+import re
 import importlib.util
 import sys
 from pathlib import Path
@@ -458,3 +459,63 @@ def generate_create_table_sql(table: ModelTable) -> str:
 def generate_drop_table_sql(table_name: str) -> str:
     """Generate DROP TABLE SQL."""
     return f"DROP TABLE {table_name}"
+
+
+def extract_tables_from_migrations(migrations_dir: str) -> dict[str, set[str]]:
+    """
+    Extract table names and their columns from existing migrations.
+
+    Args:
+        migrations_dir: Path to migrations directory.
+
+    Returns:
+        Dictionary mapping table names to sets of column names.
+    """
+    from dbwarden.engine.file_parser import parse_upgrade_statements
+
+    tables: dict[str, set[str]] = {}
+
+    if not os.path.exists(migrations_dir):
+        return tables
+
+    for filename in sorted(os.listdir(migrations_dir)):
+        if not filename.endswith(".sql"):
+            continue
+        filepath = os.path.join(migrations_dir, filename)
+        statements = parse_upgrade_statements(filepath)
+
+        for stmt in statements:
+            create_match = re.search(
+                r"CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\w+)\s*\(",
+                stmt,
+                re.IGNORECASE,
+            )
+            if create_match:
+                table_name = create_match.group(1)
+
+                columns_str_match = re.search(r"\((.+)\)", stmt, re.DOTALL)
+                if columns_str_match:
+                    columns_str = columns_str_match.group(1)
+                    column_names = set()
+
+                    column_parts = re.split(r",\s*(?![^()]*\))", columns_str)
+                    for part in column_parts:
+                        part = part.strip()
+                        col_match = re.match(r"(\w+)", part, re.IGNORECASE)
+                        if col_match:
+                            col_name = col_match.group(1).lower()
+                            if col_name not in (
+                                "primary",
+                                "foreign",
+                                "unique",
+                                "check",
+                                "constraint",
+                            ):
+                                column_names.add(col_name)
+
+                    if table_name in tables:
+                        tables[table_name].update(column_names)
+                    else:
+                        tables[table_name] = column_names
+
+    return tables

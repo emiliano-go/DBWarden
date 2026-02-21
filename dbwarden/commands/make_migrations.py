@@ -11,6 +11,9 @@ from dbwarden.engine.model_discovery import (
     auto_discover_model_paths,
     generate_create_table_sql,
     generate_drop_table_sql,
+    generate_add_column_sql,
+    extract_tables_from_migrations,
+    ModelTable,
 )
 from dbwarden.engine.version import (
     get_migrations_directory,
@@ -123,6 +126,10 @@ def generate_migration_sql(
     """
     Generate upgrade and rollback SQL from table definitions.
 
+    Compares model tables with existing migrations to generate:
+    - CREATE TABLE for new tables
+    - ALTER TABLE ADD COLUMN for new columns in existing tables
+
     Args:
         tables: List of ModelTable objects.
         migrations_dir: Path to migrations directory for deduplication.
@@ -130,21 +137,28 @@ def generate_migration_sql(
     Returns:
         Tuple of (upgrade_sql, rollback_sql).
     """
-    pending_statements = set()
+    existing_tables = {}
     if migrations_dir:
-        pending_statements = get_pending_migration_statements(migrations_dir)
+        existing_tables = extract_tables_from_migrations(migrations_dir)
 
     upgrade_parts = []
     rollback_parts = []
 
     for table in tables:
-        create_sql = generate_create_table_sql(table)
-        drop_sql = generate_drop_table_sql(table.name)
+        existing_columns = existing_tables.get(table.name, set())
 
-        normalized_create = create_sql.strip()
-        if normalized_create not in pending_statements:
+        if not existing_columns:
+            create_sql = generate_create_table_sql(table)
             upgrade_parts.append(create_sql)
-            rollback_parts.append(drop_sql)
+            rollback_parts.append(generate_drop_table_sql(table.name))
+        else:
+            for column in table.columns:
+                if column.name.lower() not in existing_columns:
+                    alter_sql = generate_add_column_sql(table.name, column)
+                    upgrade_parts.append(alter_sql)
+                    rollback_parts.append(
+                        f"ALTER TABLE {table.name} DROP COLUMN {column.name}"
+                    )
 
     rollback_parts.reverse()
 
