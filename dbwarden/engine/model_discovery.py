@@ -210,7 +210,6 @@ def auto_discover_model_paths() -> List[str]:
         ".nox",
         "venv",
         "ENV",
-        ".env",
         ".egg",
         ".cache",
         "coverage",
