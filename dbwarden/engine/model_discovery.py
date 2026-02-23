@@ -461,6 +461,42 @@ def generate_drop_table_sql(table_name: str) -> str:
     return f"DROP TABLE {table_name}"
 
 
+def extract_tables_from_database(sqlalchemy_url: str) -> dict[str, set[str]]:
+    """
+    Extract table names and their columns from the actual database.
+
+    Args:
+        sqlalchemy_url: SQLAlchemy database URL.
+
+    Returns:
+        Dictionary mapping table names to sets of column names.
+    """
+    from sqlalchemy import create_engine, inspect
+
+    url = (
+        sqlalchemy_url.replace("+asyncpg", "")
+        .replace("+async", "")
+        .replace("+aiosqlite", "")
+    )
+
+    tables: dict[str, set[str]] = {}
+
+    try:
+        engine = create_engine(url)
+        inspector = inspect(engine)
+
+        for table_name in inspector.get_table_names():
+            columns = inspector.get_columns(table_name)
+            column_names = {col["name"].lower() for col in columns}
+            tables[table_name] = column_names
+
+        engine.dispose()
+    except Exception:
+        pass
+
+    return tables
+
+
 def extract_tables_from_migrations(migrations_dir: str) -> dict[str, set[str]]:
     """
     Extract table names and their columns from existing migrations.

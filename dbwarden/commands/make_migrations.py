@@ -13,6 +13,7 @@ from dbwarden.engine.model_discovery import (
     generate_drop_table_sql,
     generate_add_column_sql,
     extract_tables_from_migrations,
+    extract_tables_from_database,
     ModelTable,
 )
 from dbwarden.engine.version import (
@@ -126,20 +127,22 @@ def generate_migration_sql(
     """
     Generate upgrade and rollback SQL from table definitions.
 
-    Compares model tables with existing migrations to generate:
+    Compares model tables with the actual database schema to generate:
     - CREATE TABLE for new tables
     - ALTER TABLE ADD COLUMN for new columns in existing tables
 
     Args:
         tables: List of ModelTable objects.
-        migrations_dir: Path to migrations directory for deduplication.
+        migrations_dir: Path to migrations directory (unused, kept for compatibility).
 
     Returns:
         Tuple of (upgrade_sql, rollback_sql).
     """
-    existing_tables = {}
-    if migrations_dir:
-        existing_tables = extract_tables_from_migrations(migrations_dir)
+    try:
+        config = get_config()
+        existing_tables = extract_tables_from_database(config.sqlalchemy_url)
+    except Exception:
+        existing_tables = {}
 
     upgrade_parts = []
     rollback_parts = []
