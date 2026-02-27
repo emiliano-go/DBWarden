@@ -21,6 +21,12 @@ pip install dbwarden
 
 ## Configuration
 
+**⚠️ Warning**
+
+This is an experimental package. Your fuckups are not mine to fix. You have been warned.
+
+*Even though this is an experimental package, I added lots of failsafes to protect the connected DB as to avoid issues.*
+
 Create `warden.toml` in your project:
 
 ```toml
