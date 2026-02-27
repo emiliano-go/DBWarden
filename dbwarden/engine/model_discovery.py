@@ -473,16 +473,10 @@ def extract_tables_from_database(sqlalchemy_url: str) -> dict[str, set[str]]:
     """
     from sqlalchemy import create_engine, inspect
 
-    url = (
-        sqlalchemy_url.replace("+asyncpg", "")
-        .replace("+async", "")
-        .replace("+aiosqlite", "")
-    )
-
     tables: dict[str, set[str]] = {}
 
     try:
-        engine = create_engine(url)
+        engine = create_engine(sqlalchemy_url)
         inspector = inspect(engine)
 
         for table_name in inspector.get_table_names():

@@ -39,9 +39,6 @@ The command creates a starter configuration:
 # DBWarden Configuration
 sqlalchemy_url = "sqlite:///./mydb.db"
 
-# Enable async mode (set to false for sync connections)
-async = false
-
 # Optional: PostgreSQL schema to use
 # postgres_schema = "public"
 

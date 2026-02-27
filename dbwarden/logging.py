@@ -247,10 +247,6 @@ class DBWardenLogger:
         """Log a critical message."""
         self.logger.critical(msg, extra=kwargs)
 
-    def log_execution_mode(self, mode: str) -> None:
-        """Log detected execution mode."""
-        self.info(f"Detected execution mode: {mode}")
-
     def log_connection_init(self, db_type: str) -> None:
         """Log database connection initialization."""
         self.info(f"Database connection initialized: {db_type}")

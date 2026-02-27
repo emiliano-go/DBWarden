@@ -1,33 +1,59 @@
-import json
-import yaml
+import tomllib
+from pathlib import Path
 
-from dbwarden.config import get_config, get_non_secret_env_vars
+from dbwarden.config import get_toml_path
 from dbwarden.constants import DBWARDEN_VERSION
-from dbwarden.database.connection import get_mode, is_async_enabled
-from dbwarden.logging import get_logger
 
 
-def mode_cmd() -> None:
-    """Display current execution mode (sync or async)."""
-    mode = get_mode()
-    print(f"Execution mode: {mode}")
-    print(f"Async enabled: {is_async_enabled()}")
+def config_cmd() -> None:
+    """Display current warden.toml configuration."""
+    toml_path = get_toml_path()
 
+    if not toml_path:
+        print("No warden.toml found.")
+        return
 
-def env_cmd() -> None:
-    """Display relevant environment variables without leaking secrets."""
-    logger = get_logger()
-    config = get_config()
-    env_vars = get_non_secret_env_vars()
+    with open(toml_path, "rb") as f:
+        config = tomllib.load(f)
 
-    print("DBWarden Environment Configuration:")
+    warden_config = config.get("warden", config)
+
+    print(f"DBWarden Configuration ({toml_path}):")
     print("=" * 50)
-    print(f"DBWARDEN_SQLALCHEMY_URL: {env_vars.get('DBWARDEN_SQLALCHEMY_URL', '***')}")
-    print(f"DBWARDEN_ASYNC: {env_vars.get('DBWARDEN_ASYNC', 'false')}")
-    print(f"DBWARDEN_MODEL_PATHS: {env_vars.get('DBWARDEN_MODEL_PATHS', '(not set)')}")
-    print(
-        f"DBWARDEN_POSTGRES_SCHEMA: {env_vars.get('DBWARDEN_POSTGRES_SCHEMA', '(not set)')}"
-    )
+
+    if "sqlalchemy_url" in warden_config:
+        url = warden_config["sqlalchemy_url"]
+        if url:
+            masked_url = _mask_password(url)
+            print(f"sqlalchemy_url: {masked_url}")
+
+    if "model_paths" in warden_config:
+        model_paths = warden_config["model_paths"]
+        if model_paths:
+            print(f"model_paths: {model_paths}")
+
+    if "postgres_schema" in warden_config:
+        schema = warden_config["postgres_schema"]
+        if schema:
+            print(f"postgres_schema: {schema}")
+
+    print()
+    print(f"Config file: {toml_path}")
+
+
+def _mask_password(url: str) -> str:
+    """Mask password in connection URL."""
+    if "@" in url:
+        try:
+            protocol, rest = url.split("://", 1)
+            if "@" in rest:
+                creds, host_part = rest.split("@", 1)
+                if ":" in creds:
+                    user, _ = creds.split(":", 1)
+                    return f"{protocol}://{user}:***@{host_part}"
+        except Exception:
+            pass
+    return url
 
 
 def version_cmd() -> None:

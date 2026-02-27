@@ -64,8 +64,6 @@ def make_migrations_cmd(
     """
     logger = get_logger(verbose=verbose)
 
-    logger.log_execution_mode("async" if is_async_enabled() else "sync")
-
     config = get_config()
     model_paths = config.model_paths
 
@@ -201,10 +199,3 @@ def new_migration_cmd(description: str, version: str | None = None) -> None:
 
     logger.info(f"Created migration file: {filename}")
     print(f"Created migration file: {filepath}")
-
-
-def is_async_enabled() -> bool:
-    """Check if async mode is enabled."""
-    from dbwarden.database.connection import is_async_enabled
-
-    return is_async_enabled()

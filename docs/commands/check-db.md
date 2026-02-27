@@ -85,7 +85,7 @@ dbwarden check-db -o sql
 ### Tables
 
 - All tables in the database
-- Tables in specific PostgreSQL schema (if `DBWARDEN_POSTGRES_SCHEMA` is set)
+- Tables in specific PostgreSQL schema (if `postgres_schema` is set in warden.toml)
 
 ### Columns
 
@@ -163,7 +163,6 @@ diff before.json after.json
 Uses the same database connection as other commands:
 - Reads from `warden.toml` configuration
 - Uses `sqlalchemy_url`
-- Respects `async` setting
 
 ### Schema Inspection
 

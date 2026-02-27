@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dbwarden"
-version = "0.1.4"
+version = "0.1.5"
 description = "Database migration system for Python/SQLAlchemy projects"
 readme = "README.md"
 license = "MIT"
@@ -29,8 +29,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "aiosqlite>=0.22.1",
-    "asyncpg>=0.29.0,<0.32.0",
     "packaging>=25.0",
     "pyyaml>=6.0.3",
     "rich>=12.2.0",
@@ -45,17 +43,11 @@ dbwarden = "dbwarden.cli.main:main"
 dev = [
     "psycopg2-binary>=2.9.11",
     "pytest>=8.4.2",
-    "pytest-asyncio>=0.24.0",
 ]
-postgres-async = [
-    "asyncpg>=0.29.0,<0.32.0",
-    "sqlalchemy[postgresql]>=2.0.10",
-]
-postgres-sync = [
+postgres = [
     "psycopg2-binary>=2.9.11",
 ]
-sqlite-async = [
-    "aiosqlite>=0.22.1",
+sqlite = [
 ]
 
 [tool.hatch.build.targets.wheel]

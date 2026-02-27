@@ -43,9 +43,6 @@ sqlalchemy_url = "dialect+driver://username:password@host:port/database"
 # PostgreSQL
 sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"
 
-# PostgreSQL with async
-sqlalchemy_url = "postgresql+asyncpg://user:password@localhost:5432/mydb"
-
 # MySQL
 sqlalchemy_url = "mysql://user:password@localhost:3306/mydb"
 
@@ -54,43 +51,9 @@ sqlalchemy_url = "sqlite:///./mydb.db"
 
 # SQLite in memory
 sqlalchemy_url = "sqlite:///:memory:"
-
-# SQLite async
-sqlalchemy_url = "sqlite+aiosqlite:///./mydb.db"
-```
-
-### Environment Variables (Fallback)
-
-If `warden.toml` is not found, DBWarden will fall back to environment variables:
-
-```env
-DBWARDEN_SQLALCHEMY_URL=postgresql://user:pass@localhost:5432/mydb
-DBWARDEN_ASYNC=false
-DBWARDEN_MODEL_PATHS=app/models/
-DBWARDEN_POSTGRES_SCHEMA=public
 ```
 
 ## Optional Configuration
-
-### async
-
-Enable or disable asynchronous database operations.
-
-```toml
-async = true
-```
-
-| Value | Mode |
-|-------|------|
-| `true`, `1`, `yes` | Asynchronous |
-| `false`, `0`, `no` | Synchronous (default) |
-
-**Example:**
-
-```toml
-async = true
-sqlalchemy_url = "postgresql+asyncpg://user:password@localhost:5432/mydb"
-```
 
 ### model_paths
 
@@ -119,7 +82,6 @@ postgres_schema = "public"
 ```toml
 # Database Connection
 sqlalchemy_url = "postgresql://myuser:mypassword@localhost:5432/myapp"
-async = true
 
 # Model Discovery
 model_paths = ["app/models/", "models/"]
@@ -134,36 +96,32 @@ postgres_schema = "public"
 
 ```toml
 sqlalchemy_url = "postgresql://dev:dev123@localhost:5432/dev_db"
-async = false
 ```
 
 ### Staging Environment
 
 ```toml
 sqlalchemy_url = "postgresql://staging:staging123@staging.example.com:5432/staging_db"
-async = true
 ```
 
 ### Production Environment
 
 ```toml
 sqlalchemy_url = "postgresql://prod:securepass@prod.example.com:5432/prod_db"
-async = true
 ```
 
 ## Configuration Validation
 
-Use the `dbwarden env` command to verify your configuration without exposing sensitive information:
+Use the `dbwarden config` command to verify your configuration without exposing sensitive information:
 
 ```bash
-dbwarden env
+dbwarden config
 ```
 
 Output:
 
 ```
 sqlalchemy_url: ***
-async: true
 model_paths: models/
 postgres_schema: public
 ```
@@ -212,4 +170,4 @@ Verify that:
 1. **Never commit `warden.toml` to version control with secrets**: Add `warden.toml` to your `.gitignore` file if it contains credentials, or use a separate `warden.toml.example` as a template
 2. **Use different configurations per environment**: Create environment-specific configuration files
 3. **Secure your credentials**: Use secrets management in production
-4. **Validate configuration**: Run `dbwarden env` before applying migrations
+4. **Validate configuration**: Run `dbwarden config` before applying migrations

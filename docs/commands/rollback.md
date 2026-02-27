@@ -129,7 +129,6 @@ Rollback completed successfully: 1 migrations reverted.
 ### Verbose Output
 
 ```
-Detected execution mode: sync
 Rolling back migration: 0003_create_posts.sql (version: 0003)
 DROP TABLE posts;
 Rollback completed: 0003_create_posts.sql in 0.03s

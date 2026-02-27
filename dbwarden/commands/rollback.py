@@ -25,7 +25,6 @@ def rollback_cmd(
         verbose: Enable verbose logging.
     """
     logger = get_logger(verbose=verbose)
-    logger.log_execution_mode("async" if is_async_enabled() else "sync")
 
     if count is not None and to_version is not None:
         raise ValueError("Cannot specify both 'count' and 'to_version'.")
@@ -91,10 +90,3 @@ def _get_versions_to_rollback(
     )
 
     return dict(reversed(list(filepaths.items())))
-
-
-def is_async_enabled() -> bool:
-    """Check if async mode is enabled."""
-    from dbwarden.database.connection import is_async_enabled
-
-    return is_async_enabled()

@@ -197,7 +197,6 @@ Migrations completed successfully: 1 migrations applied.
 ### Verbose Output
 
 ```
-Detected execution mode: sync
 Pending migrations (1):
   - 0001
 Starting migration: 0001_create_users.sql (version: 0001)

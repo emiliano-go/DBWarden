@@ -31,14 +31,12 @@ Create `warden.toml` in your project:
 
 ```toml
 sqlalchemy_url = "sqlite:///./development.db"
-async = false
 ```
 
 Or use environment variables:
 
 ```env
 DBWARDEN_SQLALCHEMY_URL=postgresql://user:pass@localhost/db
-DBWARDEN_ASYNC=false  # or true for async mode
 ```
 
 ## Basic Commands
@@ -52,7 +50,6 @@ DBWARDEN_ASYNC=false  # or true for async mode
 | `dbwarden rollback` | Revert the last migration |
 | `dbwarden history` | Show migration history |
 | `dbwarden status` | Show current status |
-| `dbwarden mode` | Show sync/async mode |
 | `dbwarden check-db` | Inspect DB schema |
 | `dbwarden diff` | Show models vs DB differences |
 
@@ -97,14 +94,13 @@ dbwarden history
 | Variable | Description |
 |----------|-------------|
 | `DBWARDEN_SQLALCHEMY_URL` | DB connection URL |
-| `DBWARDEN_ASYNC` | Async mode (`true`/`false`) |
 | `DBWARDEN_MODEL_PATHS` | Paths to SQLAlchemy models |
 
 ## Supported Databases
 
-- PostgreSQL (sync + async)
-- SQLite (sync + async)
-- MySQL (sync)
+- PostgreSQL
+- SQLite
+- MySQL
 
 ## Docs
 

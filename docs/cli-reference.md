@@ -29,8 +29,7 @@ dbwarden [OPTIONS] COMMAND [ARGS]...
 | `check-db` | Inspect database schema | `-o` |
 | `diff` | Compare models vs database | `-v` |
 | `squash` | Merge consecutive migrations | `-v` |
-| `mode` | Show sync/async mode | None |
-| `env` | Display config (masked) | None |
+| `config` | Display warden.toml config | None |
 | `version` | Show DBWarden version | None |
 | `lock-status` | Check migration lock | None |
 | `unlock` | Release stuck lock | None |
@@ -193,18 +192,6 @@ dbwarden status
 
 ---
 
-### mode
-
-Display whether execution is sync or async.
-
-```bash
-dbwarden mode
-```
-
-**No arguments or options.**
-
----
-
 ### version
 
 Display DBWarden version and compatibility information.
@@ -229,7 +216,6 @@ dbwarden env
 
 Shows:
 - `sqlalchemy_url` (masked)
-- `async` setting
 - `model_paths`
 - `postgres_schema`
 
@@ -450,7 +436,6 @@ DBWarden uses `warden.toml` file for configuration:
 
 ```toml
 sqlalchemy_url = "postgresql://user:pass@localhost:5432/db"
-async = false
 model_paths = ["models/"]
 postgres_schema = "public"
 ```

@@ -26,9 +26,8 @@ DBWarden provides a comprehensive set of commands for managing database migratio
 |---------|-------------|
 | [history](commands/history.md) | Show migration history |
 | [status](commands/status.md) | Show migration status |
-| [mode](commands/mode.md) | Display sync/async mode |
 | [version](commands/version.md) | Display DBWarden version |
-| [env](commands/env.md) | Display environment configuration |
+| [config](commands/config.md) | Display warden.toml configuration |
 
 ### Database Inspection
 

@@ -3,14 +3,13 @@ import typer
 from dbwarden.cli.validators import validate_directory
 from dbwarden.commands import (
     handle_check_db,
+    handle_config,
     handle_diff,
-    handle_env,
     handle_history,
     handle_init,
     handle_lock_status,
     handle_make_migrations,
     handle_migrate,
-    handle_mode,
     handle_new,
     handle_rollback,
     handle_squash,
@@ -146,12 +145,6 @@ def diff(
 
 
 @app.command()
-def mode():
-    """Display whether execution is sync or async."""
-    handle_mode()
-
-
-@app.command()
 def squash(
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
@@ -163,9 +156,9 @@ def squash(
 
 
 @app.command()
-def env():
-    """Display relevant environment variables without leaking secrets."""
-    handle_env()
+def config():
+    """Display current warden.toml configuration."""
+    handle_config()
 
 
 @app.command()

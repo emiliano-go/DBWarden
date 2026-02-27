@@ -106,7 +106,6 @@ def migrate_cmd(
         backup_dir: Directory for backup files.
     """
     logger = get_logger(verbose=verbose)
-    logger.log_execution_mode("async" if is_async_enabled() else "sync")
 
     if count is not None and to_version is not None:
         raise ValueError("Cannot specify both 'count' and 'to_version'.")
@@ -270,10 +269,3 @@ def _get_filepaths_by_version(
         filepaths = seen
 
     return filepaths
-
-
-def is_async_enabled() -> bool:
-    """Check if async mode is enabled."""
-    from dbwarden.database.connection import is_async_enabled
-
-    return is_async_enabled()

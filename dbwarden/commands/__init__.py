@@ -6,9 +6,8 @@ from dbwarden.commands.make_migrations import make_migrations_cmd, new_migration
 from dbwarden.commands.migrate import migrate_cmd
 from dbwarden.commands.rollback import rollback_cmd
 from dbwarden.commands.status import status_cmd
-from dbwarden.commands.utils import env_cmd, mode_cmd, version_cmd
+from dbwarden.commands.utils import config_cmd, version_cmd
 from dbwarden.exceptions import DirectoryNotFoundError
-from dbwarden.logging import get_logger
 
 
 def handle_init() -> None:
@@ -18,8 +17,6 @@ def handle_init() -> None:
 
 def handle_make_migrations(description: str | None, verbose: bool) -> None:
     """Handle make-migrations command."""
-    logger = get_logger(verbose=verbose)
-    logger.log_execution_mode("async" if is_async_enabled() else "sync")
     make_migrations_cmd(description=description, verbose=verbose)
 
 
@@ -76,19 +73,14 @@ def handle_diff(diff_type: str, verbose: bool) -> None:
     diff_cmd(diff_type=diff_type, verbose=verbose)
 
 
-def handle_mode() -> None:
-    """Handle mode command."""
-    mode_cmd()
-
-
 def handle_squash(verbose: bool) -> None:
     """Handle squash command."""
     squash_cmd(verbose=verbose)
 
 
-def handle_env() -> None:
-    """Handle env command."""
-    env_cmd()
+def handle_config() -> None:
+    """Handle config command."""
+    config_cmd()
 
 
 def handle_version() -> None:
@@ -104,10 +96,3 @@ def handle_lock_status() -> None:
 def handle_unlock() -> None:
     """Handle unlock command."""
     unlock_cmd()
-
-
-def is_async_enabled() -> bool:
-    """Check if async mode is enabled."""
-    from dbwarden.database.connection import is_async_enabled
-
-    return is_async_enabled()

@@ -31,7 +31,6 @@ Create a `warden.toml` file:
 
 ```toml
 sqlalchemy_url = "postgresql://user:password@localhost:5432/myapp"
-async = false
 ```
 
 For SQLite:

@@ -24,9 +24,6 @@ def init_cmd() -> None:
 # Database connection URL (required)
 sqlalchemy_url = "sqlite:///./development.db"
 
-# Enable async mode (true/false)
-async = false
-
 # PostgreSQL schema (optional)
 # postgres_schema = "public"
 

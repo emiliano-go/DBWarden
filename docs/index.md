@@ -12,7 +12,6 @@ DBWarden addresses the critical challenge of maintaining consistent database sch
 - **Version Control**: Track all schema changes with detailed history and timestamps
 - **Rollback Support**: Safely revert migrations when needed
 - **Multiple Database Support**: Works with PostgreSQL, MySQL, and SQLite
-- **Async/Sync Modes**: Support for both synchronous and asynchronous database operations
 - **Model Discovery**: Automatically finds and processes your SQLAlchemy models
 - **Migration Locking**: Prevents concurrent migration execution
 - **Schema Inspection**: Inspect and compare database schemas

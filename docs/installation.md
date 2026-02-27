@@ -26,33 +26,21 @@ poetry add dbwarden
 
 DBWarden supports multiple databases. Install the dependencies for your specific database:
 
-### PostgreSQL (Synchronous)
+### PostgreSQL
 
 ```bash
 pip install dbwarden psycopg2-binary
 ```
 
-### PostgreSQL (Asynchronous)
-
-```bash
-pip install dbwarden asyncpg
-```
-
-### MySQL (Synchronous)
+### MySQL
 
 ```bash
 pip install dbwarden mysql-connector-python
 ```
 
-### SQLite (Synchronous)
+### SQLite
 
 SQLite support is included by default with SQLAlchemy.
-
-### SQLite (Asynchronous)
-
-```bash
-pip install dbwarden aiosqlite
-```
 
 ## Complete Development Installation
 
@@ -79,7 +67,7 @@ dbwarden version
 You should see output similar to:
 
 ```
-DBWarden Version: 1.0.0
+DBWarden Version: 0.1.5
 Python Version: 3.12.7 (main, Jan 19 2026, 23:31:25) [GCC 15.2.1 20251112]
 ```
 
