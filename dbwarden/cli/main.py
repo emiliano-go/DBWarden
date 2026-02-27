@@ -21,7 +21,9 @@ from dbwarden.commands import (
 from dbwarden.logging import get_logger
 
 app = typer.Typer(
-    help="DBWarden - Professional database migration system for Python models",
+    help="""DBWarden - Professional database migration system for SQLAlchemy models
+
+All commands support the --verbose / -v flag for detailed output.""",
     add_completion=False,
 )
 
@@ -188,6 +190,9 @@ def unlock():
 
 def main() -> None:
     """Main entry point for DBWarden CLI."""
+    from dbwarden.database import reset_connection_logging
+
+    reset_connection_logging()
     app()
 
 
