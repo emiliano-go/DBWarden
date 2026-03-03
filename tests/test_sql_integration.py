@@ -12,6 +12,7 @@ from sqlalchemy import (
     ForeignKey,
     Table,
     MetaData,
+    text,
 )
 from sqlalchemy.orm import declarative_base
 
@@ -51,7 +52,6 @@ class TestDatabaseOperations:
 
             with open("warden.toml", "w") as f:
                 f.write(f'sqlalchemy_url = "sqlite:///{temp_db}"\n')
-                f.write("async = false\n")
 
             yield {"db_path": temp_db}
 
@@ -152,7 +152,8 @@ class TestMigrationExecution:
         engine = create_engine(f"sqlite:///{temp_db}")
 
         with engine.connect() as conn:
-            conn.execute("""
+            conn.execute(
+                text("""
                 CREATE TABLE users (
                     id INTEGER PRIMARY KEY,
                     name VARCHAR(100) NOT NULL,
@@ -160,6 +161,7 @@ class TestMigrationExecution:
                     age INTEGER
                 )
             """)
+            )
 
         engine.dispose()
 
@@ -180,13 +182,16 @@ class TestMigrationExecution:
         engine = create_engine(f"sqlite:///{temp_db}")
 
         with engine.connect() as conn:
-            conn.execute("""
+            conn.execute(
+                text("""
                 CREATE TABLE users (
                     id INTEGER PRIMARY KEY,
                     name VARCHAR(100)
                 )
             """)
-            conn.execute("""
+            )
+            conn.execute(
+                text("""
                 CREATE TABLE posts (
                     id INTEGER PRIMARY KEY,
                     title VARCHAR(255),
@@ -194,6 +199,7 @@ class TestMigrationExecution:
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             """)
+            )
 
         engine.dispose()
 
@@ -203,9 +209,9 @@ class TestMigrationExecution:
 
         with engine.connect() as conn:
             conn.execute(
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, name VARCHAR(100))"
+                text("CREATE TABLE users (id INTEGER PRIMARY KEY, name VARCHAR(100))")
             )
-            conn.execute("ALTER TABLE users ADD COLUMN email VARCHAR(255)")
+            conn.execute(text("ALTER TABLE users ADD COLUMN email VARCHAR(255)"))
 
         engine.dispose()
 
@@ -224,9 +230,9 @@ class TestMigrationExecution:
 
         with engine.connect() as conn:
             conn.execute(
-                "CREATE TABLE users (id INTEGER PRIMARY KEY, email VARCHAR(255))"
+                text("CREATE TABLE users (id INTEGER PRIMARY KEY, email VARCHAR(255))")
             )
-            conn.execute("CREATE UNIQUE INDEX ix_users_email ON users(email)")
+            conn.execute(text("CREATE UNIQUE INDEX ix_users_email ON users(email)"))
 
         engine.dispose()
 
@@ -242,7 +248,7 @@ class TestMigrationExecution:
 
         with engine.connect() as conn:
             for version, sql in migrations:
-                conn.execute(sql)
+                conn.execute(text(sql))
 
         engine.dispose()
 

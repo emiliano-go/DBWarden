@@ -180,7 +180,7 @@ tables = inspector.get_table_names()
 Verify database connection:
 
 ```bash
-dbwarden env
+dbwarden config
 # Check sqlalchemy_url is correct
 
 # Test connection

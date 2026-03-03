@@ -180,49 +180,12 @@ Custom versions must be 4-digit numbers:
 dbwarden new "urgent fix" --version 9999
 ```
 
-## Example: Data Migration
-
-```sql
--- migrations/0003_normalize_usernames.sql
-
--- upgrade
-
-UPDATE users
-SET username = LOWER(username)
-WHERE username IS NOT NULL;
-
--- rollback
-
--- No rollback needed for data normalization
-```
-
-## Example: Complex Schema Change
-
-```sql
--- migrations/0004_add_post_status.sql
-
--- upgrade
-
-ALTER TABLE posts ADD COLUMN status VARCHAR(20) DEFAULT 'draft';
-
-CREATE TYPE post_status AS ENUM ('draft', 'published', 'archived');
-
-ALTER TABLE posts DROP COLUMN status;
-ALTER TABLE posts ADD COLUMN status post_status DEFAULT 'draft';
-
--- rollback
-
-DROP TYPE post_status;
-ALTER TABLE posts DROP COLUMN status;
-ALTER TABLE posts ADD COLUMN status VARCHAR(20) DEFAULT 'draft';
-```
-
 ## Version Numbering
 
 If you don't specify a version, the next sequential number is auto-generated:
 
 ```
-0001_initial.sql
+0001_initial_schema.sql
 0002_add_users.sql
 0003_add_posts.sql
 0004_breaking_changes.sql
@@ -230,11 +193,8 @@ If you don't specify a version, the next sequential number is auto-generated:
 
 Custom versions must be 4-digit numbers:
 
-```
-0001_initial.sql
-0002_add_users.sql
-0003_add_posts.sql
-9999_urgent_fix.sql
+```bash
+dbwarden new "urgent fix" --version 9999
 ```
 
 ## Best Practices

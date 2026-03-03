@@ -22,8 +22,6 @@ nav:
       - diff: commands/diff.md
       - squash: commands/squash.md
       - lock/unlock: commands/lock.md
-      - env: commands/env.md
-      - mode: commands/mode.md
       - version: commands/version.md
   - Migration Files: migration-files.md
   - SQLAlchemy Models: models.md
@@ -32,7 +30,7 @@ nav:
   - CLI Reference: cli-reference.md
 
 theme:
-  name: material
+  name: mkdocs
   palette:
     primary: indigo
     accent: blue
