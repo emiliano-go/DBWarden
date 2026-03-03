@@ -87,7 +87,7 @@ dbwarden new DESCRIPTION [OPTIONS]
 - `DESCRIPTION`: Description of the migration (required)
 
 **Options:**
-- `--version VERSION`, `-v VERSION`: Version number for the migration (optional)
+- `--version VERSION`: Version number for the migration (optional)
 
 **Examples:**
 ```bash
@@ -204,12 +204,12 @@ dbwarden version
 
 ---
 
-### env
+### config
 
 Display configuration without leaking secrets.
 
 ```bash
-dbwarden env
+dbwarden config
 ```
 
 **No arguments or options.**
@@ -488,7 +488,7 @@ chmod +x /path/to/dbwarden
 
 ```bash
 # Validate warden.toml file
-dbwarden env
+dbwarden config
 
 # Check file exists
 ls -la warden.toml

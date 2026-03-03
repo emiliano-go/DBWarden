@@ -3,25 +3,8 @@ import tempfile
 import os
 from pathlib import Path
 
-from dbwarden.config import get_config
-from dbwarden.database.connection import is_async_enabled, get_mode
+from dbwarden.config import get_config, get_toml_path
 from dbwarden.logging import get_logger, DBWardenLogger
-
-
-@pytest.fixture(autouse=True)
-def clean_env():
-    """Clean environment variables before each test."""
-    env_vars = [
-        "DBWARDEN_ASYNC",
-    ]
-    old_vals = {}
-    for var in env_vars:
-        old_vals[var] = os.environ.pop(var, None)
-    yield
-    for var in env_vars:
-        os.environ.pop(var, None)
-        if old_vals[var] is not None:
-            os.environ[var] = old_vals[var]
 
 
 class TestConfig:
@@ -36,31 +19,10 @@ class TestConfig:
             try:
                 with open("warden.toml", "w") as f:
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
-                    f.write("async = false\n")
 
                 config = get_config()
 
                 assert config.sqlalchemy_url == "sqlite:///./test.db"
-                assert config.async_mode == False
-            finally:
-                os.chdir(old_cwd)
-
-    def test_get_config_with_async_true(self):
-        """Test async mode is detected correctly."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            old_cwd = os.getcwd()
-            os.chdir(tmpdir)
-
-            try:
-                with open("warden.toml", "w") as f:
-                    f.write(
-                        'sqlalchemy_url = "postgresql+asyncpg://user:pass@localhost/db"\n'
-                    )
-                    f.write("async = true\n")
-
-                config = get_config()
-
-                assert config.async_mode == True
             finally:
                 os.chdir(old_cwd)
 
@@ -84,6 +46,42 @@ class TestConfig:
             finally:
                 os.chdir(old_cwd)
 
+    def test_get_config_model_paths_string(self):
+        """Test model paths as comma-separated string."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
+                    f.write('model_paths = "./models"\n')
+
+                config = get_config()
+
+                assert config.model_paths is not None
+                assert len(config.model_paths) == 1
+                assert "./models" in config.model_paths
+            finally:
+                os.chdir(old_cwd)
+
+    def test_get_config_postgres_schema(self):
+        """Test postgres schema configuration."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
+                    f.write('postgres_schema = "custom_schema"\n')
+
+                config = get_config()
+
+                assert config.postgres_schema == "custom_schema"
+            finally:
+                os.chdir(old_cwd)
+
     def test_missing_sqlalchemy_url_raises_error(self):
         """Test that missing SQLAlchemy URL raises ConfigurationError."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -92,7 +90,7 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
-                    f.write("async = false\n")
+                    f.write("# Empty config\n")
 
                 from dbwarden.exceptions import ConfigurationError
 
@@ -101,12 +99,30 @@ class TestConfig:
             finally:
                 os.chdir(old_cwd)
 
+    def test_get_config_parent_directory(self):
+        """Test config is found in parent directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
 
-class TestAsyncSyncDetection:
-    """Tests for async/sync mode detection."""
+            # Create parent with warden.toml
+            parent_dir = os.path.join(tmpdir, "parent")
+            os.makedirs(parent_dir)
+            with open(os.path.join(parent_dir, "warden.toml"), "w") as f:
+                f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
-    def test_is_async_enabled_default(self):
-        """Test async detection when env is not set."""
+            # Create child directory and run from there
+            child_dir = os.path.join(parent_dir, "child")
+            os.makedirs(child_dir)
+            os.chdir(child_dir)
+
+            try:
+                config = get_config()
+                assert config.sqlalchemy_url == "sqlite:///./test.db"
+            finally:
+                os.chdir(old_cwd)
+
+    def test_get_toml_path_finds_file(self):
+        """Test get_toml_path finds warden.toml."""
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
@@ -115,75 +131,22 @@ class TestAsyncSyncDetection:
                 with open("warden.toml", "w") as f:
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
-                result = is_async_enabled()
-                assert result == False
+                path = get_toml_path()
+                assert path is not None
+                assert path.name == "warden.toml"
             finally:
                 os.chdir(old_cwd)
 
-    def test_is_async_enabled_true(self):
-        """Test async detection with DBWARDEN_ASYNC=true."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            old_cwd = os.getcwd()
-            os.environ["DBWARDEN_ASYNC"] = "true"
-            os.chdir(tmpdir)
-
-            try:
-                with open("warden.toml", "w") as f:
-                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
-
-                result = is_async_enabled()
-                assert result == True
-            finally:
-                os.environ.pop("DBWARDEN_ASYNC", None)
-                os.chdir(old_cwd)
-
-    def test_is_async_enabled_false(self):
-        """Test async detection with DBWARDEN_ASYNC=false."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            old_cwd = os.getcwd()
-            os.environ["DBWARDEN_ASYNC"] = "false"
-            os.chdir(tmpdir)
-
-            try:
-                with open("warden.toml", "w") as f:
-                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
-
-                result = is_async_enabled()
-                assert result == False
-            finally:
-                os.environ.pop("DBWARDEN_ASYNC", None)
-                os.chdir(old_cwd)
-
-    def test_get_mode_sync(self):
-        """Test get_mode returns 'sync' for sync mode."""
+    def test_get_toml_path_returns_none_when_not_found(self):
+        """Test get_toml_path returns None when file not found."""
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
 
             try:
-                with open("warden.toml", "w") as f:
-                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
-
-                mode = get_mode()
-                assert mode == "sync"
+                path = get_toml_path()
+                assert path is None
             finally:
-                os.chdir(old_cwd)
-
-    def test_get_mode_async(self):
-        """Test get_mode returns 'async' for async mode."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            old_cwd = os.getcwd()
-            os.environ["DBWARDEN_ASYNC"] = "true"
-            os.chdir(tmpdir)
-
-            try:
-                with open("warden.toml", "w") as f:
-                    f.write('sqlalchemy_url = "sqlite+aiosqlite:///./test.db"\n')
-
-                mode = get_mode()
-                assert mode == "async"
-            finally:
-                os.environ.pop("DBWARDEN_ASYNC", None)
                 os.chdir(old_cwd)
 
 
@@ -220,12 +183,6 @@ class TestLogger:
         logger.debug("Debug message")
         logger.log_sql_statement("SELECT * FROM users")
 
-    def test_logger_log_execution_mode(self):
-        """Test logging execution mode."""
-        logger = DBWardenLogger(verbose=False)
-        logger.log_execution_mode("sync")
-        logger.log_execution_mode("async")
-
     def test_logger_log_connection_init(self):
         """Test logging connection initialization."""
         logger = DBWardenLogger(verbose=False)
@@ -235,3 +192,43 @@ class TestLogger:
         """Test logging pending migrations."""
         logger = DBWardenLogger(verbose=False)
         logger.log_pending_migrations(["V1__init.sql", "V2__add_users.sql"])
+
+    def test_logger_log_migration_start(self):
+        """Test logging migration start."""
+        logger = DBWardenLogger(verbose=False)
+        logger.log_migration_start("0001", "V1__init.sql")
+
+    def test_logger_log_migration_end(self):
+        """Test logging migration end."""
+        logger = DBWardenLogger(verbose=False)
+        logger.log_migration_end("0001", "V1__init.sql", 0.05)
+
+    def test_logger_log_rollback_end(self):
+        """Test logging rollback end."""
+        logger = DBWardenLogger(verbose=False)
+        logger.log_rollback_end("0001", "V1__init.sql", 0.03)
+
+    def test_logger_log_backup_created(self):
+        """Test logging backup creation."""
+        logger = DBWardenLogger(verbose=False)
+        logger.log_backup_created("/path/to/backup.db")
+
+    def test_logger_log_baseline_set(self):
+        """Test logging baseline set."""
+        logger = DBWardenLogger(verbose=False)
+        logger.log_baseline_set("0001")
+
+    def test_get_logger_returns_same_instance(self):
+        """Test get_logger returns same instance."""
+        logger1 = get_logger()
+        logger2 = get_logger()
+        assert logger1 is logger2
+
+    def test_reset_logger(self):
+        """Test reset_logger creates new instance."""
+        from dbwarden.logging import reset_logger
+
+        logger1 = get_logger()
+        reset_logger()
+        logger2 = get_logger()
+        assert logger1 is not logger2
