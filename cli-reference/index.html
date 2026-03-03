@@ -99,14 +99,6 @@
 </li>
                                     
 <li>
-    <a href="../commands/env.md" class="dropdown-item">env</a>
-</li>
-                                    
-<li>
-    <a href="../commands/mode.md" class="dropdown-item">mode</a>
-</li>
-                                    
-<li>
     <a href="../commands/version/" class="dropdown-item">version</a>
 </li>
                                 </ul>
@@ -383,7 +375,7 @@ dbwarden<span class="w"> </span>make-migrations
 <p><strong>Arguments:</strong>
 - <code>DESCRIPTION</code>: Description of the migration (required)</p>
 <p><strong>Options:</strong>
-- <code>--version VERSION</code>, <code>-v VERSION</code>: Version number for the migration (optional)</p>
+- <code>--version VERSION</code>: Version number for the migration (optional)</p>
 <p><strong>Examples:</strong></p>
 <div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>new<span class="w"> </span><span class="s2">&quot;add index to users email&quot;</span>
 dbwarden<span class="w"> </span>new<span class="w"> </span><span class="s2">&quot;custom migration&quot;</span><span class="w"> </span>--version<span class="w"> </span><span class="m">2</span>.0.0
@@ -462,9 +454,9 @@ dbwarden<span class="w"> </span>squash<span class="w"> </span>--verbose
 
 <p><strong>No arguments or options.</strong></p>
 <hr />
-<h3 id="env">env<a class="headerlink" href="#env" title="Permanent link">&para;</a></h3>
+<h3 id="config">config<a class="headerlink" href="#config" title="Permanent link">&para;</a></h3>
 <p>Display configuration without leaking secrets.</p>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>env
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>config
 </code></pre></div>
 
 <p><strong>No arguments or options.</strong></p>
@@ -698,7 +690,7 @@ chmod<span class="w"> </span>+x<span class="w"> </span>/path/to/dbwarden
 
 <h3 id="invalid-configuration">Invalid Configuration<a class="headerlink" href="#invalid-configuration" title="Permanent link">&para;</a></h3>
 <div class="codehilite"><pre><span></span><code><span class="c1"># Validate warden.toml file</span>
-dbwarden<span class="w"> </span>env
+dbwarden<span class="w"> </span>config
 
 <span class="c1"># Check file exists</span>
 ls<span class="w"> </span>-la<span class="w"> </span>warden.toml
