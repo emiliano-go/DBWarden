@@ -13,6 +13,8 @@ A database migration system for Python/SQLAlchemy projects.
   <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
 </a>
 
+---
+
 <img src="assets/banner.png" width="100%">
 
 </div>
