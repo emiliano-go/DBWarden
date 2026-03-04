@@ -1,6 +1,10 @@
 <div align="center">
 
+<img src="assets/icon.png" width="128" height="128">
+
 # DBWarden
+
+<img src="assets/banner.png" width="400">
 
 A database migration system for Python/SQLAlchemy projects.
 

@@ -3,6 +3,7 @@ site_description: Database migration system for Python/SQLAlchemy projects
 site_author: Emiliano Gandini Outeda
 repo_url: https://github.com/emiliano-gandini-outeda/dbwarden
 edit_uri: edit/main/docs
+site_icon: assets/icon.png
 
 nav:
   - Home: index.md
