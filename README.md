@@ -1,10 +1,8 @@
 <div align="center">
 
-<img src="assets/icon.png" width="128" height="128">
+<img src="assets/icon.png" width="128" height="128" style="border-radius: 20px;">
 
 # DBWarden
-
-<img src="assets/banner.png" width="400">
 
 A database migration system for Python/SQLAlchemy projects.
 
@@ -14,6 +12,8 @@ A database migration system for Python/SQLAlchemy projects.
 <a href="https://deepwiki.com/emiliano-gandini-outeda/DBWarden">
   <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
 </a>
+
+<img src="assets/banner.png" width="100%">
 
 </div>
 

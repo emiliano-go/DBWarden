@@ -3,7 +3,18 @@ site_description: Database migration system for Python/SQLAlchemy projects
 site_author: Emiliano Gandini Outeda
 repo_url: https://github.com/emiliano-gandini-outeda/dbwarden
 edit_uri: edit/main/docs
-site_icon: assets/icon.png
+
+theme:
+  name: material
+  favicon: assets/icon.png
+  palette:
+    primary: indigo
+    accent: blue
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - search.suggest
+    - search.highlight
 
 nav:
   - Home: index.md
@@ -29,17 +40,6 @@ nav:
   - Supported Databases: databases.md
   - Advanced Features: advanced.md
   - CLI Reference: cli-reference.md
-
-theme:
-  name: mkdocs
-  palette:
-    primary: indigo
-    accent: blue
-  features:
-    - navigation.tabs
-    - navigation.sections
-    - search.suggest
-    - search.highlight
 
 markdown_extensions:
   - admonition
