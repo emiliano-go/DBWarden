@@ -21,6 +21,10 @@ def init_cmd() -> None:
         toml_content = """# DBWarden Configuration
 # See documentation: https://emiliano-gandini-outeda.me/DBWarden/
 
+# Logical database type (required)
+# Supported: sqlite, postgres, mysql, clickhouse
+database_type = "sqlite"
+
 # Database connection URL (required)
 sqlalchemy_url = "sqlite:///./development.db"
 
