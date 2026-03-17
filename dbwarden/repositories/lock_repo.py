@@ -1,20 +1,16 @@
-from typing import Optional
-
 from sqlalchemy import text
 
 from dbwarden.database.connection import get_db_connection
-from dbwarden.database.queries import SQL_QUERIES, QueryMethod
-
-
-def get_query(method: QueryMethod, **kwargs) -> str:
-    """Get a SQL query by method."""
-    return SQL_QUERIES.get(method, "")
+from dbwarden.database.queries import QueryMethod, get_query
 
 
 def create_lock_table_if_not_exists() -> None:
     """Create the lock table if it doesn't exist."""
     with get_db_connection() as connection:
         connection.execute(text(get_query(QueryMethod.CREATE_LOCK_TABLE)))
+        init_query = get_query(QueryMethod.INIT_LOCK_ROW)
+        if init_query:
+            connection.execute(text(init_query))
 
 
 def acquire_lock() -> bool:
@@ -43,6 +39,6 @@ def check_lock() -> bool:
         with get_db_connection() as connection:
             result = connection.execute(text(get_query(QueryMethod.CHECK_LOCK)))
             locked = result.scalar_one_or_none()
-            return locked is True
+            return bool(locked)
     except Exception:
         return False
