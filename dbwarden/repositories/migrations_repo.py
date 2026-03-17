@@ -3,13 +3,8 @@ from typing import Optional
 from sqlalchemy import Result, Row, text
 
 from dbwarden.database.connection import get_db_connection
-from dbwarden.database.queries import SQL_QUERIES, QueryMethod
+from dbwarden.database.queries import QueryMethod, get_current_dialect, get_query
 from dbwarden.models import MigrationRecord
-
-
-def get_query(method: QueryMethod, **kwargs) -> str:
-    """Get a SQL query by method."""
-    return SQL_QUERIES.get(method, "")
 
 
 def run_migration(
@@ -198,16 +193,37 @@ def run_repeatable_migration(
     checksum = calculate_checksum(sql_statements)
     description = get_description_from_filename(filename)
 
+    dialect = get_current_dialect()
+
     with get_db_connection() as connection:
         for statement in sql_statements:
             connection.execute(text(statement))
 
-        connection.execute(
-            text(get_query(QueryMethod.UPSERT_REPEATABLE_MIGRATION)),
-            parameters={
-                "description": description,
-                "filename": filename,
-                "migration_type": migration_type,
-                "checksum": checksum,
-            },
-        )
+        if dialect.supports_repeatable_upsert:
+            connection.execute(
+                text(get_query(QueryMethod.UPSERT_REPEATABLE_MIGRATION)),
+                parameters={
+                    "description": description,
+                    "filename": filename,
+                    "migration_type": migration_type,
+                    "checksum": checksum,
+                },
+            )
+        else:
+            delete_query = get_query(QueryMethod.DELETE_REPEATABLE_BY_FILENAME)
+            if delete_query:
+                connection.execute(
+                    text(delete_query),
+                    parameters={"filename": filename},
+                )
+
+            connection.execute(
+                text(get_query(QueryMethod.INSERT_VERSION)),
+                parameters={
+                    "version": None,
+                    "description": description,
+                    "filename": filename,
+                    "migration_type": migration_type,
+                    "checksum": checksum,
+                },
+            )
