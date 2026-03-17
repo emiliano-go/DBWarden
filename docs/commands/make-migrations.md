@@ -93,7 +93,7 @@ DROP TABLE users
 Before running `make-migrations`:
 
 1. Run `dbwarden init` to create migrations directory
-2. Create `warden.toml` with `sqlalchemy_url`
+2. Create `warden.toml` with `database_type` and `sqlalchemy_url`
 3. Define SQLAlchemy models with `__tablename__` attribute
 
 ## Validation Checks
@@ -142,6 +142,10 @@ The search traverses up to 5 parent directories from the current working directo
 | `Date` | `DATE` |
 | `JSON` | `JSON` |
 
+For ClickHouse targets, DBWarden maps types like `Integer→Int32`,
+`Boolean→UInt8`, `DateTime→DateTime`, etc., and applies any overrides defined in
+`Column(..., info={"clickhouse_type": "UInt64"})`.
+
 ## Supported Constraints
 
 - Primary Key (`primary_key=True`)
@@ -149,6 +153,15 @@ The search traverses up to 5 parent directories from the current working directo
 - Not Null (`nullable=False`)
 - Default values
 - Foreign Key (`ForeignKey('table.column')`)
+
+### ClickHouse-specific Options
+
+- Table-level hints from `__table_args__['info']` (e.g., `clickhouse_engine`,
+  `clickhouse_order_by`, `clickhouse_partition_by`, `clickhouse_settings`).
+- Column-level hints from `column.info` (`clickhouse_type`,
+  `clickhouse_codec`, `clickhouse_ttl`).
+- Primary keys/unique constraints are interpreted as part of the engine
+  ordering/keys rather than inline `PRIMARY KEY` clauses.
 
 ## Best Practices
 

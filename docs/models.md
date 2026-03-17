@@ -42,6 +42,11 @@ class User(Base):
 | `LargeBinary` | Binary data | `BLOB` |
 | `Binary` | Binary data | `VARBINARY` |
 
+For ClickHouse projects DBWarden maps SQLAlchemy visit names (e.g. `Integer`,
+`Boolean`, `DateTime`) to the appropriate ClickHouse types (`Int32`, `UInt8`,
+`DateTime`). Use `Column(info={"clickhouse_type": "UInt64"})` to override the
+mapping for a specific column.
+
 ## Column Options
 
 ### Primary Key
@@ -75,6 +80,38 @@ class User(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
+
+### ClickHouse Metadata
+
+Embed ClickHouse-specific hints using `__table_args__['info']` for table-level
+options and `Column(..., info={...})` for column-level overrides:
+
+```python
+class ClickEvent(Base):
+    __tablename__ = "click_events"
+    __table_args__ = {
+        "info": {
+            "clickhouse_engine": "ReplacingMergeTree()",
+            "clickhouse_order_by": "(event_id)",
+            "clickhouse_partition_by": "toYYYYMM(occurred_at)",
+            "clickhouse_settings": {"index_granularity": 64}
+        }
+    }
+
+    event_id = Column(Integer, primary_key=True, info={"clickhouse_type": "UInt64"})
+    occurred_at = Column(DateTime, nullable=False)
+    payload = Column(String(255))
+    is_active = Column(Boolean, nullable=False, default=True, info={"clickhouse_codec": "T64"})
+```
+
+Recognized keys include:
+
+- Table-level: `clickhouse_engine`, `clickhouse_order_by`, `clickhouse_partition_by`,
+  `clickhouse_primary_key`, `clickhouse_sample_by`, `clickhouse_ttl`, `clickhouse_settings`.
+- Column-level: `clickhouse_type`, `clickhouse_codec`, `clickhouse_ttl`.
+
+These values feed into the generated ClickHouse SQL whenever
+`database_type = "clickhouse"`.
 ```
 
 ### Unique Constraint

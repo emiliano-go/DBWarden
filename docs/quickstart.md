@@ -30,13 +30,22 @@ myproject/
 Create a `warden.toml` file:
 
 ```toml
+database_type = "postgres"
 sqlalchemy_url = "postgresql://user:password@localhost:5432/myapp"
 ```
 
 For SQLite:
 
 ```toml
+database_type = "sqlite"
 sqlalchemy_url = "sqlite:///./myapp.db"
+```
+
+For ClickHouse:
+
+```toml
+database_type = "clickhouse"
+sqlalchemy_url = "clickhousedb+connect://user:password@localhost:8123/analytics"
 ```
 
 ## Step 4: Define Your SQLAlchemy Models
@@ -45,7 +54,7 @@ Create your models in the `models/` directory:
 
 ```python
 # models/user.py
-from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 from sqlalchemy.orm import declarative_base
 import datetime
 
@@ -58,7 +67,25 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)
     email = Column(String(255), unique=True, nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+
+# models/click_event.py (ClickHouse metadata example)
+class ClickEvent(Base):
+    __tablename__ = "click_events"
+    __table_args__ = {
+        "info": {
+            "clickhouse_engine": "ReplacingMergeTree()",
+            "clickhouse_order_by": "(event_id)"
+        }
+    }
+
+    event_id = Column(Integer, primary_key=True, info={"clickhouse_type": "UInt64"})
+    payload = Column(String(255))
+    occurred_at = Column(DateTime, nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True, info={"clickhouse_codec": "T64"})
 ```
+ClickHouse-specific table/column hints live inside these `info` dictionaries and
+are picked up automatically during `make-migrations`.
 
 ## Step 5: Initialize DBWarden
 
@@ -73,7 +100,7 @@ Created configuration file: /home/user/myproject/warden.toml
 DBWarden migrations directory created: /home/user/myproject/migrations
 
 Next steps:
-  1. Edit warden.toml with your database connection URL
+  1. Edit warden.toml with your database_type and connection URL
   2. Run 'dbwarden make-migrations' to generate migrations from your models
 ```
 

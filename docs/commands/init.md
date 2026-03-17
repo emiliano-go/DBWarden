@@ -27,7 +27,7 @@ Created configuration file: /home/user/myproject/warden.toml
 DBWarden migrations directory created: /home/user/myproject/migrations
 
 Next steps:
-  1. Edit warden.toml with your database connection URL
+  1. Edit warden.toml with your database_type and connection URL
   2. Run 'dbwarden make-migrations' to generate migrations from your models
 ```
 
@@ -37,6 +37,7 @@ The command creates a starter configuration:
 
 ```toml
 # DBWarden Configuration
+database_type = "sqlite"
 sqlalchemy_url = "sqlite:///./mydb.db"
 
 # Optional: PostgreSQL schema to use

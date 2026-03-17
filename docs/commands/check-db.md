@@ -162,7 +162,7 @@ diff before.json after.json
 
 Uses the same database connection as other commands:
 - Reads from `warden.toml` configuration
-- Uses `sqlalchemy_url`
+- Uses `database_type` and `sqlalchemy_url`
 
 ### Schema Inspection
 
@@ -181,7 +181,7 @@ Verify database connection:
 
 ```bash
 dbwarden config
-# Check sqlalchemy_url is correct
+# Check database_type and sqlalchemy_url are correct
 
 # Test connection
 python -c "from sqlalchemy import create_engine; engine = create_engine('$URL'); engine.connect()"

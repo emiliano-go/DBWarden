@@ -215,6 +215,7 @@ dbwarden config
 **No arguments or options.**
 
 Shows:
+- `database_type`
 - `sqlalchemy_url` (masked)
 - `model_paths`
 - `postgres_schema`
@@ -435,6 +436,7 @@ Backups are stored in the `backups/` directory by default.
 DBWarden uses `warden.toml` file for configuration:
 
 ```toml
+database_type = "postgres"
 sqlalchemy_url = "postgresql://user:pass@localhost:5432/db"
 model_paths = ["models/"]
 postgres_schema = "public"

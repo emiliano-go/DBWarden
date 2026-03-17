@@ -280,7 +280,8 @@ dbwarden migrate --with-backup --backup-dir /path/to/backups
 
 DBWarden provides clear error messages for common issues:
 
-- **Missing warden.toml file**: "sqlalchemy_url is required in warden.toml"
+- **Missing database_type**: "database_type is required in warden.toml"
+- **Missing connection URL**: "sqlalchemy_url is required in warden.toml"
 - **Migrations directory not found**: "Please run 'dbwarden init' first"
 - **Lock active**: "Migration is currently locked"
 - **Duplicate SQL**: Skips tables already in existing migrations
