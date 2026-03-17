@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/icon.png" width="128" height="128" style="border-radius: 20px;">
+<img src="https://raw.githubusercontent.com/emiliano-gandini-outeda/DBWarden/refs/heads/main/assets/icon.png" width="128" height="128" style="border-radius: 20px;">
 
 # DBWarden
 
@@ -15,7 +15,7 @@ A database migration system for Python/SQLAlchemy projects.
 
 ---
 
-<img src="assets/banner.png" width="100%">
+<img src="https://github.com/emiliano-gandini-outeda/DBWarden/blob/main/assets/banner.png?raw=true" width="100%">
 
 </div>
 
