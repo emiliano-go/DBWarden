@@ -18,6 +18,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
+from dbwarden.database.queries import get_current_dialect
 from dbwarden.models import SchemaDifference
 
 Base = declarative_base()
@@ -35,6 +36,8 @@ class ModelColumn:
         unique: bool,
         default: Optional[str],
         foreign_key: Optional[str],
+        visit_name: Optional[str] = None,
+        info: Optional[dict] = None,
     ):
         self.name = name
         self.type = type
@@ -43,6 +46,8 @@ class ModelColumn:
         self.unique = unique
         self.default = default
         self.foreign_key = foreign_key
+        self.visit_name = visit_name
+        self.info = info or {}
 
     def to_dict(self) -> dict:
         return {
@@ -53,6 +58,8 @@ class ModelColumn:
             "unique": self.unique,
             "default": self.default,
             "foreign_key": self.foreign_key,
+            "visit_name": self.visit_name,
+            "info": self.info,
         }
 
 
@@ -63,14 +70,17 @@ class ModelTable:
         self,
         name: str,
         columns: List[ModelColumn],
+        options: Optional[dict] = None,
     ):
         self.name = name
         self.columns = columns
+        self.options = options or {}
 
     def to_dict(self) -> dict:
         return {
             "name": self.name,
             "columns": [col.to_dict() for col in self.columns],
+            "options": self.options,
         }
 
 
@@ -281,9 +291,44 @@ def extract_table_from_model(model_class: type) -> Optional[ModelTable]:
             if col:
                 columns.append(col)
 
-        return ModelTable(name=table_name, columns=columns)
+        table_options = _extract_table_options(model_class)
+
+        return ModelTable(name=table_name, columns=columns, options=table_options)
     except Exception:
         return None
+
+
+def _extract_table_options(model_class: type) -> dict:
+    """Extract dialect-specific table options from SQLAlchemy model metadata."""
+
+    options: dict = {}
+
+    def _merge_option_dict(source: dict) -> None:
+        info_values = source.get("info")
+        for key, value in source.items():
+            if key == "info":
+                continue
+            options[key] = value
+        if isinstance(info_values, dict):
+            for key, value in info_values.items():
+                options[key] = value
+
+    table_args = getattr(model_class, "__table_args__", None)
+
+    if isinstance(table_args, dict):
+        _merge_option_dict(dict(table_args))
+    elif isinstance(table_args, tuple):
+        for arg in table_args:
+            if isinstance(arg, dict):
+                _merge_option_dict(dict(arg))
+
+    table_obj = getattr(model_class, "__table__", None)
+    if table_obj is not None:
+        table_info = getattr(table_obj, "info", None)
+        if isinstance(table_info, dict):
+            _merge_option_dict(dict(table_info))
+
+    return options
 
 
 def extract_column_info(column) -> Optional[ModelColumn]:
@@ -364,6 +409,9 @@ def extract_column_info(column) -> Optional[ModelColumn]:
             else:
                 foreign_key = colspec
 
+        visit_name = getattr(column.type, "__visit_name__", None)
+        column_info = dict(getattr(column, "info", {}) or {})
+
         return ModelColumn(
             name=name,
             type=type_str,
@@ -372,6 +420,8 @@ def extract_column_info(column) -> Optional[ModelColumn]:
             unique=unique,
             default=default,
             foreign_key=foreign_key,
+            visit_name=visit_name,
+            info=column_info,
         )
     except Exception:
         return None
@@ -426,6 +476,14 @@ def compare_model_to_database(
 
 def generate_add_column_sql(table_name: str, column: ModelColumn) -> str:
     """Generate SQL for adding a column."""
+    dialect_name = _get_active_dialect_name()
+
+    if dialect_name == "clickhouse":
+        column_sql = _render_clickhouse_column_definition(
+            column, include_constraints=False
+        )
+        return f"ALTER TABLE {table_name} ADD COLUMN {column_sql}"
+
     nullable_sql = "" if column.nullable else "NOT NULL"
     default_sql = f" DEFAULT {column.default}" if column.default else ""
     fk_sql = f" REFERENCES {column.foreign_key}" if column.foreign_key else ""
@@ -435,6 +493,16 @@ def generate_add_column_sql(table_name: str, column: ModelColumn) -> str:
 
 def generate_create_table_sql(table: ModelTable) -> str:
     """Generate CREATE TABLE SQL from a ModelTable."""
+    dialect_name = _get_active_dialect_name()
+
+    if dialect_name == "clickhouse":
+        return _generate_clickhouse_create_table_sql(table)
+
+    return _generate_default_create_table_sql(table)
+
+
+def _generate_default_create_table_sql(table: ModelTable) -> str:
+    """Default ANSI-style CREATE TABLE generator."""
     column_defs = []
 
     for col in table.columns:
@@ -454,6 +522,128 @@ def generate_create_table_sql(table: ModelTable) -> str:
     columns_sql = ",\n".join(column_defs)
 
     return f"CREATE TABLE IF NOT EXISTS {table.name} (\n{columns_sql}\n)"
+
+
+def _get_active_dialect_name() -> str:
+    try:
+        return get_current_dialect().name
+    except Exception:
+        return "sqlite"
+
+
+CLICKHOUSE_TYPE_MAP = {
+    "integer": "Int32",
+    "bigint": "Int64",
+    "smallint": "Int16",
+    "tinyint": "Int8",
+    "string": "String",
+    "varchar": "String",
+    "text": "String",
+    "unicode_text": "String",
+    "boolean": "UInt8",
+    "datetime": "DateTime",
+    "date": "Date",
+    "float": "Float64",
+    "float4": "Float32",
+    "float8": "Float64",
+    "numeric": "Decimal(18, 6)",
+    "decimal": "Decimal(18, 6)",
+    "uuid": "UUID",
+}
+
+
+def _render_clickhouse_column_definition(
+    column: ModelColumn, include_constraints: bool = True
+) -> str:
+    custom_type = column.info.get("clickhouse_type")
+    visit_name = (column.visit_name or column.type or "").lower()
+    mapped_type = CLICKHOUSE_TYPE_MAP.get(visit_name, column.type)
+    column_type = custom_type or mapped_type
+
+    col_def = f"{column.name} {column_type}"
+    if not column.nullable:
+        col_def += " NOT NULL"
+    if column.default:
+        col_def += f" DEFAULT {column.default}"
+    codec = column.info.get("clickhouse_codec")
+    if codec:
+        col_def += f" CODEC({codec})"
+
+    if include_constraints:
+        ttl = column.info.get("clickhouse_ttl")
+        if ttl:
+            col_def += f" TTL {ttl}"
+
+    return col_def
+
+
+def _generate_clickhouse_create_table_sql(table: ModelTable) -> str:
+    columns_sql = ",\n".join(
+        f"    {_render_clickhouse_column_definition(col)}" for col in table.columns
+    )
+
+    engine = table.options.get("clickhouse_engine", "MergeTree()")
+    order_by = _normalize_clickhouse_clause(
+        table.options.get("clickhouse_order_by"),
+        default=_derive_order_by(table),
+    )
+    if not order_by:
+        order_by = "tuple()"
+
+    partition_by = _normalize_clickhouse_clause(
+        table.options.get("clickhouse_partition_by"),
+    )
+    primary_key = _normalize_clickhouse_clause(
+        table.options.get("clickhouse_primary_key"),
+    )
+    sample_by = _normalize_clickhouse_clause(table.options.get("clickhouse_sample_by"))
+    ttl = table.options.get("clickhouse_ttl")
+    settings = table.options.get("clickhouse_settings")
+
+    clauses = [f"ENGINE = {engine}", f"ORDER BY {order_by}"]
+    if partition_by:
+        clauses.append(f"PARTITION BY {partition_by}")
+    if primary_key:
+        clauses.append(f"PRIMARY KEY {primary_key}")
+    if sample_by:
+        clauses.append(f"SAMPLE BY {sample_by}")
+    if ttl:
+        clauses.append(f"TTL {ttl}")
+
+    settings_sql = _normalize_clickhouse_settings(settings)
+    if settings_sql:
+        clauses.append(f"SETTINGS {settings_sql}")
+
+    clauses_sql = "\n".join(f"{clause}" for clause in clauses)
+
+    return f"CREATE TABLE IF NOT EXISTS {table.name} (\n{columns_sql}\n)\n{clauses_sql}"
+
+
+def _derive_order_by(table: ModelTable) -> str:
+    pk_columns = [col.name for col in table.columns if col.primary_key]
+    if pk_columns:
+        return f"({', '.join(pk_columns)})"
+    return "tuple()"
+
+
+def _normalize_clickhouse_clause(value, default: Optional[str] = None) -> Optional[str]:
+    if value is None:
+        return default
+    if isinstance(value, (list, tuple, set)):
+        return f"({', '.join(str(v) for v in value)})"
+    return str(value)
+
+
+def _normalize_clickhouse_settings(value) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        return ", ".join(f"{k}={v}" for k, v in value.items())
+    if isinstance(value, (list, tuple, set)):
+        return ", ".join(str(v) for v in value)
+    return str(value)
 
 
 def generate_drop_table_sql(table_name: str) -> str:
