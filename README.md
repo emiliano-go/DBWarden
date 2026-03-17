@@ -36,6 +36,7 @@ This is an experimental package. Your fuckups are not mine to fix. You have been
 Create `warden.toml` in your project:
 
 ```toml
+database_type = "sqlite"
 sqlalchemy_url = "sqlite:///./development.db"
 ```
 
@@ -70,7 +71,30 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(100))
     email = Column(String(255), unique=True)
+
+
+# models/click_events.py (ClickHouse example)
+class ClickEvent(Base):
+    __tablename__ = "click_events"
+    __table_args__ = {
+        "info": {
+            "clickhouse_engine": "ReplacingMergeTree()",
+            "clickhouse_order_by": "(event_id)",
+            "clickhouse_partition_by": "toYYYYMM(occurred_at)",
+            "clickhouse_settings": {"index_granularity": 64},
+        }
+    }
+
+    event_id = Column(Integer, primary_key=True, info={"clickhouse_type": "UInt64"})
+    payload = Column(String(255))
+    occurred_at = Column(DateTime, nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
 ```
+
+The `info` dictionaries shown above allow you to pass ClickHouse-specific
+instructions (engine, ORDER BY keys, codecs, TTLs, custom data types, etc.)
+directly from SQLAlchemy models. When `database_type = "clickhouse"`, DBWarden
+uses those hints while generating SQL.
 
 ## Complete Example
 
@@ -98,6 +122,15 @@ dbwarden config
 - PostgreSQL
 - SQLite
 - MySQL
+- ClickHouse (beta)
+
+### ClickHouse Quick Notes
+
+- Install `clickhouse-connect` and set `database_type = "clickhouse"`.
+- SQLAlchemy URL format: `clickhousedb+connect://user:password@host:8123/database`.
+- Model metadata (`__table_args__['info']` or `Column(..., info={...})`) lets you
+  define engines, `ORDER BY`, codecs, TTLs, and column-specific ClickHouse types.
+- Repeatable migrations run using delete+insert semantics to stay idempotent.
 
 ## Docs
 
