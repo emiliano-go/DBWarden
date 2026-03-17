@@ -67,7 +67,7 @@ dbwarden version
 You should see output similar to:
 
 ```
-DBWarden Version: 0.1.5
+DBWarden Version: 0.2.0
 Python Version: 3.12.7 (main, Jan 19 2026, 23:31:25) [GCC 15.2.1 20251112]
 ```
 
