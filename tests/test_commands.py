@@ -178,7 +178,7 @@ class TestVersionCommand:
         """Test version command displays version."""
         output = self._run_version_capture_output()
         assert len(output.strip()) > 0
-        # Version should be a valid version string (e.g., "0.1.5")
+        # Version should be a valid version string (e.g., "0.2.0")
         assert "." in output.strip()
 
     def test_version_is_string(self):
