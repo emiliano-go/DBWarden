@@ -14,6 +14,7 @@ class DbwardenConfig:
 
     Attributes:
         sqlalchemy_url (str): The SQLAlchemy database connection URL.
+        database_type (str): Logical database type (e.g., sqlite, postgres, clickhouse).
         model_paths (list[str] | None): Optional list of paths to SQLAlchemy
             model files for automatic migration generation. Defaults to None.
         postgres_schema (str | None): Optional PostgreSQL schema to use.
@@ -21,6 +22,7 @@ class DbwardenConfig:
     """
 
     sqlalchemy_url: str
+    database_type: str
     model_paths: list[str] | None = None
     postgres_schema: str | None = None
 
@@ -90,6 +92,14 @@ def _load_from_toml(path: Path) -> DbwardenConfig:
             'Example: sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"'
         )
 
+    database_type = toml_config.get("database_type")
+    if not database_type or not str(database_type).strip():
+        raise ConfigurationError(
+            "database_type is required in warden.toml. "
+            'Example: database_type = "sqlite"'
+        )
+    database_type = str(database_type).strip().lower()
+
     model_paths = None
     if "model_paths" in toml_config:
         model_paths = toml_config["model_paths"]
@@ -100,6 +110,7 @@ def _load_from_toml(path: Path) -> DbwardenConfig:
 
     return DbwardenConfig(
         sqlalchemy_url=sqlalchemy_url,
+        database_type=database_type,
         model_paths=model_paths,
         postgres_schema=postgres_schema,
     )
