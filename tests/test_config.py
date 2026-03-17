@@ -18,11 +18,13 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
+                    f.write('database_type = "sqlite"\n')
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
                 config = get_config()
 
                 assert config.sqlalchemy_url == "sqlite:///./test.db"
+                assert config.database_type == "sqlite"
             finally:
                 os.chdir(old_cwd)
 
@@ -34,6 +36,7 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
+                    f.write('database_type = "sqlite"\n')
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
                     f.write('model_paths = ["./models/user.py", "./models/post.py"]\n')
 
@@ -54,6 +57,7 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
+                    f.write('database_type = "sqlite"\n')
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
                     f.write('model_paths = "./models"\n')
 
@@ -73,6 +77,7 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
+                    f.write('database_type = "sqlite"\n')
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
                     f.write('postgres_schema = "custom_schema"\n')
 
@@ -99,6 +104,23 @@ class TestConfig:
             finally:
                 os.chdir(old_cwd)
 
+    def test_missing_database_type_raises_error(self):
+        """Test that missing database_type raises ConfigurationError."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
+
+                from dbwarden.exceptions import ConfigurationError
+
+                with pytest.raises(ConfigurationError):
+                    get_config()
+            finally:
+                os.chdir(old_cwd)
+
     def test_get_config_parent_directory(self):
         """Test config is found in parent directory."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -108,6 +130,7 @@ class TestConfig:
             parent_dir = os.path.join(tmpdir, "parent")
             os.makedirs(parent_dir)
             with open(os.path.join(parent_dir, "warden.toml"), "w") as f:
+                f.write('database_type = "sqlite"\n')
                 f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
             # Create child directory and run from there
@@ -129,6 +152,7 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
+                    f.write('database_type = "sqlite"\n')
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
                 path = get_toml_path()

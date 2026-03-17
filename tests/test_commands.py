@@ -41,6 +41,7 @@ class TestInitCommand:
                 assert toml_path.exists()
 
                 content = toml_path.read_text()
+                assert 'database_type = "sqlite"' in content
                 assert 'sqlalchemy_url = "sqlite:///./development.db"' in content
             finally:
                 os.chdir(old_cwd)
@@ -54,7 +55,9 @@ class TestInitCommand:
             try:
                 # Create existing warden.toml
                 toml_path = Path(tmpdir) / TOML_FILE
-                original_content = 'sqlalchemy_url = "custom.db"'
+                original_content = (
+                    'database_type = "sqlite"\nsqlalchemy_url = "custom.db"'
+                )
                 toml_path.write_text(original_content)
 
                 init_cmd()
@@ -107,9 +110,11 @@ class TestConfigCommand:
         """Test config displays sqlalchemy_url."""
         with tempfile.TemporaryDirectory() as tmpdir:
             with open(os.path.join(tmpdir, "warden.toml"), "w") as f:
+                f.write('database_type = "sqlite"\n')
                 f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
             output = self._run_config_capture_output(tmpdir)
+            assert "database_type" in output
             assert "sqlalchemy_url" in output
             assert "sqlite:///./test.db" in output
 
@@ -117,6 +122,7 @@ class TestConfigCommand:
         """Test config masks password in URL."""
         with tempfile.TemporaryDirectory() as tmpdir:
             with open(os.path.join(tmpdir, "warden.toml"), "w") as f:
+                f.write('database_type = "postgres"\n')
                 f.write(
                     'sqlalchemy_url = "postgresql://user:secretpassword@localhost/db"\n'
                 )
@@ -129,6 +135,7 @@ class TestConfigCommand:
         """Test config displays model_paths."""
         with tempfile.TemporaryDirectory() as tmpdir:
             with open(os.path.join(tmpdir, "warden.toml"), "w") as f:
+                f.write('database_type = "sqlite"\n')
                 f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
                 f.write('model_paths = ["./models/"]\n')
 
@@ -139,6 +146,7 @@ class TestConfigCommand:
         """Test config displays postgres_schema."""
         with tempfile.TemporaryDirectory() as tmpdir:
             with open(os.path.join(tmpdir, "warden.toml"), "w") as f:
+                f.write('database_type = "sqlite"\n')
                 f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
                 f.write('postgres_schema = "custom"\n')
 
@@ -150,6 +158,7 @@ class TestConfigCommand:
         """Test config shows the config file path."""
         with tempfile.TemporaryDirectory() as tmpdir:
             with open(os.path.join(tmpdir, "warden.toml"), "w") as f:
+                f.write('database_type = "sqlite"\n')
                 f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
             output = self._run_config_capture_output(tmpdir)

@@ -194,6 +194,54 @@ class TestSQLGeneration:
 
         assert "user_id INTEGER NOT NULL REFERENCES users(id)" in sql
 
+    def test_generate_clickhouse_create_table_sql(self, monkeypatch):
+        """Ensure ClickHouse dialect uses specialized DDL."""
+
+        class _DummyDialect:
+            name = "clickhouse"
+
+        monkeypatch.setattr(
+            "dbwarden.engine.model_discovery.get_current_dialect",
+            lambda: _DummyDialect(),
+        )
+
+        columns = [
+            ModelColumn(
+                "event_id",
+                "INTEGER",
+                False,
+                True,
+                False,
+                None,
+                None,
+                visit_name="integer",
+            ),
+            ModelColumn(
+                "is_active",
+                "BOOLEAN",
+                False,
+                False,
+                False,
+                "TRUE",
+                None,
+                visit_name="boolean",
+                info={"clickhouse_codec": "T64"},
+            ),
+        ]
+
+        table = ModelTable(
+            name="click_events",
+            columns=columns,
+            options={"clickhouse_engine": "MergeTree()"},
+        )
+
+        sql = generate_create_table_sql(table)
+
+        assert "ENGINE = MergeTree()" in sql
+        assert "event_id Int32" in sql
+        assert "is_active UInt8 NOT NULL DEFAULT TRUE CODEC(T64)" in sql
+        assert "ORDER BY (event_id)" in sql
+
 
 class TestColumnExtraction:
     """Tests for column information extraction."""
