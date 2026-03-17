@@ -21,6 +21,11 @@ def config_cmd() -> None:
     print(f"DBWarden Configuration ({toml_path}):")
     print("=" * 50)
 
+    if "database_type" in warden_config:
+        db_type = warden_config["database_type"]
+        if db_type:
+            print(f"database_type: {db_type}")
+
     if "sqlalchemy_url" in warden_config:
         url = warden_config["sqlalchemy_url"]
         if url:
