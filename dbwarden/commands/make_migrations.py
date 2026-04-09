@@ -142,11 +142,25 @@ def generate_migration_sql(
     except Exception:
         existing_tables = {}
 
+    migration_tables = {}
+    if migrations_dir:
+        migration_tables = extract_tables_from_migrations(migrations_dir)
+
+    known_tables: dict[str, set[str]] = {
+        table_name: {col.lower() for col in columns}
+        for table_name, columns in existing_tables.items()
+    }
+    for table_name, columns in migration_tables.items():
+        if table_name in known_tables:
+            known_tables[table_name].update({col.lower() for col in columns})
+        else:
+            known_tables[table_name] = {col.lower() for col in columns}
+
     upgrade_parts = []
     rollback_parts = []
 
     for table in tables:
-        existing_columns = existing_tables.get(table.name, set())
+        existing_columns = known_tables.get(table.name, set())
 
         if not existing_columns:
             create_sql = generate_create_table_sql(table)
@@ -161,7 +175,23 @@ def generate_migration_sql(
                         f"ALTER TABLE {table.name} DROP COLUMN {column.name}"
                     )
 
+                    known_tables.setdefault(table.name, set()).add(column.name.lower())
+
     rollback_parts.reverse()
+
+    if migrations_dir:
+        existing_statements = get_pending_migration_statements(migrations_dir)
+        filtered_upgrade_parts = []
+        filtered_rollback_parts = []
+
+        for upgrade_sql, rollback_sql in zip(upgrade_parts, rollback_parts):
+            if upgrade_sql.strip() in existing_statements:
+                continue
+            filtered_upgrade_parts.append(upgrade_sql)
+            filtered_rollback_parts.append(rollback_sql)
+
+        upgrade_parts = filtered_upgrade_parts
+        rollback_parts = filtered_rollback_parts
 
     return "\n\n".join(upgrade_parts), "\n\n".join(rollback_parts)
 
