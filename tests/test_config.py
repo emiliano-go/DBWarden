@@ -3,7 +3,15 @@ import tempfile
 import os
 from pathlib import Path
 
-from dbwarden.config import get_config, get_toml_path
+from dbwarden.config import (
+    get_config,
+    get_toml_path,
+    get_database,
+    get_multi_db_config,
+    list_databases,
+    DatabaseConfig,
+    MultiDbConfig,
+)
 from dbwarden.logging import get_logger, DBWardenLogger
 
 
@@ -18,11 +26,14 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
                 config = get_config()
 
                 assert config.sqlalchemy_url == "sqlite:///./test.db"
+                assert config.migrations_dir == "migrations/primary"
             finally:
                 os.chdir(old_cwd)
 
@@ -34,6 +45,8 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
                     f.write('model_paths = ["./models/user.py", "./models/post.py"]\n')
 
@@ -54,6 +67,8 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
                     f.write('model_paths = "./models"\n')
 
@@ -73,12 +88,52 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
-                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write('sqlalchemy_url = "postgresql://localhost/test"\n')
                     f.write('postgres_schema = "custom_schema"\n')
 
                 config = get_config()
 
                 assert config.postgres_schema == "custom_schema"
+            finally:
+                os.chdir(old_cwd)
+
+    def test_get_config_custom_migrations_dir(self):
+        """Test custom migrations directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
+                    f.write('migrations_dir = "db_migrations"\n')
+
+                config = get_config()
+
+                assert config.migrations_dir == "db_migrations"
+            finally:
+                os.chdir(old_cwd)
+
+    def test_missing_database_section_raises_error(self):
+        """Test that missing [database] section raises ConfigurationError."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write("# Empty config\n")
+
+                from dbwarden.exceptions import ConfigurationError
+
+                with pytest.raises(
+                    ConfigurationError, match="No \\[database\\] section found"
+                ):
+                    get_config()
             finally:
                 os.chdir(old_cwd)
 
@@ -90,11 +145,14 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
-                    f.write("# Empty config\n")
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
 
                 from dbwarden.exceptions import ConfigurationError
 
-                with pytest.raises(ConfigurationError):
+                with pytest.raises(
+                    ConfigurationError, match="sqlalchemy_url is required"
+                ):
                     get_config()
             finally:
                 os.chdir(old_cwd)
@@ -104,13 +162,13 @@ class TestConfig:
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
 
-            # Create parent with warden.toml
             parent_dir = os.path.join(tmpdir, "parent")
             os.makedirs(parent_dir)
             with open(os.path.join(parent_dir, "warden.toml"), "w") as f:
+                f.write('default = "primary"\n')
+                f.write("[database.primary]\n")
                 f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
-            # Create child directory and run from there
             child_dir = os.path.join(parent_dir, "child")
             os.makedirs(child_dir)
             os.chdir(child_dir)
@@ -129,6 +187,8 @@ class TestConfig:
 
             try:
                 with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
 
                 path = get_toml_path()
@@ -146,6 +206,114 @@ class TestConfig:
             try:
                 path = get_toml_path()
                 assert path is None
+            finally:
+                os.chdir(old_cwd)
+
+    def test_default_database_not_found_raises_error(self):
+        """Test that non-existent default database raises ConfigurationError."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "nonexistent"\n')
+                    f.write("[database.primary]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
+
+                from dbwarden.exceptions import ConfigurationError
+
+                with pytest.raises(
+                    ConfigurationError, match="Default database 'nonexistent' not found"
+                ):
+                    get_multi_db_config()
+            finally:
+                os.chdir(old_cwd)
+
+    def test_get_database_by_name(self):
+        """Test getting a specific database by name."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./primary.db"\n')
+                    f.write("[database.analytics]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./analytics.db"\n')
+
+                db = get_database("analytics")
+                assert db.sqlalchemy_url == "sqlite:///./analytics.db"
+            finally:
+                os.chdir(old_cwd)
+
+    def test_get_database_nonexistent_raises_error(self):
+        """Test that getting non-existent database raises ConfigurationError."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
+
+                from dbwarden.exceptions import ConfigurationError
+
+                with pytest.raises(
+                    ConfigurationError, match="not found in warden.toml"
+                ):
+                    get_database("nonexistent")
+            finally:
+                os.chdir(old_cwd)
+
+    def test_list_databases(self):
+        """Test listing all databases."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./primary.db"\n')
+                    f.write("[database.analytics]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./analytics.db"\n')
+                    f.write("[database.legacy]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./legacy.db"\n')
+
+                dbs = list_databases()
+                assert len(dbs) == 3
+                assert "primary" in dbs
+                assert "analytics" in dbs
+                assert "legacy" in dbs
+            finally:
+                os.chdir(old_cwd)
+
+    def test_get_multi_db_config(self):
+        """Test getting full multi-database config."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./primary.db"\n')
+                    f.write("[database.analytics]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./analytics.db"\n')
+
+                config = get_multi_db_config()
+                assert isinstance(config, MultiDbConfig)
+                assert config.default == "primary"
+                assert len(config.databases) == 2
+                assert "primary" in config.databases
+                assert "analytics" in config.databases
             finally:
                 os.chdir(old_cwd)
 
