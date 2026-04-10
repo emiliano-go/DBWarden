@@ -4,21 +4,21 @@ DBWarden supports multiple database backends. This guide covers configuration an
 
 ## Overview
 
-| Database | Supported | Driver Required |
-|----------|-----------|-----------------|
-| PostgreSQL | Yes | `psycopg2-binary` |
-| MySQL | Yes | `mysql-connector-python` |
-| SQLite | Yes | Built-in |
-| ClickHouse | Yes | `clickhouse-connect` |
+| Database | Supported | Driver | Type Value |
+|----------|-----------|--------|------------|
+| PostgreSQL | Yes | `psycopg2-binary` | `postgresql` |
+| MySQL | Yes | `mysql-connector-python` | `mysql` |
+| SQLite | Yes | Built-in | `sqlite` |
+| ClickHouse | Yes | `clickhouse-connect` | `clickhouse` |
+| MariaDB | Yes | `mysql-connector-python` | `mariadb` |
 
 ## PostgreSQL
 
 ### Connection URL
 
-Add to your `warden.toml`:
-
 ```toml
-database_type = "postgres"
+[database.primary]
+database_type = "postgresql"
 sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"
 ```
 
@@ -35,16 +35,31 @@ pip install psycopg2-binary
 - Array types (via manual migration)
 - Full-text search (via manual migration)
 - PostgreSQL-specific constraints
+- SERIAL/BIGSERIAL for auto-increment
+- TIMESTAMP (not DATETIME)
+- BYTEA for binary data
 
 ### PostgreSQL Schema
 
 Set default schema in `warden.toml`:
 
 ```toml
-postgres_schema = "public"  # default
-# or
+[database.primary]
+database_type = "postgresql"
+sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"
 postgres_schema = "custom_schema"
 ```
+
+### Type Mapping
+
+DBWarden automatically maps SQLAlchemy types to PostgreSQL:
+
+| SQLAlchemy | PostgreSQL |
+|------------|------------|
+| Integer (PK) | SERIAL |
+| BigInteger (PK) | BIGSERIAL |
+| DateTime | TIMESTAMP |
+| BLOB | BYTEA |
 
 ### Example PostgreSQL Migration
 
@@ -54,9 +69,10 @@ postgres_schema = "custom_schema"
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_ossp_generate_v4(),
+    id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    data JSONB
 );
 
 CREATE INDEX idx_users_email ON users(email);
@@ -71,9 +87,8 @@ DROP TABLE users;
 
 ### Connection URL
 
-Add to your `warden.toml`:
-
 ```toml
+[database.legacy]
 database_type = "mysql"
 sqlalchemy_url = "mysql://user:password@localhost:3306/mydb"
 ```
@@ -91,10 +106,12 @@ pip install mysql-connector-python
 - Full-text indexes (MyISAM, InnoDB 5.6+)
 - AUTO_INCREMENT
 
-### Limitations
+### Type Mapping
 
-- Some PostgreSQL-specific types not available
-- Different default string lengths
+| SQLAlchemy | MySQL |
+|------------|-------|
+| Boolean | TINYINT(1) |
+| Integer (PK) | INT AUTO_INCREMENT |
 
 ### Example MySQL Migration
 
@@ -116,13 +133,24 @@ DROP INDEX idx_users_email;
 DROP TABLE users;
 ```
 
+## MariaDB
+
+MariaDB is fully compatible with MySQL. Use the `mariadb` type:
+
+```toml
+[database.legacy]
+database_type = "mariadb"
+sqlalchemy_url = "mysql://user:password@localhost:3306/mydb"
+```
+
+All MySQL features and type mappings apply to MariaDB.
+
 ## SQLite
 
 ### Connection URL
 
-Add to your `warden.toml`:
-
 ```toml
+[database.dev]
 database_type = "sqlite"
 # File-based
 sqlalchemy_url = "sqlite:///./mydb.db"
@@ -163,6 +191,59 @@ CREATE TABLE users (
 DROP TABLE users;
 ```
 
+## ClickHouse
+
+### Connection URL
+
+```toml
+[database.analytics]
+database_type = "clickhouse"
+sqlalchemy_url = "clickhouse://user:password@localhost:8123/analytics"
+```
+
+**Requirements:**
+```bash
+pip install clickhouse-connect
+```
+
+### Features
+
+- Supports migration tracking and locking tables
+- Supports model-generated and manual migrations
+- Supports MergeTree/ReplacingMergeTree-style table migrations
+- Excellent for analytics workloads
+- Column-oriented storage
+
+### Type Mapping
+
+ClickHouse uses MySQL-compatible queries for migration tracking tables.
+
+### Example ClickHouse Migration
+
+```sql
+-- upgrade
+
+CREATE TABLE users (
+    id UInt32,
+    email String,
+    created_at DateTime
+) ENGINE = MergeTree()
+ORDER BY id;
+
+CREATE TABLE events (
+    id UInt32,
+    user_id UInt32,
+    event_type String,
+    created_at DateTime
+) ENGINE = MergeTree()
+ORDER BY (user_id, created_at);
+
+-- rollback
+
+DROP TABLE events;
+DROP TABLE users;
+```
+
 ## Connection Pooling
 
 SQLAlchemy creates an engine with connection pool:
@@ -177,15 +258,25 @@ engine = create_engine(url, pool_size=5, max_overflow=10)
 ### PostgreSQL with SSL
 
 ```toml
-database_type = "postgres"
+[database.prod]
+database_type = "postgresql"
 sqlalchemy_url = "postgresql://user:password@host:5432/db?sslmode=require"
 ```
 
 ### MySQL with SSL
 
 ```toml
+[database.prod]
 database_type = "mysql"
 sqlalchemy_url = "mysql://user:password@host:3306/db?ssl=true"
+```
+
+### ClickHouse with HTTPS
+
+```toml
+[database.analytics]
+database_type = "clickhouse"
+sqlalchemy_url = "clickhouse://user:password@host:8443/analytics?ssl=true"
 ```
 
 ## Connection Strings Reference
@@ -217,28 +308,14 @@ sqlite:///path/to/file.db
 ### ClickHouse
 
 ```
-clickhousedb+connect://user:pass@localhost:8123/analytics
-clickhousedb+connect://user:pass@host:8123/db
-```
-## ClickHouse
-
-### Connection URL
-
-Add to your `warden.toml`:
-
-```toml
-database_type = "clickhouse"
-sqlalchemy_url = "clickhousedb+connect://user:password@localhost:8123/analytics"
+clickhouse://user:pass@localhost:8123/analytics
+clickhouse://user:pass@host:8123/db
+clickhouse://user:pass@host:8443/db?ssl=true
 ```
 
-**Requirements:**
+### MariaDB
 
-```bash
-pip install clickhouse-connect
 ```
-
-### Features
-
-- Supports migration tracking and locking tables for ClickHouse
-- Supports model-generated and manual migrations
-- Supports MergeTree/ReplacingMergeTree-style table migrations
+mariadb://user:pass@localhost:3306/mydb
+mysql://user:pass@localhost:3306/mydb
+```

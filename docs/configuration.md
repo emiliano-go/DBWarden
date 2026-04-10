@@ -25,22 +25,54 @@ DBWarden searches for `warden.toml` in the following order:
 
 This allows you to have a single `warden.toml` file at your project root that applies to all subdirectories.
 
-## Required Configuration
+## Multi-Database Configuration
+
+DBWarden supports managing multiple databases from a single configuration file.
+
+### Basic Structure
+
+```toml
+default = "primary"
+
+[database]
+[database.primary]
+database_type = "postgresql"
+sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
+migrations_dir = "migrations/primary"
+
+[database.analytics]
+database_type = "postgresql"
+sqlalchemy_url = "postgresql://user:password@localhost:5432/analytics"
+migrations_dir = "migrations/analytics"
+```
+
+### default
+
+The default database to use when no `--database` flag is specified.
+
+```toml
+default = "primary"
+```
+
+## Database Configuration
 
 ### database_type
 
-Logical database type used by DBWarden for dialect-specific behavior.
+The database type determines SQL dialect and features. Supported types:
+
+| Type | Description | Example URL Prefix |
+|------|-------------|-------------------|
+| `sqlite` | SQLite database | `sqlite:///` |
+| `postgresql` | PostgreSQL | `postgresql://` or `postgres://` |
+| `mysql` | MySQL | `mysql://` |
+| `mariadb` | MariaDB | `mariadb://` |
+| `clickhouse` | ClickHouse | `clickhouse://` |
 
 ```toml
-database_type = "sqlite"
+database_type = "postgresql"
 ```
 
-Common values:
-
-- `sqlite`
-- `postgres`
-- `mysql`
-- `clickhouse`
+**Note:** The `database_type` is automatically inferred from the URL if not specified. You can override it for explicit control.
 
 ### sqlalchemy_url
 
@@ -68,7 +100,7 @@ sqlalchemy_url = "sqlite:///./mydb.db"
 sqlalchemy_url = "sqlite:///:memory:"
 
 # ClickHouse
-sqlalchemy_url = "clickhousedb+connect://user:password@localhost:8123/analytics"
+sqlalchemy_url = "clickhouse://user:password@localhost:8123/analytics"
 ```
 
 ## Optional Configuration
@@ -87,6 +119,14 @@ If not specified, DBWarden will automatically discover models by:
 - Searching up to 5 parent directories from current working directory
 - Ignoring common library folders (`.venv`, `node_modules`, `__pycache__`, etc.)
 
+### migrations_dir
+
+Directory for migration files. Defaults to `migrations/<database_name>`.
+
+```toml
+migrations_dir = "migrations/primary"
+```
+
 ### postgres_schema
 
 PostgreSQL schema to use (PostgreSQL only).
@@ -98,15 +138,28 @@ postgres_schema = "public"
 ## Complete warden.toml Example
 
 ```toml
-# Database Connection
-database_type = "postgres"
+# Default database
+default = "primary"
+
+# Database configurations
+[database]
+
+[database.primary]
+database_type = "postgresql"
 sqlalchemy_url = "postgresql://myuser:mypassword@localhost:5432/myapp"
-
-# Model Discovery
-model_paths = ["app/models/", "models/"]
-
-# PostgreSQL Schema
+model_paths = ["app/models/"]
+migrations_dir = "migrations/primary"
 postgres_schema = "public"
+
+[database.analytics]
+database_type = "postgresql"
+sqlalchemy_url = "postgresql://myuser:mypassword@localhost:5432/analytics"
+migrations_dir = "migrations/analytics"
+
+[database.legacy]
+database_type = "mysql"
+sqlalchemy_url = "mysql://myuser:mypassword@localhost:3306/legacy"
+migrations_dir = "migrations/legacy"
 ```
 
 ## Configuration in Different Environments
@@ -114,22 +167,42 @@ postgres_schema = "public"
 ### Development Environment
 
 ```toml
-database_type = "postgres"
-sqlalchemy_url = "postgresql://dev:dev123@localhost:5432/dev_db"
+default = "dev"
+
+[database]
+
+[database.dev]
+database_type = "sqlite"
+sqlalchemy_url = "sqlite:///./dev.db"
+migrations_dir = "migrations/dev"
 ```
 
 ### Staging Environment
 
 ```toml
-database_type = "postgres"
+default = "staging"
+
+[database]
+
+[database.staging]
+database_type = "postgresql"
 sqlalchemy_url = "postgresql://staging:staging123@staging.example.com:5432/staging_db"
+postgres_schema = "public"
+migrations_dir = "migrations/staging"
 ```
 
 ### Production Environment
 
 ```toml
-database_type = "postgres"
+default = "prod"
+
+[database]
+
+[database.prod]
+database_type = "postgresql"
 sqlalchemy_url = "postgresql://prod:securepass@prod.example.com:5432/prod_db"
+postgres_schema = "public"
+migrations_dir = "migrations/prod"
 ```
 
 ## Configuration Validation
@@ -143,9 +216,10 @@ dbwarden config
 Output:
 
 ```
-database_type: postgres
+Database: primary
+database_type: postgresql
 sqlalchemy_url: ***
-model_paths: models/
+migrations_dir: migrations/primary
 postgres_schema: public
 ```
 
@@ -160,21 +234,29 @@ sqlalchemy_url = "postgresql://user:p%40ss%3Aword%2F123@localhost:5432/mydb"
 
 ## Troubleshooting Configuration
 
-### Missing database_type
+### Missing database section
 
 ```
-Error: database_type is required in warden.toml.
+Error: No [database] section found in warden.toml.
 ```
 
-Make sure your `warden.toml` includes a valid backend value.
+Make sure your `warden.toml` includes a `[database]` section with at least one database configuration.
 
 ### Missing sqlalchemy_url
 
 ```
-Error: sqlalchemy_url is required in warden.toml.
+Error: sqlalchemy_url is required for database 'primary'.
 ```
 
-Make sure your `warden.toml` file exists and contains the required option.
+Make sure each database configuration includes a valid `sqlalchemy_url`.
+
+### Invalid database_type
+
+```
+Error: Invalid database_type 'oracle'. Must be one of: sqlite, postgresql, mysql, mariadb, clickhouse
+```
+
+Use one of the supported database types.
 
 ### Invalid URL Format
 
@@ -199,6 +281,7 @@ Verify that:
 ## Best Practices
 
 1. **Never commit `warden.toml` to version control with secrets**: Add `warden.toml` to your `.gitignore` file if it contains credentials, or use a separate `warden.toml.example` as a template
-2. **Use different configurations per environment**: Create environment-specific configuration files
+2. **Use different configurations per environment**: Create environment-specific database configurations
 3. **Secure your credentials**: Use secrets management in production
 4. **Validate configuration**: Run `dbwarden config` before applying migrations
+5. **Use descriptive database names**: Names like `primary`, `analytics`, `legacy` are clearer than `db1`, `db2`

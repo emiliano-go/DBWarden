@@ -54,7 +54,10 @@ def database_add(
     name: str = typer.Argument(..., help="Database name"),
     url: str = typer.Option(..., "--url", "-u", help="SQLAlchemy database URL"),
     database_type: str | None = typer.Option(
-        None, "--type", "-t", help="Database type: sqlite, postgresql, mysql, mariadb"
+        None,
+        "--type",
+        "-t",
+        help="Database type: sqlite, postgresql, mysql, mariadb, clickhouse",
     ),
     model_paths: list[str] | None = typer.Option(
         None, "--model-paths", "-m", help="Model paths"
