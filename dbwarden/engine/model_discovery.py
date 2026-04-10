@@ -16,11 +16,64 @@ from sqlalchemy import (
     Float,
     ForeignKey,
 )
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base
 
+from dbwarden.config import get_config
 from dbwarden.models import SchemaDifference
 
 Base = declarative_base()
+
+
+def _get_backend_name() -> str:
+    """Get the database backend name from config."""
+    try:
+        config = get_config()
+        return make_url(config.sqlalchemy_url).get_backend_name().lower()
+    except Exception:
+        return "sqlite"
+
+
+def _map_sqlalchemy_type_to_backend(type_str: str, is_primary_key: bool = False) -> str:
+    """
+    Map SQLAlchemy type strings to backend-specific types.
+
+    Args:
+        type_str: The SQLAlchemy type string (e.g., "INTEGER", "DATETIME", "VARCHAR(100)").
+        is_primary_key: Whether this column is a primary key (for SERIAL/BIGSERIAL mapping).
+
+    Returns:
+        Backend-specific type string.
+    """
+    backend = _get_backend_name()
+
+    if backend.startswith("postgres"):
+        type_upper = type_str.upper()
+
+        if is_primary_key and type_upper == "INTEGER":
+            return "SERIAL"
+        if is_primary_key and type_upper == "BIGINTEGER":
+            return "BIGSERIAL"
+
+        type_mapping = {
+            "DATETIME": "TIMESTAMP",
+            "DATETIME(6)": "TIMESTAMP(6)",
+            "DATETIME WITH TIME ZONE": "TIMESTAMPTZ",
+            "TIMESTAMP(6) WITHOUT TIME ZONE": "TIMESTAMP(6)",
+            "BLOB": "BYTEA",
+            "BYTEA": "BYTEA",
+        }
+        return type_mapping.get(type_str.upper(), type_str)
+
+    if backend.startswith("mysql"):
+        type_upper = type_str.upper()
+        type_mapping = {
+            "BOOLEAN": "TINYINT(1)",
+            "SERIAL": "BIGINT UNSIGNED",
+        }
+        return type_mapping.get(type_upper, type_str)
+
+    return type_str
 
 
 class ModelColumn:
@@ -352,6 +405,8 @@ def extract_column_info(column) -> Optional[ModelColumn]:
             else:
                 default = default_str
 
+        type_str = _map_sqlalchemy_type_to_backend(type_str, is_primary_key=primary_key)
+
         foreign_key = None
         if column.foreign_keys:
             fk = list(column.foreign_keys)[0]
@@ -426,7 +481,14 @@ def compare_model_to_database(
 
 def generate_add_column_sql(table_name: str, column: ModelColumn) -> str:
     """Generate SQL for adding a column."""
-    nullable_sql = "" if column.nullable else "NOT NULL"
+    backend = _get_backend_name()
+    is_serial = (
+        column.type.upper() in ("SERIAL", "BIGSERIAL")
+        if backend.startswith("postgres")
+        else False
+    )
+
+    nullable_sql = "" if column.nullable or is_serial else "NOT NULL"
     default_sql = f" DEFAULT {column.default}" if column.default else ""
     fk_sql = f" REFERENCES {column.foreign_key}" if column.foreign_key else ""
 
@@ -435,17 +497,24 @@ def generate_add_column_sql(table_name: str, column: ModelColumn) -> str:
 
 def generate_create_table_sql(table: ModelTable) -> str:
     """Generate CREATE TABLE SQL from a ModelTable."""
+    backend = _get_backend_name()
     column_defs = []
 
     for col in table.columns:
         col_def = f"    {col.name} {col.type}"
-        if not col.nullable:
+        is_serial = (
+            col.type.upper() in ("SERIAL", "BIGSERIAL")
+            if backend.startswith("postgres")
+            else False
+        )
+
+        if not col.nullable and not is_serial:
             col_def += " NOT NULL"
         if col.primary_key:
             col_def += " PRIMARY KEY"
         elif col.unique:
             col_def += " UNIQUE"
-        if col.default:
+        if col.default and not is_serial:
             col_def += f" DEFAULT {col.default}"
         if col.foreign_key:
             col_def += f" REFERENCES {col.foreign_key}"
