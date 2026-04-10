@@ -65,8 +65,6 @@ def make_migrations_cmd(
         verbose: Enable verbose logging.
         database: Target database name.
     """
-    logger = get_logger(verbose=verbose)
-
     config = get_database(database)
     db_name = database or config.sqlalchemy_url.split("/")[-1].split("?")[0]
     model_paths = config.model_paths
@@ -81,6 +79,7 @@ def make_migrations_cmd(
         print("  2. Or set model_paths in warden.toml")
         return
 
+    logger.log_model_paths(model_paths)
     logger.info(f"Discovering models in: {model_paths}")
     tables = get_all_model_tables(model_paths)
 
@@ -88,6 +87,9 @@ def make_migrations_cmd(
         logger.warning("No tables found in models")
         print("No tables found in the specified model paths.")
         return
+
+    for table in tables:
+        logger.log_model_discovered(table.name, [c.name for c in table.columns])
 
     logger.info(f"Found {len(tables)} tables in models")
 
