@@ -290,16 +290,16 @@ MYSQL_QUERIES = {
 def _get_backend_name(db_name: str | None = None) -> str:
     try:
         config = get_database(db_name)
-        return make_url(config.sqlalchemy_url).get_backend_name().lower()
+        return config.database_type
     except Exception:
         return "sqlite"
 
 
 def _get_queries_for_backend(db_name: str | None = None) -> dict:
     backend = _get_backend_name(db_name)
-    if backend.startswith("postgres"):
+    if backend == "postgresql":
         return POSTGRES_QUERIES
-    if backend.startswith("mysql"):
+    if backend in ("mysql", "mariadb"):
         return MYSQL_QUERIES
     return SQLITE_QUERIES
 

@@ -50,7 +50,7 @@ def _map_sqlalchemy_type_to_backend(
     """
     backend = _get_backend_name(db_name)
 
-    if backend.startswith("postgres"):
+    if backend == "postgresql":
         type_upper = type_str.upper()
 
         if is_primary_key and type_upper == "INTEGER":
@@ -68,7 +68,7 @@ def _map_sqlalchemy_type_to_backend(
         }
         return type_mapping.get(type_str.upper(), type_str)
 
-    if backend.startswith("mysql"):
+    if backend in ("mysql", "mariadb"):
         type_upper = type_str.upper()
         type_mapping = {
             "BOOLEAN": "TINYINT(1)",
@@ -495,7 +495,7 @@ def generate_add_column_sql(
     backend = _get_backend_name(db_name)
     is_serial = (
         column.type.upper() in ("SERIAL", "BIGSERIAL")
-        if backend.startswith("postgres")
+        if backend == "postgresql"
         else False
     )
 
@@ -515,7 +515,7 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
         col_def = f"    {col.name} {col.type}"
         is_serial = (
             col.type.upper() in ("SERIAL", "BIGSERIAL")
-            if backend.startswith("postgres")
+            if backend == "postgresql"
             else False
         )
 
