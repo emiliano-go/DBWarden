@@ -33,10 +33,12 @@ default = "{db_name}"
 # Database configurations
 [database]
 [database.{db_name}]
+# Database type: sqlite, postgresql, mysql, mariadb
+database_type = "sqlite"
 # Database connection URL (required)
 sqlalchemy_url = "sqlite:///./development.db"
 
-# PostgreSQL schema (optional)
+# PostgreSQL schema (optional, only for postgresql)
 # postgres_schema = "public"
 
 # Paths to SQLAlchemy models for auto-migration (optional)

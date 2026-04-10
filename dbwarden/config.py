@@ -1,10 +1,13 @@
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 import tomllib
 
 from dbwarden.constants import TOML_FILE
 from dbwarden.exceptions import ConfigurationError
+
+DatabaseType = Literal["sqlite", "postgresql", "mysql", "mariadb"]
 
 
 @dataclass
@@ -14,6 +17,7 @@ class DatabaseConfig:
 
     Attributes:
         sqlalchemy_url (str): The SQLAlchemy database connection URL.
+        database_type (DatabaseType): The database type (sqlite, postgresql, mysql, mariadb).
         model_paths (list[str] | None): Optional list of paths to SQLAlchemy
             model files for automatic migration generation. Defaults to None.
         migrations_dir (str): Directory for migration files. Defaults to "migrations".
@@ -22,6 +26,7 @@ class DatabaseConfig:
     """
 
     sqlalchemy_url: str
+    database_type: DatabaseType
     model_paths: list[str] | None = None
     migrations_dir: str = "migrations"
     postgres_schema: str | None = None
@@ -60,6 +65,28 @@ def get_toml_path() -> Path | None:
         current = current.parent
 
     return None
+
+
+def _infer_database_type(sqlalchemy_url: str) -> DatabaseType:
+    """
+    Infer database type from SQLAlchemy URL.
+
+    Args:
+        sqlalchemy_url: The database connection URL.
+
+    Returns:
+        DatabaseType: The inferred database type.
+    """
+    url_lower = sqlalchemy_url.lower()
+    if url_lower.startswith("sqlite"):
+        return "sqlite"
+    elif url_lower.startswith("postgresql") or url_lower.startswith("postgres"):
+        return "postgresql"
+    elif url_lower.startswith("mysql"):
+        return "mysql"
+    elif url_lower.startswith("mariadb"):
+        return "mariadb"
+    return "sqlite"
 
 
 def get_multi_db_config() -> MultiDbConfig:
@@ -116,6 +143,16 @@ def get_multi_db_config() -> MultiDbConfig:
                 f'Example: sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"'
             )
 
+        database_type = _infer_database_type(sqlalchemy_url)
+        if "database_type" in db_config:
+            explicit_type = db_config["database_type"].lower()
+            if explicit_type not in ("sqlite", "postgresql", "mysql", "mariadb"):
+                raise ConfigurationError(
+                    f"Invalid database_type '{explicit_type}' for database '{name}'. "
+                    f"Must be one of: sqlite, postgresql, mysql, mariadb"
+                )
+            database_type = explicit_type
+
         model_paths = None
         if "model_paths" in db_config:
             model_paths = db_config["model_paths"]
@@ -127,6 +164,7 @@ def get_multi_db_config() -> MultiDbConfig:
 
         databases[name] = DatabaseConfig(
             sqlalchemy_url=sqlalchemy_url,
+            database_type=database_type,
             model_paths=model_paths,
             migrations_dir=migrations_dir,
             postgres_schema=postgres_schema,

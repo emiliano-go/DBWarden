@@ -37,12 +37,14 @@ def handle_database_list() -> None:
                     user, _ = auth.split(":", 1)
                     url = f"{parts[0]}://{user}:***@{rest}"
         print(f"  {name}{is_default} - {url}")
+        print(f"    type: {db_config.database_type}")
         print(f"    migrations: {db_config.migrations_dir}")
 
 
 def handle_database_add(
     name: str,
     url: str,
+    database_type: str | None = None,
     model_paths: list[str] | None = None,
     migrations_dir: str | None = None,
     default: bool = False,
@@ -70,8 +72,22 @@ def handle_database_add(
     if name in database_section:
         raise ValueError(f"Database '{name}' already exists in warden.toml")
 
+    from dbwarden.config import _infer_database_type
+
+    db_type = database_type or _infer_database_type(url)
+    if database_type and database_type not in (
+        "sqlite",
+        "postgresql",
+        "mysql",
+        "mariadb",
+    ):
+        raise ValueError(
+            f"Invalid database_type '{database_type}'. Must be one of: sqlite, postgresql, mysql, mariadb"
+        )
+
     db_config = {
         "sqlalchemy_url": url,
+        "database_type": db_type,
     }
 
     if model_paths:

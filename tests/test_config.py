@@ -29,10 +29,12 @@ class TestConfig:
                     f.write('default = "primary"\n')
                     f.write("[database.primary]\n")
                     f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
+                    f.write('database_type = "sqlite"\n')
 
                 config = get_config()
 
                 assert config.sqlalchemy_url == "sqlite:///./test.db"
+                assert config.database_type == "sqlite"
                 assert config.migrations_dir == "migrations/primary"
             finally:
                 os.chdir(old_cwd)
