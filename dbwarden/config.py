@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import tomllib
@@ -8,21 +8,37 @@ from dbwarden.exceptions import ConfigurationError
 
 
 @dataclass
-class DbwardenConfig:
+class DatabaseConfig:
     """
-    Configuration settings for DBWarden migrations.
+    Configuration settings for a single database.
 
     Attributes:
         sqlalchemy_url (str): The SQLAlchemy database connection URL.
         model_paths (list[str] | None): Optional list of paths to SQLAlchemy
             model files for automatic migration generation. Defaults to None.
+        migrations_dir (str): Directory for migration files. Defaults to "migrations".
         postgres_schema (str | None): Optional PostgreSQL schema to use.
             Defaults to None.
     """
 
     sqlalchemy_url: str
     model_paths: list[str] | None = None
+    migrations_dir: str = "migrations"
     postgres_schema: str | None = None
+
+
+@dataclass
+class MultiDbConfig:
+    """
+    Multi-database configuration for DBWarden.
+
+    Attributes:
+        databases (dict[str, DatabaseConfig]): Dictionary mapping database names to configs.
+        default (str): Name of the default database. Defaults to "default".
+    """
+
+    databases: dict[str, DatabaseConfig] = field(default_factory=dict)
+    default: str = "default"
 
 
 def get_toml_path() -> Path | None:
@@ -46,12 +62,12 @@ def get_toml_path() -> Path | None:
     return None
 
 
-def get_config() -> DbwardenConfig:
+def get_multi_db_config() -> MultiDbConfig:
     """
-    Load configuration from warden.toml file.
+    Load multi-database configuration from warden.toml file.
 
     Returns:
-        DbwardenConfig: Configuration dataclass with all required values.
+        MultiDbConfig: Multi-database configuration dataclass.
 
     Raises:
         ConfigurationError: If warden.toml is not found or is missing required values.
@@ -60,46 +76,116 @@ def get_config() -> DbwardenConfig:
 
     if not toml_path:
         raise ConfigurationError(
-            f"warden.toml not found. Please create a warden.toml file in {Path.cwd()} or a parent directory. "
-            f"Required: sqlalchemy_url\n"
-            f'Example: sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"'
+            f"warden.toml not found. Please create a warden.toml file in {Path.cwd()} or a parent directory.\n"
+            f"Required format:\n"
+            f'  default = "primary"\n'
+            f"  [database.primary]\n"
+            f'  sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"\n'
+            f'  migrations_dir = "migrations/primary"\n'
+            f'  model_paths = ["./models/"]'
         )
 
-    return _load_from_toml(toml_path)
-
-
-def _load_from_toml(path: Path) -> DbwardenConfig:
-    """
-    Load configuration from warden.toml file.
-
-    Args:
-        path: Path to warden.toml file.
-
-    Returns:
-        DbwardenConfig: Configuration dataclass.
-    """
-    with open(path, "rb") as f:
+    with open(toml_path, "rb") as f:
         config_data = tomllib.load(f)
 
     toml_config = config_data.get("warden", config_data)
 
-    sqlalchemy_url = toml_config.get("sqlalchemy_url")
-    if not sqlalchemy_url:
+    default = toml_config.get("default", "default")
+    databases: dict[str, DatabaseConfig] = {}
+
+    database_section = toml_config.get("database", {})
+    if not database_section:
         raise ConfigurationError(
-            "sqlalchemy_url is required in warden.toml. "
-            'Example: sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"'
+            "No [database] section found in warden.toml. "
+            "Multi-database format is required.\n"
+            f'  default = "primary"\n'
+            f"  [database.primary]\n"
+            f'  sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"'
         )
 
-    model_paths = None
-    if "model_paths" in toml_config:
-        model_paths = toml_config["model_paths"]
-        if isinstance(model_paths, str):
-            model_paths = [p.strip() for p in model_paths.split(",") if p.strip()]
+    for name, db_config in database_section.items():
+        if not isinstance(db_config, dict):
+            raise ConfigurationError(
+                f"Invalid database configuration for '{name}'. Expected a table with settings."
+            )
 
-    postgres_schema = toml_config.get("postgres_schema", None)
+        sqlalchemy_url = db_config.get("sqlalchemy_url")
+        if not sqlalchemy_url:
+            raise ConfigurationError(
+                f"sqlalchemy_url is required for database '{name}' in warden.toml. "
+                f'Example: sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"'
+            )
 
-    return DbwardenConfig(
-        sqlalchemy_url=sqlalchemy_url,
-        model_paths=model_paths,
-        postgres_schema=postgres_schema,
-    )
+        model_paths = None
+        if "model_paths" in db_config:
+            model_paths = db_config["model_paths"]
+            if isinstance(model_paths, str):
+                model_paths = [p.strip() for p in model_paths.split(",") if p.strip()]
+
+        migrations_dir = db_config.get("migrations_dir", f"migrations/{name}")
+        postgres_schema = db_config.get("postgres_schema", None)
+
+        databases[name] = DatabaseConfig(
+            sqlalchemy_url=sqlalchemy_url,
+            model_paths=model_paths,
+            migrations_dir=migrations_dir,
+            postgres_schema=postgres_schema,
+        )
+
+    if default not in databases:
+        available = list(databases.keys())
+        raise ConfigurationError(
+            f"Default database '{default}' not found in [database] section. "
+            f"Available databases: {available}"
+        )
+
+    return MultiDbConfig(databases=databases, default=default)
+
+
+def get_database(name: str | None = None) -> DatabaseConfig:
+    """
+    Get database config by name or default.
+
+    Args:
+        name: Database name. If None, returns the default database.
+
+    Returns:
+        DatabaseConfig: Configuration for the specified database.
+
+    Raises:
+        ConfigurationError: If database name is not found.
+    """
+    config = get_multi_db_config()
+
+    if name is None:
+        name = config.default
+
+    if name not in config.databases:
+        available = list(config.databases.keys())
+        raise ConfigurationError(
+            f"Database '{name}' not found in warden.toml. "
+            f"Available databases: {available}"
+        )
+
+    return config.databases[name]
+
+
+def list_databases() -> list[str]:
+    """
+    List all configured database names.
+
+    Returns:
+        list[str]: List of database names.
+    """
+    config = get_multi_db_config()
+    return list(config.databases.keys())
+
+
+def get_config() -> DatabaseConfig:
+    """
+    Get the default database config (for backward compatibility).
+
+    Returns:
+        DatabaseConfig: Configuration for the default database.
+    """
+    return get_database(None)
