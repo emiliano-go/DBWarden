@@ -2,7 +2,7 @@ from enum import Enum
 
 from sqlalchemy.engine import make_url
 
-from dbwarden.config import get_config
+from dbwarden.config import get_database
 
 
 class QueryMethod(Enum):
@@ -287,24 +287,24 @@ MYSQL_QUERIES = {
 }
 
 
-def _get_backend_name() -> str:
+def _get_backend_name(db_name: str | None = None) -> str:
     try:
-        config = get_config()
-        return make_url(config.sqlalchemy_url).get_backend_name().lower()
+        config = get_database(db_name)
+        return config.database_type
     except Exception:
         return "sqlite"
 
 
-def _get_queries_for_backend() -> dict:
-    backend = _get_backend_name()
-    if backend.startswith("postgres"):
+def _get_queries_for_backend(db_name: str | None = None) -> dict:
+    backend = _get_backend_name(db_name)
+    if backend == "postgresql":
         return POSTGRES_QUERIES
-    if backend.startswith("mysql"):
+    if backend in ("mysql", "mariadb"):
         return MYSQL_QUERIES
     return SQLITE_QUERIES
 
 
-def get_query(method: QueryMethod, **kwargs) -> str:
+def get_query(method: QueryMethod, db_name: str | None = None, **kwargs) -> str:
     """Get a SQL query by method for current backend."""
 
-    return _get_queries_for_backend().get(method, "")
+    return _get_queries_for_backend(db_name).get(method, "")

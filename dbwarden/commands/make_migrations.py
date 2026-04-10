@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from dbwarden.config import get_config
+from dbwarden.config import get_database
 from dbwarden.engine.file_parser import parse_upgrade_statements
 from dbwarden.engine.model_discovery import (
     get_all_model_tables,
@@ -19,6 +19,7 @@ from dbwarden.engine.model_discovery import (
 from dbwarden.engine.version import (
     get_migrations_directory,
     get_next_migration_number,
+    generate_migration_filename,
 )
 from dbwarden.logging import get_logger
 
@@ -54,6 +55,7 @@ def get_pending_migration_statements(migrations_dir: str) -> set[str]:
 def make_migrations_cmd(
     description: str | None = None,
     verbose: bool = False,
+    database: str | None = None,
 ) -> None:
     """
     Auto-generate SQL migration from SQLAlchemy models.
@@ -61,10 +63,12 @@ def make_migrations_cmd(
     Args:
         description: Description for the migration.
         verbose: Enable verbose logging.
+        database: Target database name.
     """
     logger = get_logger(verbose=verbose)
 
-    config = get_config()
+    config = get_database(database)
+    db_name = database or config.sqlalchemy_url.split("/")[-1].split("?")[0]
     model_paths = config.model_paths
 
     if model_paths is None:
@@ -87,12 +91,15 @@ def make_migrations_cmd(
 
     logger.info(f"Found {len(tables)} tables in models")
 
-    migrations_dir = get_migrations_directory()
+    migrations_dir = get_migrations_directory(database)
     next_number = get_next_migration_number(migrations_dir)
     safe_desc = re.sub(r"[^a-zA-Z0-9]", "_", description or "auto_generated").lower()
-    filename = f"{next_number}_{safe_desc}.sql"
 
-    upgrade_sql, rollback_sql = generate_migration_sql(tables, migrations_dir)
+    filename = generate_migration_filename(db_name, safe_desc, next_number)
+
+    upgrade_sql, rollback_sql = generate_migration_sql(
+        tables, migrations_dir, database, db_name
+    )
 
     if not upgrade_sql.strip():
         print(
@@ -120,7 +127,10 @@ def make_migrations_cmd(
 
 
 def generate_migration_sql(
-    tables: list, migrations_dir: str | None = None
+    tables: list,
+    migrations_dir: str | None = None,
+    database: str | None = None,
+    db_name: str | None = None,
 ) -> tuple[str, str]:
     """
     Generate upgrade and rollback SQL from table definitions.
@@ -131,13 +141,15 @@ def generate_migration_sql(
 
     Args:
         tables: List of ModelTable objects.
-        migrations_dir: Path to migrations directory (unused, kept for compatibility).
+        migrations_dir: Path to migrations directory.
+        database: Database name for backend-specific types.
+        db_name: Database name for filename generation.
 
     Returns:
         Tuple of (upgrade_sql, rollback_sql).
     """
     try:
-        config = get_config()
+        config = get_database(database)
         existing_tables = extract_tables_from_database(config.sqlalchemy_url)
     except Exception:
         existing_tables = {}
@@ -163,13 +175,13 @@ def generate_migration_sql(
         existing_columns = known_tables.get(table.name, set())
 
         if not existing_columns:
-            create_sql = generate_create_table_sql(table)
+            create_sql = generate_create_table_sql(table, db_name)
             upgrade_parts.append(create_sql)
             rollback_parts.append(generate_drop_table_sql(table.name))
         else:
             for column in table.columns:
                 if column.name.lower() not in existing_columns:
-                    alter_sql = generate_add_column_sql(table.name, column)
+                    alter_sql = generate_add_column_sql(table.name, column, db_name)
                     upgrade_parts.append(alter_sql)
                     rollback_parts.append(
                         f"ALTER TABLE {table.name} DROP COLUMN {column.name}"
@@ -196,23 +208,31 @@ def generate_migration_sql(
     return "\n\n".join(upgrade_parts), "\n\n".join(rollback_parts)
 
 
-def new_migration_cmd(description: str, version: str | None = None) -> None:
+def new_migration_cmd(
+    description: str,
+    version: str | None = None,
+    database: str | None = None,
+) -> None:
     """
     Create a new manual migration file.
 
     Args:
         description: Description of the migration.
         version: Version number for the migration.
+        database: Target database name.
     """
     logger = get_logger()
 
-    migrations_dir = get_migrations_directory()
+    config = get_database(database)
+    db_name = database or config.sqlalchemy_url.split("/")[-1].split("?")[0]
+
+    migrations_dir = get_migrations_directory(database)
 
     if version is None:
         version = get_next_migration_number(migrations_dir)
 
     safe_description = re.sub(r"[^a-zA-Z0-9]", "_", description).lower()
-    filename = f"{version}_{safe_description}.sql"
+    filename = generate_migration_filename(db_name, safe_description, version)
     filepath = os.path.join(migrations_dir, filename)
 
     content = f"""-- upgrade

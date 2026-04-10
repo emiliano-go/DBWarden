@@ -1,5 +1,4 @@
 from dbwarden.constants import (
-    MIGRATIONS_DIR,
     RUNS_ALWAYS_FILE_PREFIX,
     RUNS_ON_CHANGE_FILE_PREFIX,
 )
@@ -10,9 +9,12 @@ import os
 from typing import Optional
 
 
-def get_migrations_directory() -> str:
+def get_migrations_directory(db_name: str | None = None) -> str:
     """
-    Get the migrations directory path.
+    Get the migrations directory path for a specific database.
+
+    Args:
+        db_name: Database name. If None, uses the database's configured migrations_dir.
 
     Returns:
         str: Path to migrations directory.
@@ -20,20 +22,26 @@ def get_migrations_directory() -> str:
     Raises:
         DirectoryNotFoundError: If migrations directory is not found.
     """
+    from dbwarden.config import get_database
+
+    config = get_database(db_name)
     current_dir = Path.cwd()
-    migrations_dir = current_dir / MIGRATIONS_DIR
+    migrations_dir = current_dir / config.migrations_dir
 
     if not migrations_dir.exists() or not migrations_dir.is_dir():
         raise DirectoryNotFoundError(
-            f"migrations directory not found. Please run 'dbwarden init' first."
+            f"Migrations directory '{config.migrations_dir}' not found. "
+            f"Please run 'dbwarden init --database {db_name or config}' first."
         )
     return str(migrations_dir)
 
 
-MIGRATION_PATTERN = re.compile(r"^(\d{4})_(.+)\.sql$")
-RUNS_ALWAYS_PATTERN = re.compile(rf"^{re.escape(RUNS_ALWAYS_FILE_PREFIX)}(.+)\.sql$")
+MIGRATION_PATTERN = re.compile(r"^[a-zA-Z0-9_]+__(\d{4})_(.+)\.sql$")
+RUNS_ALWAYS_PATTERN = re.compile(
+    rf"^[a-zA-Z0-9_]+__{re.escape(RUNS_ALWAYS_FILE_PREFIX)}(.+)\.sql$"
+)
 RUNS_ON_CHANGE_PATTERN = re.compile(
-    rf"^{re.escape(RUNS_ON_CHANGE_FILE_PREFIX)}(.+)\.sql$"
+    rf"^[a-zA-Z0-9_]+__{re.escape(RUNS_ON_CHANGE_FILE_PREFIX)}(.+)\.sql$"
 )
 
 
@@ -108,7 +116,7 @@ def get_runs_always_filepaths(directory: str) -> list[str]:
 
 
 def get_runs_on_change_filepaths(
-    directory: str, changed_only: bool = False
+    directory: str, changed_only: bool = False, db_name: str | None = None
 ) -> list[str]:
     """
     Get all runs-on-change (ROC__) migration file paths.
@@ -116,6 +124,7 @@ def get_runs_on_change_filepaths(
     Args:
         directory: Path to migrations directory.
         changed_only: Only return files that have changed since last run.
+        db_name: Database name for getting existing checksums.
 
     Returns:
         list[str]: List of file paths for runs-on-change migrations.
@@ -135,8 +144,8 @@ def get_runs_on_change_filepaths(
         if match:
             filepath = os.path.join(directory, filename)
             if changed_only:
-                existing_checksums = (
-                    get_existing_runs_on_change_filenames_to_checksums()
+                existing_checksums = get_existing_runs_on_change_filenames_to_checksums(
+                    db_name
                 )
                 if filename in existing_checksums:
                     with open(filepath, "r") as f:
@@ -156,19 +165,22 @@ def get_runs_on_change_filepaths(
     return filepaths
 
 
-def get_all_repeatable_filepaths(directory: str) -> dict[str, list[str]]:
+def get_all_repeatable_filepaths(
+    directory: str, db_name: str | None = None
+) -> dict[str, list[str]]:
     """
     Get all repeatable migration file paths (both RA__ and ROC__).
 
     Args:
         directory: Path to migrations directory.
+        db_name: Database name for getting existing checksums.
 
     Returns:
         dict[str, list[str]]: Dictionary with 'runs_always' and 'runs_on_change' keys.
     """
     return {
         "runs_always": get_runs_always_filepaths(directory),
-        "runs_on_change": get_runs_on_change_filepaths(directory),
+        "runs_on_change": get_runs_on_change_filepaths(directory, db_name=db_name),
     }
 
 
@@ -295,3 +307,39 @@ def compare_versions(v1: str, v2: str) -> int:
     elif p1 > p2:
         return 1
     return 0
+
+
+def generate_migration_filename(db_name: str, description: str, version: str) -> str:
+    """
+    Generate a migration filename with database name prefix.
+
+    Args:
+        db_name: Database name.
+        description: Migration description.
+        version: Migration version number.
+
+    Returns:
+        str: Migration filename (e.g., "primary__0001_create_users.sql")
+    """
+    safe_description = re.sub(r"[^a-zA-Z0-9_]", "_", description.lower())
+    safe_description = re.sub(r"_+", "_", safe_description)
+    safe_description = safe_description.strip("_")
+    return f"{db_name}__{version}_{safe_description}.sql"
+
+
+def generate_repeatable_filename(db_name: str, description: str, prefix: str) -> str:
+    """
+    Generate a repeatable migration filename with database name prefix.
+
+    Args:
+        db_name: Database name.
+        description: Migration description.
+        prefix: RA__ or ROC__ prefix.
+
+    Returns:
+        str: Filename (e.g., "primary__RA__seed_data.sql")
+    """
+    safe_description = re.sub(r"[^a-zA-Z0-9_]", "_", description.lower())
+    safe_description = re.sub(r"_+", "_", safe_description)
+    safe_description = safe_description.strip("_")
+    return f"{db_name}__{prefix}{safe_description}.sql"

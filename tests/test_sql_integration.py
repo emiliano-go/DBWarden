@@ -51,6 +51,8 @@ class TestDatabaseOperations:
             os.chdir(tmpdir)
 
             with open("warden.toml", "w") as f:
+                f.write('default = "primary"\n')
+                f.write("[database.primary]\n")
                 f.write(f'sqlalchemy_url = "sqlite:///{temp_db}"\n')
 
             yield {"db_path": temp_db}
