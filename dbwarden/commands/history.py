@@ -5,22 +5,30 @@ from dbwarden.logging import get_logger
 from dbwarden.repositories import get_migration_records, migrations_table_exists
 
 
-def history_cmd() -> None:
+def history_cmd(database: str | None = None) -> None:
     """Display the migration history in a formatted table."""
     logger = get_logger()
     console = Console()
 
-    if not migrations_table_exists():
-        console.print("[yellow]No migrations have been applied yet.[/yellow]")
+    db_name = database or "default"
+
+    if not migrations_table_exists(database):
+        console.print(
+            f"[yellow]No migrations have been applied to '{db_name}' yet.[/yellow]"
+        )
         return
 
-    migration_records = get_migration_records()
+    migration_records = get_migration_records(database)
     if not migration_records:
-        console.print("[yellow]No migrations have been applied yet.[/yellow]")
+        console.print(
+            f"[yellow]No migrations have been applied to '{db_name}' yet.[/yellow]"
+        )
         return
 
     table = Table(
-        title="Migration History", show_header=True, header_style="bold magenta"
+        title=f"Migration History - {db_name}",
+        show_header=True,
+        header_style="bold magenta",
     )
     table.add_column("Version", style="cyan", no_wrap=True)
     table.add_column("Order Executed", style="green")

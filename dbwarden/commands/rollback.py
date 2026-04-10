@@ -15,6 +15,7 @@ def rollback_cmd(
     count: int | None = None,
     to_version: str | None = None,
     verbose: bool = False,
+    database: str | None = None,
 ) -> None:
     """
     Rollback the last applied migration.
@@ -23,21 +24,24 @@ def rollback_cmd(
         count: Number of migrations to rollback.
         to_version: Rollback to a specific version.
         verbose: Enable verbose logging.
+        database: Target database name.
     """
     logger = get_logger(verbose=verbose)
 
     if count is not None and to_version is not None:
-        raise ValueError("Cannot specify both 'count' and 'to_version'.")
+        raise ValueError("Cannot specify both 'count' and 'to-version'.")
 
-    migrations_dir = get_migrations_directory()
+    migrations_dir = get_migrations_directory(database)
 
-    create_migrations_table_if_not_exists()
-    create_lock_table_if_not_exists()
+    create_migrations_table_if_not_exists(database)
+    create_lock_table_if_not_exists(database)
 
     if count is None and to_version is None:
         count = 1
 
-    latest_versions = get_latest_versions(limit=count, starting_version=to_version)
+    latest_versions = get_latest_versions(
+        database, limit=count, starting_version=to_version
+    )
 
     if not latest_versions:
         print("Nothing to rollback.")
@@ -63,6 +67,7 @@ def rollback_cmd(
             version=version,
             migration_operation="rollback",
             filename=filename,
+            db_name=database,
         )
 
         duration = time.time() - start_time

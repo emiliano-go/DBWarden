@@ -6,11 +6,11 @@ from typing import Any, Generator
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
-from dbwarden.config import get_config
+from dbwarden.config import get_database
 from dbwarden.logging import get_logger
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=4)
 def _get_engine(url: str) -> Engine:
     return create_engine(url=url)
 
@@ -25,13 +25,16 @@ def reset_connection_logging() -> None:
 
 
 @contextmanager
-def get_db_connection() -> Generator[Any, None, None]:
+def get_db_connection(db_name: str | None = None) -> Generator[Any, None, None]:
     """
     Context manager that yields a database connection.
+
+    Args:
+        db_name: Database name from config. If None, uses default database.
     """
     global _connection_init_logged
     logger = get_logger()
-    config = get_config()
+    config = get_database(db_name)
 
     engine = _get_engine(config.sqlalchemy_url)
 
@@ -47,3 +50,17 @@ def get_db_connection() -> Generator[Any, None, None]:
                 parameters={"postgres_schema": postgres_schema},
             )
         yield connection
+
+
+def get_engine(db_name: str | None = None) -> Engine:
+    """
+    Get SQLAlchemy engine for the specified database.
+
+    Args:
+        db_name: Database name from config. If None, uses default database.
+
+    Returns:
+        SQLAlchemy Engine instance.
+    """
+    config = get_database(db_name)
+    return _get_engine(config.sqlalchemy_url)
