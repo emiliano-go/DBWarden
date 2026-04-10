@@ -33,13 +33,16 @@ def get_db_connection(db_name: str | None = None) -> Generator[Any, None, None]:
         db_name: Database name from config. If None, uses default database.
     """
     global _connection_init_logged
-    logger = get_logger()
     config = get_database(db_name)
+    logger = get_logger(
+        db_name=config.sqlalchemy_url.split("/")[-1].split("?")[0],
+        db_type=config.database_type,
+    )
 
     engine = _get_engine(config.sqlalchemy_url)
 
     if not _connection_init_logged:
-        logger.log_connection_init("sync")
+        logger.log_connection_init(config.database_type)
         _connection_init_logged = True
 
     with engine.begin() as connection:
