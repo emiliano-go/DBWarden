@@ -16,7 +16,6 @@ from sqlalchemy import (
     Float,
     ForeignKey,
 )
-from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base
 
 from dbwarden.config import get_database
@@ -29,7 +28,7 @@ def _get_backend_name(db_name: str | None = None) -> str:
     """Get the database backend name from config."""
     try:
         config = get_database(db_name)
-        return make_url(config.sqlalchemy_url).get_backend_name().lower()
+        return config.database_type
     except Exception:
         return "sqlite"
 
