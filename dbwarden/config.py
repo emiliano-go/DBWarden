@@ -148,10 +148,16 @@ def get_multi_db_config() -> MultiDbConfig:
         database_type = _infer_database_type(sqlalchemy_url)
         if "database_type" in db_config:
             explicit_type = db_config["database_type"].lower()
-            if explicit_type not in ("sqlite", "postgresql", "mysql", "mariadb"):
+            if explicit_type not in (
+                "sqlite",
+                "postgresql",
+                "mysql",
+                "mariadb",
+                "clickhouse",
+            ):
                 raise ConfigurationError(
                     f"Invalid database_type '{explicit_type}' for database '{name}'. "
-                    f"Must be one of: sqlite, postgresql, mysql, mariadb"
+                    f"Must be one of: sqlite, postgresql, mysql, mariadb, clickhouse"
                 )
             database_type = explicit_type
 

@@ -258,13 +258,13 @@ class DBWardenLogger:
         self.logger.critical(msg, extra=kwargs)
 
     def _format_db_context(self) -> str:
-        """Format database context for log messages."""
+        """Format database context for log messages with colors."""
         if self.db_name and self.db_type:
-            return f"[{self.db_name}/{self.db_type}]"
+            return f"[{colorize(self.db_name, ANSI_COLORS['cyan'])}/{colorize(self.db_type, ANSI_COLORS['magenta'])}]"
         elif self.db_name:
-            return f"[{self.db_name}]"
+            return f"[{colorize(self.db_name, ANSI_COLORS['cyan'])}]"
         elif self.db_type:
-            return f"[{self.db_type}]"
+            return f"[{colorize(self.db_type, ANSI_COLORS['magenta'])}]"
         return ""
 
     def log_connection_init(self, db_type: str | None = None) -> None:
@@ -272,7 +272,10 @@ class DBWardenLogger:
         if db_type:
             self.db_type = db_type
         ctx = self._format_db_context()
-        self.info(f"Database connection initialized: {ctx}")
+        if ctx:
+            self.info(f"Connected to {ctx}")
+        else:
+            self.info("Database connection initialized")
 
     def log_pending_migrations(self, migrations: list[str]) -> None:
         """Log list of pending migrations."""
@@ -281,7 +284,9 @@ class DBWardenLogger:
         if migrations:
             self.info(f"{prefix}Pending migrations ({len(migrations)}):")
             for m in migrations:
-                self.info(f"  {colorize_status('PENDING')} {m}")
+                self.info(
+                    f"  {colorize('[PENDING]', ANSI_COLORS['yellow'])} {colorize(m, ANSI_COLORS['white'])}"
+                )
 
     def log_migration_start(self, version: str, filename: str) -> None:
         """Log migration start."""
@@ -294,7 +299,7 @@ class DBWardenLogger:
         ctx = self._format_db_context()
         prefix = f"{ctx} " if ctx else ""
         self.info(
-            f"{prefix}{colorize_status('APPLIED')} Completed migration: {filename} (version: {version}) in {duration:.2f}s"
+            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Completed migration: {colorize(filename, ANSI_COLORS['white'])} (version: {colorize(version, ANSI_COLORS['dim'] + ANSI_COLORS['cyan'])}) in {colorize(f'{duration:.2f}s', ANSI_COLORS['dim'])}"
         )
 
     def log_rollback_start(self, version: str, filename: str) -> None:
@@ -308,36 +313,44 @@ class DBWardenLogger:
         ctx = self._format_db_context()
         prefix = f"{ctx} " if ctx else ""
         self.info(
-            f"{prefix}{colorize_status('ROLLED_BACK')} Rollback completed: {filename} (version: {version}) in {duration:.2f}s"
+            f"{prefix}{colorize('[ROLLED_BACK]', ANSI_COLORS['red'])} Rollback completed: {filename} (version: {version}) in {duration:.2f}s"
         )
 
     def log_sql_statement(self, sql: str) -> None:
         """Log SQL statement with syntax highlighting (verbose only)."""
         if self.verbose:
-            highlighted = colorize_sql(sql)
             ctx = self._format_db_context()
             prefix = f"{ctx} " if ctx else ""
-            self.debug(f"{prefix}SQL Statement:\n{highlighted}")
+            self.debug(
+                f"{prefix}{colorize('SQL:', ANSI_COLORS['bold'] + ANSI_COLORS['blue'])}"
+            )
+            for line in sql.strip().split("\n"):
+                if line.strip():
+                    self.debug(colorize_sql(line))
 
     def log_backup_created(self, backup_path: str) -> None:
         """Log backup creation."""
         ctx = self._format_db_context()
         prefix = f"{ctx} " if ctx else ""
-        self.info(f"{prefix}{colorize_status('APPLIED')} Backup created: {backup_path}")
+        self.info(
+            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Backup created: {backup_path}"
+        )
 
     def log_baseline_set(self, version: str) -> None:
         """Log baseline migration set."""
         ctx = self._format_db_context()
         prefix = f"{ctx} " if ctx else ""
         self.info(
-            f"{prefix}{colorize_status('APPLIED')} Baseline set at version: {version}"
+            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Baseline set at version: {version}"
         )
 
     def log_seed_migration(self, filename: str) -> None:
         """Log seed migration."""
         ctx = self._format_db_context()
         prefix = f"{ctx} " if ctx else ""
-        self.info(f"{prefix}{colorize_status('APPLIED')} Seed data applied: {filename}")
+        self.info(
+            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Seed data applied: {filename}"
+        )
 
     def log_model_discovered(self, table_name: str, columns: list) -> None:
         """Log model discovered from SQLAlchemy models (verbose only)."""
