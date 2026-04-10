@@ -19,33 +19,36 @@ from sqlalchemy import (
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import declarative_base
 
-from dbwarden.config import get_config
+from dbwarden.config import get_database
 from dbwarden.models import SchemaDifference
 
 Base = declarative_base()
 
 
-def _get_backend_name() -> str:
+def _get_backend_name(db_name: str | None = None) -> str:
     """Get the database backend name from config."""
     try:
-        config = get_config()
+        config = get_database(db_name)
         return make_url(config.sqlalchemy_url).get_backend_name().lower()
     except Exception:
         return "sqlite"
 
 
-def _map_sqlalchemy_type_to_backend(type_str: str, is_primary_key: bool = False) -> str:
+def _map_sqlalchemy_type_to_backend(
+    type_str: str, is_primary_key: bool = False, db_name: str | None = None
+) -> str:
     """
     Map SQLAlchemy type strings to backend-specific types.
 
     Args:
         type_str: The SQLAlchemy type string (e.g., "INTEGER", "DATETIME", "VARCHAR(100)").
         is_primary_key: Whether this column is a primary key (for SERIAL/BIGSERIAL mapping).
+        db_name: Database name for backend detection.
 
     Returns:
         Backend-specific type string.
     """
-    backend = _get_backend_name()
+    backend = _get_backend_name(db_name)
 
     if backend.startswith("postgres"):
         type_upper = type_str.upper()
@@ -315,12 +318,15 @@ def auto_discover_model_paths() -> List[str]:
     return model_paths
 
 
-def extract_table_from_model(model_class: type) -> Optional[ModelTable]:
+def extract_table_from_model(
+    model_class: type, db_name: str | None = None
+) -> Optional[ModelTable]:
     """
     Extract table information from a SQLAlchemy model class.
 
     Args:
         model_class: SQLAlchemy model class.
+        db_name: Database name for backend-specific type mapping.
 
     Returns:
         ModelTable object or None if extraction fails.
@@ -330,7 +336,7 @@ def extract_table_from_model(model_class: type) -> Optional[ModelTable]:
         columns = []
 
         for column in model_class.__table__.columns:
-            col = extract_column_info(column)
+            col = extract_column_info(column, db_name=db_name)
             if col:
                 columns.append(col)
 
@@ -339,12 +345,13 @@ def extract_table_from_model(model_class: type) -> Optional[ModelTable]:
         return None
 
 
-def extract_column_info(column) -> Optional[ModelColumn]:
+def extract_column_info(column, db_name: str | None = None) -> Optional[ModelColumn]:
     """
     Extract column information from a SQLAlchemy column.
 
     Args:
         column: SQLAlchemy column object.
+        db_name: Database name for backend-specific type mapping.
 
     Returns:
         ModelColumn object or None if extraction fails.
@@ -405,7 +412,9 @@ def extract_column_info(column) -> Optional[ModelColumn]:
             else:
                 default = default_str
 
-        type_str = _map_sqlalchemy_type_to_backend(type_str, is_primary_key=primary_key)
+        type_str = _map_sqlalchemy_type_to_backend(
+            type_str, is_primary_key=primary_key, db_name=db_name
+        )
 
         foreign_key = None
         if column.foreign_keys:
@@ -479,9 +488,11 @@ def compare_model_to_database(
     return differences
 
 
-def generate_add_column_sql(table_name: str, column: ModelColumn) -> str:
+def generate_add_column_sql(
+    table_name: str, column: ModelColumn, db_name: str | None = None
+) -> str:
     """Generate SQL for adding a column."""
-    backend = _get_backend_name()
+    backend = _get_backend_name(db_name)
     is_serial = (
         column.type.upper() in ("SERIAL", "BIGSERIAL")
         if backend.startswith("postgres")
@@ -495,9 +506,9 @@ def generate_add_column_sql(table_name: str, column: ModelColumn) -> str:
     return f"ALTER TABLE {table_name} ADD COLUMN {column.name} {column.type} {nullable_sql}{default_sql}{fk_sql}"
 
 
-def generate_create_table_sql(table: ModelTable) -> str:
+def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> str:
     """Generate CREATE TABLE SQL from a ModelTable."""
-    backend = _get_backend_name()
+    backend = _get_backend_name(db_name)
     column_defs = []
 
     for col in table.columns:
