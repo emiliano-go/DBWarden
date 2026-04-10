@@ -36,36 +36,17 @@ This is an experimental package. Your fuckups are not mine to fix. You have been
 Create `warden.toml` in your project:
 
 ```toml
+# Default database
 default = "primary"
 
-[database]
+# Database configurations
 [database.primary]
 database_type = "sqlite"
 sqlalchemy_url = "sqlite:///./development.db"
-```
 
-PostgreSQL example:
-
-```toml
-default = "primary"
-
-[database]
-[database.primary]
-database_type = "postgresql"
-sqlalchemy_url = "postgresql://user:password@localhost:5432/myapp"
-migrations_dir = "migrations/primary"
-```
-
-ClickHouse example:
-
-```toml
-default = "analytics"
-
-[database]
 [database.analytics]
-database_type = "clickhouse"
-sqlalchemy_url = "clickhouse://user:password@localhost:8123/analytics"
-migrations_dir = "migrations/analytics"
+database_type = "postgresql"
+sqlalchemy_url = "postgresql://user:password@localhost:5432/analytics"
 ```
 
 ## Basic Commands
@@ -79,13 +60,9 @@ migrations_dir = "migrations/analytics"
 | `dbwarden migrate` | Apply pending migrations |
 | `dbwarden migrate -d <name>` | Migrate specific database |
 | `dbwarden migrate --all` | Migrate all databases |
-| `dbwarden migrate --verbose` | Apply with detailed logging |
 | `dbwarden rollback` | Revert the last migration |
 | `dbwarden history` | Show migration history |
 | `dbwarden status` | Show current status |
-| `dbwarden config` | Show current configuration |
-| `dbwarden check-db` | Inspect DB schema |
-| `dbwarden diff` | Show models vs DB differences |
 
 ## Multi-Database Support
 
