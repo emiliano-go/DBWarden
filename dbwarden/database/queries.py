@@ -299,7 +299,7 @@ def _get_queries_for_backend(db_name: str | None = None) -> dict:
     backend = _get_backend_name(db_name)
     if backend == "postgresql":
         return POSTGRES_QUERIES
-    if backend in ("mysql", "mariadb"):
+    if backend in ("mysql", "mariadb", "clickhouse"):
         return MYSQL_QUERIES
     return SQLITE_QUERIES
 

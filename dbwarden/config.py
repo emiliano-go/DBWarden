@@ -7,7 +7,7 @@ import tomllib
 from dbwarden.constants import TOML_FILE
 from dbwarden.exceptions import ConfigurationError
 
-DatabaseType = Literal["sqlite", "postgresql", "mysql", "mariadb"]
+DatabaseType = Literal["sqlite", "postgresql", "mysql", "mariadb", "clickhouse"]
 
 
 @dataclass
@@ -17,7 +17,7 @@ class DatabaseConfig:
 
     Attributes:
         sqlalchemy_url (str): The SQLAlchemy database connection URL.
-        database_type (DatabaseType): The database type (sqlite, postgresql, mysql, mariadb).
+        database_type (DatabaseType): The database type (sqlite, postgresql, mysql, mariadb, clickhouse).
         model_paths (list[str] | None): Optional list of paths to SQLAlchemy
             model files for automatic migration generation. Defaults to None.
         migrations_dir (str): Directory for migration files. Defaults to "migrations".
@@ -86,6 +86,8 @@ def _infer_database_type(sqlalchemy_url: str) -> DatabaseType:
         return "mysql"
     elif url_lower.startswith("mariadb"):
         return "mariadb"
+    elif url_lower.startswith("clickhouse"):
+        return "clickhouse"
     return "sqlite"
 
 
