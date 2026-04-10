@@ -80,9 +80,10 @@ def handle_database_add(
         "postgresql",
         "mysql",
         "mariadb",
+        "clickhouse",
     ):
         raise ValueError(
-            f"Invalid database_type '{database_type}'. Must be one of: sqlite, postgresql, mysql, mariadb"
+            f"Invalid database_type '{database_type}'. Must be one of: sqlite, postgresql, mysql, mariadb, clickhouse"
         )
 
     db_config = {

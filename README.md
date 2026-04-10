@@ -36,15 +36,17 @@ This is an experimental package. Your fuckups are not mine to fix. You have been
 Create `warden.toml` in your project:
 
 ```toml
+# Default database
+default = "primary"
+
+# Database configurations
+[database.primary]
 database_type = "sqlite"
 sqlalchemy_url = "sqlite:///./development.db"
-```
 
-ClickHouse example:
-
-```toml
-database_type = "clickhouse"
-sqlalchemy_url = "clickhousedb+connect://user:password@localhost:8123/analytics"
+[database.analytics]
+database_type = "postgresql"
+sqlalchemy_url = "postgresql://user:password@localhost:5432/analytics"
 ```
 
 ## Basic Commands
@@ -52,15 +54,34 @@ sqlalchemy_url = "clickhousedb+connect://user:password@localhost:8123/analytics"
 | Command | Description |
 |---------|-------------|
 | `dbwarden init` | Initialize migrations directory |
+| `dbwarden database list` | List all configured databases |
+| `dbwarden database add <name>` | Add a new database |
 | `dbwarden make-migrations "name"` | Generate SQL from SQLAlchemy models |
 | `dbwarden migrate` | Apply pending migrations |
-| `dbwarden migrate --verbose` | Apply with detailed logging |
+| `dbwarden migrate -d <name>` | Migrate specific database |
+| `dbwarden migrate --all` | Migrate all databases |
 | `dbwarden rollback` | Revert the last migration |
 | `dbwarden history` | Show migration history |
 | `dbwarden status` | Show current status |
-| `dbwarden config` | Show current configuration |
-| `dbwarden check-db` | Inspect DB schema |
-| `dbwarden diff` | Show models vs DB differences |
+
+## Multi-Database Support
+
+Manage multiple databases from a single configuration:
+
+```bash
+# Add databases
+dbwarden database add analytics --url "postgresql://user:pass@localhost:5432/analytics"
+dbwarden database add legacy --url "mysql://user:pass@localhost:3306/legacy"
+
+# List all databases
+dbwarden database list
+
+# Migrate specific database
+dbwarden migrate -d analytics
+
+# Migrate all databases (sequentially)
+dbwarden migrate --all
+```
 
 ## SQLAlchemy Models
 
@@ -88,25 +109,31 @@ dbwarden init
 
 # 2. Create models in models/
 
-# 3. Generate migration from models
+# 3. Add more databases
+dbwarden database add analytics --url "postgresql://user:pass@localhost:5432/analytics"
+
+# 4. Generate migration from models
 dbwarden make-migrations "create users table"
 
-# 4. Apply
+# 5. Apply
 dbwarden migrate --verbose
 
-# 5. View history
-dbwarden history
+# 6. Migrate all databases
+dbwarden migrate --all
 
-# 6. Check configuration
-dbwarden config
+# 7. View history
+dbwarden history
 ```
 
 ## Supported Databases
 
-- PostgreSQL
-- SQLite
-- MySQL
-- ClickHouse
+| Database | Type Value | Features |
+|----------|------------|----------|
+| PostgreSQL | `postgresql` | SERIAL, TIMESTAMP, BYTEA |
+| MySQL | `mysql` | AUTO_INCREMENT, ENUM |
+| SQLite | `sqlite` | Built-in, zero config |
+| ClickHouse | `clickhouse` | Analytics, MergeTree |
+| MariaDB | `mariadb` | MySQL-compatible |
 
 ## Docs
 

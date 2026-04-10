@@ -435,10 +435,15 @@ Backups are stored in the `backups/` directory by default.
 DBWarden uses `warden.toml` file for configuration:
 
 ```toml
-database_type = "postgres"
+default = "primary"
+
+[database]
+[database.primary]
+database_type = "postgresql"
 sqlalchemy_url = "postgresql://user:pass@localhost:5432/db"
 model_paths = ["models/"]
 postgres_schema = "public"
+migrations_dir = "migrations/primary"
 ```
 
 Run `dbwarden init` to create a starter configuration file.

@@ -5,7 +5,7 @@ This guide walks you through a complete DBWarden workflow, from initial setup to
 ## Prerequisites
 
 - Python 3.10+ installed
-- A database (PostgreSQL, MySQL, or SQLite)
+- A database (PostgreSQL, MySQL, SQLite, or ClickHouse)
 - Basic familiarity with SQL and SQLAlchemy
 
 ## Step 1: Install DBWarden
@@ -25,30 +25,58 @@ myproject/
 └── app.py
 ```
 
-## Step 3: Configure Database Connection
+## Step 3: Initialize DBWarden
 
-Create a `warden.toml` file:
+```bash
+dbwarden init
+```
+
+Output:
+
+```
+Created configuration file: /home/user/myproject/warden.toml
+DBWarden migrations directory created: /home/user/myproject/migrations/default
+```
+
+## Step 4: Configure Database Connection
+
+Edit the generated `warden.toml`:
 
 ```toml
-database_type = "postgres"
+default = "primary"
+
+[database]
+[database.primary]
+database_type = "postgresql"
 sqlalchemy_url = "postgresql://user:password@localhost:5432/myapp"
+migrations_dir = "migrations/primary"
 ```
 
 For SQLite:
 
 ```toml
+default = "primary"
+
+[database]
+[database.primary]
 database_type = "sqlite"
 sqlalchemy_url = "sqlite:///./myapp.db"
+migrations_dir = "migrations/primary"
 ```
 
 For ClickHouse:
 
 ```toml
+default = "analytics"
+
+[database]
+[database.analytics]
 database_type = "clickhouse"
-sqlalchemy_url = "clickhousedb+connect://user:password@localhost:8123/analytics"
+sqlalchemy_url = "clickhouse://user:password@localhost:8123/analytics"
+migrations_dir = "migrations/analytics"
 ```
 
-## Step 4: Define Your SQLAlchemy Models
+## Step 5: Define Your SQLAlchemy Models
 
 Create your models in the `models/` directory:
 
@@ -69,23 +97,6 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
 ```
 
-## Step 5: Initialize DBWarden
-
-```bash
-dbwarden init
-```
-
-Output:
-
-```
-Created configuration file: /home/user/myproject/warden.toml
-DBWarden migrations directory created: /home/user/myproject/migrations
-
-Next steps:
-  1. Edit warden.toml with your database_type and connection URL
-  2. Run 'dbwarden make-migrations' to generate migrations from your models
-```
-
 ## Step 6: Generate Migration from Models
 
 ```bash
@@ -95,7 +106,7 @@ dbwarden make-migrations "create users table"
 Output:
 
 ```
-Created migration file: /home/user/myproject/migrations/0001_create_users_table.sql
+Created migration file: /home/user/myproject/migrations/primary/primary__0001_create_users.sql
 Tables included: users
 ```
 
@@ -104,7 +115,7 @@ Tables included: users
 Check the generated SQL:
 
 ```sql
--- migrations/0001_create_users_table.sql
+-- migrations/primary/primary__0001_create_users.sql
 
 -- upgrade
 
@@ -129,7 +140,7 @@ dbwarden migrate --verbose
 Output:
 
 ```
-[INFO] Applying migration: 0001_create_users_table.sql
+[INFO] Applying migration: primary__0001_create_users.sql (version: 0001)
 Migrations completed successfully: 1 migrations applied.
 ```
 
@@ -142,89 +153,50 @@ dbwarden status
 Output:
 
 ```
-Migration Status
-================
-✓ Applied   | 0001_create_users_table
+ Migration Status - primary              
+┏━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Status  ┃ Version ┃ Filename                   ┃
+┡━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Applied │ 0001    │ primary__0001_create_users.sql │
+└─────────┴─────────┴────────────────────────────────┘
 
 Applied: 1
 Pending: 0
 Total: 1
 ```
 
-## Step 10: View Migration History
+## Multi-Database Support
+
+### Adding More Databases
 
 ```bash
-dbwarden history
+dbwarden database add analytics --url "postgresql://user:pass@localhost:5432/analytics"
+dbwarden database list
 ```
 
 Output:
 
 ```
-Migration History
-=================
-Version | Order | Description     | Applied At           | Type
--------|-------|-----------------|----------------------|------
-0001   | 1     | create users    | 2024-02-15 14:30:15  | versioned
+Databases:
+  primary (default) - postgresql://user:***@localhost:5432/myapp
+    type: postgresql
+    migrations: migrations/primary
+  analytics - postgresql://user:***@localhost:5432/analytics
+    type: postgresql
+    migrations: migrations/analytics
 ```
 
-## Step 11: Add More Changes
-
-Add a new table to your models:
-
-```python
-# models/post.py
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
-
-class Post(Base):
-    __tablename__ = "posts"
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    title = Column(String(200), nullable=False)
-    content = Column(Text)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-```
-
-Generate a new migration:
+### Migrating Specific Database
 
 ```bash
-dbwarden make-migrations "create posts table"
-dbwarden migrate
+dbwarden migrate -d analytics
+dbwarden status -d analytics
 ```
 
-## Step 12: Rollback (If Needed)
-
-Revert the last migration:
+### Migrating All Databases
 
 ```bash
-dbwarden rollback
-```
-
-Or rollback to a specific version:
-
-```bash
-dbwarden rollback --to-version 0001
-```
-
-## Step 13: Check Database Schema
-
-Inspect your current database schema:
-
-```bash
-dbwarden check-db --out txt
-```
-
-Output:
-
-```
-Table: users
-----------
-  id: INTEGER PRIMARY KEY AUTOINCREMENT
-  username: VARCHAR(50) NOT NULL UNIQUE
-  email: VARCHAR(255) NOT NULL UNIQUE
-  created_at: DATETIME NULL
+dbwarden migrate --all
 ```
 
 ## Common Workflows
@@ -269,9 +241,20 @@ dbwarden rollback
 dbwarden rollback --to-version 0001
 ```
 
+## Supported Databases
+
+| Database | Type Value | Notes |
+|----------|------------|-------|
+| PostgreSQL | `postgresql` | SERIAL, TIMESTAMP, BYTEA |
+| MySQL | `mysql` | AUTO_INCREMENT, ENUM |
+| SQLite | `sqlite` | Built-in, no drivers |
+| ClickHouse | `clickhouse` | Analytics, MergeTree |
+| MariaDB | `mariadb` | MySQL-compatible |
+
 ## Next Steps
 
 - Learn about [Migration Files](migration-files.md) structure
 - Explore [Commands](commands.md) in detail
 - Understand [SQLAlchemy Models](models.md) integration
-- Check [Advanced Features](advanced.md) for more options
+- Check [Configuration](configuration.md) for all options
+- Read [Supported Databases](databases.md) for database-specific features
