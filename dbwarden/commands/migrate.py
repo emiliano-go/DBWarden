@@ -114,13 +114,15 @@ def migrate_single(
         with_backup: Create a backup before migrating.
         backup_dir: Directory for backup files.
     """
-    logger = get_logger(verbose=verbose)
-
     from dbwarden.config import get_database
 
     config = get_database(db_name)
     sqlalchemy_url = config.sqlalchemy_url
     actual_db_name = db_name or config.sqlalchemy_url.split("/")[-1].split("?")[0]
+
+    logger = get_logger(
+        verbose=verbose, db_name=actual_db_name, db_type=config.database_type
+    )
 
     if db_name:
         print(f"\n=== Migrating database: {db_name} ===")
