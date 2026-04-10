@@ -36,7 +36,15 @@ This is an experimental package. Your fuckups are not mine to fix. You have been
 Create `warden.toml` in your project:
 
 ```toml
+database_type = "sqlite"
 sqlalchemy_url = "sqlite:///./development.db"
+```
+
+ClickHouse example:
+
+```toml
+database_type = "clickhouse"
+sqlalchemy_url = "clickhousedb+connect://user:password@localhost:8123/analytics"
 ```
 
 ## Basic Commands
@@ -98,6 +106,7 @@ dbwarden config
 - PostgreSQL
 - SQLite
 - MySQL
+- ClickHouse
 
 ## Docs
 

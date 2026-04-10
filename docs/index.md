@@ -11,7 +11,7 @@ DBWarden addresses the critical challenge of maintaining consistent database sch
 - **Automatic Migration Generation**: Automatically generate SQL migrations from your SQLAlchemy models
 - **Version Control**: Track all schema changes with detailed history and timestamps
 - **Rollback Support**: Safely revert migrations when needed
-- **Multiple Database Support**: Works with PostgreSQL, MySQL, and SQLite
+- **Multiple Database Support**: Works with PostgreSQL, MySQL, SQLite, and ClickHouse
 - **Model Discovery**: Automatically finds and processes your SQLAlchemy models
 - **Migration Locking**: Prevents concurrent migration execution
 - **Schema Inspection**: Inspect and compare database schemas

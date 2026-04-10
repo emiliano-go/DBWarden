@@ -30,13 +30,22 @@ myproject/
 Create a `warden.toml` file:
 
 ```toml
+database_type = "postgres"
 sqlalchemy_url = "postgresql://user:password@localhost:5432/myapp"
 ```
 
 For SQLite:
 
 ```toml
+database_type = "sqlite"
 sqlalchemy_url = "sqlite:///./myapp.db"
+```
+
+For ClickHouse:
+
+```toml
+database_type = "clickhouse"
+sqlalchemy_url = "clickhousedb+connect://user:password@localhost:8123/analytics"
 ```
 
 ## Step 4: Define Your SQLAlchemy Models
@@ -73,7 +82,7 @@ Created configuration file: /home/user/myproject/warden.toml
 DBWarden migrations directory created: /home/user/myproject/migrations
 
 Next steps:
-  1. Edit warden.toml with your database connection URL
+  1. Edit warden.toml with your database_type and connection URL
   2. Run 'dbwarden make-migrations' to generate migrations from your models
 ```
 

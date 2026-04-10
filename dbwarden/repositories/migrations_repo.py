@@ -3,13 +3,8 @@ from typing import Optional
 from sqlalchemy import Result, Row, text
 
 from dbwarden.database.connection import get_db_connection
-from dbwarden.database.queries import SQL_QUERIES, QueryMethod
+from dbwarden.database.queries import QueryMethod, get_query
 from dbwarden.models import MigrationRecord
-
-
-def get_query(method: QueryMethod, **kwargs) -> str:
-    """Get a SQL query by method."""
-    return SQL_QUERIES.get(method, "")
 
 
 def run_migration(

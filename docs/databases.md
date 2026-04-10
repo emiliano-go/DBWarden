@@ -9,6 +9,7 @@ DBWarden supports multiple database backends. This guide covers configuration an
 | PostgreSQL | Yes | `psycopg2-binary` |
 | MySQL | Yes | `mysql-connector-python` |
 | SQLite | Yes | Built-in |
+| ClickHouse | Yes | `clickhouse-connect` |
 
 ## PostgreSQL
 
@@ -17,6 +18,7 @@ DBWarden supports multiple database backends. This guide covers configuration an
 Add to your `warden.toml`:
 
 ```toml
+database_type = "postgres"
 sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"
 ```
 
@@ -72,6 +74,7 @@ DROP TABLE users;
 Add to your `warden.toml`:
 
 ```toml
+database_type = "mysql"
 sqlalchemy_url = "mysql://user:password@localhost:3306/mydb"
 ```
 
@@ -120,6 +123,7 @@ DROP TABLE users;
 Add to your `warden.toml`:
 
 ```toml
+database_type = "sqlite"
 # File-based
 sqlalchemy_url = "sqlite:///./mydb.db"
 
@@ -173,12 +177,14 @@ engine = create_engine(url, pool_size=5, max_overflow=10)
 ### PostgreSQL with SSL
 
 ```toml
+database_type = "postgres"
 sqlalchemy_url = "postgresql://user:password@host:5432/db?sslmode=require"
 ```
 
 ### MySQL with SSL
 
 ```toml
+database_type = "mysql"
 sqlalchemy_url = "mysql://user:password@host:3306/db?ssl=true"
 ```
 
@@ -207,3 +213,32 @@ sqlite:///./mydb.db
 sqlite:///:memory:
 sqlite:///path/to/file.db
 ```
+
+### ClickHouse
+
+```
+clickhousedb+connect://user:pass@localhost:8123/analytics
+clickhousedb+connect://user:pass@host:8123/db
+```
+## ClickHouse
+
+### Connection URL
+
+Add to your `warden.toml`:
+
+```toml
+database_type = "clickhouse"
+sqlalchemy_url = "clickhousedb+connect://user:password@localhost:8123/analytics"
+```
+
+**Requirements:**
+
+```bash
+pip install clickhouse-connect
+```
+
+### Features
+
+- Supports migration tracking and locking tables for ClickHouse
+- Supports model-generated and manual migrations
+- Supports MergeTree/ReplacingMergeTree-style table migrations

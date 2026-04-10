@@ -27,9 +27,24 @@ This allows you to have a single `warden.toml` file at your project root that ap
 
 ## Required Configuration
 
+### database_type
+
+Logical database type used by DBWarden for dialect-specific behavior.
+
+```toml
+database_type = "sqlite"
+```
+
+Common values:
+
+- `sqlite`
+- `postgres`
+- `mysql`
+- `clickhouse`
+
 ### sqlalchemy_url
 
-The SQLAlchemy database connection URL. This is the only required configuration option.
+The SQLAlchemy database connection URL.
 
 **Format:**
 
@@ -51,6 +66,9 @@ sqlalchemy_url = "sqlite:///./mydb.db"
 
 # SQLite in memory
 sqlalchemy_url = "sqlite:///:memory:"
+
+# ClickHouse
+sqlalchemy_url = "clickhousedb+connect://user:password@localhost:8123/analytics"
 ```
 
 ## Optional Configuration
@@ -81,6 +99,7 @@ postgres_schema = "public"
 
 ```toml
 # Database Connection
+database_type = "postgres"
 sqlalchemy_url = "postgresql://myuser:mypassword@localhost:5432/myapp"
 
 # Model Discovery
@@ -95,18 +114,21 @@ postgres_schema = "public"
 ### Development Environment
 
 ```toml
+database_type = "postgres"
 sqlalchemy_url = "postgresql://dev:dev123@localhost:5432/dev_db"
 ```
 
 ### Staging Environment
 
 ```toml
+database_type = "postgres"
 sqlalchemy_url = "postgresql://staging:staging123@staging.example.com:5432/staging_db"
 ```
 
 ### Production Environment
 
 ```toml
+database_type = "postgres"
 sqlalchemy_url = "postgresql://prod:securepass@prod.example.com:5432/prod_db"
 ```
 
@@ -121,6 +143,7 @@ dbwarden config
 Output:
 
 ```
+database_type: postgres
 sqlalchemy_url: ***
 model_paths: models/
 postgres_schema: public
@@ -136,6 +159,14 @@ sqlalchemy_url = "postgresql://user:p%40ss%3Aword%2F123@localhost:5432/mydb"
 ```
 
 ## Troubleshooting Configuration
+
+### Missing database_type
+
+```
+Error: database_type is required in warden.toml.
+```
+
+Make sure your `warden.toml` includes a valid backend value.
 
 ### Missing sqlalchemy_url
 

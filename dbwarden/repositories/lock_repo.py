@@ -1,14 +1,7 @@
-from typing import Optional
-
 from sqlalchemy import text
 
 from dbwarden.database.connection import get_db_connection
-from dbwarden.database.queries import SQL_QUERIES, QueryMethod
-
-
-def get_query(method: QueryMethod, **kwargs) -> str:
-    """Get a SQL query by method."""
-    return SQL_QUERIES.get(method, "")
+from dbwarden.database.queries import QueryMethod, get_query
 
 
 def create_lock_table_if_not_exists() -> None:
