@@ -16,6 +16,8 @@ dbwarden rollback [OPTIONS]
 
 | Short | Long | Description |
 |-------|------|-------------|
+| `-d` | `--database NAME` | Target specific database |
+| | `--all` | Rollback all configured databases |
 | `-c` | `--count COUNT` | Number of migrations to rollback |
 | `-t` | `--to-version VERSION` | Rollback to a specific version |
 | `-v` | `--verbose` | Enable verbose logging |
@@ -51,6 +53,48 @@ dbwarden rollback -t 0001
 
 ```bash
 dbwarden rollback -c 1 -t 0001 -v
+```
+
+### Multi-Database Options
+
+#### Rollback Specific Database
+
+Use `-d` or `--database` to target a specific database:
+
+```bash
+# Rollback last migration on analytics database
+dbwarden rollback -d analytics
+
+# Rollback to specific version on analytics
+dbwarden rollback -d analytics --to-version 0001 --verbose
+```
+
+#### Rollback All Databases
+
+Use `--all` to rollback migrations on all configured databases:
+
+```bash
+# Rollback last migration on all databases
+dbwarden rollback --all
+
+# Rollback to specific version on all databases
+dbwarden rollback --all --to-version 0001 --verbose
+```
+
+**Example output with --all:**
+
+```
+[INFO] Database: primary (sqlite)
+[INFO] Nothing to rollback on primary.
+
+[INFO] Database: analytics (postgresql)
+Rolling back migration: 0003_create_reports.sql (version: 0003)
+[ROLLED_BACK] 0003_create_reports.sql in 0.05s
+
+[INFO] Database: legacy (mysql)
+[INFO] Nothing to rollback on legacy.
+
+Rollback completed successfully across all databases.
 ```
 
 ## How It Works
@@ -315,7 +359,9 @@ jobs:
 
 ## See Also
 
+- [database](database.md): Manage database configurations
 - [migrate](migrate.md): Apply migrations forward
 - [history](history.md): View migration history
 - [status](status.md): Check current status
 - [Migration Files](../migration-files.md): Understanding rollback SQL
+- [Configuration](../configuration.md): Multi-database configuration

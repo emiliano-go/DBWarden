@@ -16,6 +16,8 @@ dbwarden migrate [OPTIONS]
 
 | Short | Long | Description |
 |-------|------|-------------|
+| `-d` | `--database NAME` | Target specific database |
+| | `--all` | Migrate all configured databases |
 | `-c` | `--count COUNT` | Number of migrations to apply |
 | `-t` | `--to-version VERSION` | Migrate to a specific version |
 | `-v` | `--verbose` | Enable verbose logging with SQL highlighting |
@@ -87,6 +89,51 @@ dbwarden migrate --with-backup --backup-dir /path/to/backups
 
 ```bash
 dbwarden migrate -c 1 -t 0002 -v -b --backup-dir ./backups
+```
+
+### Multi-Database Options
+
+#### Migrate Specific Database
+
+Use `-d` or `--database` to target a specific database:
+
+```bash
+# Target database by name
+dbwarden migrate -d analytics
+
+# With verbose output
+dbwarden migrate -d analytics --verbose
+```
+
+#### Migrate All Databases
+
+Use `--all` to apply pending migrations to all configured databases:
+
+```bash
+# Migrate all databases sequentially
+dbwarden migrate --all
+
+# With verbose output
+dbwarden migrate --all --verbose
+```
+
+**Example output with --all:**
+
+```
+[INFO] Database: primary (sqlite)
+[INFO] Migrations are up to date.
+
+[INFO] Database: analytics (postgresql)
+[PENDING] 0001_create_users.sql
+Starting migration: 0001_create_users.sql (version: 0001)
+[APPLIED] 0001_create_users.sql in 0.12s
+
+[INFO] Database: legacy (mysql)
+[PENDING] 0001_add_logs_table.sql
+Starting migration: 0001_add_logs_table.sql (version: 0001)
+[APPLIED] 0001_add_logs_table.sql in 0.08s
+
+Migrations completed successfully across all databases.
 ```
 
 ## How It Works
@@ -282,6 +329,34 @@ jobs:
           DBWARDEN_SQLALCHEMY_URL: ${{ secrets.DATABASE_URL }}
 ```
 
+### Multi-Database CI/CD
+
+```yaml
+name: Multi-Database Migrations
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  migrate-all:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install dbwarden
+
+      - name: Run migrations on all databases
+        run: dbwarden migrate --all --verbose
+```
+
 ## Troubleshooting
 
 ### "Migrations are up to date" but you expect changes
@@ -304,7 +379,9 @@ dbwarden unlock
 
 ## See Also
 
+- [database](database.md): Manage database configurations
 - [rollback](rollback.md): Revert applied migrations
 - [status](status.md): Check migration status
 - [history](history.md): View migration history
 - [Lock Management](lock.md): Understanding migration locks
+- [Configuration](../configuration.md): Multi-database configuration
