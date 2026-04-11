@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from dbwarden.config import get_database
+from dbwarden.config import get_database, get_multi_db_config
 from dbwarden.engine.file_parser import parse_upgrade_statements
 from dbwarden.engine.model_discovery import (
     get_all_model_tables,
@@ -68,7 +68,8 @@ def make_migrations_cmd(
     logger = get_logger()
 
     config = get_database(database)
-    db_name = database or config.sqlalchemy_url.split("/")[-1].split("?")[0]
+    multi_config = get_multi_db_config()
+    db_name = database or multi_config.default
     model_paths = config.model_paths
 
     if model_paths is None:
@@ -228,7 +229,8 @@ def new_migration_cmd(
     logger = get_logger()
 
     config = get_database(database)
-    db_name = database or config.sqlalchemy_url.split("/")[-1].split("?")[0]
+    multi_config = get_multi_db_config()
+    db_name = database or multi_config.default
 
     migrations_dir = get_migrations_directory(database)
 
