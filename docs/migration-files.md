@@ -9,19 +9,23 @@ Migration files are the heart of DBWarden. They contain SQL statements that modi
 Migration files follow this naming pattern:
 
 ```
-{number}_{description}.sql
+{dbname}__{number}_{description}.sql
 ```
 
 **Components:**
+- `{dbname}`: Database name (e.g., `primary`, `analytics`)
 - `{number}`: 4-digit sequential number (auto-incremented)
 - `{description}`: Lowercase, underscore-separated description
 
 **Examples:**
 ```
-0001_initial_schema.sql
-0002_create_users_table.sql
-0003_add_user_posts_relationship.sql
+primary__0001_initial_schema.sql
+primary__0002_create_users_table.sql
+primary__0003_add_user_posts_relationship.sql
+analytics__0001_create_events.sql
 ```
+
+**Note:** In multi-database setups, migration files are prefixed with the database name (`{dbname}__`) to keep migrations organized per database. The `{dbname}` prefix matches the database name defined in `warden.toml`.
 
 ### Internal Structure
 
@@ -165,7 +169,7 @@ PRAGMA foreign_keys = ON;
 
 **Sequential Number (Django-style):**
 ```
-0001_description.sql
+primary__0001_description.sql
 ```
 - Unique: Auto-incremented sequential number
 - Ordered: Naturally sorted numerically
@@ -173,7 +177,7 @@ PRAGMA foreign_keys = ON;
 
 **Custom Number:**
 ```
-9999_custom_description.sql
+primary__9999_custom_description.sql
 ```
 - Manual: Set with `--version`
 - Explicit: You control numbering
@@ -182,7 +186,8 @@ PRAGMA foreign_keys = ON;
 ### Version Ordering
 
 DBWarden sorts migrations:
-- Numerically by the 4-digit prefix
+- By database name (for multi-database setups)
+- Numerically by the 4-digit prefix within each database
 - Allows: `0001`, `0002`, ..., `9999`
 
 ## Best Practices
@@ -266,18 +271,42 @@ COMMIT;
 
 ## Directory Structure
 
+### Single Database
+
 ```
 project/
 ├── migrations/
-│   ├── 0001_initial_schema.sql
-│   ├── 0002_create_users.sql
-│   ├── 0003_create_posts.sql
-│   └── .gitkeep          # Keep directory in git
+│   ├── primary/
+│   │   ├── primary__0001_initial_schema.sql
+│   │   ├── primary__0002_create_users.sql
+│   │   └── .gitkeep
+│   └── .gitkeep
 ├── models/
 │   └── user.py
 ├── warden.toml
 └── pyproject.toml
 ```
+
+### Multi-Database
+
+```
+project/
+├── migrations/
+│   ├── primary/
+│   │   ├── primary__0001_initial_schema.sql
+│   │   └── primary__0002_create_users.sql
+│   ├── analytics/
+│   │   ├── analytics__0001_create_events.sql
+│   │   └── analytics__0002_create_reports.sql
+│   └── legacy/
+│       └── legacy__0001_initial.sql
+├── models/
+│   └── user.py
+├── warden.toml
+└── pyproject.toml
+```
+
+Each database has its own migration directory containing migrations prefixed with the database name.
 
 ## Git Integration
 
@@ -309,9 +338,10 @@ When merging branches:
 
 Check file naming:
 ```
-WRONG: desc.sql                      (missing number)
-WRONG: 1_desc.sql                    (not 4 digits)
-RIGHT: 0001_desc.sql
+WRONG: desc.sql                          (missing number)
+WRONG: 1_desc.sql                        (not 4 digits)
+WRONG: 0001_desc.sql                     (missing dbname prefix)
+RIGHT: primary__0001_desc.sql
 ```
 
 ### Parsing Errors
@@ -324,11 +354,18 @@ Ensure proper section markers:
 
 ### Duplicate Versions
 
-Use unique version numbers:
+Use unique version numbers within each database:
 ```
-ERROR: 0001_feature.sql already exists
-FIX: Use 0002_feature.sql or let auto-numbering handle it
+ERROR: primary__0001_feature.sql already exists
+FIX: Use primary__0002_feature.sql or let auto-numbering handle it
 ```
+
+### Wrong Database
+
+If migrations aren't being detected:
+1. Check migration filename prefix matches database name in `warden.toml`
+2. Verify migrations are in the correct directory (e.g., `migrations/primary/`)
+3. Use `dbwarden status -d <database>` to check status for specific database
 
 ## See Also
 

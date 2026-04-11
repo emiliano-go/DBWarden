@@ -10,6 +10,14 @@ DBWarden provides a comprehensive set of commands for managing database migratio
 |---------|-------------|
 | [init](commands/init.md) | Initialize the migrations directory |
 
+### Database Management
+
+| Command | Description |
+|---------|-------------|
+| [database list](commands/database.md) | List all configured databases |
+| [database add](commands/database.md) | Add a new database configuration |
+| [database remove](commands/database.md) | Remove a database configuration |
+
 ### Migration Management
 
 | Command | Description |
@@ -50,6 +58,27 @@ DBWarden provides a comprehensive set of commands for managing database migratio
 | Option | Description |
 |--------|-------------|
 | `--help`, `-h` | Show help message |
+
+## Multi-Database Flags
+
+### `-d, --database NAME`
+
+Target a specific database (available on most commands):
+
+- `migrate`
+- `rollback`
+- `status`
+- `history`
+- `make-migrations`
+- `check-db`
+- `diff`
+
+### `--all`
+
+Operate on all configured databases:
+
+- `migrate --all`
+- `rollback --all`
 
 ## Command Flags Reference
 

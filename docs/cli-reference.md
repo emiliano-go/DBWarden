@@ -20,19 +20,82 @@ dbwarden [OPTIONS] COMMAND [ARGS]...
 | Command | Description | Flags |
 |---------|-------------|-------|
 | `init` | Initialize migrations directory | None |
-| `make-migrations` | Auto-generate SQL from models | `-v` |
+| `database list` | List all databases | None |
+| `database add` | Add new database | `-u`, `-t`, `-m` |
+| `database remove` | Remove database | `-f` |
+| `make-migrations` | Auto-generate SQL from models | `-v`, `-d` |
 | `new` | Create manual migration | `--version` |
-| `migrate` | Apply pending migrations | `-v`, `-c`, `-t` |
-| `rollback` | Revert migrations | `-v`, `-c`, `-t` |
-| `history` | Show migration history | None |
-| `status` | Show applied/pending status | None |
-| `check-db` | Inspect database schema | `-o` |
-| `diff` | Compare models vs database | `-v` |
+| `migrate` | Apply pending migrations | `-v`, `-c`, `-t`, `-d`, `--all` |
+| `rollback` | Revert migrations | `-v`, `-c`, `-t`, `-d`, `--all` |
+| `history` | Show migration history | `-d` |
+| `status` | Show applied/pending status | `-d` |
+| `check-db` | Inspect database schema | `-o`, `-d` |
+| `diff` | Compare models vs database | `-v`, `-d` |
 | `squash` | Merge consecutive migrations | `-v` |
 | `config` | Display warden.toml config | None |
 | `version` | Show DBWarden version | None |
-| `lock-status` | Check migration lock | None |
-| `unlock` | Release stuck lock | None |
+| `lock-status` | Check migration lock | `-d` |
+| `unlock` | Release stuck lock | `-d` |
+
+---
+
+## Database Management Commands
+
+### database list
+
+List all configured databases.
+
+```bash
+dbwarden database list
+```
+
+**No arguments or options.**
+
+---
+
+### database add
+
+Add a new database configuration.
+
+```bash
+dbwarden database add <name> [OPTIONS]
+```
+
+**Arguments:**
+- `name`: Database name (required)
+
+**Options:**
+- `-u, --url URL`: SQLAlchemy connection URL (required)
+- `-t, --type TYPE`: Database type (optional, auto-detected)
+- `-m, --migrations-dir DIR`: Migrations directory (optional)
+
+**Examples:**
+```bash
+dbwarden database add analytics --url "postgresql://user:pass@localhost:5432/analytics"
+dbwarden database add legacy --url "mysql://user:pass@localhost:3306/legacy" --type mysql
+```
+
+---
+
+### database remove
+
+Remove a database configuration.
+
+```bash
+dbwarden database remove <name> [OPTIONS]
+```
+
+**Arguments:**
+- `name`: Database name (required)
+
+**Options:**
+- `-f, --force`: Skip confirmation
+
+**Examples:**
+```bash
+dbwarden database remove legacy
+dbwarden database remove legacy --force
+```
 
 ---
 
@@ -296,6 +359,25 @@ dbwarden unlock
 
 ## Flag Reference
 
+### `-d, --database`
+
+Target a specific database by name. Available on:
+- `migrate`
+- `rollback`
+- `status`
+- `history`
+- `make-migrations`
+- `check-db`
+- `diff`
+- `lock-status`
+- `unlock`
+
+### `--all`
+
+Operate on all configured databases. Available on:
+- `migrate`
+- `rollback`
+
 ### `-v, --verbose`
 
 Enable verbose logging with SQL syntax highlighting. Available on:
@@ -341,6 +423,26 @@ Create a backup before running migrations. Available on:
 
 Specify backup directory for `--with-backup`. Available on:
 - `migrate`
+
+### `-u, --url`
+
+Specify database connection URL. Available on:
+- `database add`
+
+### `-t, --type`
+
+Specify database type. Available on:
+- `database add`
+
+### `-m, --migrations-dir`
+
+Specify migrations directory. Available on:
+- `database add`
+
+### `-f, --force`
+
+Skip confirmation prompt. Available on:
+- `database remove`
 
 ---
 

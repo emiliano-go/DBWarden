@@ -24,6 +24,7 @@ nav:
   - Commands:
       - Commands Overview: commands.md
       - init: commands/init.md
+      - database: commands/database.md
       - make-migrations: commands/make-migrations.md
       - new: commands/new.md
       - migrate: commands/migrate.md
