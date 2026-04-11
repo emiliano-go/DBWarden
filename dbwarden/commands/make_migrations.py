@@ -65,6 +65,8 @@ def make_migrations_cmd(
         verbose: Enable verbose logging.
         database: Target database name.
     """
+    logger = get_logger()
+
     config = get_database(database)
     db_name = database or config.sqlalchemy_url.split("/")[-1].split("?")[0]
     model_paths = config.model_paths
