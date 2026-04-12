@@ -34,6 +34,7 @@ dependencies = [
     "rich>=12.2.0",
     "sqlalchemy>=2.0.10",
     "typer>=0.12.3",
+    "clickhouse-connect>=0.7.15",
 ]
 
 [project.scripts]
