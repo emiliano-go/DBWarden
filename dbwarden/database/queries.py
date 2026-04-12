@@ -32,8 +32,7 @@ class QueryMethod(Enum):
 SQLITE_QUERIES = {
     QueryMethod.CREATE_MIGRATIONS_TABLE: """
         CREATE TABLE IF NOT EXISTS dbwarden_migrations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            version VARCHAR(255) UNIQUE,
+            version VARCHAR(255),
             description VARCHAR(500),
             filename VARCHAR(500) UNIQUE,
             migration_type VARCHAR(50),
@@ -116,8 +115,7 @@ SQLITE_QUERIES = {
 POSTGRES_QUERIES = {
     QueryMethod.CREATE_MIGRATIONS_TABLE: """
         CREATE TABLE IF NOT EXISTS dbwarden_migrations (
-            id BIGSERIAL PRIMARY KEY,
-            version VARCHAR(255) UNIQUE,
+            version VARCHAR(255),
             description VARCHAR(500),
             filename VARCHAR(500) UNIQUE,
             migration_type VARCHAR(50),
@@ -202,8 +200,7 @@ POSTGRES_QUERIES = {
 MYSQL_QUERIES = {
     QueryMethod.CREATE_MIGRATIONS_TABLE: """
         CREATE TABLE IF NOT EXISTS dbwarden_migrations (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            version VARCHAR(255) UNIQUE,
+            version VARCHAR(255),
             description VARCHAR(500),
             filename VARCHAR(500) UNIQUE,
             migration_type VARCHAR(50),
@@ -290,7 +287,6 @@ MYSQL_QUERIES = {
 CLICKHOUSE_QUERIES = {
     QueryMethod.CREATE_MIGRATIONS_TABLE: """
         CREATE TABLE IF NOT EXISTS dbwarden_migrations (
-            id UInt64,
             version String,
             description String,
             filename String,
@@ -298,7 +294,7 @@ CLICKHOUSE_QUERIES = {
             applied_at DateTime DEFAULT now(),
             checksum String
         ) ENGINE = MergeTree()
-        ORDER BY id
+        ORDER BY filename
     """,
     QueryMethod.CREATE_LOCK_TABLE: """
         CREATE TABLE IF NOT EXISTS dbwarden_lock (
@@ -309,19 +305,19 @@ CLICKHOUSE_QUERIES = {
         ORDER BY id
     """,
     QueryMethod.INSERT_VERSION: """
-        INSERT INTO dbwarden_migrations (id, version, description, filename, migration_type, checksum)
-        VALUES (default, :version, :description, :filename, :migration_type, :checksum)
+        INSERT INTO dbwarden_migrations (version, description, filename, migration_type, checksum)
+        VALUES (:version, :description, :filename, :migration_type, :checksum)
     """,
     QueryMethod.DELETE_VERSION: """
         ALTER TABLE dbwarden_migrations DELETE WHERE version = :version
     """,
     QueryMethod.GET_ALL_MIGRATIONS: """
-        SELECT id, version, description, filename, migration_type, applied_at, checksum
+        SELECT version, description, filename, migration_type, applied_at, checksum
         FROM dbwarden_migrations
         ORDER BY applied_at ASC
     """,
     QueryMethod.GET_LATEST_VERSION: """
-        SELECT id, version, description, filename, migration_type, applied_at, checksum
+        SELECT version, description, filename, migration_type, applied_at, checksum
         FROM dbwarden_migrations
         WHERE version IS NOT NULL
         ORDER BY applied_at DESC
