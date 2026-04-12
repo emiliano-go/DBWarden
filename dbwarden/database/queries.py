@@ -310,7 +310,7 @@ CLICKHOUSE_QUERIES = {
     """,
     QueryMethod.INSERT_VERSION: """
         INSERT INTO dbwarden_migrations (id, version, description, filename, migration_type, checksum)
-        VALUES (:id, :version, :description, :filename, :migration_type, :checksum)
+        VALUES (default, :version, :description, :filename, :migration_type, :checksum)
     """,
     QueryMethod.DELETE_VERSION: """
         ALTER TABLE dbwarden_migrations DELETE WHERE version = :version
