@@ -3,6 +3,7 @@ from dbwarden.repositories.migrations_repo import (
     fetch_latest_versioned_migration,
     get_existing_runs_always_filenames,
     get_existing_runs_on_change_filenames_to_checksums,
+    get_applied_checksums,
     get_latest_versions,
     get_migration_records,
     get_migrated_versions,

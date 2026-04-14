@@ -20,6 +20,7 @@ from dbwarden.repositories import (
     fetch_latest_versioned_migration,
     get_existing_runs_always_filenames,
     get_existing_runs_on_change_filenames_to_checksums,
+    get_applied_checksums,
     get_migrated_versions,
     run_migration,
     run_repeatable_migration,
@@ -138,6 +139,7 @@ def migrate_single(
     create_lock_table_if_not_exists(db_name)
 
     applied_versions = set(get_migrated_versions(db_name))
+    applied_checksums = get_applied_checksums(db_name)
 
     if baseline:
         if not to_version:
@@ -174,9 +176,16 @@ def migrate_single(
 
     versioned_count = 0
 
+    from dbwarden.engine.checksum import calculate_checksum
+
     for version, filepath in filepaths_by_version.items():
         filename = filepath.split("/")[-1]
         sql_statements = parse_upgrade_statements(filepath)
+        checksum = calculate_checksum(sql_statements)
+
+        if checksum in applied_checksums:
+            logger.log_migration_skipped(version, filename, checksum)
+            continue
 
         for sql in sql_statements:
             logger.log_sql_statement(sql)
@@ -195,6 +204,7 @@ def migrate_single(
         duration = time.time() - start_time
         logger.log_migration_end(version, filename, duration)
         versioned_count += 1
+        applied_checksums.add(checksum)
 
     existing_runs_always = get_existing_runs_always_filenames(db_name)
     existing_runs_on_change = get_existing_runs_on_change_filenames_to_checksums(
