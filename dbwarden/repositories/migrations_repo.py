@@ -122,6 +122,20 @@ def get_migrated_versions(db_name: str | None = None) -> list[str]:
         return [row.version for row in results.fetchall()]
 
 
+def get_applied_checksums(db_name: str | None = None) -> set[str]:
+    """Get all applied migration checksums."""
+    if not migrations_table_exists(db_name):
+        return set()
+
+    with get_db_connection(db_name) as connection:
+        results = connection.execute(
+            text(
+                "SELECT DISTINCT checksum FROM dbwarden_migrations WHERE checksum IS NOT NULL"
+            )
+        )
+        return {row.checksum for row in results.fetchall()}
+
+
 def get_latest_versions(
     db_name: str | None = None,
     limit: int | None = None,

@@ -302,6 +302,14 @@ class DBWardenLogger:
             f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Completed migration: {colorize(filename, ANSI_COLORS['white'])} (version: {colorize(version, ANSI_COLORS['dim'] + ANSI_COLORS['cyan'])}) in {colorize(f'{duration:.2f}s', ANSI_COLORS['dim'])}"
         )
 
+    def log_migration_skipped(self, version: str, filename: str, checksum: str) -> None:
+        """Log migration skipped because checksum already applied."""
+        ctx = self._format_db_context()
+        prefix = f"{ctx} " if ctx else ""
+        self.info(
+            f"{prefix}{colorize('[SKIPPED]', STATUS_COLORS['SKIPPED'])} Migration already applied: {colorize(filename, ANSI_COLORS['white'])} (version: {version}, checksum: {checksum[:16]}...)"
+        )
+
     def log_rollback_start(self, version: str, filename: str) -> None:
         """Log rollback start."""
         ctx = self._format_db_context()
