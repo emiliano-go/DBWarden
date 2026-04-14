@@ -115,7 +115,7 @@ SQLITE_QUERIES = {
 POSTGRES_QUERIES = {
     QueryMethod.CREATE_MIGRATIONS_TABLE: """
         CREATE TABLE IF NOT EXISTS dbwarden_migrations (
-            version VARCHAR(255),
+            version VARCHAR(255) UNIQUE,
             description VARCHAR(500),
             filename VARCHAR(500) UNIQUE,
             migration_type VARCHAR(50),
@@ -130,7 +130,13 @@ POSTGRES_QUERIES = {
             acquired_at TIMESTAMP
         )
     """,
-    QueryMethod.INSERT_VERSION: SQLITE_QUERIES[QueryMethod.INSERT_VERSION],
+    QueryMethod.INSERT_VERSION: """
+        INSERT INTO dbwarden_migrations (version, description, filename, migration_type, checksum)
+        VALUES (:version, :description, :filename, :migration_type, :checksum)
+        ON CONFLICT (version) DO UPDATE SET
+            checksum = EXCLUDED.checksum,
+            applied_at = CURRENT_TIMESTAMP
+    """,
     QueryMethod.DELETE_VERSION: SQLITE_QUERIES[QueryMethod.DELETE_VERSION],
     QueryMethod.GET_ALL_MIGRATIONS: SQLITE_QUERIES[QueryMethod.GET_ALL_MIGRATIONS],
     QueryMethod.GET_LATEST_VERSION: SQLITE_QUERIES[QueryMethod.GET_LATEST_VERSION],

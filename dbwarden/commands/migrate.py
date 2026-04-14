@@ -339,11 +339,6 @@ def _get_filepaths_by_version(
         directory=migrations_dir,
     )
 
-    if applied_versions is None:
-        applied_versions = set(get_migrated_versions(db_name))
-
-    filepaths = {v: p for v, p in filepaths.items() if v not in applied_versions}
-
     if count:
         filepaths = dict(list(filepaths.items())[:count])
     elif to_version:

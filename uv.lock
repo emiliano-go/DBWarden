@@ -106,7 +106,7 @@ wheels = [
 
 [[package]]
 name = "dbwarden"
-version = "0.3.3.1"
+version = "0.3.5"
 source = { editable = "." }
 dependencies = [
     { name = "clickhouse-connect" },
