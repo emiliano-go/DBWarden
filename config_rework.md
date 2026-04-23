@@ -106,7 +106,7 @@ On failure: raise and name exact missing/invalid field and call location.
 
 Examples:
 
-- `Missing required config 'database_name' in database_config(...) call #2`
+- `Missing required config 'database_name' in database_config(...) in path/to/file.py at line XX`
 - `Missing required config 'database_type' for database 'primary'`
 
 ## 4.2 Global uniqueness constraints
@@ -347,7 +347,7 @@ Required clear errors:
 - `Multiple dbwarden.py files found. Keep exactly one.`
 - `Multiple database_config(...) call sites found. Keep exactly one source or set DBWARDEN_CONFIG_MODULE.`
 - `No configuration found. Add database_config(...) call(s), create dbwarden.py with dbwarden init, or set DBWARDEN_CONFIG_MODULE.`
-- `Missing required config '<field>' in database_config(...)`
+- `Missing required config '<field>' in database_config(...) in path/to/file.py at line XX`
 - `Only one database can be default=True`
 - `Duplicate database_name '<name>'`
 - `Duplicate database_url '<url>'`
