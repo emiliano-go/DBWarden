@@ -2,7 +2,13 @@ import tomllib
 from pathlib import Path
 
 from dbwarden.constants import TOML_FILE
-from dbwarden.config import get_multi_db_config, list_databases
+from dbwarden.config import (
+    DatabaseConfig,
+    _build_database_target_key,
+    _infer_database_type,
+    _normalized_url,
+    get_multi_db_config,
+)
 from dbwarden.logging import get_logger
 
 
@@ -72,8 +78,6 @@ def handle_database_add(
     if name in database_section:
         raise ValueError(f"Database '{name}' already exists in warden.toml")
 
-    from dbwarden.config import _infer_database_type
-
     db_type = database_type or _infer_database_type(url)
     if database_type and database_type not in (
         "sqlite",
@@ -90,6 +94,14 @@ def handle_database_add(
         "sqlalchemy_url": url,
         "database_type": db_type,
     }
+
+    _validate_new_database_uniqueness(
+        existing_databases=get_multi_db_config().databases,
+        new_name=name,
+        new_url=url,
+        new_db_type=db_type,
+        config_base_dir=toml_path.parent,
+    )
 
     if model_paths:
         db_config["model_paths"] = model_paths
@@ -121,6 +133,53 @@ def handle_database_add(
     print(f"  Migrations: {db_config['migrations_dir']}")
     if default:
         print(f"  Set as default database")
+
+
+def _validate_new_database_uniqueness(
+    existing_databases: dict[str, DatabaseConfig],
+    new_name: str,
+    new_url: str,
+    new_db_type: str,
+    config_base_dir: Path,
+) -> None:
+    new_url_key = _normalized_url(new_url)
+    new_target_key = _build_database_target_key(new_url, new_db_type, config_base_dir)
+
+    for existing_name, existing in existing_databases.items():
+        existing_entries: list[tuple[str, str, str]] = [
+            ("sqlalchemy_url", existing.sqlalchemy_url, existing.database_type)
+        ]
+
+        if existing.dev_database_url and existing.dev_database_type:
+            existing_entries.append(
+                (
+                    "dev_database_url",
+                    existing.dev_database_url,
+                    existing.dev_database_type,
+                )
+            )
+
+        for field_name, existing_url, existing_type in existing_entries:
+            existing_url_key = _normalized_url(existing_url)
+            existing_target_key = _build_database_target_key(
+                existing_url,
+                existing_type,
+                config_base_dir,
+            )
+
+            if new_url_key == existing_url_key:
+                raise ValueError(
+                    "Database URL already exists in configuration: "
+                    f"'{new_name}.sqlalchemy_url' duplicates "
+                    f"'{existing_name}.{field_name}'."
+                )
+
+            if new_target_key == existing_target_key:
+                raise ValueError(
+                    "Database target already exists in configuration: "
+                    f"'{new_name}.sqlalchemy_url' points to the same target as "
+                    f"'{existing_name}.{field_name}'."
+                )
 
 
 def handle_database_remove(name: str, force: bool = False) -> None:
