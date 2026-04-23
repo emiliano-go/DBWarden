@@ -18,7 +18,12 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base
 
-from dbwarden.config import get_database
+from dbwarden.config import get_database, is_strict_translation
+from dbwarden.engine.sqlite_translation import (
+    translate_default_to_sqlite,
+    translate_type_to_sqlite,
+)
+from dbwarden.logging import get_logger
 from dbwarden.models import SchemaDifference
 
 Base = declarative_base()
@@ -74,6 +79,13 @@ def _map_sqlalchemy_type_to_backend(
             "SERIAL": "BIGINT UNSIGNED",
         }
         return type_mapping.get(type_upper, type_str)
+
+    if backend == "sqlite":
+        strict = is_strict_translation()
+        translated, warning = translate_type_to_sqlite(type_str, strict=strict)
+        if warning:
+            get_logger().warning(warning)
+        return translated
 
     return type_str
 
@@ -178,6 +190,7 @@ def discover_models_in_directory(directory: str) -> List[str]:
 
 def get_all_model_tables(
     model_paths: Optional[List[str]] = None,
+    db_name: str | None = None,
 ) -> List[ModelTable]:
     """
     Extract table definitions from SQLAlchemy models.
@@ -229,7 +242,7 @@ def get_all_model_tables(
                     if attr.__tablename__ in seen_tables:
                         continue
                     seen_tables.add(attr.__tablename__)
-                    table = extract_table_from_model(attr)
+                    table = extract_table_from_model(attr, db_name=db_name)
                     if table:
                         tables.append(table)
 
@@ -414,6 +427,16 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
         type_str = _map_sqlalchemy_type_to_backend(
             type_str, is_primary_key=primary_key, db_name=db_name
         )
+
+        if _get_backend_name(db_name) == "sqlite":
+            strict = is_strict_translation()
+            translated_default, default_warning = translate_default_to_sqlite(
+                default,
+                strict=strict,
+            )
+            if default_warning:
+                get_logger().warning(default_warning)
+            default = translated_default
 
         foreign_key = None
         if column.foreign_keys:

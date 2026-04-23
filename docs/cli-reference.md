@@ -15,6 +15,7 @@ dbwarden [OPTIONS] COMMAND [ARGS]...
 | `--help`, `-h` | Show help message |
 | `--version` | Show version information |
 | `--dev` | Use `dev_database_url` / `dev_database_type` for target database |
+| `--strict-translation` | Fail instead of fallback when SQL translation is lossy |
 
 ## Commands Overview
 
@@ -46,6 +47,15 @@ You can run database commands against the development connection configured unde
 dbwarden --dev migrate -d primary
 dbwarden --dev status
 dbwarden --dev check-db -o json -d analytics
+```
+
+When `--dev` targets SQLite, DBWarden translates unsupported backend-specific model types/defaults to SQLite-compatible SQL.
+If a conversion is not possible, DBWarden falls back to `TEXT` with warnings.
+
+Use `--strict-translation` to fail on unsupported conversions instead of falling back:
+
+```bash
+dbwarden --dev --strict-translation make-migrations -d primary
 ```
 
 ---

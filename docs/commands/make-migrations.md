@@ -24,6 +24,10 @@ dbwarden make-migrations "description of changes"
 |--------|-------------|
 | `--verbose`, `-v` | Enable verbose logging |
 
+Global options that also apply:
+- `--dev`: Use `dev_database_url`/`dev_database_type`
+- `--strict-translation`: Fail on unsupported SQL translation instead of fallback
+
 ## Examples
 
 ### Basic Usage
@@ -45,6 +49,21 @@ dbwarden make-migrations
 ```
 
 If no description is provided, "auto_generated" will be used.
+
+### Development SQLite Translation
+
+```bash
+dbwarden --dev make-migrations "sync models" -d primary
+```
+
+If the dev database is SQLite, DBWarden translates unsupported backend-specific SQL types/defaults.
+Unsupported types that cannot be converted are emitted as `TEXT` with warnings.
+
+To fail instead of fallback:
+
+```bash
+dbwarden --dev --strict-translation make-migrations "sync models" -d primary
+```
 
 ## How It Works
 

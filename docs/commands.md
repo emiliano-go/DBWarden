@@ -59,6 +59,7 @@ DBWarden provides a comprehensive set of commands for managing database migratio
 |--------|-------------|
 | `--help`, `-h` | Show help message |
 | `--dev` | Use development database settings (`dev_database_url`) |
+| `--strict-translation` | Fail on unsupported SQL translation instead of fallback |
 
 ## Multi-Database Flags
 

@@ -231,3 +231,29 @@ class TestColumnExtraction:
 
         assert col is not None
         assert col.nullable == False
+
+    def test_extract_column_translates_jsonb_to_text_for_sqlite(self):
+        from sqlalchemy import Column
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        col_obj = Column("payload", JSONB)
+
+        col = extract_column_info(col_obj)
+
+        assert col is not None
+        assert col.type == "TEXT"
+
+    def test_extract_column_falls_back_unknown_type_to_text_for_sqlite(self):
+        from sqlalchemy import Column
+        from sqlalchemy.types import UserDefinedType
+
+        class Geography(UserDefinedType):
+            def get_col_spec(self, **kw):
+                return "GEOGRAPHY"
+
+        col_obj = Column("location", Geography())
+
+        col = extract_column_info(col_obj)
+
+        assert col is not None
+        assert col.type == "TEXT"

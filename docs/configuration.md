@@ -195,6 +195,27 @@ dbwarden status --dev
 
 If `--dev` is enabled and the target database has no `dev_database_url`, DBWarden raises a configuration error.
 
+### SQLite Recommendation for Development
+
+We recommend using SQLite for `dev_database_url`:
+
+```toml
+dev_database_type = "sqlite"
+dev_database_url = "sqlite:///./development.db"
+```
+
+When using `--dev` with a SQLite dev database, DBWarden translates backend-specific model types/defaults (PostgreSQL, MySQL, MariaDB, ClickHouse) to SQLite-compatible SQL.
+
+If a type cannot be converted safely, DBWarden falls back to `TEXT` and emits warnings.
+
+For strict behavior, use:
+
+```bash
+dbwarden --dev --strict-translation make-migrations -d primary
+```
+
+In strict translation mode, unsupported conversions fail instead of falling back.
+
 ## Uniqueness Constraints
 
 DBWarden validates that configured database targets are unique:

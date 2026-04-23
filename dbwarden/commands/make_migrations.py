@@ -84,7 +84,7 @@ def make_migrations_cmd(
 
     logger.log_model_paths(model_paths)
     logger.info(f"Discovering models in: {model_paths}")
-    tables = get_all_model_tables(model_paths)
+    tables = get_all_model_tables(model_paths, db_name=database)
 
     if not tables:
         logger.warning("No tables found in models")
