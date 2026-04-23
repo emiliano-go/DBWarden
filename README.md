@@ -86,6 +86,18 @@ dbwarden migrate -d analytics
 dbwarden migrate --all
 ```
 
+## Development Recommendation
+
+Use SQLite as your development database (`dev_database_url`) when working with `--dev`.
+DBWarden translates unsupported backend-specific model types/defaults to SQLite-compatible SQL during migration generation.
+If a type cannot be translated, DBWarden falls back to `TEXT` and logs a warning.
+
+Use strict mode to fail on unsupported conversions:
+
+```bash
+dbwarden --dev --strict-translation make-migrations "sync models" -d primary
+```
+
 ## SQLAlchemy Models
 
 DBWarden automatically detects models in `models/`:
