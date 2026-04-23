@@ -39,6 +39,8 @@ default = "primary"
 database_type = "postgresql"
 sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
 migrations_dir = "migrations/primary"
+dev_database_type = "sqlite"
+dev_database_url = "sqlite:///./development.db"
 
 [database.analytics]
 database_type = "postgresql"
@@ -135,6 +137,24 @@ PostgreSQL schema to use (PostgreSQL only).
 postgres_schema = "public"
 ```
 
+### dev_database_url
+
+Optional development database URL used when running commands with `--dev`.
+
+```toml
+dev_database_url = "sqlite:///./development.db"
+```
+
+### dev_database_type
+
+Optional type for the development database.
+
+```toml
+dev_database_type = "sqlite"
+```
+
+If omitted, DBWarden infers it from `dev_database_url`.
+
 ## Complete warden.toml Example
 
 ```toml
@@ -147,6 +167,8 @@ default = "primary"
 [database.primary]
 database_type = "postgresql"
 sqlalchemy_url = "postgresql://myuser:mypassword@localhost:5432/myapp"
+dev_database_type = "sqlite"
+dev_database_url = "sqlite:///./development.db"
 model_paths = ["app/models/"]
 migrations_dir = "migrations/primary"
 postgres_schema = "public"
@@ -160,6 +182,44 @@ migrations_dir = "migrations/analytics"
 database_type = "mysql"
 sqlalchemy_url = "mysql://myuser:mypassword@localhost:3306/legacy"
 migrations_dir = "migrations/legacy"
+```
+
+## Development Mode
+
+Use the `--dev` global CLI flag to run commands against `dev_database_url` for the selected database.
+
+```bash
+dbwarden migrate --dev -d primary
+dbwarden status --dev
+```
+
+If `--dev` is enabled and the target database has no `dev_database_url`, DBWarden raises a configuration error.
+
+## Uniqueness Constraints
+
+DBWarden validates that configured database targets are unique:
+
+1. No duplicate `sqlalchemy_url` values.
+2. No duplicate `dev_database_url` values.
+3. No overlap between primary and dev URLs.
+4. No two entries can resolve to the same physical database target (for example, same host/port/database with different credentials).
+
+Examples of invalid configurations:
+
+```toml
+[database.primary]
+sqlalchemy_url = "postgresql://user1:pass1@localhost:5432/main"
+
+[database.analytics]
+sqlalchemy_url = "postgresql://user2:pass2@localhost:5432/main"
+```
+
+```toml
+[database.primary]
+sqlalchemy_url = "sqlite:///./main.db"
+
+[database.analytics]
+dev_database_url = "sqlite:///./main.db"
 ```
 
 ## Configuration in Different Environments

@@ -1,6 +1,7 @@
 import typer
 
 from dbwarden.cli.validators import validate_directory
+from dbwarden.config import set_dev_mode
 from dbwarden.commands import (
     handle_check_db,
     handle_config,
@@ -31,6 +32,18 @@ All commands support the --verbose / -v flag for detailed output.""",
 
 database_app = typer.Typer(help="Manage databases in warden.toml")
 app.add_typer(database_app, name="database")
+
+
+@app.callback()
+def app_callback(
+    dev: bool = typer.Option(
+        False,
+        "--dev",
+        help="Use development database settings (dev_database_url/dev_database_type)",
+    ),
+):
+    """Global CLI options."""
+    set_dev_mode(dev)
 
 
 @app.command()

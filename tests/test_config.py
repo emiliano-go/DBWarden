@@ -11,8 +11,16 @@ from dbwarden.config import (
     list_databases,
     DatabaseConfig,
     MultiDbConfig,
+    set_dev_mode,
 )
 from dbwarden.logging import get_logger, DBWardenLogger
+
+
+@pytest.fixture(autouse=True)
+def reset_dev_mode():
+    set_dev_mode(False)
+    yield
+    set_dev_mode(False)
 
 
 class TestConfig:
@@ -316,6 +324,148 @@ class TestConfig:
                 assert len(config.databases) == 2
                 assert "primary" in config.databases
                 assert "analytics" in config.databases
+            finally:
+                os.chdir(old_cwd)
+
+    def test_get_database_uses_dev_database_in_dev_mode(self):
+        """Test get_database switches to dev URL/type when dev mode is enabled."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write('database_type = "postgresql"\n')
+                    f.write(
+                        'sqlalchemy_url = "postgresql://user:password@localhost:5432/main"\n'
+                    )
+                    f.write('dev_database_url = "sqlite:///./development.db"\n')
+
+                set_dev_mode(True)
+                config = get_database("primary")
+
+                assert config.sqlalchemy_url == "sqlite:///./development.db"
+                assert config.database_type == "sqlite"
+            finally:
+                os.chdir(old_cwd)
+
+    def test_get_database_dev_mode_requires_dev_database_url(self):
+        """Test --dev mode fails when target database lacks dev_database_url."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./primary.db"\n')
+
+                from dbwarden.exceptions import ConfigurationError
+
+                set_dev_mode(True)
+                with pytest.raises(
+                    ConfigurationError,
+                    match="has no dev_database_url configured",
+                ):
+                    get_database("primary")
+            finally:
+                os.chdir(old_cwd)
+
+    def test_dev_database_type_requires_dev_database_url(self):
+        """Test setting dev_database_type without dev_database_url raises error."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./primary.db"\n')
+                    f.write('dev_database_type = "sqlite"\n')
+
+                from dbwarden.exceptions import ConfigurationError
+
+                with pytest.raises(
+                    ConfigurationError,
+                    match="dev_database_url is required",
+                ):
+                    get_multi_db_config()
+            finally:
+                os.chdir(old_cwd)
+
+    def test_duplicate_sqlalchemy_urls_raise_error(self):
+        """Test duplicate sqlalchemy_url values are rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./same.db"\n')
+                    f.write("[database.analytics]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./same.db"\n')
+
+                from dbwarden.exceptions import ConfigurationError
+
+                with pytest.raises(ConfigurationError, match="Duplicate database URL"):
+                    get_multi_db_config()
+            finally:
+                os.chdir(old_cwd)
+
+    def test_duplicate_database_targets_raise_error(self):
+        """Test different URLs pointing to same DB target are rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write(
+                        'sqlalchemy_url = "postgresql://user1:pass1@localhost:5432/main"\n'
+                    )
+                    f.write("[database.analytics]\n")
+                    f.write(
+                        'sqlalchemy_url = "postgresql://user2:pass2@localhost:5432/main"\n'
+                    )
+
+                from dbwarden.exceptions import ConfigurationError
+
+                with pytest.raises(
+                    ConfigurationError,
+                    match="Duplicate database target",
+                ):
+                    get_multi_db_config()
+            finally:
+                os.chdir(old_cwd)
+
+    def test_dev_url_duplicate_against_primary_url_raises_error(self):
+        """Test dev_database_url cannot duplicate another database URL."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+
+            try:
+                with open("warden.toml", "w") as f:
+                    f.write('default = "primary"\n')
+                    f.write("[database.primary]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./main.db"\n')
+                    f.write('dev_database_url = "sqlite:///./dev.db"\n')
+                    f.write("[database.analytics]\n")
+                    f.write('sqlalchemy_url = "sqlite:///./analytics.db"\n')
+                    f.write('dev_database_url = "sqlite:///./main.db"\n')
+
+                from dbwarden.exceptions import ConfigurationError
+
+                with pytest.raises(ConfigurationError, match="Duplicate database URL"):
+                    get_multi_db_config()
             finally:
                 os.chdir(old_cwd)
 

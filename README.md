@@ -43,6 +43,8 @@ default = "primary"
 [database.primary]
 database_type = "sqlite"
 sqlalchemy_url = "sqlite:///./development.db"
+dev_database_type = "sqlite"
+dev_database_url = "sqlite:///./dev.db"
 
 [database.analytics]
 database_type = "postgresql"
@@ -59,6 +61,7 @@ sqlalchemy_url = "postgresql://user:password@localhost:5432/analytics"
 | `dbwarden make-migrations "name"` | Generate SQL from SQLAlchemy models |
 | `dbwarden migrate` | Apply pending migrations |
 | `dbwarden migrate -d <name>` | Migrate specific database |
+| `dbwarden --dev migrate -d <name>` | Migrate using development DB URL |
 | `dbwarden migrate --all` | Migrate all databases |
 | `dbwarden rollback` | Revert the last migration |
 | `dbwarden history` | Show migration history |
