@@ -6,6 +6,8 @@
 
 A database migration system for Python/SQLAlchemy projects.
 
+## Django-like migration managment, made for FastAPI
+
 <a href="https://emiliano-gandini-outeda.github.io/DBWarden/">
   <img src="https://img.shields.io/badge/docs-mkdocs-blue.svg" alt="Documentation">
 </a>
