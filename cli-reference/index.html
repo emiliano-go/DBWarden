@@ -1191,6 +1191,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Commands Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#development-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1912,6 +1929,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Commands Overview">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#development-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2611,6 +2645,14 @@
 <td><code>--version</code></td>
 <td>Show version information</td>
 </tr>
+<tr>
+<td><code>--dev</code></td>
+<td>Use <code>dev_database_url</code> / <code>dev_database_type</code> for target database</td>
+</tr>
+<tr>
+<td><code>--strict-translation</code></td>
+<td>Fail instead of fallback when SQL translation is lossy</td>
+</tr>
 </tbody>
 </table>
 <h2 id="commands-overview">Commands Overview<a class="headerlink" href="#commands-overview" title="Permanent link">&para;</a></h2>
@@ -2710,6 +2752,19 @@
 </tr>
 </tbody>
 </table>
+<h3 id="development-mode">Development Mode<a class="headerlink" href="#development-mode" title="Permanent link">&para;</a></h3>
+<p>You can run database commands against the development connection configured under each database:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
+dbwarden<span class="w"> </span>--dev<span class="w"> </span>status
+dbwarden<span class="w"> </span>--dev<span class="w"> </span>check-db<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span>-d<span class="w"> </span>analytics
+</code></pre></div>
+
+<p>When <code>--dev</code> targets SQLite, DBWarden translates unsupported backend-specific model types/defaults to SQLite-compatible SQL.
+If a conversion is not possible, DBWarden falls back to <code>TEXT</code> with warnings.</p>
+<p>Use <code>--strict-translation</code> to fail on unsupported conversions instead of falling back:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>--strict-translation<span class="w"> </span>make-migrations<span class="w"> </span>-d<span class="w"> </span>primary
+</code></pre></div>
+
 <hr />
 <h2 id="database-management-commands">Database Management Commands<a class="headerlink" href="#database-management-commands" title="Permanent link">&para;</a></h2>
 <h3 id="database-list">database list<a class="headerlink" href="#database-list" title="Permanent link">&para;</a></h3>

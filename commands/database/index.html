@@ -1646,13 +1646,13 @@
 </code></pre></div>
 
 <p><strong>Output:</strong></p>
-<div class="codehilite"><pre><span></span><code><span class="n">Databases</span><span class="o">:</span>
-<span class="w">  </span><span class="n">primary</span><span class="w"> </span><span class="o">(</span><span class="k">default</span><span class="o">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">sqlite</span><span class="o">:///./</span><span class="n">development</span><span class="o">.</span><span class="na">db</span>
-<span class="w">    </span><span class="n">type</span><span class="o">:</span><span class="w"> </span><span class="n">sqlite</span>
-<span class="w">    </span><span class="n">migrations</span><span class="o">:</span><span class="w"> </span><span class="n">migrations</span><span class="o">/</span><span class="n">primary</span>
-<span class="w">  </span><span class="n">analytics</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">postgresql</span><span class="o">://</span><span class="n">user</span><span class="o">:***</span><span class="err">@</span><span class="n">localhost</span><span class="o">:</span><span class="mi">5432</span><span class="o">/</span><span class="n">analytics</span>
-<span class="w">    </span><span class="n">type</span><span class="o">:</span><span class="w"> </span><span class="n">postgresql</span>
-<span class="w">    </span><span class="n">migrations</span><span class="o">:</span><span class="w"> </span><span class="n">migrations</span><span class="o">/</span><span class="n">analytics</span>
+<div class="codehilite"><pre><span></span><code><span class="nx">Databases</span><span class="p">:</span>
+<span class="w">  </span><span class="nx">primary</span><span class="w"> </span><span class="p">(</span><span class="k">default</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">sqlite</span><span class="p">:</span><span class="c1">///./development.db</span>
+<span class="w">    </span><span class="k">type</span><span class="p">:</span><span class="w"> </span><span class="nx">sqlite</span>
+<span class="w">    </span><span class="nx">migrations</span><span class="p">:</span><span class="w"> </span><span class="nx">migrations</span><span class="o">/</span><span class="nx">primary</span>
+<span class="w">  </span><span class="nx">analytics</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">postgresql</span><span class="p">:</span><span class="c1">//user:***@localhost:5432/analytics</span>
+<span class="w">    </span><span class="k">type</span><span class="p">:</span><span class="w"> </span><span class="nx">postgresql</span>
+<span class="w">    </span><span class="nx">migrations</span><span class="p">:</span><span class="w"> </span><span class="nx">migrations</span><span class="o">/</span><span class="nx">analytics</span>
 </code></pre></div>
 
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">&para;</a></h3>
@@ -1700,6 +1700,9 @@ dbwarden<span class="w"> </span>database<span class="w"> </span>add<span class="
 dbwarden<span class="w"> </span>database<span class="w"> </span>add<span class="w"> </span>warehouse<span class="w"> </span>--url<span class="w"> </span><span class="s2">&quot;postgresql://user:pass@localhost:5432/warehouse&quot;</span><span class="w"> </span>--migrations-dir<span class="w"> </span><span class="s2">&quot;migrations/warehouse&quot;</span>
 </code></pre></div>
 
+<p><code>database add</code> validates uniqueness and rejects:
+- Duplicate URLs (including duplicates against any <code>dev_database_url</code>)
+- Different URLs that still resolve to the same physical database target</p>
 <h3 id="remove">remove<a class="headerlink" href="#remove" title="Permanent link">&para;</a></h3>
 <p>Remove a database configuration.</p>
 <div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>database<span class="w"> </span>remove<span class="w"> </span>&lt;name&gt;<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span>
@@ -1840,7 +1843,7 @@ dbwarden<span class="w"> </span>rollback<span class="w"> </span>--all
 </table>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="database-not-found">Database Not Found<a class="headerlink" href="#database-not-found" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="n">Error</span><span class="o">:</span><span class="w"> </span><span class="n">Database</span><span class="w"> </span><span class="s1">&#39;analytics&#39;</span><span class="w"> </span><span class="n">not</span><span class="w"> </span><span class="n">found</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">warden</span><span class="o">.</span><span class="na">toml</span>
+<div class="codehilite"><pre><span></span><code>Error: Database &#39;analytics&#39; not found in warden.toml
 </code></pre></div>
 
 <p>Make sure the database is configured in warden.toml or add it first:</p>
@@ -1848,7 +1851,7 @@ dbwarden<span class="w"> </span>rollback<span class="w"> </span>--all
 </code></pre></div>
 
 <h3 id="missing-sqlalchemy_url">Missing sqlalchemy_url<a class="headerlink" href="#missing-sqlalchemy_url" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="n">Error</span><span class="o">:</span><span class="w"> </span><span class="n">sqlalchemy_url</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">required</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">database</span><span class="w"> </span><span class="s1">&#39;analytics&#39;</span>
+<div class="codehilite"><pre><span></span><code>Error: sqlalchemy_url is required for database &#39;analytics&#39;
 </code></pre></div>
 
 <p>When adding a database, you must provide a connection URL:</p>

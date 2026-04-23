@@ -868,6 +868,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#use-development-database-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use Development Database Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#apply-specific-number-of-migrations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1740,6 +1751,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#use-development-database-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Use Development Database Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#apply-specific-number-of-migrations" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2235,6 +2257,11 @@
 dbwarden<span class="w"> </span>migrate<span class="w"> </span>-v
 </code></pre></div>
 
+<h3 id="use-development-database-settings">Use Development Database Settings<a class="headerlink" href="#use-development-database-settings" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
+</code></pre></div>
+
+<p>This uses <code>dev_database_url</code> (and <code>dev_database_type</code> if configured) from <code>warden.toml</code>.</p>
 <h3 id="apply-specific-number-of-migrations">Apply Specific Number of Migrations<a class="headerlink" href="#apply-specific-number-of-migrations" title="Permanent link">&para;</a></h3>
 <div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>migrate<span class="w"> </span>--count<span class="w"> </span><span class="m">2</span>
 <span class="c1"># or</span>

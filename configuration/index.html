@@ -711,6 +711,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#dev_database_url" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dev_database_url
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dev_database_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dev_database_type
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -721,6 +743,45 @@
     <span class="md-ellipsis">
       
         Complete warden.toml Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sqlite-recommendation-for-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SQLite Recommendation for Development
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uniqueness-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uniqueness Constraints
       
     </span>
   </a>
@@ -1691,6 +1752,28 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#dev_database_url" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dev_database_url
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dev_database_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dev_database_type
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1701,6 +1784,45 @@
     <span class="md-ellipsis">
       
         Complete warden.toml Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#development-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Development Mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#sqlite-recommendation-for-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SQLite Recommendation for Development
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#uniqueness-constraints" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Uniqueness Constraints
       
     </span>
   </a>
@@ -1909,6 +2031,8 @@
 <span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
 <span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/main&quot;</span>
 <span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/primary&quot;</span>
+<span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
+<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
 
 <span class="k">[database.analytics]</span>
 <span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
@@ -2008,6 +2132,17 @@
 <div class="codehilite"><pre><span></span><code><span class="n">postgres_schema</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;public&quot;</span>
 </code></pre></div>
 
+<h3 id="dev_database_url">dev_database_url<a class="headerlink" href="#dev_database_url" title="Permanent link">&para;</a></h3>
+<p>Optional development database URL used when running commands with <code>--dev</code>.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
+</code></pre></div>
+
+<h3 id="dev_database_type">dev_database_type<a class="headerlink" href="#dev_database_type" title="Permanent link">&para;</a></h3>
+<p>Optional type for the development database.</p>
+<div class="codehilite"><pre><span></span><code><span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
+</code></pre></div>
+
+<p>If omitted, DBWarden infers it from <code>dev_database_url</code>.</p>
 <h2 id="complete-wardentoml-example">Complete warden.toml Example<a class="headerlink" href="#complete-wardentoml-example" title="Permanent link">&para;</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="c1"># Default database</span>
 <span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;primary&quot;</span>
@@ -2018,6 +2153,8 @@
 <span class="k">[database.primary]</span>
 <span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
 <span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://myuser:mypassword@localhost:5432/myapp&quot;</span>
+<span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
+<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
 <span class="n">model_paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;app/models/&quot;</span><span class="p">]</span>
 <span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/primary&quot;</span>
 <span class="n">postgres_schema</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;public&quot;</span>
@@ -2031,6 +2168,49 @@
 <span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mysql&quot;</span>
 <span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mysql://myuser:mypassword@localhost:3306/legacy&quot;</span>
 <span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/legacy&quot;</span>
+</code></pre></div>
+
+<h2 id="development-mode">Development Mode<a class="headerlink" href="#development-mode" title="Permanent link">&para;</a></h2>
+<p>Use the <code>--dev</code> global CLI flag to run commands against <code>dev_database_url</code> for the selected database.</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>migrate<span class="w"> </span>--dev<span class="w"> </span>-d<span class="w"> </span>primary
+dbwarden<span class="w"> </span>status<span class="w"> </span>--dev
+</code></pre></div>
+
+<p>If <code>--dev</code> is enabled and the target database has no <code>dev_database_url</code>, DBWarden raises a configuration error.</p>
+<h3 id="sqlite-recommendation-for-development">SQLite Recommendation for Development<a class="headerlink" href="#sqlite-recommendation-for-development" title="Permanent link">&para;</a></h3>
+<p>We recommend using SQLite for <code>dev_database_url</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
+<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
+</code></pre></div>
+
+<p>When using <code>--dev</code> with a SQLite dev database, DBWarden translates backend-specific model types/defaults (PostgreSQL, MySQL, MariaDB, ClickHouse) to SQLite-compatible SQL.</p>
+<p>If a type cannot be converted safely, DBWarden falls back to <code>TEXT</code> and emits warnings.</p>
+<p>For strict behavior, use:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>--strict-translation<span class="w"> </span>make-migrations<span class="w"> </span>-d<span class="w"> </span>primary
+</code></pre></div>
+
+<p>In strict translation mode, unsupported conversions fail instead of falling back.</p>
+<h2 id="uniqueness-constraints">Uniqueness Constraints<a class="headerlink" href="#uniqueness-constraints" title="Permanent link">&para;</a></h2>
+<p>DBWarden validates that configured database targets are unique:</p>
+<ol>
+<li>No duplicate <code>sqlalchemy_url</code> values.</li>
+<li>No duplicate <code>dev_database_url</code> values.</li>
+<li>No overlap between primary and dev URLs.</li>
+<li>No two entries can resolve to the same physical database target (for example, same host/port/database with different credentials).</li>
+</ol>
+<p>Examples of invalid configurations:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">[database.primary]</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user1:pass1@localhost:5432/main&quot;</span>
+
+<span class="k">[database.analytics]</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user2:pass2@localhost:5432/main&quot;</span>
+</code></pre></div>
+
+<div class="codehilite"><pre><span></span><code><span class="k">[database.primary]</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./main.db&quot;</span>
+
+<span class="k">[database.analytics]</span>
+<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./main.db&quot;</span>
 </code></pre></div>
 
 <h2 id="configuration-in-different-environments">Configuration in Different Environments<a class="headerlink" href="#configuration-in-different-environments" title="Permanent link">&para;</a></h2>
@@ -2075,11 +2255,11 @@
 </code></pre></div>
 
 <p>Output:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">Database</span><span class="o">:</span><span class="w"> </span><span class="n">primary</span>
-<span class="n">database_type</span><span class="o">:</span><span class="w"> </span><span class="n">postgresql</span>
-<span class="n">sqlalchemy_url</span><span class="o">:</span><span class="w"> </span><span class="o">***</span>
-<span class="n">migrations_dir</span><span class="o">:</span><span class="w"> </span><span class="n">migrations</span><span class="o">/</span><span class="n">primary</span>
-<span class="n">postgres_schema</span><span class="o">:</span><span class="w"> </span><span class="kd">public</span>
+<div class="codehilite"><pre><span></span><code><span class="nx">Database</span><span class="p">:</span><span class="w"> </span><span class="nx">primary</span>
+<span class="nx">database_type</span><span class="p">:</span><span class="w"> </span><span class="nx">postgresql</span>
+<span class="nx">sqlalchemy_url</span><span class="p">:</span><span class="w"> </span><span class="o">***</span>
+<span class="nx">migrations_dir</span><span class="p">:</span><span class="w"> </span><span class="nx">migrations</span><span class="o">/</span><span class="nx">primary</span>
+<span class="nx">postgres_schema</span><span class="p">:</span><span class="w"> </span><span class="nx">public</span>
 </code></pre></div>
 
 <h2 id="special-characters-in-passwords">Special Characters in Passwords<a class="headerlink" href="#special-characters-in-passwords" title="Permanent link">&para;</a></h2>
@@ -2095,22 +2275,22 @@
 
 <p>Make sure your <code>warden.toml</code> includes a <code>[database]</code> section with at least one database configuration.</p>
 <h3 id="missing-sqlalchemy_url">Missing sqlalchemy_url<a class="headerlink" href="#missing-sqlalchemy_url" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="n">Error</span><span class="o">:</span><span class="w"> </span><span class="n">sqlalchemy_url</span><span class="w"> </span><span class="k">is</span><span class="w"> </span><span class="n">required</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">database</span><span class="w"> </span><span class="s1">&#39;primary&#39;</span><span class="o">.</span>
+<div class="codehilite"><pre><span></span><code>Error: sqlalchemy_url is required for database &#39;primary&#39;.
 </code></pre></div>
 
 <p>Make sure each database configuration includes a valid <code>sqlalchemy_url</code>.</p>
 <h3 id="invalid-database_type">Invalid database_type<a class="headerlink" href="#invalid-database_type" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="n">Error</span><span class="o">:</span><span class="w"> </span><span class="n">Invalid</span><span class="w"> </span><span class="n">database_type</span><span class="w"> </span><span class="s1">&#39;oracle&#39;</span><span class="o">.</span><span class="w"> </span><span class="n">Must</span><span class="w"> </span><span class="n">be</span><span class="w"> </span><span class="n">one</span><span class="w"> </span><span class="n">of</span><span class="o">:</span><span class="w"> </span><span class="n">sqlite</span><span class="o">,</span><span class="w"> </span><span class="n">postgresql</span><span class="o">,</span><span class="w"> </span><span class="n">mysql</span><span class="o">,</span><span class="w"> </span><span class="n">mariadb</span><span class="o">,</span><span class="w"> </span><span class="n">clickhouse</span>
+<div class="codehilite"><pre><span></span><code><span class="nx">Error</span><span class="p">:</span><span class="w"> </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">database_type</span><span class="w"> </span><span class="err">&#39;</span><span class="nx">oracle</span><span class="err">&#39;</span><span class="p">.</span><span class="w"> </span><span class="nx">Must</span><span class="w"> </span><span class="nx">be</span><span class="w"> </span><span class="nx">one</span><span class="w"> </span><span class="nx">of</span><span class="p">:</span><span class="w"> </span><span class="nx">sqlite</span><span class="p">,</span><span class="w"> </span><span class="nx">postgresql</span><span class="p">,</span><span class="w"> </span><span class="nx">mysql</span><span class="p">,</span><span class="w"> </span><span class="nx">mariadb</span><span class="p">,</span><span class="w"> </span><span class="nx">clickhouse</span>
 </code></pre></div>
 
 <p>Use one of the supported database types.</p>
 <h3 id="invalid-url-format">Invalid URL Format<a class="headerlink" href="#invalid-url-format" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="n">Error</span><span class="o">:</span><span class="w"> </span><span class="n">Could</span><span class="w"> </span><span class="n">not</span><span class="w"> </span><span class="n">parse</span><span class="w"> </span><span class="n">SQLAlchemy</span><span class="w"> </span><span class="n">URL</span>
+<div class="codehilite"><pre><span></span><code>Error: Could not parse SQLAlchemy URL
 </code></pre></div>
 
 <p>Check that your URL follows the correct format: <code>dialect+driver://username:password@host:port/database</code></p>
 <h3 id="database-connection-failed">Database Connection Failed<a class="headerlink" href="#database-connection-failed" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="n">Error</span><span class="o">:</span><span class="w"> </span><span class="n">could</span><span class="w"> </span><span class="n">not</span><span class="w"> </span><span class="n">connect</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">server</span>
+<div class="codehilite"><pre><span></span><code><span class="nv">Error</span>:<span class="w"> </span><span class="nv">could</span><span class="w"> </span><span class="nv">not</span><span class="w"> </span><span class="k">connect</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">server</span>
 </code></pre></div>
 
 <p>Verify that:

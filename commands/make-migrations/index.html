@@ -833,6 +833,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#development-sqlite-translation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development SQLite Translation
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1550,6 +1561,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#development-sqlite-translation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development SQLite Translation
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1779,6 +1801,9 @@
 </tr>
 </tbody>
 </table>
+<p>Global options that also apply:
+- <code>--dev</code>: Use <code>dev_database_url</code>/<code>dev_database_type</code>
+- <code>--strict-translation</code>: Fail on unsupported SQL translation instead of fallback</p>
 <h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
 <h3 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h3>
 <div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;create users table&quot;</span>
@@ -1793,6 +1818,16 @@
 </code></pre></div>
 
 <p>If no description is provided, "auto_generated" will be used.</p>
+<h3 id="development-sqlite-translation">Development SQLite Translation<a class="headerlink" href="#development-sqlite-translation" title="Permanent link">&para;</a></h3>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;sync models&quot;</span><span class="w"> </span>-d<span class="w"> </span>primary
+</code></pre></div>
+
+<p>If the dev database is SQLite, DBWarden translates unsupported backend-specific SQL types/defaults.
+Unsupported types that cannot be converted are emitted as <code>TEXT</code> with warnings.</p>
+<p>To fail instead of fallback:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>--strict-translation<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;sync models&quot;</span><span class="w"> </span>-d<span class="w"> </span>primary
+</code></pre></div>
+
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
 <ol>
 <li><strong>Model Discovery</strong>: Automatically discovers SQLAlchemy models by:</li>
