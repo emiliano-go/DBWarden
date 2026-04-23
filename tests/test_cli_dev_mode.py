@@ -1,7 +1,12 @@
 from typer.testing import CliRunner
 
 from dbwarden.cli.main import app
-from dbwarden.config import is_dev_mode, set_dev_mode
+from dbwarden.config import (
+    is_dev_mode,
+    is_strict_translation,
+    set_dev_mode,
+    set_strict_translation,
+)
 
 
 class TestCliDevMode:
@@ -22,3 +27,21 @@ class TestCliDevMode:
 
         assert result.exit_code == 0
         assert is_dev_mode() is False
+
+    def test_strict_translation_flag_enables_mode(self):
+        runner = CliRunner()
+        set_strict_translation(False)
+
+        result = runner.invoke(app, ["--strict-translation", "version"])
+
+        assert result.exit_code == 0
+        assert is_strict_translation() is True
+
+    def test_strict_translation_disabled_by_default(self):
+        runner = CliRunner()
+        set_strict_translation(True)
+
+        result = runner.invoke(app, ["version"])
+
+        assert result.exit_code == 0
+        assert is_strict_translation() is False
