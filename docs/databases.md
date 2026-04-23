@@ -1,199 +1,45 @@
 # Supported Databases
 
-DBWarden supports multiple database backends. This guide covers configuration and considerations for each.
+DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
 
-## Overview
+## Backend Matrix
 
-| Database | Supported | Driver | Type Value |
-|----------|-----------|--------|------------|
-| PostgreSQL | Yes | `psycopg2-binary` | `postgresql` |
-| MySQL | Yes | `mysql-connector-python` | `mysql` |
-| SQLite | Yes | Built-in | `sqlite` |
-| ClickHouse | Yes | `clickhouse-connect` | `clickhouse` |
-| MariaDB | Yes | `mysql-connector-python` | `mariadb` |
+| Backend | `database_type` | Typical URL |
+|---------|------------------|-------------|
+| PostgreSQL | `postgresql` | `postgresql://user:pass@host:5432/db` |
+| MySQL | `mysql` | `mysql://user:pass@host:3306/db` |
+| MariaDB | `mariadb` | `mariadb://user:pass@host:3306/db` |
+| SQLite | `sqlite` | `sqlite:///./app.db` |
+| ClickHouse | `clickhouse` | `clickhouse://user:pass@host:8123/db` |
 
-## PostgreSQL
+## Config Examples
 
-### Connection URL
-
-```toml
-[database.primary]
-database_type = "postgresql"
-sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"
-```
-
-**Requirements:**
-```bash
-pip install psycopg2-binary
-```
-
-### Features
-
-- Full support for all PostgreSQL features
-- UUID types
-- JSON/JSONB columns
-- Array types (via manual migration)
-- Full-text search (via manual migration)
-- PostgreSQL-specific constraints
-- SERIAL/BIGSERIAL for auto-increment
-- TIMESTAMP (not DATETIME)
-- BYTEA for binary data
-
-### PostgreSQL Schema
-
-Set default schema in `warden.toml`:
+PostgreSQL:
 
 ```toml
 [database.primary]
 database_type = "postgresql"
-sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"
-postgres_schema = "custom_schema"
+sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
+postgres_schema = "public"
 ```
 
-### Type Mapping
-
-DBWarden automatically maps SQLAlchemy types to PostgreSQL:
-
-| SQLAlchemy | PostgreSQL |
-|------------|------------|
-| Integer (PK) | SERIAL |
-| BigInteger (PK) | BIGSERIAL |
-| DateTime | TIMESTAMP |
-| BLOB | BYTEA |
-
-### Example PostgreSQL Migration
-
-```sql
--- upgrade
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMP DEFAULT NOW(),
-    data JSONB
-);
-
-CREATE INDEX idx_users_email ON users(email);
-
--- rollback
-
-DROP INDEX idx_users_email;
-DROP TABLE users;
-```
-
-## MySQL
-
-### Connection URL
+MySQL:
 
 ```toml
 [database.legacy]
 database_type = "mysql"
-sqlalchemy_url = "mysql://user:password@localhost:3306/mydb"
+sqlalchemy_url = "mysql://user:password@localhost:3306/legacy"
 ```
 
-**Requirements:**
-```bash
-pip install mysql-connector-python
-```
-
-### Features
-
-- Full support for MySQL features
-- ENUM types
-- SET types
-- Full-text indexes (MyISAM, InnoDB 5.6+)
-- AUTO_INCREMENT
-
-### Type Mapping
-
-| SQLAlchemy | MySQL |
-|------------|-------|
-| Boolean | TINYINT(1) |
-| Integer (PK) | INT AUTO_INCREMENT |
-
-### Example MySQL Migration
-
-```sql
--- upgrade
-
-CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) NOT NULL,
-    status ENUM('active', 'inactive', 'pending') DEFAULT 'active',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE UNIQUE INDEX idx_users_email ON users(email);
-
--- rollback
-
-DROP INDEX idx_users_email;
-DROP TABLE users;
-```
-
-## MariaDB
-
-MariaDB is fully compatible with MySQL. Use the `mariadb` type:
-
-```toml
-[database.legacy]
-database_type = "mariadb"
-sqlalchemy_url = "mysql://user:password@localhost:3306/mydb"
-```
-
-All MySQL features and type mappings apply to MariaDB.
-
-## SQLite
-
-### Connection URL
+SQLite:
 
 ```toml
 [database.dev]
 database_type = "sqlite"
-# File-based
-sqlalchemy_url = "sqlite:///./mydb.db"
-
-# In-memory
-sqlalchemy_url = "sqlite:///:memory:"
+sqlalchemy_url = "sqlite:///./development.db"
 ```
 
-No additional drivers needed.
-
-### Features
-
-- Simple file-based database
-- Zero configuration
-- Good for development/testing
-- Full SQLite feature support
-
-### Limitations
-
-- No concurrent connections (file-based)
-- Limited ALTER TABLE support
-- Different type system (type affinity)
-
-### Example SQLite Migration
-
-```sql
--- upgrade
-
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT NOT NULL UNIQUE,
-    email TEXT NOT NULL UNIQUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- rollback
-
-DROP TABLE users;
-```
-
-## ClickHouse
-
-### Connection URL
+ClickHouse:
 
 ```toml
 [database.analytics]
@@ -201,121 +47,81 @@ database_type = "clickhouse"
 sqlalchemy_url = "clickhouse://user:password@localhost:8123/analytics"
 ```
 
-**Requirements:**
-```bash
-pip install clickhouse-connect
-```
+## Internal Connection Handling
 
-### Features
+DBWarden uses SQLAlchemy engines, with backend-specific URL normalization where needed.
 
-- Supports migration tracking and locking tables
-- Supports model-generated and manual migrations
-- Supports MergeTree/ReplacingMergeTree-style table migrations
-- Excellent for analytics workloads
-- Column-oriented storage
-
-### Type Mapping
-
-ClickHouse uses MySQL-compatible queries for migration tracking tables.
-
-### Example ClickHouse Migration
-
-```sql
--- upgrade
-
-CREATE TABLE users (
-    id UInt32,
-    email String,
-    created_at DateTime
-) ENGINE = MergeTree()
-ORDER BY id;
-
-CREATE TABLE events (
-    id UInt32,
-    user_id UInt32,
-    event_type String,
-    created_at DateTime
-) ENGINE = MergeTree()
-ORDER BY (user_id, created_at);
-
--- rollback
-
-DROP TABLE events;
-DROP TABLE users;
-```
-
-## Connection Pooling
-
-SQLAlchemy creates an engine with connection pool:
+Conceptual flow:
 
 ```python
-from sqlalchemy import create_engine
-engine = create_engine(url, pool_size=5, max_overflow=10)
+def get_engine(config):
+    url = config.sqlalchemy_url
+    if config.database_type == "clickhouse":
+        url = normalize_clickhouse_dialect(url)
+    return create_engine(url)
 ```
 
-## SSL/TLS Connections
+For PostgreSQL schema support, DBWarden sets `search_path` on connection when `postgres_schema` is configured.
 
-### PostgreSQL with SSL
+## Development Database Strategy
+
+Recommended pattern:
+
+- Production-like primary DB (for example PostgreSQL)
+- SQLite for dev DB via `dev_database_url`
+- Run local commands with `--dev`
 
 ```toml
-[database.prod]
+[database.primary]
 database_type = "postgresql"
-sqlalchemy_url = "postgresql://user:password@host:5432/db?sslmode=require"
+sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
+dev_database_type = "sqlite"
+dev_database_url = "sqlite:///./development.db"
 ```
 
-### MySQL with SSL
-
-```toml
-[database.prod]
-database_type = "mysql"
-sqlalchemy_url = "mysql://user:password@host:3306/db?ssl=true"
+```bash
+dbwarden --dev make-migrations "sync models" -d primary
+dbwarden --dev migrate -d primary
 ```
 
-### ClickHouse with HTTPS
+## Translation Note
 
-```toml
-[database.analytics]
-database_type = "clickhouse"
-sqlalchemy_url = "clickhouse://user:password@host:8443/analytics?ssl=true"
-```
+When targeting SQLite in dev mode, DBWarden translates unsupported backend-specific types/defaults.
 
-## Connection Strings Reference
+- Unknown/unsupported types fallback to `TEXT` with warnings
+- `--strict-translation` turns those warnings into errors
 
-### PostgreSQL
+Details: [SQL Translation](sql-translation.md)
 
-```
-postgresql://user:pass@localhost:5432/mydb
-postgresql://user:pass@host:5432/mydb?sslmode=require
-postgresql://user:pass@host:5432/mydb?channel_binding=require
-```
+## Backend-Specific Notes
 
-### MySQL
+PostgreSQL:
 
-```
-mysql://user:pass@localhost:3306/mydb
-mysql+pymysql://user:pass@localhost:3306/mydb
-mysql://user:pass@host:3306/mydb?ssl=true
-```
+- Strong support for JSONB, UUID, rich DDL
+- Prefer production runs on actual PostgreSQL instance
 
-### SQLite
+MySQL/MariaDB:
 
-```
-sqlite:///./mydb.db
-sqlite:///:memory:
-sqlite:///path/to/file.db
-```
+- Similar behavior; MariaDB configured separately via `database_type`
+- Validate engine-specific syntax in manual migrations
 
-### ClickHouse
+SQLite:
 
-```
-clickhouse://user:pass@localhost:8123/analytics
-clickhouse://user:pass@host:8123/db
-clickhouse://user:pass@host:8443/db?ssl=true
-```
+- Great for local tests and dev loops
+- Different type affinity and DDL limitations vs server databases
 
-### MariaDB
+ClickHouse:
 
-```
-mariadb://user:pass@localhost:3306/mydb
-mysql://user:pass@localhost:3306/mydb
+- Optimized for analytics workloads
+- Use manual SQL for engine/partition/order specifics when needed
+
+## Recommended Verification Workflow
+
+```bash
+# local loop on dev DB
+dbwarden --dev migrate -d primary
+
+# pre-release validation on production-like DB
+dbwarden migrate -d primary
+dbwarden status -d primary
 ```

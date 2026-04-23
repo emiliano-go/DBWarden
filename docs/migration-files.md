@@ -1,375 +1,145 @@
 # Migration Files
 
-Migration files are the heart of DBWarden. They contain SQL statements that modify your database schema.
+Migration files are executable SQL units with explicit upgrade and rollback behavior.
 
-## File Structure
+## Naming Convention
 
-### Naming Convention
-
-Migration files follow this naming pattern:
-
-```
-{dbname}__{number}_{description}.sql
+```text
+{database_name}__{version}_{description}.sql
 ```
 
-**Components:**
-- `{dbname}`: Database name (e.g., `primary`, `analytics`)
-- `{number}`: 4-digit sequential number (auto-incremented)
-- `{description}`: Lowercase, underscore-separated description
+Examples:
 
-**Examples:**
-```
+```text
 primary__0001_initial_schema.sql
-primary__0002_create_users_table.sql
-primary__0003_add_user_posts_relationship.sql
+primary__0002_add_users_table.sql
 analytics__0001_create_events.sql
 ```
 
-**Note:** In multi-database setups, migration files are prefixed with the database name (`{dbname}__`) to keep migrations organized per database. The `{dbname}` prefix matches the database name defined in `warden.toml`.
+## File Anatomy
 
-### Internal Structure
-
-Each migration file has two sections:
+Every migration file must include two sections:
 
 ```sql
 -- upgrade
 
--- Your upgrade SQL statements here
+-- SQL applied during migrate
 
 -- rollback
 
--- Your rollback SQL statements here
+-- SQL applied during rollback
 ```
 
-## Example Migrations
+## Migration Types
 
-### Create Table
+| Prefix | Type | Behavior |
+|--------|------|----------|
+| `NNNN_` | Versioned | Runs once in version order |
+| `RA__` | Runs always | Runs each `migrate` execution |
+| `ROC__` | Runs on change | Runs only when checksum changed |
+
+## Internal Execution Model
+
+When `migrate` runs, DBWarden builds an execution plan from migration files:
+
+```python
+def build_plan(directory, applied_versions):
+    versioned = parse_versioned_files(directory)
+    repeatable = parse_repeatable_files(directory)
+
+    pending_versioned = [m for m in versioned if m.version not in applied_versions]
+    pending_ra = repeatable.runs_always
+    pending_roc = changed_only(repeatable.runs_on_change)
+
+    return pending_versioned + pending_ra + pending_roc
+```
+
+Then each migration:
+
+1. Parses `-- upgrade` statements
+2. Executes statements in order
+3. Stores execution metadata/checksum
+
+## Example: Versioned Migration
 
 ```sql
--- migrations/0001_create_users.sql
-
 -- upgrade
 
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username VARCHAR(50) NOT NULL UNIQUE,
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME
 );
-
-CREATE INDEX idx_users_email ON users(email);
 
 -- rollback
 
-DROP INDEX idx_users_email;
 DROP TABLE users;
 ```
 
-### Add Column
+## Example: Runs-Always Migration
 
 ```sql
--- migrations/0002_add_user_profile.sql
-
 -- upgrade
 
-ALTER TABLE users ADD COLUMN bio TEXT;
-ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500);
+CREATE OR REPLACE VIEW active_users AS
+SELECT id, email FROM users WHERE is_active = TRUE;
 
 -- rollback
 
-ALTER TABLE users DROP COLUMN avatar_url;
-ALTER TABLE users DROP COLUMN bio;
+DROP VIEW IF EXISTS active_users;
 ```
 
-### Complex Migration with Transactions
+Filename example: `primary__RA__refresh_active_users_view.sql`
+
+## Example: Runs-On-Change Migration
 
 ```sql
--- migrations/0003_migrate_to_new_schema.sql
-
 -- upgrade
 
-BEGIN;
-
--- Create new table
-CREATE TABLE posts_new (
-    id INTEGER PRIMARY KEY,
-    author_id INTEGER NOT NULL,
-    title VARCHAR(200) NOT NULL,
-    content TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Copy data
-INSERT INTO posts_new (id, author_id, title, content, created_at)
-SELECT id, user_id, title, content, created_at FROM posts;
-
--- Drop old table
-DROP TABLE posts;
-
--- Rename new table
-ALTER TABLE posts_new RENAME TO posts;
-
-COMMIT;
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
 -- rollback
 
-BEGIN;
-
--- Reverse the migration
-CREATE TABLE posts_old (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER NOT NULL,
-    title VARCHAR(200) NOT NULL,
-    content TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-INSERT INTO posts_old (id, user_id, title, content, created_at)
-SELECT id, author_id, title, content, created_at FROM posts;
-
-DROP TABLE posts;
-
-ALTER TABLE posts_old RENAME TO posts;
-
-COMMIT;
+DROP FUNCTION IF EXISTS update_updated_at();
 ```
 
-## SQL Support
+Filename example: `primary__ROC__update_timestamp_trigger.sql`
 
-### Supported SQL Statements
+## Metadata Headers
 
-- `CREATE TABLE`
-- `ALTER TABLE ADD/DROP/MODIFY COLUMN`
-- `DROP TABLE`
-- `CREATE INDEX`
-- `DROP INDEX`
-- `CREATE/DROP VIEW`
-- `CREATE/DROP TRIGGER`
-- `INSERT`, `UPDATE`, `DELETE` (for data migration)
-- `BEGIN`, `COMMIT`, `ROLLBACK` (transactions)
-
-### Database-Specific SQL
-
-DBWarden supports database-specific SQL:
+Dependency header:
 
 ```sql
--- PostgreSQL
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- MySQL
-ALTER TABLE users ENGINE=InnoDB;
-
--- SQLite
-PRAGMA foreign_keys = ON;
+-- depends_on: ["0004", "0005"]
 ```
 
-## Version Management
+Seed header:
 
-### Version Formats
-
-**Sequential Number (Django-style):**
+```sql
+-- seed
 ```
-primary__0001_description.sql
-```
-- Unique: Auto-incremented sequential number
-- Ordered: Naturally sorted numerically
-- Automatic: Generated by `make-migrations`
 
-**Custom Number:**
-```
-primary__9999_custom_description.sql
-```
-- Manual: Set with `--version`
-- Explicit: You control numbering
-- Use when: Need to insert migration between existing ones
-
-### Version Ordering
-
-DBWarden sorts migrations:
-- By database name (for multi-database setups)
-- Numerically by the 4-digit prefix within each database
-- Allows: `0001`, `0002`, ..., `9999`
+Headers are parsed before SQL execution and used by ordering logic.
 
 ## Best Practices
 
-### 1. One Migration Per Feature
+- Keep one logical change per migration file
+- Always write rollback SQL that actually restores previous state
+- Prefer explicit SQL over side effects in application code
+- Review generated SQL before running `migrate`
+- For complex data moves, use transactional blocks where backend supports it
 
-```
-GOOD:
-├── 0001_initial_schema.sql
-├── 0002_create_users.sql
-├── 0003_create_posts.sql
-└── 0004_add_comments.sql
-
-BAD:
-└── 0001_users_posts_comments_all.sql
-```
-
-### 2. Descriptive Names
-
-```
-GOOD: 0004_add_user_email_verification.sql
-BAD:  0004_changes.sql
-```
-
-### 3. Always Include Rollback
-
-```sql
--- GOOD: Has rollback
--- upgrade
-CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100));
--- rollback
-DROP TABLE users;
-
--- BAD: No rollback
--- upgrade
-CREATE TABLE users (id INT PRIMARY KEY, name VARCHAR(100));
-```
-
-### 4. Idempotent Migrations
-
-```sql
--- GOOD: Idempotent
-CREATE TABLE IF NOT EXISTS users (id INT PRIMARY KEY);
-
--- GOOD: Safe to run twice
-DROP INDEX IF EXISTS idx_users_email;
-CREATE INDEX idx_users_email ON users(email);
-```
-
-### 5. Use Transactions for Complex Changes
-
-```sql
--- Wrap in transaction for atomicity
-BEGIN;
--- All changes
-COMMIT;
-```
-
-## Migration Lifecycle
-
-```
-┌─────────────┐
-│ New File    │ Created by make-migrations or new
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ Pending     │ Not yet applied
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ Applied     │ migrate command executed
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ Recorded    │ Added to dbwarden_migrations table
-└─────────────┘
-```
-
-## Directory Structure
-
-### Single Database
-
-```
-project/
-├── migrations/
-│   ├── primary/
-│   │   ├── primary__0001_initial_schema.sql
-│   │   ├── primary__0002_create_users.sql
-│   │   └── .gitkeep
-│   └── .gitkeep
-├── models/
-│   └── user.py
-├── warden.toml
-└── pyproject.toml
-```
-
-### Multi-Database
-
-```
-project/
-├── migrations/
-│   ├── primary/
-│   │   ├── primary__0001_initial_schema.sql
-│   │   └── primary__0002_create_users.sql
-│   ├── analytics/
-│   │   ├── analytics__0001_create_events.sql
-│   │   └── analytics__0002_create_reports.sql
-│   └── legacy/
-│       └── legacy__0001_initial.sql
-├── models/
-│   └── user.py
-├── warden.toml
-└── pyproject.toml
-```
-
-Each database has its own migration directory containing migrations prefixed with the database name.
-
-## Git Integration
-
-### Add to Version Control
+## Validation Checklist Before Commit
 
 ```bash
-git add migrations/
-git commit -m "Add database migrations"
+dbwarden status -d primary
+dbwarden migrate -d primary
+dbwarden rollback --count 1 -d primary
+dbwarden migrate -d primary
 ```
-
-### Migration File Rules
-
-1. **Never modify applied migrations**
-2. **Always create new migrations for changes**
-3. **Review migration SQL before applying**
-
-### Handling Migration Conflicts
-
-When merging branches:
-
-1. Review both migration sequences
-2. Combine if needed (or use squash)
-3. Ensure order is preserved
-4. Test after merge
-
-## Troubleshooting
-
-### Migration Not Found
-
-Check file naming:
-```
-WRONG: desc.sql                          (missing number)
-WRONG: 1_desc.sql                        (not 4 digits)
-WRONG: 0001_desc.sql                     (missing dbname prefix)
-RIGHT: primary__0001_desc.sql
-```
-
-### Parsing Errors
-
-Ensure proper section markers:
-```sql
--- upgrade         (lowercase, no extra spaces)
--- rollback        (lowercase)
-```
-
-### Duplicate Versions
-
-Use unique version numbers within each database:
-```
-ERROR: primary__0001_feature.sql already exists
-FIX: Use primary__0002_feature.sql or let auto-numbering handle it
-```
-
-### Wrong Database
-
-If migrations aren't being detected:
-1. Check migration filename prefix matches database name in `warden.toml`
-2. Verify migrations are in the correct directory (e.g., `migrations/primary/`)
-3. Use `dbwarden status -d <database>` to check status for specific database
-
-## See Also
-
-- [make-migrations](commands/make-migrations.md): Auto-generate migrations
-- [new](commands/new.md): Create manual migrations
-- [migrate](commands/migrate.md): Apply migrations
-- [rollback](commands/rollback.md): Revert migrations

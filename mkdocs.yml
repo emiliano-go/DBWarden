@@ -39,6 +39,9 @@ nav:
   - Migration Files: migration-files.md
   - SQLAlchemy Models: models.md
   - Supported Databases: databases.md
+  - SQL Translation: sql-translation.md
+  - Architecture Deep Dive: architecture-deep-dive.md
+  - Operations Runbook: operations-runbook.md
   - Advanced Features: advanced.md
   - CLI Reference: cli-reference.md
 

@@ -98,6 +98,35 @@ Use strict mode to fail on unsupported conversions:
 dbwarden --dev --strict-translation make-migrations "sync models" -d primary
 ```
 
+## Dev Mode + SQL Translation Example
+
+If your primary DB is PostgreSQL but you want lightweight local testing on SQLite:
+
+```toml
+default = "primary"
+
+[database.primary]
+database_type = "postgresql"
+sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
+migrations_dir = "migrations/primary"
+
+dev_database_type = "sqlite"
+dev_database_url = "sqlite:///./development.db"
+```
+
+Generate and run migrations in dev mode:
+
+```bash
+# Generate migration SQL adapted for SQLite dev database
+dbwarden --dev make-migrations "add billing tables" -d primary
+
+# Apply migrations in SQLite dev database
+dbwarden --dev migrate -d primary
+
+# Optional: fail if any type/default cannot be translated cleanly
+dbwarden --dev --strict-translation make-migrations "validate translation" -d primary
+```
+
 ## SQLAlchemy Models
 
 DBWarden automatically detects models in `models/`:

@@ -1,71 +1,69 @@
-# DBWarden - Professional Database Migration System
+# DBWarden
 
-**DBWarden** is a professional-grade database migration system designed specifically for Python projects using SQLAlchemy. It provides a robust, reliable, and developer-friendly approach to managing database schema changes across different environments.
+DBWarden is a SQL-first migration system for Python projects using SQLAlchemy.
 
-## What is DBWarden?
+It helps teams keep schema changes explicit, reviewable, and safe across development, staging, and production.
 
-DBWarden addresses the critical challenge of maintaining consistent database schemas across development, staging, and production environments. It combines the flexibility of SQL-based migrations with the convenience of automatic migration generation from SQLAlchemy models.
+## Why Teams Use It
 
-### Features
+- Generate migration files from SQLAlchemy models
+- Keep upgrade and rollback SQL in the same file
+- Run migrations per database or across all configured databases
+- Use migration locking to avoid concurrent execution issues
+- Compare model schema and live database schema before deploying
+- Use `--dev` mode to run local workflows on a separate development database
 
-- **Automatic Migration Generation**: Automatically generate SQL migrations from your SQLAlchemy models
-- **Version Control**: Track all schema changes with detailed history and timestamps
-- **Rollback Support**: Safely revert migrations when needed
-- **Multiple Database Support**: Works with PostgreSQL, MySQL, SQLite, and ClickHouse
-- **Model Discovery**: Automatically finds and processes your SQLAlchemy models
-- **Migration Locking**: Prevents concurrent migration execution
-- **Schema Inspection**: Inspect and compare database schemas
-
-## Architecture Overview
-
-DBWarden follows a modular architecture designed for reliability and extensibility:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     DBWarden CLI                        │
-│                    (Typer-based)                        │
-├─────────────────────────────────────────────────────────┤
-│  Commands Layer                                         │
-│  ├── init         ├── migrate      ├── rollback         │
-│  ├── make-migrations ├── history    ├── status          │
-│  └── ...          └── ...           └── ...             │
-├─────────────────────────────────────────────────────────┤
-│  Engine Layer                                           │
-│  ├── Model Discovery  ├── Versioning  ├── File Parser   │
-│  └── Checksum         └── Locking                       │
-├─────────────────────────────────────────────────────────┤
-│  Repository Layer                                       │
-│  ├── Migration Records  ├── Lock Management             │
-├─────────────────────────────────────────────────────────┤
-│  Database Layer                                         │
-│  ├── Connection Pool  ├── SQL Execution                 │
-└─────────────────────────────────────────────────────────┘
-```
-
-## Quick Example
+## 60-Second Workflow
 
 ```bash
-# Initialize migrations directory
+# 1) Initialize project and config
 dbwarden init
 
-# Generate migration from SQLAlchemy models
+# 2) Generate SQL migration from models
 dbwarden make-migrations "create users table"
 
-# Apply migrations
-dbwarden migrate --verbose
+# 3) Apply pending migrations
+dbwarden migrate
 
-# Check migration history
-dbwarden history
+# 4) Check current state
+dbwarden status
 ```
 
-## Next Steps
+## How It Works Internally
 
-- [Installation](installation.md): Get started with installing DBWarden
-- [Configuration](configuration.md): Set up your environment
-- [Quick Start](quickstart.md): Walk through a complete example
-- [Commands](commands.md): Explore all available commands
-- [SQLAlchemy Models](models.md): Learn how to define models for migrations
+DBWarden executes a predictable pipeline:
 
-## License
+1. Load database config from `warden.toml`
+2. Resolve target database (`--database`, default, or `--all`)
+3. Parse migration files and model metadata
+4. Build SQL execution plan (versioned + repeatables)
+5. Acquire migration lock
+6. Execute SQL and write records in `dbwarden_migrations`
+7. Release lock and print summary
 
-DBWarden is released under the MIT License.
+High-level architecture:
+
+```text
+CLI (Typer)
+  -> Commands
+    -> Engine (parser/version/ordering/checksum/model discovery)
+      -> Repositories (migration records + lock records)
+        -> Database layer (SQLAlchemy connection + SQL execution)
+```
+
+## Learn by Path
+
+- New users: [Installation](installation.md) -> [Quick Start](quickstart.md)
+- Project setup: [Configuration](configuration.md)
+- Daily usage: [Commands Overview](commands.md) and [CLI Reference](cli-reference.md)
+- SQL behavior: [Migration Files](migration-files.md)
+- Model behavior: [SQLAlchemy Models](models.md)
+- Cross-dialect dev support: [SQL Translation](sql-translation.md)
+- Operations and edge cases: [Advanced Features](advanced.md)
+
+## Design Principles
+
+- SQL is the source of truth
+- Rollback is mandatory, not optional
+- Multi-database support is first-class
+- Local dev should be simple (`--dev` + SQLite recommended)

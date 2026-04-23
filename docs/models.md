@@ -1,16 +1,16 @@
 # SQLAlchemy Models
 
-DBWarden automatically generates migrations from SQLAlchemy models. This guide covers how to define models that work best with DBWarden.
+DBWarden can generate migration SQL from SQLAlchemy model definitions.
 
-## Model Requirements
+This page explains both usage and internal extraction behavior.
 
-### Basic Structure
+## Minimum Requirements
 
-Your models must:
+Each model should:
 
-1. **Inherit from `declarative_base`**: Use SQLAlchemy's declarative system
-2. **Define `__tablename__`**: Each model must have a table name
-3. **Use SQLAlchemy types**: Column types must be from SQLAlchemy
+1. Be a class with `__tablename__`
+2. Expose `__table__` columns through SQLAlchemy declarative mapping
+3. Use supported SQLAlchemy column types
 
 ```python
 from sqlalchemy import Column, Integer, String
@@ -18,384 +18,133 @@ from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
-class User(Base):
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True)
-    username = Column(String(50))
-```
-
-## Supported Column Types
-
-| SQLAlchemy Type | Description | Generated SQL |
-|-----------------|-------------|---------------|
-| `Integer` | Integer value | `INTEGER` |
-| `String(n)` | Variable-length string | `VARCHAR(n)` |
-| `Text` | Long text | `TEXT` |
-| `Boolean` | True/False | `BOOLEAN` |
-| `DateTime` | Date and time | `DATETIME` |
-| `Date` | Date only | `DATE` |
-| `Time` | Time only | `TIME` |
-| `Float` | Floating point | `FLOAT` |
-| `Numeric(p, s)` | Fixed precision | `NUMERIC(p, s)` |
-| `JSON` | JSON data | `JSON` |
-| `LargeBinary` | Binary data | `BLOB` |
-| `Binary` | Binary data | `VARBINARY` |
-
-## Column Options
-
-### Primary Key
-
-```python
-class User(Base):
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True)
-    # or with auto-increment
-    id = Column(Integer, primary_key=True, autoincrement=True)
-```
-
-### Nullable
-
-```python
-class User(Base):
-    __tablename__ = "users"
-    
-    email = Column(String(255), nullable=False)  # NOT NULL
-    bio = Column(Text, nullable=True)           # NULL (default)
-```
-
-### Default Values
-
-```python
-from datetime import datetime
 
 class User(Base):
     __tablename__ = "users"
-    
-    created_at = Column(DateTime, default=datetime.utcnow)
-    is_active = Column(Boolean, default=True)
-```
-
-### Unique Constraint
-
-```python
-class User(Base):
-    __tablename__ = "users"
-    
-    email = Column(String(255), unique=True)
-```
-
-### Primary Key + Unique
-
-```python
-class User(Base):
-    __tablename__ = "users"
-    
     id = Column(Integer, primary_key=True)
-    username = Column(String(50), unique=True)
+    email = Column(String(255), unique=True, nullable=False)
 ```
 
-## Foreign Keys
+## Model Discovery Internals
 
-### Basic Foreign Key
+`make-migrations` discovers models from configured `model_paths` or auto-discovered `models/` folders.
+
+High-level process:
 
 ```python
-class Post(Base):
-    __tablename__ = "posts"
-    
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+def discover_tables(paths):
+    modules = load_python_modules(paths)
+    tables = []
+    seen = set()
+    for module in modules:
+        for attr in module_attributes(module):
+            if is_sqlalchemy_model(attr) and attr.__tablename__ not in seen:
+                tables.append(extract_table(attr))
+                seen.add(attr.__tablename__)
+    return tables
 ```
 
-### Foreign Key with ON DELETE
+Duplicate table names are skipped after first discovery.
+
+## Column Extraction Internals
+
+For each SQLAlchemy `Column`, DBWarden extracts:
+
+- name
+- type string
+- nullability
+- primary key flag
+- unique flag
+- default expression
+- foreign key reference
+
+For SQLite dev mode, DBWarden runs translation on extracted type/default fields.
+
+## Common Model Patterns
+
+## Typical App Models
 
 ```python
-class Post(Base):
-    __tablename__ = "posts"
-    
-    id = Column(Integer, primary_key=True)
-    user_id = Column(
-        Integer, 
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False
-    )
-```
-
-### Self-Referential FK
-
-```python
-class Category(Base):
-    __tablename__ = "categories"
-    
-    id = Column(Integer, primary_key=True)
-    parent_id = Column(
-        Integer, 
-        ForeignKey("categories.id")
-    )
-```
-
-## Indexes
-
-### Automatic Indexes
-
-DBWarden generates indexes for:
-- Primary key columns
-- Foreign key columns
-- Unique columns
-
-### Manual Indexes (Manual Migration)
-
-For custom indexes, use manual migrations:
-
-```sql
--- 0002_add_user_indexes.sql
-
--- upgrade
-
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_posts_user_id ON posts(user_id);
-CREATE INDEX idx_posts_created_at ON posts(created_at DESC);
-
--- rollback
-
-DROP INDEX idx_posts_created_at;
-DROP INDEX idx_posts_user_id;
-DROP INDEX idx_users_username;
-```
-
-## Complete Example
-
-```python
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import declarative_base
-from datetime import datetime
+import datetime as dt
 
 Base = declarative_base()
 
+
 class User(Base):
     __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String(50), unique=True, nullable=False)
+
+    id = Column(Integer, primary_key=True)
     email = Column(String(255), unique=True, nullable=False)
-    bio = Column(Text)
-    is_active = Column(Integer, default=1)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_active = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
 
 
 class Post(Base):
     __tablename__ = "posts"
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     title = Column(String(200), nullable=False)
-    content = Column(Text)
-    view_count = Column(Integer, default=0)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-
-class Comment(Base):
-    __tablename__ = "comments"
-    
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    body = Column(Text)
 ```
 
-## Model Discovery
-
-### Auto-Discovery
-
-DBWarden automatically finds models in:
-- `models/` directory
-- `model/` directory
-
-Searches up to 5 parent directories from current working directory.
-
-### Manual Path Configuration
-
-Set custom paths in `warden.toml`:
-
-```toml
-model_paths = ["app/models/", "core/database/models/", "shared/models/"]
-```
-
-### Import Patterns
-
-DBWarden loads models as modules:
-
-```python
-# models/user.py
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
-
-class User(Base):
-    __tablename__ = "users"
-    # ...
-```
-
-```python
-# models/post.py
-from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import declarative_base
-
-Base = declarative_base()
-
-class Post(Base):
-    __tablename__ = "posts"
-    # ...
-```
-
-## Common Patterns
-
-### Enum Values
-
-```python
-from sqlalchemy import Enum
-import enum
-
-class PostStatus(enum.Enum):
-    DRAFT = "draft"
-    PUBLISHED = "published"
-    ARCHIVED = "archived"
-
-class Post(Base):
-    __tablename__ = "posts"
-    
-    status = Column(Enum(PostStatus), default=PostStatus.DRAFT)
-```
-
-### Composite Keys
+## Composite Key Example
 
 ```python
 class OrderItem(Base):
     __tablename__ = "order_items"
-    
+
     order_id = Column(Integer, ForeignKey("orders.id"), primary_key=True)
     product_id = Column(Integer, ForeignKey("products.id"), primary_key=True)
     quantity = Column(Integer, nullable=False)
 ```
 
-### JSON Columns
+## JSON + UUID Style Example
 
 ```python
 from sqlalchemy import JSON
-
-class User(Base):
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True)
-    preferences = Column(JSON, default=dict)
-```
-
-## Limitations
-
-### Not Supported
-
-- Column comments
-- Table comments
-- Partial indexes (SQLite)
-- Expression indexes (some databases)
-- Deferred constraints
-
-For these features, use manual migrations.
-
-### Workarounds
-
-```sql
--- Add column comment (manual migration)
-COMMENT ON COLUMN users.email IS 'User email address';
-
--- Add table comment
-COMMENT ON TABLE users IS 'Registered user accounts';
-```
-
-## Best Practices
-
-### 1. Naming Conventions
-
-```python
-# GOOD
-__tablename__ = "users"          # Plural, snake_case
-username = Column(String(50))    # snake_case
-
-# AVOID
-__tablename__ = "User"           # Singular
-UserName = Column(String(50))   # CamelCase
-```
-
-### 2. Explicit Types
-
-```python
-# GOOD: Explicit length
-email = Column(String(255))
-
-# LESS CLEAR: Default length varies
-email = Column(String)  # May be 255 or 1 depending on DB
-```
-
-### 3. Primary Keys
-
-```python
-# GOOD: Auto-incrementing integer
-id = Column(Integer, primary_key=True, autoincrement=True)
-
-# OR UUID
+from sqlalchemy.dialects.postgresql import UUID
 import uuid
-id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
+class Profile(Base):
+    __tablename__ = "profiles"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    settings = Column(JSON, default=dict)
 ```
 
-### 4. Timestamps
+In SQLite dev mode these may translate (for example `UUID` and `JSON` to `TEXT`).
 
-```python
-from datetime import datetime
+## Type Behavior by Backend
 
-class Model(Base):
-    __tablename__ = "models"
-    
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-```
+DBWarden maps SQLAlchemy-like types to backend-specific SQL during generation.
+
+- PostgreSQL: supports `SERIAL`, `TIMESTAMP`, `BYTEA`
+- MySQL/MariaDB: maps booleans to compatible types
+- SQLite: simple type affinity model
+- Dev translation: can adapt non-SQLite types when running `--dev` with SQLite
+
+For translation specifics, see [SQL Translation](sql-translation.md).
+
+## Practical Guidelines
+
+- Keep model imports side-effect free (module import should not run app boot logic)
+- Prefer explicit nullability and defaults
+- Use manual migrations for backend-specific advanced objects (indexes, triggers, policies)
+- Review generated SQL before applying
 
 ## Troubleshooting
 
-### Model Not Discovered
+No models found:
 
-1. Check `model_paths` in `warden.toml`
-2. Verify file is in `models/` directory
-3. Ensure model inherits from `Base`
-4. Check `__tablename__` is defined
+- Ensure `model_paths` points to real files/directories
+- Ensure classes define `__tablename__`
+- Ensure SQLAlchemy models are importable in current environment
 
-### Migration Missing Columns
+Wrong SQL type output:
 
-1. Verify column is in model
-2. Check for typos in column name
-3. Ensure column is defined on model class (not relationship)
-
-### Column Type Mismatch
-
-Migration generates different type than expected:
-
-```python
-# Model
-email = Column(String(255))
-
-# Generated SQL might be:
--- VARCHAR(255) for PostgreSQL/MySQL
--- TEXT for SQLite (no VARCHAR)
-```
-
-Use manual migrations for database-specific types.
-
-## See Also
-
-- [make-migrations](commands/make-migrations.md): Generate migrations from models
-- [new](commands/new.md): Create manual migrations for features not in models
-- [Supported Databases](databases.md): Database-specific considerations
+- Check selected database config
+- If running `--dev`, check `dev_database_url` and translation behavior
+- Use `--strict-translation` to surface lossy conversion failures early
