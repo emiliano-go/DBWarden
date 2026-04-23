@@ -1,141 +1,167 @@
-# DBWarden Config Rework - Final Detailed Spec (Predefined `dbwarden_config(...)` API)
+# DBWarden Config Rework
 
-## 1) Summary
+Status: design approved for implementation
 
-DBWarden will move from TOML configuration to a Python registration API.
+Branch target: `config-rework`
 
-Instead of reading `warden.toml`, users will register configuration by calling a predefined DBWarden function inside a Python module:
+## 1) Objective
+
+Replace TOML configuration with a Python registration API and remove `warden.toml` support immediately.
+
+The new model is call-based, one database per call:
 
 ```python
-from dbwarden import dbwarden_config
+from dbwarden import database_config
 
-dbwarden_config({
-    "default": "primary",
-    "database": {
-        "primary": {
-            "database_type": "sqlite",
-            "sqlalchemy_url": "sqlite:///./app.db",
-            "migrations_dir": "migrations/primary",
-        }
-    },
-})
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://user:password@localhost:5432/main",
+    migrations_dir="migrations/primary",
+    model_paths=["models/primary"],
+    dev_database_type="sqlite",
+    dev_database_url="sqlite:///./development.db",
+)
 ```
 
-This is a breaking change. `warden.toml` support is removed immediately.
+Multiple calls are allowed (one call per database configuration).
 
 ---
 
 ## 2) Locked Product Decisions
 
-1. **No TOML compatibility phase**. Remove TOML support now.
-2. **Config is registered by calling DBWarden’s predefined function**:
-   - `dbwarden_config(<dict>)`
-3. **Exactly one registration call is allowed** in the resolved settings module.
-4. DBWarden discovers `dbwarden.py` recursively in the repository.
-5. If more than one `dbwarden.py` is found, DBWarden fails.
-6. If no `dbwarden.py` is found, DBWarden runs a full Python repo scan for `dbwarden_config(` call sites.
-7. If scan finds no unique result, DBWarden supports env var fallback via `DBWARDEN_CONFIG_MODULE`.
-8. `dbwarden init [path/to/file.py]` must:
-   - add import at top: `from dbwarden import dbwarden_config`
-   - add registration scaffold at bottom
-   - create file if it does not exist
-9. Settings mutator CLI must support add/remove/rename/default/set-dev/clear-dev.
+1. TOML support is removed immediately (no compatibility period).
+2. Config API is predefined by DBWarden as `database_config(...)`.
+3. Multiple `database_config(...)` calls are supported.
+4. Exactly one `default=True` is allowed across all calls.
+5. `database_name` must be a quoted string.
+6. `database_url` is the canonical URL field name (not `sqlalchemy_url`).
+7. `model_paths` must be present when total configured databases > 1.
+8. `migrations_dir` default is `migrations/<database_name>`.
+9. Model path overlap across databases is forbidden by default.
+10. Model path overlap is allowed only when `overlap_models=True` is set.
+11. Source resolution order:
+    - discover `dbwarden.py`
+    - fallback to full repo scan for `database_config(`
+    - fallback to `DBWARDEN_CONFIG_MODULE`
 
 ---
 
-## 3) API Contract
+## 3) Public API Contract
 
-### 3.1 Public registration API
-
-DBWarden exports:
+## 3.1 API signature
 
 ```python
-dbwarden_config(config: dict) -> None
+database_config(
+    *,
+    database_name: str,
+    database_type: str,
+    database_url: str,
+    default: bool = False,
+    migrations_dir: str | None = None,
+    model_paths: list[str] | None = None,
+    dev_database_type: str | None = None,
+    dev_database_url: str | None = None,
+    overlap_models: bool = False,
+) -> None
 ```
 
 Behavior:
 
-- Accepts one argument: `config` (dict)
-- Stores config in internal runtime registry for later resolution
-- If called more than once during one module load cycle, raises a duplicate registration error
+- Each call registers one database entry in an in-memory registry.
+- Registry is finalized/validated after module loading.
+- Missing required fields produce immediate explicit errors.
 
-### 3.2 Required usage style in user settings file
+## 3.2 Required fields
 
-```python
-from dbwarden import dbwarden_config
+- `database_name`
+- `database_type`
+- `database_url`
 
-dbwarden_config({...})
-```
+## 3.3 Optional fields and defaults
 
-No user-defined callback/function contract is required.
-
-### 3.3 Exactly-one-call rule
-
-For the resolved settings module/file:
-
-- 0 `dbwarden_config(...)` calls -> error
-- 1 call -> valid
-- >1 calls -> error
+- `default=False`
+- `migrations_dir=None` -> normalized to `migrations/<database_name>`
+- `model_paths=None`
+- `dev_database_type=None`
+- `dev_database_url=None`
+- `overlap_models=False`
 
 ---
 
-## 4) Config Schema Contract
+## 4) Validation Rules
 
-### 4.1 Top-level shape
+Validation happens after module import, against the full set of registered calls.
 
-```python
-{
-    "default": "primary",
-    "database": {
-        "primary": {
-            "database_type": "postgresql",
-            "sqlalchemy_url": "postgresql://user:password@localhost:5432/main",
-            "migrations_dir": "migrations/primary",
-            "model_paths": ["models/"],
-            "postgres_schema": "public",
-            "dev_database_type": "sqlite",
-            "dev_database_url": "sqlite:///./development.db",
-        }
-    },
-}
-```
+## 4.1 Required field validation
 
-### 4.2 Semantics
+For each call:
 
-- `default` (required): default database key used when `-d` is omitted
-- `database` (required): mapping of db name -> db config
-- `sqlalchemy_url` (required per db)
-- `database_type` (optional; inferred from URL)
-- `migrations_dir` (optional; default `migrations/<name>`)
-- `model_paths` (optional list[str])
-- `postgres_schema` (optional)
-- `dev_database_url` (optional)
-- `dev_database_type` (optional, requires `dev_database_url`)
+- `database_name` must exist and be non-empty string
+- `database_type` must exist and be valid type
+- `database_url` must exist and be non-empty string
 
-### 4.3 Type/value constraints
+On failure: raise and name exact missing/invalid field and call location.
 
-- database type must be one of: `sqlite`, `postgresql`, `mysql`, `mariadb`, `clickhouse`
-- URLs must be valid SQLAlchemy URLs or produce clear validation errors
+Examples:
+
+- `Missing required config 'database_name' in database_config(...) call #2`
+- `Missing required config 'database_type' for database 'primary'`
+
+## 4.2 Global uniqueness constraints
+
+Across all registered databases:
+
+- exactly one `default=True`
+- `database_name` unique
+- `database_url` unique
+- `migrations_dir` unique
+- `dev_database_url` unique (for non-null values)
+
+## 4.3 Physical target uniqueness
+
+Keep existing target collision checks:
+
+- two different URLs pointing to same effective physical DB target are invalid
+- applies across primary and dev URLs
+
+## 4.4 Dev pair constraints
+
+- `dev_database_type` requires `dev_database_url`
+- `--dev` mode requires selected DB to have `dev_database_url`
+
+## 4.5 Model path constraints
+
+- If total database count > 1, each database must define `model_paths`
+- Overlap between model path sets is forbidden unless `overlap_models=True`
+
+Overlap behavior:
+
+- Default (`overlap_models=False`): no path intersection with any other DB's `model_paths`
+- If `overlap_models=True` on a DB, that DB may overlap with others
+
+Error example:
+
+- `model_paths overlap detected between 'primary' and 'analytics'; set overlap_models=True to allow`
 
 ---
 
-## 5) Discovery and Resolution
+## 5) Source Discovery and Resolution
 
-### 5.1 Resolution order
+## 5.1 Resolution order
 
-1. Find all files named `dbwarden.py` recursively from workspace root.
-2. If exactly 1 found: use it.
-3. If >1 found: fail and print all matching paths.
-4. If 0 found: scan Python files recursively for `dbwarden_config(` call sites.
-5. If exactly 1 scan match found: use it.
-6. If >1 scan matches found: fail and print all matching paths.
-7. If 0 scan matches found: read env var `DBWARDEN_CONFIG_MODULE`.
-8. If env var exists: import that module and resolve registration.
-9. If env var missing: fail with setup instructions.
+1. Recursively discover files named exactly `dbwarden.py`
+2. If exactly one file found, use it
+3. If more than one found, fail and print all paths
+4. If none found, full scan Python files for `database_config(` occurrences
+5. If exactly one candidate file found, use it
+6. If multiple candidate files found, fail and print all paths
+7. If no candidate found, try env var `DBWARDEN_CONFIG_MODULE`
+8. If env var set, import module by dotted path
+9. If env var absent, fail with setup guidance
 
-### 5.2 Directory ignore list
-
-The recursive scan must skip:
+## 5.2 Ignore directories
 
 - `.git`
 - `.venv`
@@ -148,29 +174,13 @@ The recursive scan must skip:
 - `.mypy_cache`
 - `.pytest_cache`
 
-The same ignore list applies to both filename discovery (`dbwarden.py`) and full content scan (`dbwarden_config(`).
+Apply ignore list to both filename and content scans.
 
-### 5.3 Ambiguity handling
+## 5.3 Performance note
 
-If multiple `dbwarden.py` are found, DBWarden **must not guess**.
+Full content scan is acceptable for small/medium repos and potentially slower in large monorepos.
 
-If `dbwarden.py` is not found and full scan finds multiple `dbwarden_config(` call sites, DBWarden **must not guess**.
-
-Error output must include:
-
-- one-line reason
-- exact list of matching paths
-- guidance on reducing to one source or setting `DBWARDEN_CONFIG_MODULE`
-
-### 5.4 Performance guidance
-
-Full repo content scans are acceptable for small/medium repositories but can add startup overhead in large monorepos.
-
-Documentation must include a warning and optimization guidance:
-
-- For larger repos, set `DBWARDEN_CONFIG_MODULE` to avoid full scan overhead and ensure deterministic resolution.
-
-Example:
+Optimization path:
 
 ```bash
 export DBWARDEN_CONFIG_MODULE="myapp.settings.dbwarden_settings"
@@ -180,329 +190,281 @@ export DBWARDEN_CONFIG_MODULE="myapp.settings.dbwarden_settings"
 
 ## 6) Runtime Loading Pipeline
 
-### 6.1 Internal flow
+1. Resolve source via strategy in section 5.
+2. Reset in-memory config registry.
+3. Import resolved module (file or dotted module path).
+4. During import, capture all `database_config(...)` calls.
+5. Finalize and validate complete registry.
+6. Build normalized runtime config structure used by existing command handlers.
 
-1. Resolve source (file discovery -> full-scan fallback -> env fallback).
-2. Reset transient config registry for clean load.
-3. AST-parse resolved source file to count `dbwarden_config(...)` calls when source is file-based.
-4. Enforce exactly-one-call rule before import when source file is available.
-5. Import/execute resolved module.
-6. Read registered config from runtime registry.
-7. Validate and normalize config dict.
-8. Return normalized config object used by command handlers.
-
-### 6.2 Conceptual pseudocode
+Conceptual pseudocode:
 
 ```python
 def load_runtime_config() -> dict:
-    source = resolve_settings_source()  # file path, full-scan file path, or module name
+    source = resolve_source()
+    registry.reset()
 
-    reset_config_registry()
-
-    if source.is_file:
-        call_count = count_dbwarden_config_calls_ast(source.path)
-        if call_count == 0:
-            raise ConfigurationError("No dbwarden_config(...) call found")
-        if call_count > 1:
-            raise ConfigurationError("Multiple dbwarden_config(...) calls found")
-
-        import_module_from_file(source.path)
+    if source.kind == "file":
+        import_module_from_path(source.path)
     else:
         import_module_by_name(source.module)
 
-    raw = get_registered_config_from_registry()
-    if raw is None:
-        raise ConfigurationError("dbwarden_config(...) did not register config")
-    if not isinstance(raw, dict):
-        raise ConfigurationError("dbwarden_config(...) requires a dict payload")
+    entries = registry.entries()
+    if not entries:
+        raise ConfigurationError("No database_config(...) call found")
 
-    return validate_and_normalize(raw)
+    cfg = finalize_entries(entries)  # uniqueness + required + defaults + normalization
+    return cfg
 ```
-
-### 6.3 Registry safety behavior
-
-- Registry allows one successful set per load cycle.
-- If second call occurs during one load cycle, raise deterministic duplicate-registration error.
-- Clear registry between command executions/tests to avoid cross-test contamination.
-
-### 6.4 Resolver caching
-
-Within one process execution, cache the resolved source location after first successful resolution.
-
-Benefits:
-
-- avoids duplicate scans in the same command lifecycle
-- keeps startup overhead bounded when multiple config reads happen in one run
 
 ---
 
-## 7) `dbwarden init` Detailed Spec
+## 7) Final Normalized Internal Shape
 
-### 7.1 Command
+Although user API is call-based, normalize to this internal structure:
+
+```python
+{
+    "default": "primary",
+    "database": {
+        "primary": {
+            "database_type": "postgresql",
+            "database_url": "postgresql://...",
+            "migrations_dir": "migrations/primary",
+            "model_paths": ["models/primary"],
+            "dev_database_type": "sqlite",
+            "dev_database_url": "sqlite:///./development.db",
+            "overlap_models": False,
+        },
+        "analytics": {
+            "database_type": "clickhouse",
+            "database_url": "clickhouse://...",
+            "migrations_dir": "migrations/analytics",
+            "model_paths": ["models/analytics"],
+            "dev_database_type": None,
+            "dev_database_url": None,
+            "overlap_models": False,
+        },
+    },
+}
+```
+
+Note: this is internal representation only; user-facing API remains call-based.
+
+---
+
+## 8) `dbwarden init` Detailed Behavior
+
+Command:
 
 ```bash
 dbwarden init [path/to/file.py]
 ```
 
-### 7.2 Path resolution
+Behavior:
 
-- No arg -> `./dbwarden.py`
-- With arg -> exact provided path
-
-### 7.3 File behavior
-
-- If parent dirs missing: create them
+- No arg: target `./dbwarden.py`
+- Arg provided: target exact path
+- If parent directories missing: create them
 - If file missing: create file
-- If file exists: preserve existing content and inject missing pieces only
-
-### 7.4 Injection requirements
-
-Must ensure both exist exactly once:
-
-1. Import line near top:
+- Ensure import exists at top:
+  - `from dbwarden import database_config`
+- Ensure scaffold exists at bottom:
 
 ```python
-from dbwarden import dbwarden_config
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="sqlite",
+    database_url="sqlite:///./app.db",
+    migrations_dir="migrations/primary",
+)
 ```
 
-2. Scaffold registration at bottom:
+Idempotency:
 
-```python
-dbwarden_config({
-    "default": "primary",
-    "database": {
-        "primary": {
-            "database_type": "sqlite",
-            "sqlalchemy_url": "sqlite:///./app.db",
-            "migrations_dir": "migrations/primary",
-        }
-    },
-})
-```
+- rerunning `init` must not duplicate import or scaffold block
 
-### 7.5 Idempotency
+Safety:
 
-- Running `dbwarden init` repeatedly must not duplicate import or scaffold.
-- If both already present, print informational success and no changes.
-
-### 7.6 Duplicate-file guard
-
-Before writing default/no-arg scaffold, run discovery:
-
-- if another `dbwarden.py` exists elsewhere, fail with explicit ambiguity guidance.
+- if command would create ambiguity with existing `dbwarden.py` discovery, fail with explicit guidance
 
 ---
 
-## 8) Settings CLI Spec
+## 9) Settings CLI (Mutators)
 
-### 8.1 Command group
+Command group:
 
 ```bash
 dbwarden config ...
 ```
 
-### 8.2 Commands
+Required commands:
 
 - `dbwarden config show`
 - `dbwarden config default-database set <name>`
-- `dbwarden config database add <name> --url ... [--type ...] [--migrations-dir ...] [--model-path ...] [--postgres-schema ...]`
+- `dbwarden config database add <name> --type <type> --url <url> [--migrations-dir ...] [--model-path ...] [--dev-type ...] [--dev-url ...] [--overlap-models] [--default]`
 - `dbwarden config database remove <name>`
 - `dbwarden config database rename <old> <new>`
-- `dbwarden config database set-dev <name> --url ... [--type ...]`
+- `dbwarden config database set-dev <name> --type <type> --url <url>`
 - `dbwarden config database clear-dev <name>`
 
-### 8.3 Mutator lifecycle (all mutator commands)
+Mutator lifecycle:
 
-1. Resolve source.
-2. Parse source and extract dict argument from single `dbwarden_config(...)` call.
-3. Apply mutation.
-4. Run full validation.
-5. Write updated dict back in deterministic format.
-6. Re-load to verify parse/registration still succeeds.
-7. Print before/after summary.
+1. Resolve source
+2. Parse and collect existing `database_config(...)` calls
+3. Apply mutation to call set
+4. Re-run full validation
+5. Write deterministic updated calls back to file
+6. Reload and verify config resolution
+7. Print concise summary
 
-### 8.4 Command-specific rules
+Command-specific rules:
 
-#### Add database
-
-- fail if name already exists
-- infer type from URL if `--type` omitted
-- fail on URL or target collisions
-
-#### Remove database
-
-- fail if database does not exist
-- fail if removing default without setting a new default first/within command
-
-#### Rename database
-
-- fail if old does not exist
-- fail if new already exists
-- if old is default, update default to new
-- preserve existing field values unless explicitly changed
-
-#### Set dev database
-
-- set `dev_database_url`
-- set/infer `dev_database_type`
-- validate uniqueness against all primary + dev entries
-
-#### Clear dev database
-
-- remove both `dev_database_url` and `dev_database_type`
-
-#### Set default database
-
-- fail if target key does not exist
+- Add DB:
+  - fail if name exists
+  - fail on URL/target/migrations dir/model overlap conflicts
+- Remove DB:
+  - fail if not found
+  - fail if removing current default and no replacement default set
+- Rename DB:
+  - fail if old missing or new already exists
+  - transfer default flag if old was default
+- Set dev:
+  - set `dev_database_type`, `dev_database_url`
+  - validate uniqueness/collision rules
+- Clear dev:
+  - clear both dev fields
+- Default set:
+  - enforce exactly one default
 
 ---
 
-## 9) Validation Rules
+## 10) Error Contract
 
-Validation is centralized and applied after load and after each mutator write.
+Required clear errors:
 
-Rules:
+- `Multiple dbwarden.py files found. Keep exactly one.`
+- `Multiple database_config(...) call sites found. Keep exactly one source or set DBWARDEN_CONFIG_MODULE.`
+- `No configuration found. Add database_config(...) call(s), create dbwarden.py with dbwarden init, or set DBWARDEN_CONFIG_MODULE.`
+- `Missing required config '<field>' in database_config(...)`
+- `Only one database can be default=True`
+- `Duplicate database_name '<name>'`
+- `Duplicate database_url '<url>'`
+- `Duplicate migrations_dir '<dir>'`
+- `Duplicate dev_database_url '<url>'`
+- `model_paths overlap detected between '<a>' and '<b>'; set overlap_models=True to allow`
 
-1. `default` exists and references a configured database
-2. each database has `sqlalchemy_url`
-3. database type is valid or inferable
-4. `dev_database_type` cannot exist without `dev_database_url`
-5. no duplicate normalized URLs across all primary/dev URLs
-6. no duplicate physical DB targets across all primary/dev targets
-7. in `--dev`, selected DB must have `dev_database_url`
-
----
-
-## 10) Error Messages and Diagnostics
-
-Required failures:
-
-- Multiple config files:
-  - `Multiple dbwarden.py files found. Keep exactly one.`
-- Multiple discovered call sites during full scan:
-  - `Multiple dbwarden_config(...) call sites found. Keep exactly one or set DBWARDEN_CONFIG_MODULE.`
-- No source:
-  - `No configuration found. Add one dbwarden_config(...) call, create dbwarden.py with 'dbwarden init', or set DBWARDEN_CONFIG_MODULE.`
-- No registration call in resolved source:
-  - `No dbwarden_config(...) call found in resolved config module.`
-- Multiple registration calls in resolved source:
-  - `Multiple dbwarden_config(...) calls found. Keep exactly one.`
-- Invalid payload type:
-  - `dbwarden_config(...) requires a dict payload.`
-- Validation errors:
-  - precise field path and database name where relevant
-
-Diagnostics should include resolved source location for easier debugging.
+All errors should include source location when available (file path and line number).
 
 ---
 
-## 11) TOML Removal Tasks
+## 11) Immediate TOML Removal Tasks
 
-Immediate codebase cleanup tasks:
-
-- remove TOML discovery/parsing helpers
-- remove TOML write/update code paths
-- remove TOML references from command help/output
-- remove TOML docs (except migration guide section)
-- replace error messages with settings-centric guidance
+- Remove TOML discovery/parsing functions
+- Remove TOML-based config mutators
+- Remove TOML references in CLI help/output
+- Remove TOML examples from docs (except migration guide page)
+- Replace all setup errors with new settings guidance
 
 ---
 
-## 12) Implementation Precision Notes
+## 12) Implementation Guide (Step-by-Step)
 
-### 12.1 Parsing strategy for mutators
+## Phase A: Core API and registry
 
-Use AST-based extraction for `dbwarden_config({...})` payload in source file when possible.
+1. Add predefined public `database_config(...)` API
+2. Add internal registry to collect call entries
+3. Add registry reset/finalize utilities
 
-- safer than regex string slicing
-- resilient to whitespace/comments
-- enables exact-one-call enforcement
+## Phase B: Source resolver
 
-### 12.2 Write-back formatting strategy
+1. Implement `dbwarden.py` filename discovery
+2. Implement fallback content scan for `database_config(`
+3. Implement env var module fallback
+4. Implement ambiguity and no-source errors
+5. Add per-process source cache
 
-- use deterministic pretty formatting for dict literal output
-- preserve file content outside managed registration block when possible
-- avoid non-ASCII unless already present
+## Phase C: Validation and normalization
 
-### 12.3 Managed-block recommendation
+1. Implement required-field checks
+2. Implement uniqueness checks
+3. Implement model overlap logic with `overlap_models`
+4. Implement default selection checks
+5. Normalize defaults (migrations dir etc.)
 
-For future stability, include optional markers around generated scaffold:
+## Phase D: Integrate with existing command stack
 
-```python
-# DBWARDEN_CONFIG_START
-dbwarden_config({...})
-# DBWARDEN_CONFIG_END
-```
+1. Swap old config loader with new runtime resolver
+2. Keep existing command behavior for migrate/rollback/status/history/diff/check-db
+3. Ensure `--dev` and translation features continue to work
 
-Mutators can then safely target this region.
+## Phase E: Init command
 
-### 12.4 Import side effects
+1. Update init to inject import and scaffold
+2. Support missing custom file creation
+3. Ensure idempotency and ambiguity safety
 
-Since module import executes Python code:
+## Phase F: Settings mutator CLI
 
-- docs must recommend keeping settings module side-effect free
-- loader should surface exceptions with module path context
+1. Implement `config show`
+2. Implement DB add/remove/rename/default-dev mutators
+3. Add deterministic source rewrite
+4. Add post-write reload verification
 
-### 12.5 Full-scan implementation choice
+## Phase G: Tests and docs
 
-- Use fast content scan to detect `dbwarden_config(` candidates.
-- Convert candidate file paths to modules only after narrowing candidates.
-- If performance is a concern in big repos, docs should direct users to set `DBWARDEN_CONFIG_MODULE`.
+1. Add/adjust tests per section 13
+2. Rewrite docs per section 14
+3. Build and publish docs
 
 ---
 
 ## 13) Test Plan
 
-### 13.1 Unit tests
+Unit tests:
 
-- discovery:
-  - one `dbwarden.py` found
-  - zero `dbwarden.py` + one full-scan match
-  - zero `dbwarden.py` + multiple full-scan matches (fail)
-  - zero `dbwarden.py` + zero full-scan matches + env fallback
-  - multiple `dbwarden.py` fail
-- registration:
-  - zero calls fail
-  - one call works
-  - multiple calls fail
-  - non-dict payload fails
-- validation:
-  - default missing
-  - URL missing
-  - dev invariants
-  - URL/target uniqueness
+- one/multiple/no `dbwarden.py` discovery
+- full-scan single/multiple/no candidate behavior
+- env var fallback success/failure
+- missing required field errors with field name
+- uniqueness rules (name/url/migrations/dev/model overlap)
+- exactly-one-default rule
 
-### 13.2 Command tests
+Command tests:
 
-- `init` no arg creates `dbwarden.py`
-- `init path/to/file.py` creates missing dirs/file
-- `init` idempotency
-- config mutators for all required operations
+- `init` default and custom path file creation
+- idempotent init behavior
+- config mutators for all operations
 
-### 13.3 Integration tests
+Integration tests:
 
-- migrate/rollback/status/history/check-db/diff under new config model
-- `--dev` behavior unchanged
-- strict translation behavior unchanged
+- migrate, rollback, status, history, diff, check-db under new config source
+- `--dev` + translation + strict translation unchanged
 
 ---
 
-## 14) Docs Rework Plan
+## 14) Docs Update Layout
 
-### 14.1 New docs pages
+## 14.1 New pages
 
 1. `docs/settings.md`
-   - predefined API usage (`dbwarden_config({...})`)
-   - schema reference
-   - single/multi-db examples
-   - performance warning for large repos
-   - `DBWARDEN_CONFIG_MODULE` optimization example
-2. `docs/settings-cli.md`
-   - all mutators with before/after examples
-3. `docs/migrate-from-toml.md`
-   - old TOML -> new registration payload mapping
+   - new API contract (`database_config(...)`)
+   - required/optional fields table
+   - multi-call examples
+   - uniqueness and default rules
+   - performance note + env optimization
 
-### 14.2 Rewrite existing pages
+2. `docs/settings-cli.md`
+   - full `dbwarden config` command reference
+   - before/after examples for mutators
+   - common validation failures
+
+3. `docs/migrate-from-toml.md`
+   - old TOML to call-based mapping
+   - migration checklist
+
+## 14.2 Rewrite pages
 
 - `docs/configuration.md`
 - `docs/quickstart.md`
@@ -511,24 +473,25 @@ Since module import executes Python code:
 - `docs/operations-runbook.md`
 - `README.md`
 
-### 14.3 Documentation quality requirements
+## 14.3 Content requirements
 
-- no stale TOML usage in normal setup docs
-- include internals for discovery and loading
-- include mutation safety and failure handling
-- include explicit warning that full scan fallback may be slower in large repos
-- include env-var optimization guidance with examples
+- remove stale TOML usage in normal docs
+- include internal loader/discovery flow
+- include one-default and uniqueness rules
+- include large-repo performance note
+- include `DBWARDEN_CONFIG_MODULE` optimization guidance
 
 ---
 
-## 15) Rollout and Acceptance Criteria
+## 15) Acceptance Criteria
 
-Accepted when all are true:
-
-1. DBWarden runs without TOML support anywhere in runtime.
-2. Config resolves from exactly one `dbwarden.py`, or exactly one full-scan call-site match, or env module fallback.
-3. Exactly-one `dbwarden_config(...)` call is enforced.
-4. `dbwarden init` injects import top + scaffold bottom and creates missing files.
-5. Settings CLI supports add/remove/rename/default/set-dev/clear-dev.
-6. Existing migration features remain stable.
-7. Docs are fully updated and published with new settings model and large-repo performance note.
+1. DBWarden runs without TOML anywhere in runtime.
+2. Config resolves using: `dbwarden.py` -> full scan -> env fallback.
+3. Missing required fields raise explicit errors naming the missing key.
+4. Multiple calls are supported and validated.
+5. Exactly one default database is enforced.
+6. Name/url/migrations/dev/model uniqueness rules enforced.
+7. `model_paths` required when database count > 1.
+8. `dbwarden init` adds import + scaffold and creates missing target file/dirs.
+9. Settings CLI mutators work and preserve valid config.
+10. Documentation is fully updated and published.
