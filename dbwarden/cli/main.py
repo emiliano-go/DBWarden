@@ -1,7 +1,7 @@
 import typer
 
 from dbwarden.cli.validators import validate_directory
-from dbwarden.config import set_dev_mode
+from dbwarden.config import set_dev_mode, set_strict_translation
 from dbwarden.commands import (
     handle_check_db,
     handle_config,
@@ -41,9 +41,15 @@ def app_callback(
         "--dev",
         help="Use development database settings (dev_database_url/dev_database_type)",
     ),
+    strict_translation: bool = typer.Option(
+        False,
+        "--strict-translation",
+        help="Fail when a type/default cannot be translated for target backend",
+    ),
 ):
     """Global CLI options."""
     set_dev_mode(dev)
+    set_strict_translation(strict_translation)
 
 
 @app.command()

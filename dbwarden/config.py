@@ -50,6 +50,7 @@ class MultiDbConfig:
 
 
 _USE_DEV_DATABASE = False
+_STRICT_TRANSLATION = False
 
 
 def set_dev_mode(enabled: bool) -> None:
@@ -61,6 +62,17 @@ def set_dev_mode(enabled: bool) -> None:
 def is_dev_mode() -> bool:
     """Return whether development database mode is enabled."""
     return _USE_DEV_DATABASE
+
+
+def set_strict_translation(enabled: bool) -> None:
+    """Enable or disable strict SQL translation mode for this process."""
+    global _STRICT_TRANSLATION
+    _STRICT_TRANSLATION = enabled
+
+
+def is_strict_translation() -> bool:
+    """Return whether strict SQL translation mode is enabled."""
+    return _STRICT_TRANSLATION
 
 
 def get_toml_path() -> Path | None:
