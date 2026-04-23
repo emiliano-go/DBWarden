@@ -31,14 +31,15 @@ This is a breaking change. `warden.toml` support is removed immediately.
 2. **Config is registered by calling DBWarden’s predefined function**:
    - `dbwarden_config(<dict>)`
 3. **Exactly one registration call is allowed** in the resolved settings module.
-4. DBWarden discovers `dbwarden.py` recursively in the repo.
+4. DBWarden discovers `dbwarden.py` recursively in the repository.
 5. If more than one `dbwarden.py` is found, DBWarden fails.
-6. If no `dbwarden.py` is found, DBWarden falls back to `DBWARDEN_CONFIG_MODULE`.
-7. `dbwarden init [path/to/file.py]` must:
+6. If no `dbwarden.py` is found, DBWarden runs a full Python repo scan for `dbwarden_config(` call sites.
+7. If scan finds no unique result, DBWarden supports env var fallback via `DBWARDEN_CONFIG_MODULE`.
+8. `dbwarden init [path/to/file.py]` must:
    - add import at top: `from dbwarden import dbwarden_config`
    - add registration scaffold at bottom
    - create file if it does not exist
-8. Settings mutator CLI must support add/remove/rename/default/set-dev/clear-dev.
+9. Settings mutator CLI must support add/remove/rename/default/set-dev/clear-dev.
 
 ---
 
@@ -125,9 +126,12 @@ For the resolved settings module/file:
 1. Find all files named `dbwarden.py` recursively from workspace root.
 2. If exactly 1 found: use it.
 3. If >1 found: fail and print all matching paths.
-4. If 0 found: read env var `DBWARDEN_CONFIG_MODULE`.
-5. If env var exists: import that module and resolve registration.
-6. If env var missing: fail with setup instructions.
+4. If 0 found: scan Python files recursively for `dbwarden_config(` call sites.
+5. If exactly 1 scan match found: use it.
+6. If >1 scan matches found: fail and print all matching paths.
+7. If 0 scan matches found: read env var `DBWARDEN_CONFIG_MODULE`.
+8. If env var exists: import that module and resolve registration.
+9. If env var missing: fail with setup instructions.
 
 ### 5.2 Directory ignore list
 
@@ -144,15 +148,33 @@ The recursive scan must skip:
 - `.mypy_cache`
 - `.pytest_cache`
 
+The same ignore list applies to both filename discovery (`dbwarden.py`) and full content scan (`dbwarden_config(`).
+
 ### 5.3 Ambiguity handling
 
 If multiple `dbwarden.py` are found, DBWarden **must not guess**.
 
-Error should include:
+If `dbwarden.py` is not found and full scan finds multiple `dbwarden_config(` call sites, DBWarden **must not guess**.
+
+Error output must include:
 
 - one-line reason
 - exact list of matching paths
-- guidance to keep only one file or use env module fallback path strategy
+- guidance on reducing to one source or setting `DBWARDEN_CONFIG_MODULE`
+
+### 5.4 Performance guidance
+
+Full repo content scans are acceptable for small/medium repositories but can add startup overhead in large monorepos.
+
+Documentation must include a warning and optimization guidance:
+
+- For larger repos, set `DBWARDEN_CONFIG_MODULE` to avoid full scan overhead and ensure deterministic resolution.
+
+Example:
+
+```bash
+export DBWARDEN_CONFIG_MODULE="myapp.settings.dbwarden_settings"
+```
 
 ---
 
@@ -160,11 +182,11 @@ Error should include:
 
 ### 6.1 Internal flow
 
-1. Resolve source (file or env module).
+1. Resolve source (file discovery -> full-scan fallback -> env fallback).
 2. Reset transient config registry for clean load.
-3. (Recommended) AST parse resolved source to count `dbwarden_config(...)` calls.
+3. AST-parse resolved source file to count `dbwarden_config(...)` calls when source is file-based.
 4. Enforce exactly-one-call rule before import when source file is available.
-5. Import/execute module.
+5. Import/execute resolved module.
 6. Read registered config from runtime registry.
 7. Validate and normalize config dict.
 8. Return normalized config object used by command handlers.
@@ -173,7 +195,7 @@ Error should include:
 
 ```python
 def load_runtime_config() -> dict:
-    source = resolve_settings_source()  # file path or module name
+    source = resolve_settings_source()  # file path, full-scan file path, or module name
 
     reset_config_registry()
 
@@ -192,16 +214,25 @@ def load_runtime_config() -> dict:
     if raw is None:
         raise ConfigurationError("dbwarden_config(...) did not register config")
     if not isinstance(raw, dict):
-        raise ConfigurationError("dbwarden_config(...) must receive a dict")
+        raise ConfigurationError("dbwarden_config(...) requires a dict payload")
 
     return validate_and_normalize(raw)
 ```
 
 ### 6.3 Registry safety behavior
 
-- Registry should allow one successful set per load cycle.
-- If second call occurs, raise deterministic duplicate-registration error.
+- Registry allows one successful set per load cycle.
+- If second call occurs during one load cycle, raise deterministic duplicate-registration error.
 - Clear registry between command executions/tests to avoid cross-test contamination.
+
+### 6.4 Resolver caching
+
+Within one process execution, cache the resolved source location after first successful resolution.
+
+Benefits:
+
+- avoids duplicate scans in the same command lifecycle
+- keeps startup overhead bounded when multiple config reads happen in one run
 
 ---
 
@@ -285,7 +316,7 @@ dbwarden config ...
 1. Resolve source.
 2. Parse source and extract dict argument from single `dbwarden_config(...)` call.
 3. Apply mutation.
-4. Run full config validation.
+4. Run full validation.
 5. Write updated dict back in deterministic format.
 6. Re-load to verify parse/registration still succeeds.
 7. Print before/after summary.
@@ -348,11 +379,13 @@ Required failures:
 
 - Multiple config files:
   - `Multiple dbwarden.py files found. Keep exactly one.`
+- Multiple discovered call sites during full scan:
+  - `Multiple dbwarden_config(...) call sites found. Keep exactly one or set DBWARDEN_CONFIG_MODULE.`
 - No source:
-  - `No configuration found. Create dbwarden.py with 'dbwarden init' or set DBWARDEN_CONFIG_MODULE.`
-- No registration call:
+  - `No configuration found. Add one dbwarden_config(...) call, create dbwarden.py with 'dbwarden init', or set DBWARDEN_CONFIG_MODULE.`
+- No registration call in resolved source:
   - `No dbwarden_config(...) call found in resolved config module.`
-- Multiple registration calls:
+- Multiple registration calls in resolved source:
   - `Multiple dbwarden_config(...) calls found. Keep exactly one.`
 - Invalid payload type:
   - `dbwarden_config(...) requires a dict payload.`
@@ -381,13 +414,13 @@ Immediate codebase cleanup tasks:
 
 Use AST-based extraction for `dbwarden_config({...})` payload in source file when possible.
 
-- Safer than regex string slicing
+- safer than regex string slicing
 - resilient to whitespace/comments
 - enables exact-one-call enforcement
 
 ### 12.2 Write-back formatting strategy
 
-- Use deterministic pretty formatting for dict literal output
+- use deterministic pretty formatting for dict literal output
 - preserve file content outside managed registration block when possible
 - avoid non-ASCII unless already present
 
@@ -407,8 +440,14 @@ Mutators can then safely target this region.
 
 Since module import executes Python code:
 
-- documentation must recommend keeping settings module side-effect free
+- docs must recommend keeping settings module side-effect free
 - loader should surface exceptions with module path context
+
+### 12.5 Full-scan implementation choice
+
+- Use fast content scan to detect `dbwarden_config(` candidates.
+- Convert candidate file paths to modules only after narrowing candidates.
+- If performance is a concern in big repos, docs should direct users to set `DBWARDEN_CONFIG_MODULE`.
 
 ---
 
@@ -417,9 +456,11 @@ Since module import executes Python code:
 ### 13.1 Unit tests
 
 - discovery:
-  - one file found
-  - zero files + env fallback
-  - multiple files fail
+  - one `dbwarden.py` found
+  - zero `dbwarden.py` + one full-scan match
+  - zero `dbwarden.py` + multiple full-scan matches (fail)
+  - zero `dbwarden.py` + zero full-scan matches + env fallback
+  - multiple `dbwarden.py` fail
 - registration:
   - zero calls fail
   - one call works
@@ -454,6 +495,8 @@ Since module import executes Python code:
    - predefined API usage (`dbwarden_config({...})`)
    - schema reference
    - single/multi-db examples
+   - performance warning for large repos
+   - `DBWARDEN_CONFIG_MODULE` optimization example
 2. `docs/settings-cli.md`
    - all mutators with before/after examples
 3. `docs/migrate-from-toml.md`
@@ -473,6 +516,8 @@ Since module import executes Python code:
 - no stale TOML usage in normal setup docs
 - include internals for discovery and loading
 - include mutation safety and failure handling
+- include explicit warning that full scan fallback may be slower in large repos
+- include env-var optimization guidance with examples
 
 ---
 
@@ -481,9 +526,9 @@ Since module import executes Python code:
 Accepted when all are true:
 
 1. DBWarden runs without TOML support anywhere in runtime.
-2. Config resolves from exactly one `dbwarden.py` or env module fallback.
+2. Config resolves from exactly one `dbwarden.py`, or exactly one full-scan call-site match, or env module fallback.
 3. Exactly-one `dbwarden_config(...)` call is enforced.
 4. `dbwarden init` injects import top + scaffold bottom and creates missing files.
 5. Settings CLI supports add/remove/rename/default/set-dev/clear-dev.
 6. Existing migration features remain stable.
-7. Docs are fully updated and published with new settings model.
+7. Docs are fully updated and published with new settings model and large-repo performance note.
