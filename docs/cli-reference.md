@@ -14,6 +14,7 @@ dbwarden [OPTIONS] COMMAND [ARGS]...
 |--------|-------------|
 | `--help`, `-h` | Show help message |
 | `--version` | Show version information |
+| `--dev` | Use `dev_database_url` / `dev_database_type` for target database |
 
 ## Commands Overview
 
@@ -36,6 +37,16 @@ dbwarden [OPTIONS] COMMAND [ARGS]...
 | `version` | Show DBWarden version | None |
 | `lock-status` | Check migration lock | `-d` |
 | `unlock` | Release stuck lock | `-d` |
+
+### Development Mode
+
+You can run database commands against the development connection configured under each database:
+
+```bash
+dbwarden --dev migrate -d primary
+dbwarden --dev status
+dbwarden --dev check-db -o json -d analytics
+```
 
 ---
 

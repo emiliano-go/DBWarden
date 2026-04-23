@@ -66,6 +66,10 @@ dbwarden database add legacy --url "mysql://user:pass@localhost:3306/legacy" --t
 dbwarden database add warehouse --url "postgresql://user:pass@localhost:5432/warehouse" --migrations-dir "migrations/warehouse"
 ```
 
+`database add` validates uniqueness and rejects:
+- Duplicate URLs (including duplicates against any `dev_database_url`)
+- Different URLs that still resolve to the same physical database target
+
 ### remove
 
 Remove a database configuration.

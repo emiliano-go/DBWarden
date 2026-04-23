@@ -43,6 +43,14 @@ dbwarden migrate --verbose
 dbwarden migrate -v
 ```
 
+### Use Development Database Settings
+
+```bash
+dbwarden --dev migrate -d primary
+```
+
+This uses `dev_database_url` (and `dev_database_type` if configured) from `warden.toml`.
+
 ### Apply Specific Number of Migrations
 
 ```bash
