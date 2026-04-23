@@ -352,6 +352,63 @@
   
   
     <li class="md-tabs__item">
+      <a href="../sql-translation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  SQL Translation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture-deep-dive/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Deep Dive
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../operations-runbook/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Operations Runbook
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../advanced/" class="md-tabs__link">
         
   
@@ -550,199 +607,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuration-file" class="md-nav__link">
+  <a href="#minimal-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration File
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Configuration File">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#creating-the-wardentoml-file" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Creating the warden.toml File
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#wardentoml-file-location" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        warden.toml File Location
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multi-database-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Database Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Multi-Database Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#default" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        default
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#database-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Database Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Database Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#database_type" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        database_type
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#sqlalchemy_url" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        sqlalchemy_url
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#optional-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Optional Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Optional Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#model_paths" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        model_paths
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#migrations_dir" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        migrations_dir
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#postgres_schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        postgres_schema
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dev_database_url" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        dev_database_url
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dev_database_type" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        dev_database_type
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#complete-wardentoml-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complete warden.toml Example
+        Minimal Config
       
     </span>
   </a>
@@ -750,38 +618,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#development-mode" class="md-nav__link">
+  <a href="#multi-database-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Development Mode
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Development Mode">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#sqlite-recommendation-for-development" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        SQLite Recommendation for Development
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#uniqueness-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Uniqueness Constraints
+        Multi-Database Config
       
     </span>
   </a>
@@ -789,60 +629,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#configuration-in-different-environments" class="md-nav__link">
+  <a href="#development-database-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration in Different Environments
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Configuration in Different Environments">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#development-environment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Development Environment
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#staging-environment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Staging Environment
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#production-environment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Production Environment
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-validation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration Validation
+        Development Database Config
       
     </span>
   </a>
@@ -850,10 +640,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#special-characters-in-passwords" class="md-nav__link">
+  <a href="#field-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Special Characters in Passwords
+        Field Reference
       
     </span>
   </a>
@@ -861,82 +651,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#troubleshooting-configuration" class="md-nav__link">
+  <a href="#internal-loading-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Troubleshooting Configuration
+        Internal Loading Rules
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Troubleshooting Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#missing-database-section" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Missing database section
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#missing-sqlalchemy_url" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Missing sqlalchemy_url
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#invalid-database_type" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Invalid database_type
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#invalid-url-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Invalid URL Format
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#database-connection-failed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Database Connection Failed
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#best-practices" class="md-nav__link">
+  <a href="#validation-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Best Practices
+        Validation Rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sql-translation-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SQL Translation Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
       
     </span>
   </a>
@@ -1517,6 +1268,87 @@
   
   
     <li class="md-nav__item">
+      <a href="../sql-translation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Translation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture-deep-dive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../advanced/" class="md-nav__link">
         
   
@@ -1591,199 +1423,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#configuration-file" class="md-nav__link">
+  <a href="#minimal-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration File
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Configuration File">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#creating-the-wardentoml-file" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Creating the warden.toml File
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#wardentoml-file-location" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        warden.toml File Location
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multi-database-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Database Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Multi-Database Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#default" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        default
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#database-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Database Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Database Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#database_type" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        database_type
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#sqlalchemy_url" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        sqlalchemy_url
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#optional-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Optional Configuration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Optional Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#model_paths" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        model_paths
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#migrations_dir" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        migrations_dir
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#postgres_schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        postgres_schema
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dev_database_url" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        dev_database_url
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#dev_database_type" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        dev_database_type
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#complete-wardentoml-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complete warden.toml Example
+        Minimal Config
       
     </span>
   </a>
@@ -1791,38 +1434,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#development-mode" class="md-nav__link">
+  <a href="#multi-database-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Development Mode
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Development Mode">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#sqlite-recommendation-for-development" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        SQLite Recommendation for Development
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#uniqueness-constraints" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Uniqueness Constraints
+        Multi-Database Config
       
     </span>
   </a>
@@ -1830,60 +1445,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#configuration-in-different-environments" class="md-nav__link">
+  <a href="#development-database-config" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Configuration in Different Environments
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Configuration in Different Environments">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#development-environment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Development Environment
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#staging-environment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Staging Environment
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#production-environment" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Production Environment
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-validation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration Validation
+        Development Database Config
       
     </span>
   </a>
@@ -1891,10 +1456,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#special-characters-in-passwords" class="md-nav__link">
+  <a href="#field-reference" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Special Characters in Passwords
+        Field Reference
       
     </span>
   </a>
@@ -1902,82 +1467,43 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#troubleshooting-configuration" class="md-nav__link">
+  <a href="#internal-loading-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Troubleshooting Configuration
+        Internal Loading Rules
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Troubleshooting Configuration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#missing-database-section" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Missing database section
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#missing-sqlalchemy_url" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Missing sqlalchemy_url
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#invalid-database_type" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Invalid database_type
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#invalid-url-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Invalid URL Format
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#database-connection-failed" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Database Connection Failed
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#best-practices" class="md-nav__link">
+  <a href="#validation-rules" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Best Practices
+        Validation Rules
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sql-translation-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SQL Translation Settings
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
       
     </span>
   </a>
@@ -2005,307 +1531,148 @@
 
 
 <h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
-<p>DBWarden is configured through a <code>warden.toml</code> file. This guide covers all configuration options.</p>
-<h2 id="configuration-file">Configuration File<a class="headerlink" href="#configuration-file" title="Permanent link">&para;</a></h2>
-<p>DBWarden looks for a <code>warden.toml</code> file in the current working directory or any parent directory.</p>
-<h3 id="creating-the-wardentoml-file">Creating the warden.toml File<a class="headerlink" href="#creating-the-wardentoml-file" title="Permanent link">&para;</a></h3>
-<p>Run <code>dbwarden init</code> to create a starter configuration:</p>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>init
-</code></pre></div>
-
-<p>This creates both the <code>migrations/</code> directory and a <code>warden.toml</code> file.</p>
-<h3 id="wardentoml-file-location">warden.toml File Location<a class="headerlink" href="#wardentoml-file-location" title="Permanent link">&para;</a></h3>
-<p>DBWarden searches for <code>warden.toml</code> in the following order:</p>
-<ol>
-<li>Current working directory</li>
-<li>Parent directories (up to the filesystem root)</li>
-</ol>
-<p>This allows you to have a single <code>warden.toml</code> file at your project root that applies to all subdirectories.</p>
-<h2 id="multi-database-configuration">Multi-Database Configuration<a class="headerlink" href="#multi-database-configuration" title="Permanent link">&para;</a></h2>
-<p>DBWarden supports managing multiple databases from a single configuration file.</p>
-<h3 id="basic-structure">Basic Structure<a class="headerlink" href="#basic-structure" title="Permanent link">&para;</a></h3>
+<p>DBWarden reads settings from <code>warden.toml</code> in the current directory or parent directories.</p>
+<h2 id="minimal-config">Minimal Config<a class="headerlink" href="#minimal-config" title="Permanent link">&para;</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;primary&quot;</span>
 
-<span class="k">[database]</span>
 <span class="k">[database.primary]</span>
 <span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
 <span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/main&quot;</span>
 <span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/primary&quot;</span>
-<span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
-<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
+</code></pre></div>
+
+<h2 id="multi-database-config">Multi-Database Config<a class="headerlink" href="#multi-database-config" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code><span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;primary&quot;</span>
+
+<span class="k">[database.primary]</span>
+<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/main&quot;</span>
+<span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/primary&quot;</span>
 
 <span class="k">[database.analytics]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/analytics&quot;</span>
+<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;clickhouse&quot;</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;clickhouse://user:password@localhost:8123/analytics&quot;</span>
 <span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/analytics&quot;</span>
 </code></pre></div>
 
-<h3 id="default">default<a class="headerlink" href="#default" title="Permanent link">&para;</a></h3>
-<p>The default database to use when no <code>--database</code> flag is specified.</p>
-<div class="codehilite"><pre><span></span><code><span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;primary&quot;</span>
+<h2 id="development-database-config">Development Database Config<a class="headerlink" href="#development-database-config" title="Permanent link">&para;</a></h2>
+<p>Recommended setup:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">[database.primary]</span>
+<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/main&quot;</span>
+<span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/primary&quot;</span>
+
+<span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
+<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
 </code></pre></div>
 
-<h2 id="database-configuration">Database Configuration<a class="headerlink" href="#database-configuration" title="Permanent link">&para;</a></h2>
-<h3 id="database_type">database_type<a class="headerlink" href="#database_type" title="Permanent link">&para;</a></h3>
-<p>The database type determines SQL dialect and features. Supported types:</p>
+<p>Use with:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
+</code></pre></div>
+
+<h2 id="field-reference">Field Reference<a class="headerlink" href="#field-reference" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Type</th>
+<th>Field</th>
+<th>Required</th>
 <th>Description</th>
-<th>Example URL Prefix</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>sqlite</code></td>
-<td>SQLite database</td>
-<td><code>sqlite:///</code></td>
+<td><code>default</code></td>
+<td>yes</td>
+<td>Default database name used when <code>-d</code> is omitted</td>
 </tr>
 <tr>
-<td><code>postgresql</code></td>
-<td>PostgreSQL</td>
-<td><code>postgresql://</code> or <code>postgres://</code></td>
+<td><code>database.&lt;name&gt;.sqlalchemy_url</code></td>
+<td>yes</td>
+<td>Primary DB URL</td>
 </tr>
 <tr>
-<td><code>mysql</code></td>
-<td>MySQL</td>
-<td><code>mysql://</code></td>
+<td><code>database.&lt;name&gt;.database_type</code></td>
+<td>no</td>
+<td>Explicit backend type, inferred from URL if omitted</td>
 </tr>
 <tr>
-<td><code>mariadb</code></td>
-<td>MariaDB</td>
-<td><code>mariadb://</code></td>
+<td><code>database.&lt;name&gt;.migrations_dir</code></td>
+<td>no</td>
+<td>Migration folder, defaults to <code>migrations/&lt;name&gt;</code></td>
 </tr>
 <tr>
-<td><code>clickhouse</code></td>
-<td>ClickHouse</td>
-<td><code>clickhouse://</code></td>
+<td><code>database.&lt;name&gt;.model_paths</code></td>
+<td>no</td>
+<td>List of model paths for auto-generation</td>
+</tr>
+<tr>
+<td><code>database.&lt;name&gt;.postgres_schema</code></td>
+<td>no</td>
+<td>PostgreSQL search path override</td>
+</tr>
+<tr>
+<td><code>database.&lt;name&gt;.dev_database_url</code></td>
+<td>no</td>
+<td>Dev DB URL used with <code>--dev</code></td>
+</tr>
+<tr>
+<td><code>database.&lt;name&gt;.dev_database_type</code></td>
+<td>no</td>
+<td>Dev backend type, inferred if omitted</td>
 </tr>
 </tbody>
 </table>
-<div class="codehilite"><pre><span></span><code><span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
+<h2 id="internal-loading-rules">Internal Loading Rules<a class="headerlink" href="#internal-loading-rules" title="Permanent link">&para;</a></h2>
+<p>DBWarden config loading pipeline:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_database</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">cfg</span> <span class="o">=</span> <span class="n">get_multi_db_config</span><span class="p">()</span>
+    <span class="n">selected</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">databases</span><span class="p">[</span><span class="n">name</span> <span class="ow">or</span> <span class="n">cfg</span><span class="o">.</span><span class="n">default</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">is_dev_mode</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">with_dev_url_and_type</span><span class="p">(</span><span class="n">selected</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">selected</span>
 </code></pre></div>
 
-<p><strong>Note:</strong> The <code>database_type</code> is automatically inferred from the URL if not specified. You can override it for explicit control.</p>
-<h3 id="sqlalchemy_url">sqlalchemy_url<a class="headerlink" href="#sqlalchemy_url" title="Permanent link">&para;</a></h3>
-<p>The SQLAlchemy database connection URL.</p>
-<p><strong>Format:</strong></p>
-<div class="codehilite"><pre><span></span><code><span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dialect+driver://username:password@host:port/database&quot;</span>
-</code></pre></div>
-
-<p><strong>Examples:</strong></p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># PostgreSQL</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/mydb&quot;</span>
-
-<span class="c1"># MySQL</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mysql://user:password@localhost:3306/mydb&quot;</span>
-
-<span class="c1"># SQLite</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./mydb.db&quot;</span>
-
-<span class="c1"># SQLite in memory</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///:memory:&quot;</span>
-
-<span class="c1"># ClickHouse</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;clickhouse://user:password@localhost:8123/analytics&quot;</span>
-</code></pre></div>
-
-<h2 id="optional-configuration">Optional Configuration<a class="headerlink" href="#optional-configuration" title="Permanent link">&para;</a></h2>
-<h3 id="model_paths">model_paths<a class="headerlink" href="#model_paths" title="Permanent link">&para;</a></h3>
-<p>List of paths to directories containing SQLAlchemy models.</p>
-<div class="codehilite"><pre><span></span><code><span class="n">model_paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;models/&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;app/models/&quot;</span><span class="p">]</span>
-</code></pre></div>
-
-<p>If not specified, DBWarden will automatically discover models by:
-- Scanning all subdirectories of the current directory
-- Looking for <code>models/</code> or <code>model/</code> folders inside each subdirectory
-- Searching up to 5 parent directories from current working directory
-- Ignoring common library folders (<code>.venv</code>, <code>node_modules</code>, <code>__pycache__</code>, etc.)</p>
-<h3 id="migrations_dir">migrations_dir<a class="headerlink" href="#migrations_dir" title="Permanent link">&para;</a></h3>
-<p>Directory for migration files. Defaults to <code>migrations/&lt;database_name&gt;</code>.</p>
-<div class="codehilite"><pre><span></span><code><span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/primary&quot;</span>
-</code></pre></div>
-
-<h3 id="postgres_schema">postgres_schema<a class="headerlink" href="#postgres_schema" title="Permanent link">&para;</a></h3>
-<p>PostgreSQL schema to use (PostgreSQL only).</p>
-<div class="codehilite"><pre><span></span><code><span class="n">postgres_schema</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;public&quot;</span>
-</code></pre></div>
-
-<h3 id="dev_database_url">dev_database_url<a class="headerlink" href="#dev_database_url" title="Permanent link">&para;</a></h3>
-<p>Optional development database URL used when running commands with <code>--dev</code>.</p>
-<div class="codehilite"><pre><span></span><code><span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
-</code></pre></div>
-
-<h3 id="dev_database_type">dev_database_type<a class="headerlink" href="#dev_database_type" title="Permanent link">&para;</a></h3>
-<p>Optional type for the development database.</p>
-<div class="codehilite"><pre><span></span><code><span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
-</code></pre></div>
-
-<p>If omitted, DBWarden infers it from <code>dev_database_url</code>.</p>
-<h2 id="complete-wardentoml-example">Complete warden.toml Example<a class="headerlink" href="#complete-wardentoml-example" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="c1"># Default database</span>
-<span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;primary&quot;</span>
-
-<span class="c1"># Database configurations</span>
-<span class="k">[database]</span>
-
-<span class="k">[database.primary]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://myuser:mypassword@localhost:5432/myapp&quot;</span>
-<span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
-<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
-<span class="n">model_paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;app/models/&quot;</span><span class="p">]</span>
-<span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/primary&quot;</span>
-<span class="n">postgres_schema</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;public&quot;</span>
-
-<span class="k">[database.analytics]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://myuser:mypassword@localhost:5432/analytics&quot;</span>
-<span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/analytics&quot;</span>
-
-<span class="k">[database.legacy]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mysql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mysql://myuser:mypassword@localhost:3306/legacy&quot;</span>
-<span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/legacy&quot;</span>
-</code></pre></div>
-
-<h2 id="development-mode">Development Mode<a class="headerlink" href="#development-mode" title="Permanent link">&para;</a></h2>
-<p>Use the <code>--dev</code> global CLI flag to run commands against <code>dev_database_url</code> for the selected database.</p>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>migrate<span class="w"> </span>--dev<span class="w"> </span>-d<span class="w"> </span>primary
-dbwarden<span class="w"> </span>status<span class="w"> </span>--dev
-</code></pre></div>
-
-<p>If <code>--dev</code> is enabled and the target database has no <code>dev_database_url</code>, DBWarden raises a configuration error.</p>
-<h3 id="sqlite-recommendation-for-development">SQLite Recommendation for Development<a class="headerlink" href="#sqlite-recommendation-for-development" title="Permanent link">&para;</a></h3>
-<p>We recommend using SQLite for <code>dev_database_url</code>:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
-<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
-</code></pre></div>
-
-<p>When using <code>--dev</code> with a SQLite dev database, DBWarden translates backend-specific model types/defaults (PostgreSQL, MySQL, MariaDB, ClickHouse) to SQLite-compatible SQL.</p>
-<p>If a type cannot be converted safely, DBWarden falls back to <code>TEXT</code> and emits warnings.</p>
-<p>For strict behavior, use:</p>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>--strict-translation<span class="w"> </span>make-migrations<span class="w"> </span>-d<span class="w"> </span>primary
-</code></pre></div>
-
-<p>In strict translation mode, unsupported conversions fail instead of falling back.</p>
-<h2 id="uniqueness-constraints">Uniqueness Constraints<a class="headerlink" href="#uniqueness-constraints" title="Permanent link">&para;</a></h2>
-<p>DBWarden validates that configured database targets are unique:</p>
+<p>This means the same command code path works for production and dev mode; only active connection values switch.</p>
+<h2 id="validation-rules">Validation Rules<a class="headerlink" href="#validation-rules" title="Permanent link">&para;</a></h2>
+<p>DBWarden validates config aggressively to prevent dangerous mistakes.</p>
 <ol>
-<li>No duplicate <code>sqlalchemy_url</code> values.</li>
-<li>No duplicate <code>dev_database_url</code> values.</li>
-<li>No overlap between primary and dev URLs.</li>
-<li>No two entries can resolve to the same physical database target (for example, same host/port/database with different credentials).</li>
+<li><code>default</code> must exist in <code>[database.*]</code></li>
+<li>Every DB entry must have <code>sqlalchemy_url</code></li>
+<li><code>dev_database_type</code> requires <code>dev_database_url</code></li>
+<li>URLs must be unique across primary and dev URLs</li>
+<li>Physical DB targets must be unique (even if URLs differ by credentials)</li>
 </ol>
-<p>Examples of invalid configurations:</p>
+<p>Example invalid setup (same target DB):</p>
 <div class="codehilite"><pre><span></span><code><span class="k">[database.primary]</span>
 <span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user1:pass1@localhost:5432/main&quot;</span>
 
-<span class="k">[database.analytics]</span>
+<span class="k">[database.reporting]</span>
 <span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user2:pass2@localhost:5432/main&quot;</span>
 </code></pre></div>
 
-<div class="codehilite"><pre><span></span><code><span class="k">[database.primary]</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./main.db&quot;</span>
-
-<span class="k">[database.analytics]</span>
-<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./main.db&quot;</span>
+<h2 id="sql-translation-settings">SQL Translation Settings<a class="headerlink" href="#sql-translation-settings" title="Permanent link">&para;</a></h2>
+<p>When using <code>--dev</code> with SQLite, translation is enabled for backend-specific model SQL.</p>
+<ul>
+<li>Non-strict mode: unsupported conversions fallback to <code>TEXT</code> with warning</li>
+<li>Strict mode: fail on unsupported conversion</li>
+</ul>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>--strict-translation<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;sync&quot;</span><span class="w"> </span>-d<span class="w"> </span>primary
 </code></pre></div>
 
-<h2 id="configuration-in-different-environments">Configuration in Different Environments<a class="headerlink" href="#configuration-in-different-environments" title="Permanent link">&para;</a></h2>
-<h3 id="development-environment">Development Environment<a class="headerlink" href="#development-environment" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dev&quot;</span>
-
-<span class="k">[database]</span>
-
-<span class="k">[database.dev]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./dev.db&quot;</span>
-<span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/dev&quot;</span>
-</code></pre></div>
-
-<h3 id="staging-environment">Staging Environment<a class="headerlink" href="#staging-environment" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;staging&quot;</span>
-
-<span class="k">[database]</span>
-
-<span class="k">[database.staging]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://staging:staging123@staging.example.com:5432/staging_db&quot;</span>
-<span class="n">postgres_schema</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;public&quot;</span>
-<span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/staging&quot;</span>
-</code></pre></div>
-
-<h3 id="production-environment">Production Environment<a class="headerlink" href="#production-environment" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;prod&quot;</span>
-
-<span class="k">[database]</span>
-
-<span class="k">[database.prod]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://prod:securepass@prod.example.com:5432/prod_db&quot;</span>
-<span class="n">postgres_schema</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;public&quot;</span>
-<span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/prod&quot;</span>
-</code></pre></div>
-
-<h2 id="configuration-validation">Configuration Validation<a class="headerlink" href="#configuration-validation" title="Permanent link">&para;</a></h2>
-<p>Use the <code>dbwarden config</code> command to verify your configuration without exposing sensitive information:</p>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>config
-</code></pre></div>
-
-<p>Output:</p>
-<div class="codehilite"><pre><span></span><code><span class="nx">Database</span><span class="p">:</span><span class="w"> </span><span class="nx">primary</span>
-<span class="nx">database_type</span><span class="p">:</span><span class="w"> </span><span class="nx">postgresql</span>
-<span class="nx">sqlalchemy_url</span><span class="p">:</span><span class="w"> </span><span class="o">***</span>
-<span class="nx">migrations_dir</span><span class="p">:</span><span class="w"> </span><span class="nx">migrations</span><span class="o">/</span><span class="nx">primary</span>
-<span class="nx">postgres_schema</span><span class="p">:</span><span class="w"> </span><span class="nx">public</span>
-</code></pre></div>
-
-<h2 id="special-characters-in-passwords">Special Characters in Passwords<a class="headerlink" href="#special-characters-in-passwords" title="Permanent link">&para;</a></h2>
-<p>If your database password contains special characters, URL-encode them:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># Password: p@ss:word/123</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:p%40ss%3Aword%2F123@localhost:5432/mydb&quot;</span>
-</code></pre></div>
-
-<h2 id="troubleshooting-configuration">Troubleshooting Configuration<a class="headerlink" href="#troubleshooting-configuration" title="Permanent link">&para;</a></h2>
-<h3 id="missing-database-section">Missing database section<a class="headerlink" href="#missing-database-section" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="nl">Error</span><span class="p">:</span><span class="w"> </span><span class="k">No</span><span class="w"> </span><span class="o">[</span><span class="n">database</span><span class="o">]</span><span class="w"> </span><span class="k">section</span><span class="w"> </span><span class="k">found</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">warden</span><span class="p">.</span><span class="n">toml</span><span class="p">.</span>
-</code></pre></div>
-
-<p>Make sure your <code>warden.toml</code> includes a <code>[database]</code> section with at least one database configuration.</p>
-<h3 id="missing-sqlalchemy_url">Missing sqlalchemy_url<a class="headerlink" href="#missing-sqlalchemy_url" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>Error: sqlalchemy_url is required for database &#39;primary&#39;.
-</code></pre></div>
-
-<p>Make sure each database configuration includes a valid <code>sqlalchemy_url</code>.</p>
-<h3 id="invalid-database_type">Invalid database_type<a class="headerlink" href="#invalid-database_type" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="nx">Error</span><span class="p">:</span><span class="w"> </span><span class="nx">Invalid</span><span class="w"> </span><span class="nx">database_type</span><span class="w"> </span><span class="err">&#39;</span><span class="nx">oracle</span><span class="err">&#39;</span><span class="p">.</span><span class="w"> </span><span class="nx">Must</span><span class="w"> </span><span class="nx">be</span><span class="w"> </span><span class="nx">one</span><span class="w"> </span><span class="nx">of</span><span class="p">:</span><span class="w"> </span><span class="nx">sqlite</span><span class="p">,</span><span class="w"> </span><span class="nx">postgresql</span><span class="p">,</span><span class="w"> </span><span class="nx">mysql</span><span class="p">,</span><span class="w"> </span><span class="nx">mariadb</span><span class="p">,</span><span class="w"> </span><span class="nx">clickhouse</span>
-</code></pre></div>
-
-<p>Use one of the supported database types.</p>
-<h3 id="invalid-url-format">Invalid URL Format<a class="headerlink" href="#invalid-url-format" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>Error: Could not parse SQLAlchemy URL
-</code></pre></div>
-
-<p>Check that your URL follows the correct format: <code>dialect+driver://username:password@host:port/database</code></p>
-<h3 id="database-connection-failed">Database Connection Failed<a class="headerlink" href="#database-connection-failed" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="nv">Error</span>:<span class="w"> </span><span class="nv">could</span><span class="w"> </span><span class="nv">not</span><span class="w"> </span><span class="k">connect</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">server</span>
-</code></pre></div>
-
-<p>Verify that:
-1. The database server is running
-2. The host and port are correct
-3. The username and password are valid
-4. The database exists</p>
-<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
-<ol>
-<li><strong>Never commit <code>warden.toml</code> to version control with secrets</strong>: Add <code>warden.toml</code> to your <code>.gitignore</code> file if it contains credentials, or use a separate <code>warden.toml.example</code> as a template</li>
-<li><strong>Use different configurations per environment</strong>: Create environment-specific database configurations</li>
-<li><strong>Secure your credentials</strong>: Use secrets management in production</li>
-<li><strong>Validate configuration</strong>: Run <code>dbwarden config</code> before applying migrations</li>
-<li><strong>Use descriptive database names</strong>: Names like <code>primary</code>, <code>analytics</code>, <code>legacy</code> are clearer than <code>db1</code>, <code>db2</code></li>
-</ol>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<p><code>Database '&lt;name&gt;' not found</code>:</p>
+<ul>
+<li>Verify database key exists in <code>warden.toml</code></li>
+<li>Verify <code>default</code> references an existing key</li>
+</ul>
+<p><code>has no dev_database_url configured</code> in <code>--dev</code> mode:</p>
+<ul>
+<li>Add <code>dev_database_url</code> for target database</li>
+</ul>
+<p>Duplicate URL/target errors:</p>
+<ul>
+<li>Ensure each configured primary/dev DB points to a distinct physical target</li>
+</ul>
 
 
 

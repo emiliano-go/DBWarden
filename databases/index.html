@@ -16,7 +16,7 @@
         <link rel="prev" href="../models/">
       
       
-        <link rel="next" href="../advanced/">
+        <link rel="next" href="../sql-translation/">
       
       
         
@@ -340,6 +340,63 @@
     
   
   Supported Databases
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../sql-translation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  SQL Translation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture-deep-dive/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Deep Dive
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../operations-runbook/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Operations Runbook
 
       </a>
     </li>
@@ -1109,10 +1166,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#backend-matrix" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        Backend Matrix
       
     </span>
   </a>
@@ -1120,143 +1177,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#postgresql" class="md-nav__link">
+  <a href="#config-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
-        PostgreSQL
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="PostgreSQL">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#connection-url" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connection URL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#postgresql-schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PostgreSQL Schema
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#type-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Type Mapping
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-postgresql-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example PostgreSQL Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mysql" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MySQL
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="MySQL">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#connection-url_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connection URL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#features_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#type-mapping_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Type Mapping
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-mysql-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example MySQL Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mariadb" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MariaDB
+        Config Examples
       
     </span>
   </a>
@@ -1264,132 +1188,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sqlite" class="md-nav__link">
+  <a href="#internal-connection-handling" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SQLite
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SQLite">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#connection-url_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connection URL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#features_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Limitations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-sqlite-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example SQLite Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#clickhouse" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ClickHouse
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="ClickHouse">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#connection-url_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connection URL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#features_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#type-mapping_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Type Mapping
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-clickhouse-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example ClickHouse Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#connection-pooling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connection Pooling
+        Internal Connection Handling
       
     </span>
   </a>
@@ -1397,124 +1199,46 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ssltls-connections" class="md-nav__link">
+  <a href="#development-database-strategy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SSL/TLS Connections
+        Development Database Strategy
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="SSL/TLS Connections">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#postgresql-with-ssl" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PostgreSQL with SSL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mysql-with-ssl" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MySQL with SSL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#clickhouse-with-https" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ClickHouse with HTTPS
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#connection-strings-reference" class="md-nav__link">
+  <a href="#translation-note" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Connection Strings Reference
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Connection Strings Reference">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#postgresql_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PostgreSQL
+        Translation Note
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#mysql_1" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#backend-specific-notes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MySQL
+        Backend-Specific Notes
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#sqlite_1" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#recommended-verification-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SQLite
+        Recommended Verification Workflow
       
     </span>
   </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#clickhouse_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ClickHouse
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mariadb_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MariaDB
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1522,6 +1246,87 @@
   
 </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sql-translation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Translation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture-deep-dive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1607,10 +1412,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#backend-matrix" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        Backend Matrix
       
     </span>
   </a>
@@ -1618,143 +1423,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#postgresql" class="md-nav__link">
+  <a href="#config-examples" class="md-nav__link">
     <span class="md-ellipsis">
       
-        PostgreSQL
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="PostgreSQL">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#connection-url" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connection URL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#postgresql-schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PostgreSQL Schema
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#type-mapping" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Type Mapping
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-postgresql-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example PostgreSQL Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mysql" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MySQL
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="MySQL">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#connection-url_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connection URL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#features_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#type-mapping_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Type Mapping
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-mysql-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example MySQL Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#mariadb" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MariaDB
+        Config Examples
       
     </span>
   </a>
@@ -1762,132 +1434,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#sqlite" class="md-nav__link">
+  <a href="#internal-connection-handling" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SQLite
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="SQLite">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#connection-url_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connection URL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#features_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Limitations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-sqlite-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example SQLite Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#clickhouse" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ClickHouse
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="ClickHouse">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#connection-url_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connection URL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#features_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Features
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#type-mapping_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Type Mapping
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#example-clickhouse-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example ClickHouse Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#connection-pooling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Connection Pooling
+        Internal Connection Handling
       
     </span>
   </a>
@@ -1895,124 +1445,46 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ssltls-connections" class="md-nav__link">
+  <a href="#development-database-strategy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SSL/TLS Connections
+        Development Database Strategy
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="SSL/TLS Connections">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#postgresql-with-ssl" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PostgreSQL with SSL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mysql-with-ssl" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MySQL with SSL
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#clickhouse-with-https" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ClickHouse with HTTPS
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#connection-strings-reference" class="md-nav__link">
+  <a href="#translation-note" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Connection Strings Reference
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Connection Strings Reference">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#postgresql_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PostgreSQL
+        Translation Note
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#mysql_1" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#backend-specific-notes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        MySQL
+        Backend-Specific Notes
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#sqlite_1" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#recommended-verification-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SQLite
+        Recommended Verification Workflow
       
     </span>
   </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#clickhouse_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ClickHouse
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mariadb_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        MariaDB
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2037,331 +1509,134 @@
 
 
 <h1 id="supported-databases">Supported Databases<a class="headerlink" href="#supported-databases" title="Permanent link">&para;</a></h1>
-<p>DBWarden supports multiple database backends. This guide covers configuration and considerations for each.</p>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.</p>
+<h2 id="backend-matrix">Backend Matrix<a class="headerlink" href="#backend-matrix" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Database</th>
-<th>Supported</th>
-<th>Driver</th>
-<th>Type Value</th>
+<th>Backend</th>
+<th><code>database_type</code></th>
+<th>Typical URL</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>PostgreSQL</td>
-<td>Yes</td>
-<td><code>psycopg2-binary</code></td>
 <td><code>postgresql</code></td>
+<td><code>postgresql://user:pass@host:5432/db</code></td>
 </tr>
 <tr>
 <td>MySQL</td>
-<td>Yes</td>
-<td><code>mysql-connector-python</code></td>
 <td><code>mysql</code></td>
-</tr>
-<tr>
-<td>SQLite</td>
-<td>Yes</td>
-<td>Built-in</td>
-<td><code>sqlite</code></td>
-</tr>
-<tr>
-<td>ClickHouse</td>
-<td>Yes</td>
-<td><code>clickhouse-connect</code></td>
-<td><code>clickhouse</code></td>
+<td><code>mysql://user:pass@host:3306/db</code></td>
 </tr>
 <tr>
 <td>MariaDB</td>
-<td>Yes</td>
-<td><code>mysql-connector-python</code></td>
 <td><code>mariadb</code></td>
+<td><code>mariadb://user:pass@host:3306/db</code></td>
+</tr>
+<tr>
+<td>SQLite</td>
+<td><code>sqlite</code></td>
+<td><code>sqlite:///./app.db</code></td>
+</tr>
+<tr>
+<td>ClickHouse</td>
+<td><code>clickhouse</code></td>
+<td><code>clickhouse://user:pass@host:8123/db</code></td>
 </tr>
 </tbody>
 </table>
-<h2 id="postgresql">PostgreSQL<a class="headerlink" href="#postgresql" title="Permanent link">&para;</a></h2>
-<h3 id="connection-url">Connection URL<a class="headerlink" href="#connection-url" title="Permanent link">&para;</a></h3>
+<h2 id="config-examples">Config Examples<a class="headerlink" href="#config-examples" title="Permanent link">&para;</a></h2>
+<p>PostgreSQL:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">[database.primary]</span>
 <span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/mydb&quot;</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/main&quot;</span>
+<span class="n">postgres_schema</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;public&quot;</span>
 </code></pre></div>
 
-<p><strong>Requirements:</strong></p>
-<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>psycopg2-binary
-</code></pre></div>
-
-<h3 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Full support for all PostgreSQL features</li>
-<li>UUID types</li>
-<li>JSON/JSONB columns</li>
-<li>Array types (via manual migration)</li>
-<li>Full-text search (via manual migration)</li>
-<li>PostgreSQL-specific constraints</li>
-<li>SERIAL/BIGSERIAL for auto-increment</li>
-<li>TIMESTAMP (not DATETIME)</li>
-<li>BYTEA for binary data</li>
-</ul>
-<h3 id="postgresql-schema">PostgreSQL Schema<a class="headerlink" href="#postgresql-schema" title="Permanent link">&para;</a></h3>
-<p>Set default schema in <code>warden.toml</code>:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">[database.primary]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/mydb&quot;</span>
-<span class="n">postgres_schema</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;custom_schema&quot;</span>
-</code></pre></div>
-
-<h3 id="type-mapping">Type Mapping<a class="headerlink" href="#type-mapping" title="Permanent link">&para;</a></h3>
-<p>DBWarden automatically maps SQLAlchemy types to PostgreSQL:</p>
-<table>
-<thead>
-<tr>
-<th>SQLAlchemy</th>
-<th>PostgreSQL</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Integer (PK)</td>
-<td>SERIAL</td>
-</tr>
-<tr>
-<td>BigInteger (PK)</td>
-<td>BIGSERIAL</td>
-</tr>
-<tr>
-<td>DateTime</td>
-<td>TIMESTAMP</td>
-</tr>
-<tr>
-<td>BLOB</td>
-<td>BYTEA</td>
-</tr>
-</tbody>
-</table>
-<h3 id="example-postgresql-migration">Example PostgreSQL Migration<a class="headerlink" href="#example-postgresql-migration" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="n">EXTENSION</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="ss">&quot;uuid-ossp&quot;</span><span class="p">;</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">email</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">UNIQUE</span><span class="p">,</span>
-<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="k">TIMESTAMP</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="n">NOW</span><span class="p">(),</span>
-<span class="w">    </span><span class="k">data</span><span class="w"> </span><span class="n">JSONB</span>
-<span class="p">);</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
-
-<span class="c1">-- rollback</span>
-
-<span class="k">DROP</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="p">;</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
-</code></pre></div>
-
-<h2 id="mysql">MySQL<a class="headerlink" href="#mysql" title="Permanent link">&para;</a></h2>
-<h3 id="connection-url_1">Connection URL<a class="headerlink" href="#connection-url_1" title="Permanent link">&para;</a></h3>
+<p>MySQL:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">[database.legacy]</span>
 <span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mysql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mysql://user:password@localhost:3306/mydb&quot;</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mysql://user:password@localhost:3306/legacy&quot;</span>
 </code></pre></div>
 
-<p><strong>Requirements:</strong></p>
-<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>mysql-connector-python
-</code></pre></div>
-
-<h3 id="features_1">Features<a class="headerlink" href="#features_1" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Full support for MySQL features</li>
-<li>ENUM types</li>
-<li>SET types</li>
-<li>Full-text indexes (MyISAM, InnoDB 5.6+)</li>
-<li>AUTO_INCREMENT</li>
-</ul>
-<h3 id="type-mapping_1">Type Mapping<a class="headerlink" href="#type-mapping_1" title="Permanent link">&para;</a></h3>
-<table>
-<thead>
-<tr>
-<th>SQLAlchemy</th>
-<th>MySQL</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Boolean</td>
-<td>TINYINT(1)</td>
-</tr>
-<tr>
-<td>Integer (PK)</td>
-<td>INT AUTO_INCREMENT</td>
-</tr>
-</tbody>
-</table>
-<h3 id="example-mysql-migration">Example MySQL Migration<a class="headerlink" href="#example-mysql-migration" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="n">AUTO_INCREMENT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">email</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<span class="w">    </span><span class="n">status</span><span class="w"> </span><span class="n">ENUM</span><span class="p">(</span><span class="s1">&#39;active&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;inactive&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;pending&#39;</span><span class="p">)</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="s1">&#39;active&#39;</span><span class="p">,</span>
-<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">DATETIME</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span>
-<span class="p">);</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">UNIQUE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
-
-<span class="c1">-- rollback</span>
-
-<span class="k">DROP</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="p">;</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
-</code></pre></div>
-
-<h2 id="mariadb">MariaDB<a class="headerlink" href="#mariadb" title="Permanent link">&para;</a></h2>
-<p>MariaDB is fully compatible with MySQL. Use the <code>mariadb</code> type:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">[database.legacy]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mariadb&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mysql://user:password@localhost:3306/mydb&quot;</span>
-</code></pre></div>
-
-<p>All MySQL features and type mappings apply to MariaDB.</p>
-<h2 id="sqlite">SQLite<a class="headerlink" href="#sqlite" title="Permanent link">&para;</a></h2>
-<h3 id="connection-url_2">Connection URL<a class="headerlink" href="#connection-url_2" title="Permanent link">&para;</a></h3>
+<p>SQLite:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">[database.dev]</span>
 <span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
-<span class="c1"># File-based</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./mydb.db&quot;</span>
-
-<span class="c1"># In-memory</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///:memory:&quot;</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
 </code></pre></div>
 
-<p>No additional drivers needed.</p>
-<h3 id="features_2">Features<a class="headerlink" href="#features_2" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Simple file-based database</li>
-<li>Zero configuration</li>
-<li>Good for development/testing</li>
-<li>Full SQLite feature support</li>
-</ul>
-<h3 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h3>
-<ul>
-<li>No concurrent connections (file-based)</li>
-<li>Limited ALTER TABLE support</li>
-<li>Different type system (type affinity)</li>
-</ul>
-<h3 id="example-sqlite-migration">Example SQLite Migration<a class="headerlink" href="#example-sqlite-migration" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="n">AUTOINCREMENT</span><span class="p">,</span>
-<span class="w">    </span><span class="n">username</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">UNIQUE</span><span class="p">,</span>
-<span class="w">    </span><span class="n">email</span><span class="w"> </span><span class="nb">TEXT</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">UNIQUE</span><span class="p">,</span>
-<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">DATETIME</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span>
-<span class="p">);</span>
-
-<span class="c1">-- rollback</span>
-
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
-</code></pre></div>
-
-<h2 id="clickhouse">ClickHouse<a class="headerlink" href="#clickhouse" title="Permanent link">&para;</a></h2>
-<h3 id="connection-url_3">Connection URL<a class="headerlink" href="#connection-url_3" title="Permanent link">&para;</a></h3>
+<p>ClickHouse:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">[database.analytics]</span>
 <span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;clickhouse&quot;</span>
 <span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;clickhouse://user:password@localhost:8123/analytics&quot;</span>
 </code></pre></div>
 
-<p><strong>Requirements:</strong></p>
-<div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>clickhouse-connect
+<h2 id="internal-connection-handling">Internal Connection Handling<a class="headerlink" href="#internal-connection-handling" title="Permanent link">&para;</a></h2>
+<p>DBWarden uses SQLAlchemy engines, with backend-specific URL normalization where needed.</p>
+<p>Conceptual flow:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">get_engine</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">sqlalchemy_url</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">database_type</span> <span class="o">==</span> <span class="s2">&quot;clickhouse&quot;</span><span class="p">:</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">normalize_clickhouse_dialect</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">create_engine</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="features_3">Features<a class="headerlink" href="#features_3" title="Permanent link">&para;</a></h3>
+<p>For PostgreSQL schema support, DBWarden sets <code>search_path</code> on connection when <code>postgres_schema</code> is configured.</p>
+<h2 id="development-database-strategy">Development Database Strategy<a class="headerlink" href="#development-database-strategy" title="Permanent link">&para;</a></h2>
+<p>Recommended pattern:</p>
 <ul>
-<li>Supports migration tracking and locking tables</li>
-<li>Supports model-generated and manual migrations</li>
-<li>Supports MergeTree/ReplacingMergeTree-style table migrations</li>
-<li>Excellent for analytics workloads</li>
-<li>Column-oriented storage</li>
+<li>Production-like primary DB (for example PostgreSQL)</li>
+<li>SQLite for dev DB via <code>dev_database_url</code></li>
+<li>Run local commands with <code>--dev</code></li>
 </ul>
-<h3 id="type-mapping_2">Type Mapping<a class="headerlink" href="#type-mapping_2" title="Permanent link">&para;</a></h3>
-<p>ClickHouse uses MySQL-compatible queries for migration tracking tables.</p>
-<h3 id="example-clickhouse-migration">Example ClickHouse Migration<a class="headerlink" href="#example-clickhouse-migration" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">UInt32</span><span class="p">,</span>
-<span class="w">    </span><span class="n">email</span><span class="w"> </span><span class="n">String</span><span class="p">,</span>
-<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">DateTime</span>
-<span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MergeTree</span><span class="p">()</span>
-<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">id</span><span class="p">;</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="n">UInt32</span><span class="p">,</span>
-<span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="n">UInt32</span><span class="p">,</span>
-<span class="w">    </span><span class="n">event_type</span><span class="w"> </span><span class="n">String</span><span class="p">,</span>
-<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">DateTime</span>
-<span class="p">)</span><span class="w"> </span><span class="n">ENGINE</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">MergeTree</span><span class="p">()</span>
-<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="p">(</span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">);</span>
-
-<span class="c1">-- rollback</span>
-
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">events</span><span class="p">;</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
-</code></pre></div>
-
-<h2 id="connection-pooling">Connection Pooling<a class="headerlink" href="#connection-pooling" title="Permanent link">&para;</a></h2>
-<p>SQLAlchemy creates an engine with connection pool:</p>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_engine</span>
-<span class="n">engine</span> <span class="o">=</span> <span class="n">create_engine</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">pool_size</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">max_overflow</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-</code></pre></div>
-
-<h2 id="ssltls-connections">SSL/TLS Connections<a class="headerlink" href="#ssltls-connections" title="Permanent link">&para;</a></h2>
-<h3 id="postgresql-with-ssl">PostgreSQL with SSL<a class="headerlink" href="#postgresql-with-ssl" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="k">[database.prod]</span>
+<div class="codehilite"><pre><span></span><code><span class="k">[database.primary]</span>
 <span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@host:5432/db?sslmode=require&quot;</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/main&quot;</span>
+<span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
+<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
 </code></pre></div>
 
-<h3 id="mysql-with-ssl">MySQL with SSL<a class="headerlink" href="#mysql-with-ssl" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="k">[database.prod]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mysql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;mysql://user:password@host:3306/db?ssl=true&quot;</span>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;sync models&quot;</span><span class="w"> </span>-d<span class="w"> </span>primary
+dbwarden<span class="w"> </span>--dev<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
 </code></pre></div>
 
-<h3 id="clickhouse-with-https">ClickHouse with HTTPS<a class="headerlink" href="#clickhouse-with-https" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="k">[database.analytics]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;clickhouse&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;clickhouse://user:password@host:8443/analytics?ssl=true&quot;</span>
-</code></pre></div>
+<h2 id="translation-note">Translation Note<a class="headerlink" href="#translation-note" title="Permanent link">&para;</a></h2>
+<p>When targeting SQLite in dev mode, DBWarden translates unsupported backend-specific types/defaults.</p>
+<ul>
+<li>Unknown/unsupported types fallback to <code>TEXT</code> with warnings</li>
+<li><code>--strict-translation</code> turns those warnings into errors</li>
+</ul>
+<p>Details: <a href="../sql-translation/">SQL Translation</a></p>
+<h2 id="backend-specific-notes">Backend-Specific Notes<a class="headerlink" href="#backend-specific-notes" title="Permanent link">&para;</a></h2>
+<p>PostgreSQL:</p>
+<ul>
+<li>Strong support for JSONB, UUID, rich DDL</li>
+<li>Prefer production runs on actual PostgreSQL instance</li>
+</ul>
+<p>MySQL/MariaDB:</p>
+<ul>
+<li>Similar behavior; MariaDB configured separately via <code>database_type</code></li>
+<li>Validate engine-specific syntax in manual migrations</li>
+</ul>
+<p>SQLite:</p>
+<ul>
+<li>Great for local tests and dev loops</li>
+<li>Different type affinity and DDL limitations vs server databases</li>
+</ul>
+<p>ClickHouse:</p>
+<ul>
+<li>Optimized for analytics workloads</li>
+<li>Use manual SQL for engine/partition/order specifics when needed</li>
+</ul>
+<h2 id="recommended-verification-workflow">Recommended Verification Workflow<a class="headerlink" href="#recommended-verification-workflow" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code><span class="c1"># local loop on dev DB</span>
+dbwarden<span class="w"> </span>--dev<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
 
-<h2 id="connection-strings-reference">Connection Strings Reference<a class="headerlink" href="#connection-strings-reference" title="Permanent link">&para;</a></h2>
-<h3 id="postgresql_1">PostgreSQL<a class="headerlink" href="#postgresql_1" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="nl">postgresql</span><span class="p">:</span><span class="o">//</span><span class="k">user</span><span class="err">:</span><span class="n">pass</span><span class="nv">@localhost</span><span class="err">:</span><span class="mi">5432</span><span class="o">/</span><span class="n">mydb</span>
-<span class="nl">postgresql</span><span class="p">:</span><span class="o">//</span><span class="k">user</span><span class="err">:</span><span class="n">pass</span><span class="nv">@host</span><span class="err">:</span><span class="mi">5432</span><span class="o">/</span><span class="n">mydb</span><span class="vm">?</span><span class="n">sslmode</span><span class="o">=</span><span class="n">require</span>
-<span class="nl">postgresql</span><span class="p">:</span><span class="o">//</span><span class="k">user</span><span class="err">:</span><span class="n">pass</span><span class="nv">@host</span><span class="err">:</span><span class="mi">5432</span><span class="o">/</span><span class="n">mydb</span><span class="vm">?</span><span class="n">channel_binding</span><span class="o">=</span><span class="n">require</span>
-</code></pre></div>
-
-<h3 id="mysql_1">MySQL<a class="headerlink" href="#mysql_1" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="nl">mysql</span><span class="p">:</span><span class="o">//</span><span class="k">user</span><span class="err">:</span><span class="n">pass</span><span class="nv">@localhost</span><span class="err">:</span><span class="mi">3306</span><span class="o">/</span><span class="n">mydb</span>
-<span class="n">mysql</span><span class="o">+</span><span class="nl">pymysql</span><span class="p">:</span><span class="o">//</span><span class="k">user</span><span class="err">:</span><span class="n">pass</span><span class="nv">@localhost</span><span class="err">:</span><span class="mi">3306</span><span class="o">/</span><span class="n">mydb</span>
-<span class="nl">mysql</span><span class="p">:</span><span class="o">//</span><span class="k">user</span><span class="err">:</span><span class="n">pass</span><span class="nv">@host</span><span class="err">:</span><span class="mi">3306</span><span class="o">/</span><span class="n">mydb</span><span class="vm">?</span><span class="n">ssl</span><span class="o">=</span><span class="k">true</span>
-</code></pre></div>
-
-<h3 id="sqlite_1">SQLite<a class="headerlink" href="#sqlite_1" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>sqlite:///./mydb.db
-sqlite:///:memory:
-sqlite:///path/to/file.db
-</code></pre></div>
-
-<h3 id="clickhouse_1">ClickHouse<a class="headerlink" href="#clickhouse_1" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="nl">clickhouse</span><span class="p">:</span><span class="o">//</span><span class="k">user</span><span class="err">:</span><span class="n">pass</span><span class="nv">@localhost</span><span class="err">:</span><span class="mi">8123</span><span class="o">/</span><span class="n">analytics</span>
-<span class="nl">clickhouse</span><span class="p">:</span><span class="o">//</span><span class="k">user</span><span class="err">:</span><span class="n">pass</span><span class="nv">@host</span><span class="err">:</span><span class="mi">8123</span><span class="o">/</span><span class="n">db</span>
-<span class="nl">clickhouse</span><span class="p">:</span><span class="o">//</span><span class="k">user</span><span class="err">:</span><span class="n">pass</span><span class="nv">@host</span><span class="err">:</span><span class="mi">8443</span><span class="o">/</span><span class="n">db</span><span class="vm">?</span><span class="n">ssl</span><span class="o">=</span><span class="k">true</span>
-</code></pre></div>
-
-<h3 id="mariadb_1">MariaDB<a class="headerlink" href="#mariadb_1" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="nl">mariadb</span><span class="p">:</span><span class="o">//</span><span class="k">user</span><span class="err">:</span><span class="n">pass</span><span class="nv">@localhost</span><span class="err">:</span><span class="mi">3306</span><span class="o">/</span><span class="n">mydb</span>
-<span class="nl">mysql</span><span class="p">:</span><span class="o">//</span><span class="k">user</span><span class="err">:</span><span class="n">pass</span><span class="nv">@localhost</span><span class="err">:</span><span class="mi">3306</span><span class="o">/</span><span class="n">mydb</span>
+<span class="c1"># pre-release validation on production-like DB</span>
+dbwarden<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
+dbwarden<span class="w"> </span>status<span class="w"> </span>-d<span class="w"> </span>primary
 </code></pre></div>
 
 

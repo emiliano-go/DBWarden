@@ -352,6 +352,63 @@
   
   
     <li class="md-tabs__item">
+      <a href="../sql-translation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  SQL Translation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture-deep-dive/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Deep Dive
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../operations-runbook/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Operations Runbook
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../advanced/" class="md-tabs__link">
         
   
@@ -1082,38 +1139,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#model-requirements" class="md-nav__link">
+  <a href="#minimum-requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Model Requirements
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Model Requirements">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-column-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported Column Types
+        Minimum Requirements
       
     </span>
   </a>
@@ -1121,171 +1150,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#column-options" class="md-nav__link">
+  <a href="#model-discovery-internals" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Column Options
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Column Options">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#primary-key" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Primary Key
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#nullable" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Nullable
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#default-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default Values
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#unique-constraint" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Unique Constraint
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#primary-key-unique" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Primary Key + Unique
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#foreign-keys" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Foreign Keys
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Foreign Keys">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-foreign-key" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Foreign Key
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#foreign-key-with-on-delete" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Foreign Key with ON DELETE
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#self-referential-fk" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Self-Referential FK
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#indexes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Indexes
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Indexes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#automatic-indexes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Automatic Indexes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-indexes-manual-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Manual Indexes (Manual Migration)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#complete-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complete Example
+        Model Discovery Internals
       
     </span>
   </a>
@@ -1293,202 +1161,79 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#model-discovery" class="md-nav__link">
+  <a href="#column-extraction-internals" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Model Discovery
+        Column Extraction Internals
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Model Discovery">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Auto-Discovery
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-path-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Manual Path Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#import-patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Import Patterns
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#common-patterns" class="md-nav__link">
+  <a href="#common-model-patterns" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Common Patterns
+        Common Model Patterns
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Common Patterns">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#enum-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Enum Values
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#composite-keys" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Composite Keys
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#json-columns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        JSON Columns
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
+  <a href="#typical-app-models" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Limitations
+        Typical App Models
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Limitations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#not-supported" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Not Supported
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#workarounds" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Workarounds
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#best-practices" class="md-nav__link">
+  <a href="#composite-key-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Best Practices
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Best Practices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-naming-conventions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Naming Conventions
+        Composite Key Example
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#2-explicit-types" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#json-uuid-style-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Explicit Types
+        JSON + UUID Style Example
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#3-primary-keys" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#type-behavior-by-backend" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Primary Keys
+        Type Behavior by Backend
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#4-timestamps" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#practical-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Timestamps
+        Practical Guidelines
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -1497,56 +1242,6 @@
     <span class="md-ellipsis">
       
         Troubleshooting
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Troubleshooting">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#model-not-discovered" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Model Not Discovered
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#migration-missing-columns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration Missing Columns
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#column-type-mismatch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Column Type Mismatch
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See Also
       
     </span>
   </a>
@@ -1576,6 +1271,87 @@
     
   
     Supported Databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sql-translation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Translation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture-deep-dive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
   
 
     
@@ -1669,38 +1445,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#model-requirements" class="md-nav__link">
+  <a href="#minimum-requirements" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Model Requirements
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Model Requirements">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Structure
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-column-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported Column Types
+        Minimum Requirements
       
     </span>
   </a>
@@ -1708,171 +1456,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#column-options" class="md-nav__link">
+  <a href="#model-discovery-internals" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Column Options
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Column Options">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#primary-key" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Primary Key
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#nullable" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Nullable
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#default-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Default Values
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#unique-constraint" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Unique Constraint
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#primary-key-unique" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Primary Key + Unique
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#foreign-keys" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Foreign Keys
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Foreign Keys">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-foreign-key" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Foreign Key
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#foreign-key-with-on-delete" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Foreign Key with ON DELETE
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#self-referential-fk" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Self-Referential FK
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#indexes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Indexes
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Indexes">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#automatic-indexes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Automatic Indexes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-indexes-manual-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Manual Indexes (Manual Migration)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#complete-example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complete Example
+        Model Discovery Internals
       
     </span>
   </a>
@@ -1880,202 +1467,79 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#model-discovery" class="md-nav__link">
+  <a href="#column-extraction-internals" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Model Discovery
+        Column Extraction Internals
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Model Discovery">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#auto-discovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Auto-Discovery
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-path-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Manual Path Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#import-patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Import Patterns
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#common-patterns" class="md-nav__link">
+  <a href="#common-model-patterns" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Common Patterns
+        Common Model Patterns
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Common Patterns">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#enum-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Enum Values
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#composite-keys" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Composite Keys
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#json-columns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        JSON Columns
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#limitations" class="md-nav__link">
+  <a href="#typical-app-models" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Limitations
+        Typical App Models
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Limitations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#not-supported" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Not Supported
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#workarounds" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Workarounds
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#best-practices" class="md-nav__link">
+  <a href="#composite-key-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Best Practices
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Best Practices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-naming-conventions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. Naming Conventions
+        Composite Key Example
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#2-explicit-types" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#json-uuid-style-example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Explicit Types
+        JSON + UUID Style Example
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#3-primary-keys" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#type-behavior-by-backend" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3. Primary Keys
+        Type Behavior by Backend
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#4-timestamps" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#practical-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
       
-        4. Timestamps
+        Practical Guidelines
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
@@ -2084,56 +1548,6 @@
     <span class="md-ellipsis">
       
         Troubleshooting
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Troubleshooting">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#model-not-discovered" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Model Not Discovered
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#migration-missing-columns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration Missing Columns
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#column-type-mismatch" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Column Type Mismatch
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See Also
       
     </span>
   </a>
@@ -2161,290 +1575,83 @@
 
 
 <h1 id="sqlalchemy-models">SQLAlchemy Models<a class="headerlink" href="#sqlalchemy-models" title="Permanent link">&para;</a></h1>
-<p>DBWarden automatically generates migrations from SQLAlchemy models. This guide covers how to define models that work best with DBWarden.</p>
-<h2 id="model-requirements">Model Requirements<a class="headerlink" href="#model-requirements" title="Permanent link">&para;</a></h2>
-<h3 id="basic-structure">Basic Structure<a class="headerlink" href="#basic-structure" title="Permanent link">&para;</a></h3>
-<p>Your models must:</p>
+<p>DBWarden can generate migration SQL from SQLAlchemy model definitions.</p>
+<p>This page explains both usage and internal extraction behavior.</p>
+<h2 id="minimum-requirements">Minimum Requirements<a class="headerlink" href="#minimum-requirements" title="Permanent link">&para;</a></h2>
+<p>Each model should:</p>
 <ol>
-<li><strong>Inherit from <code>declarative_base</code></strong>: Use SQLAlchemy's declarative system</li>
-<li><strong>Define <code>__tablename__</code></strong>: Each model must have a table name</li>
-<li><strong>Use SQLAlchemy types</strong>: Column types must be from SQLAlchemy</li>
+<li>Be a class with <code>__tablename__</code></li>
+<li>Expose <code>__table__</code> columns through SQLAlchemy declarative mapping</li>
+<li>Use supported SQLAlchemy column types</li>
 </ol>
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">declarative_base</span>
 
 <span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
 
-<span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;users&quot;</span>
-
-    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">username</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">50</span><span class="p">))</span>
-</code></pre></div>
-
-<h2 id="supported-column-types">Supported Column Types<a class="headerlink" href="#supported-column-types" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>SQLAlchemy Type</th>
-<th>Description</th>
-<th>Generated SQL</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>Integer</code></td>
-<td>Integer value</td>
-<td><code>INTEGER</code></td>
-</tr>
-<tr>
-<td><code>String(n)</code></td>
-<td>Variable-length string</td>
-<td><code>VARCHAR(n)</code></td>
-</tr>
-<tr>
-<td><code>Text</code></td>
-<td>Long text</td>
-<td><code>TEXT</code></td>
-</tr>
-<tr>
-<td><code>Boolean</code></td>
-<td>True/False</td>
-<td><code>BOOLEAN</code></td>
-</tr>
-<tr>
-<td><code>DateTime</code></td>
-<td>Date and time</td>
-<td><code>DATETIME</code></td>
-</tr>
-<tr>
-<td><code>Date</code></td>
-<td>Date only</td>
-<td><code>DATE</code></td>
-</tr>
-<tr>
-<td><code>Time</code></td>
-<td>Time only</td>
-<td><code>TIME</code></td>
-</tr>
-<tr>
-<td><code>Float</code></td>
-<td>Floating point</td>
-<td><code>FLOAT</code></td>
-</tr>
-<tr>
-<td><code>Numeric(p, s)</code></td>
-<td>Fixed precision</td>
-<td><code>NUMERIC(p, s)</code></td>
-</tr>
-<tr>
-<td><code>JSON</code></td>
-<td>JSON data</td>
-<td><code>JSON</code></td>
-</tr>
-<tr>
-<td><code>LargeBinary</code></td>
-<td>Binary data</td>
-<td><code>BLOB</code></td>
-</tr>
-<tr>
-<td><code>Binary</code></td>
-<td>Binary data</td>
-<td><code>VARBINARY</code></td>
-</tr>
-</tbody>
-</table>
-<h2 id="column-options">Column Options<a class="headerlink" href="#column-options" title="Permanent link">&para;</a></h2>
-<h3 id="primary-key">Primary Key<a class="headerlink" href="#primary-key" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;users&quot;</span>
-
-    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="c1"># or with auto-increment</span>
-    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</code></pre></div>
-
-<h3 id="nullable">Nullable<a class="headerlink" href="#nullable" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;users&quot;</span>
-
-    <span class="n">email</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">255</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>  <span class="c1"># NOT NULL</span>
-    <span class="n">bio</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>           <span class="c1"># NULL (default)</span>
-</code></pre></div>
-
-<h3 id="default-values">Default Values<a class="headerlink" href="#default-values" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
 
 <span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;users&quot;</span>
-
-    <span class="n">created_at</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">)</span>
-    <span class="n">is_active</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Boolean</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</code></pre></div>
-
-<h3 id="unique-constraint">Unique Constraint<a class="headerlink" href="#unique-constraint" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;users&quot;</span>
-
-    <span class="n">email</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">255</span><span class="p">),</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</code></pre></div>
-
-<h3 id="primary-key-unique">Primary Key + Unique<a class="headerlink" href="#primary-key-unique" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;users&quot;</span>
-
     <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">username</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">255</span><span class="p">),</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="foreign-keys">Foreign Keys<a class="headerlink" href="#foreign-keys" title="Permanent link">&para;</a></h2>
-<h3 id="basic-foreign-key">Basic Foreign Key<a class="headerlink" href="#basic-foreign-key" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Post</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;posts&quot;</span>
-
-    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;users.id&quot;</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<h2 id="model-discovery-internals">Model Discovery Internals<a class="headerlink" href="#model-discovery-internals" title="Permanent link">&para;</a></h2>
+<p><code>make-migrations</code> discovers models from configured <code>model_paths</code> or auto-discovered <code>models/</code> folders.</p>
+<p>High-level process:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">discover_tables</span><span class="p">(</span><span class="n">paths</span><span class="p">):</span>
+    <span class="n">modules</span> <span class="o">=</span> <span class="n">load_python_modules</span><span class="p">(</span><span class="n">paths</span><span class="p">)</span>
+    <span class="n">tables</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">module</span> <span class="ow">in</span> <span class="n">modules</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">attr</span> <span class="ow">in</span> <span class="n">module_attributes</span><span class="p">(</span><span class="n">module</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">is_sqlalchemy_model</span><span class="p">(</span><span class="n">attr</span><span class="p">)</span> <span class="ow">and</span> <span class="n">attr</span><span class="o">.</span><span class="n">__tablename__</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">seen</span><span class="p">:</span>
+                <span class="n">tables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extract_table</span><span class="p">(</span><span class="n">attr</span><span class="p">))</span>
+                <span class="n">seen</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">attr</span><span class="o">.</span><span class="n">__tablename__</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tables</span>
 </code></pre></div>
 
-<h3 id="foreign-key-with-on-delete">Foreign Key with ON DELETE<a class="headerlink" href="#foreign-key-with-on-delete" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Post</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;posts&quot;</span>
-
-    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
-        <span class="n">Integer</span><span class="p">,</span> 
-        <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;users.id&quot;</span><span class="p">,</span> <span class="n">ondelete</span><span class="o">=</span><span class="s2">&quot;CASCADE&quot;</span><span class="p">),</span>
-        <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span>
-    <span class="p">)</span>
-</code></pre></div>
-
-<h3 id="self-referential-fk">Self-Referential FK<a class="headerlink" href="#self-referential-fk" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">Category</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;categories&quot;</span>
-
-    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">parent_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span>
-        <span class="n">Integer</span><span class="p">,</span> 
-        <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;categories.id&quot;</span><span class="p">)</span>
-    <span class="p">)</span>
-</code></pre></div>
-
-<h2 id="indexes">Indexes<a class="headerlink" href="#indexes" title="Permanent link">&para;</a></h2>
-<h3 id="automatic-indexes">Automatic Indexes<a class="headerlink" href="#automatic-indexes" title="Permanent link">&para;</a></h3>
-<p>DBWarden generates indexes for:
-- Primary key columns
-- Foreign key columns
-- Unique columns</p>
-<h3 id="manual-indexes-manual-migration">Manual Indexes (Manual Migration)<a class="headerlink" href="#manual-indexes-manual-migration" title="Permanent link">&para;</a></h3>
-<p>For custom indexes, use manual migrations:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- 0002_add_user_indexes.sql</span>
-
-<span class="c1">-- upgrade</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_username</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">username</span><span class="p">);</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_posts_user_id</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">posts</span><span class="p">(</span><span class="n">user_id</span><span class="p">);</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_posts_created_at</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">posts</span><span class="p">(</span><span class="n">created_at</span><span class="w"> </span><span class="k">DESC</span><span class="p">);</span>
-
-<span class="c1">-- rollback</span>
-
-<span class="k">DROP</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_posts_created_at</span><span class="p">;</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_posts_user_id</span><span class="p">;</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_username</span><span class="p">;</span>
-</code></pre></div>
-
-<h2 id="complete-example">Complete Example<a class="headerlink" href="#complete-example" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">Text</span><span class="p">,</span> <span class="n">DateTime</span><span class="p">,</span> <span class="n">ForeignKey</span>
+<p>Duplicate table names are skipped after first discovery.</p>
+<h2 id="column-extraction-internals">Column Extraction Internals<a class="headerlink" href="#column-extraction-internals" title="Permanent link">&para;</a></h2>
+<p>For each SQLAlchemy <code>Column</code>, DBWarden extracts:</p>
+<ul>
+<li>name</li>
+<li>type string</li>
+<li>nullability</li>
+<li>primary key flag</li>
+<li>unique flag</li>
+<li>default expression</li>
+<li>foreign key reference</li>
+</ul>
+<p>For SQLite dev mode, DBWarden runs translation on extracted type/default fields.</p>
+<h2 id="common-model-patterns">Common Model Patterns<a class="headerlink" href="#common-model-patterns" title="Permanent link">&para;</a></h2>
+<h2 id="typical-app-models">Typical App Models<a class="headerlink" href="#typical-app-models" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">Boolean</span><span class="p">,</span> <span class="n">Column</span><span class="p">,</span> <span class="n">DateTime</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">Text</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">declarative_base</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
 
 <span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
 
+
 <span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;users&quot;</span>
 
-    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">username</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">email</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">255</span><span class="p">),</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">bio</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
-    <span class="n">is_active</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">created_at</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">)</span>
-    <span class="n">updated_at</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">,</span> <span class="n">onupdate</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">)</span>
+    <span class="n">is_active</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Boolean</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">created_at</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">)</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">Post</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;posts&quot;</span>
 
-    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;users.id&quot;</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
     <span class="n">title</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">200</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">content</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
-    <span class="n">view_count</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-    <span class="n">created_at</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">)</span>
-    <span class="n">updated_at</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">,</span> <span class="n">onupdate</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">)</span>
-
-
-<span class="k">class</span><span class="w"> </span><span class="nc">Comment</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;comments&quot;</span>
-
-    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">post_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;posts.id&quot;</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">user_id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">ForeignKey</span><span class="p">(</span><span class="s2">&quot;users.id&quot;</span><span class="p">),</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">content</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">created_at</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">)</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Text</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="model-discovery">Model Discovery<a class="headerlink" href="#model-discovery" title="Permanent link">&para;</a></h2>
-<h3 id="auto-discovery">Auto-Discovery<a class="headerlink" href="#auto-discovery" title="Permanent link">&para;</a></h3>
-<p>DBWarden automatically finds models in:
-- <code>models/</code> directory
-- <code>model/</code> directory</p>
-<p>Searches up to 5 parent directories from current working directory.</p>
-<h3 id="manual-path-configuration">Manual Path Configuration<a class="headerlink" href="#manual-path-configuration" title="Permanent link">&para;</a></h3>
-<p>Set custom paths in <code>warden.toml</code>:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">model_paths</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;app/models/&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;core/database/models/&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;shared/models/&quot;</span><span class="p">]</span>
-</code></pre></div>
-
-<h3 id="import-patterns">Import Patterns<a class="headerlink" href="#import-patterns" title="Permanent link">&para;</a></h3>
-<p>DBWarden loads models as modules:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># models/user.py</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">declarative_base</span>
-
-<span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
-
-<span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;users&quot;</span>
-    <span class="c1"># ...</span>
-</code></pre></div>
-
-<div class="codehilite"><pre><span></span><code><span class="c1"># models/post.py</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">declarative_base</span>
-
-<span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
-
-<span class="k">class</span><span class="w"> </span><span class="nc">Post</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;posts&quot;</span>
-    <span class="c1"># ...</span>
-</code></pre></div>
-
-<h2 id="common-patterns">Common Patterns<a class="headerlink" href="#common-patterns" title="Permanent link">&para;</a></h2>
-<h3 id="enum-values">Enum Values<a class="headerlink" href="#enum-values" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">enum</span>
-
-<span class="k">class</span><span class="w"> </span><span class="nc">PostStatus</span><span class="p">(</span><span class="n">enum</span><span class="o">.</span><span class="n">Enum</span><span class="p">):</span>
-    <span class="n">DRAFT</span> <span class="o">=</span> <span class="s2">&quot;draft&quot;</span>
-    <span class="n">PUBLISHED</span> <span class="o">=</span> <span class="s2">&quot;published&quot;</span>
-    <span class="n">ARCHIVED</span> <span class="o">=</span> <span class="s2">&quot;archived&quot;</span>
-
-<span class="k">class</span><span class="w"> </span><span class="nc">Post</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;posts&quot;</span>
-
-    <span class="n">status</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Enum</span><span class="p">(</span><span class="n">PostStatus</span><span class="p">),</span> <span class="n">default</span><span class="o">=</span><span class="n">PostStatus</span><span class="o">.</span><span class="n">DRAFT</span><span class="p">)</span>
-</code></pre></div>
-
-<h3 id="composite-keys">Composite Keys<a class="headerlink" href="#composite-keys" title="Permanent link">&para;</a></h3>
+<h2 id="composite-key-example">Composite Key Example<a class="headerlink" href="#composite-key-example" title="Permanent link">&para;</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">OrderItem</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;order_items&quot;</span>
 
@@ -2453,102 +1660,47 @@
     <span class="n">quantity</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="json-columns">JSON Columns<a class="headerlink" href="#json-columns" title="Permanent link">&para;</a></h3>
+<h2 id="json-uuid-style-example">JSON + UUID Style Example<a class="headerlink" href="#json-uuid-style-example" title="Permanent link">&para;</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">JSON</span>
-
-<span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;users&quot;</span>
-
-    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">preferences</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSON</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
-</code></pre></div>
-
-<h2 id="limitations">Limitations<a class="headerlink" href="#limitations" title="Permanent link">&para;</a></h2>
-<h3 id="not-supported">Not Supported<a class="headerlink" href="#not-supported" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Column comments</li>
-<li>Table comments</li>
-<li>Partial indexes (SQLite)</li>
-<li>Expression indexes (some databases)</li>
-<li>Deferred constraints</li>
-</ul>
-<p>For these features, use manual migrations.</p>
-<h3 id="workarounds">Workarounds<a class="headerlink" href="#workarounds" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- Add column comment (manual migration)</span>
-<span class="k">COMMENT</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">users</span><span class="p">.</span><span class="n">email</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="s1">&#39;User email address&#39;</span><span class="p">;</span>
-
-<span class="c1">-- Add table comment</span>
-<span class="k">COMMENT</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="s1">&#39;Registered user accounts&#39;</span><span class="p">;</span>
-</code></pre></div>
-
-<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
-<h3 id="1-naming-conventions">1. Naming Conventions<a class="headerlink" href="#1-naming-conventions" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1"># GOOD</span>
-<span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;users&quot;</span>          <span class="c1"># Plural, snake_case</span>
-<span class="n">username</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">50</span><span class="p">))</span>    <span class="c1"># snake_case</span>
-
-<span class="c1"># AVOID</span>
-<span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;User&quot;</span>           <span class="c1"># Singular</span>
-<span class="n">UserName</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">50</span><span class="p">))</span>   <span class="c1"># CamelCase</span>
-</code></pre></div>
-
-<h3 id="2-explicit-types">2. Explicit Types<a class="headerlink" href="#2-explicit-types" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1"># GOOD: Explicit length</span>
-<span class="n">email</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
-
-<span class="c1"># LESS CLEAR: Default length varies</span>
-<span class="n">email</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">)</span>  <span class="c1"># May be 255 or 1 depending on DB</span>
-</code></pre></div>
-
-<h3 id="3-primary-keys">3. Primary Keys<a class="headerlink" href="#3-primary-keys" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1"># GOOD: Auto-incrementing integer</span>
-<span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-
-<span class="c1"># OR UUID</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy.dialects.postgresql</span><span class="w"> </span><span class="kn">import</span> <span class="n">UUID</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">uuid</span>
-<span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">36</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()))</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">Profile</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
+    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;profiles&quot;</span>
+
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">UUID</span><span class="p">(</span><span class="n">as_uuid</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">)</span>
+    <span class="n">settings</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">JSON</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="4-timestamps">4. Timestamps<a class="headerlink" href="#4-timestamps" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
-
-<span class="k">class</span><span class="w"> </span><span class="nc">Model</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
-    <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;models&quot;</span>
-
-    <span class="n">created_at</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">)</span>
-    <span class="n">updated_at</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">,</span> <span class="n">onupdate</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">)</span>
-</code></pre></div>
-
-<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<h3 id="model-not-discovered">Model Not Discovered<a class="headerlink" href="#model-not-discovered" title="Permanent link">&para;</a></h3>
-<ol>
-<li>Check <code>model_paths</code> in <code>warden.toml</code></li>
-<li>Verify file is in <code>models/</code> directory</li>
-<li>Ensure model inherits from <code>Base</code></li>
-<li>Check <code>__tablename__</code> is defined</li>
-</ol>
-<h3 id="migration-missing-columns">Migration Missing Columns<a class="headerlink" href="#migration-missing-columns" title="Permanent link">&para;</a></h3>
-<ol>
-<li>Verify column is in model</li>
-<li>Check for typos in column name</li>
-<li>Ensure column is defined on model class (not relationship)</li>
-</ol>
-<h3 id="column-type-mismatch">Column Type Mismatch<a class="headerlink" href="#column-type-mismatch" title="Permanent link">&para;</a></h3>
-<p>Migration generates different type than expected:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># Model</span>
-<span class="n">email</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">255</span><span class="p">))</span>
-
-<span class="c1"># Generated SQL might be:</span>
-<span class="o">--</span> <span class="n">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span> <span class="k">for</span> <span class="n">PostgreSQL</span><span class="o">/</span><span class="n">MySQL</span>
-<span class="o">--</span> <span class="n">TEXT</span> <span class="k">for</span> <span class="n">SQLite</span> <span class="p">(</span><span class="n">no</span> <span class="n">VARCHAR</span><span class="p">)</span>
-</code></pre></div>
-
-<p>Use manual migrations for database-specific types.</p>
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<p>In SQLite dev mode these may translate (for example <code>UUID</code> and <code>JSON</code> to <code>TEXT</code>).</p>
+<h2 id="type-behavior-by-backend">Type Behavior by Backend<a class="headerlink" href="#type-behavior-by-backend" title="Permanent link">&para;</a></h2>
+<p>DBWarden maps SQLAlchemy-like types to backend-specific SQL during generation.</p>
 <ul>
-<li><a href="../commands/make-migrations/">make-migrations</a>: Generate migrations from models</li>
-<li><a href="../commands/new/">new</a>: Create manual migrations for features not in models</li>
-<li><a href="../databases/">Supported Databases</a>: Database-specific considerations</li>
+<li>PostgreSQL: supports <code>SERIAL</code>, <code>TIMESTAMP</code>, <code>BYTEA</code></li>
+<li>MySQL/MariaDB: maps booleans to compatible types</li>
+<li>SQLite: simple type affinity model</li>
+<li>Dev translation: can adapt non-SQLite types when running <code>--dev</code> with SQLite</li>
+</ul>
+<p>For translation specifics, see <a href="../sql-translation/">SQL Translation</a>.</p>
+<h2 id="practical-guidelines">Practical Guidelines<a class="headerlink" href="#practical-guidelines" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Keep model imports side-effect free (module import should not run app boot logic)</li>
+<li>Prefer explicit nullability and defaults</li>
+<li>Use manual migrations for backend-specific advanced objects (indexes, triggers, policies)</li>
+<li>Review generated SQL before applying</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<p>No models found:</p>
+<ul>
+<li>Ensure <code>model_paths</code> points to real files/directories</li>
+<li>Ensure classes define <code>__tablename__</code></li>
+<li>Ensure SQLAlchemy models are importable in current environment</li>
+</ul>
+<p>Wrong SQL type output:</p>
+<ul>
+<li>Check selected database config</li>
+<li>If running <code>--dev</code>, check <code>dev_database_url</code> and translation behavior</li>
+<li>Use <code>--strict-translation</code> to surface lossy conversion failures early</li>
 </ul>
 
 

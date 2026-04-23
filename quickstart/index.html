@@ -352,6 +352,63 @@
   
   
     <li class="md-tabs__item">
+      <a href="../sql-translation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  SQL Translation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture-deep-dive/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Deep Dive
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../operations-runbook/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Operations Runbook
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../advanced/" class="md-tabs__link">
         
   
@@ -577,10 +634,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#1-install" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        1) Install
       
     </span>
   </a>
@@ -588,10 +645,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-1-install-dbwarden" class="md-nav__link">
+  <a href="#2-initialize-project" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 1: Install DBWarden
+        2) Initialize Project
       
     </span>
   </a>
@@ -599,10 +656,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-2-create-your-project-structure" class="md-nav__link">
+  <a href="#3-configure-databases" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 2: Create Your Project Structure
+        3) Configure Databases
       
     </span>
   </a>
@@ -610,10 +667,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-initialize-dbwarden" class="md-nav__link">
+  <a href="#4-add-sqlalchemy-models" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Initialize DBWarden
+        4) Add SQLAlchemy Models
       
     </span>
   </a>
@@ -621,10 +678,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-4-configure-database-connection" class="md-nav__link">
+  <a href="#5-generate-migration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 4: Configure Database Connection
+        5) Generate Migration
       
     </span>
   </a>
@@ -632,10 +689,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-5-define-your-sqlalchemy-models" class="md-nav__link">
+  <a href="#6-review-generated-sql" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 5: Define Your SQLAlchemy Models
+        6) Review Generated SQL
       
     </span>
   </a>
@@ -643,10 +700,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-6-generate-migration-from-models" class="md-nav__link">
+  <a href="#7-apply-migration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 6: Generate Migration from Models
+        7) Apply Migration
       
     </span>
   </a>
@@ -654,10 +711,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-7-review-the-migration" class="md-nav__link">
+  <a href="#8-check-state" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 7: Review the Migration
+        8) Check State
       
     </span>
   </a>
@@ -665,132 +722,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-8-apply-the-migration" class="md-nav__link">
+  <a href="#what-happens-internally" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 8: Apply the Migration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-9-check-migration-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 9: Check Migration Status
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multi-database-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Database Support
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Multi-Database Support">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#adding-more-databases" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding More Databases
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#migrating-specific-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migrating Specific Database
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#migrating-all-databases" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migrating All Databases
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#common-workflows" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common Workflows
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Common Workflows">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#daily-development" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Daily Development
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#deploying-to-production" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Deploying to Production
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#rolling-back-a-bad-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rolling Back a Bad Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-databases" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported Databases
+        What Happens Internally
       
     </span>
   </a>
@@ -1355,6 +1290,87 @@
   
   
     <li class="md-nav__item">
+      <a href="../sql-translation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Translation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture-deep-dive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../advanced/" class="md-nav__link">
         
   
@@ -1429,10 +1445,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#prerequisites" class="md-nav__link">
+  <a href="#1-install" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Prerequisites
+        1) Install
       
     </span>
   </a>
@@ -1440,10 +1456,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-1-install-dbwarden" class="md-nav__link">
+  <a href="#2-initialize-project" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 1: Install DBWarden
+        2) Initialize Project
       
     </span>
   </a>
@@ -1451,10 +1467,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-2-create-your-project-structure" class="md-nav__link">
+  <a href="#3-configure-databases" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 2: Create Your Project Structure
+        3) Configure Databases
       
     </span>
   </a>
@@ -1462,10 +1478,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-initialize-dbwarden" class="md-nav__link">
+  <a href="#4-add-sqlalchemy-models" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Initialize DBWarden
+        4) Add SQLAlchemy Models
       
     </span>
   </a>
@@ -1473,10 +1489,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-4-configure-database-connection" class="md-nav__link">
+  <a href="#5-generate-migration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 4: Configure Database Connection
+        5) Generate Migration
       
     </span>
   </a>
@@ -1484,10 +1500,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-5-define-your-sqlalchemy-models" class="md-nav__link">
+  <a href="#6-review-generated-sql" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 5: Define Your SQLAlchemy Models
+        6) Review Generated SQL
       
     </span>
   </a>
@@ -1495,10 +1511,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-6-generate-migration-from-models" class="md-nav__link">
+  <a href="#7-apply-migration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 6: Generate Migration from Models
+        7) Apply Migration
       
     </span>
   </a>
@@ -1506,10 +1522,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-7-review-the-migration" class="md-nav__link">
+  <a href="#8-check-state" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 7: Review the Migration
+        8) Check State
       
     </span>
   </a>
@@ -1517,132 +1533,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-8-apply-the-migration" class="md-nav__link">
+  <a href="#what-happens-internally" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 8: Apply the Migration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#step-9-check-migration-status" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Step 9: Check Migration Status
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multi-database-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Database Support
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Multi-Database Support">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#adding-more-databases" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding More Databases
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#migrating-specific-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migrating Specific Database
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#migrating-all-databases" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migrating All Databases
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#common-workflows" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Common Workflows
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Common Workflows">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#daily-development" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Daily Development
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#deploying-to-production" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Deploying to Production
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#rolling-back-a-bad-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Rolling Back a Bad Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-databases" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported Databases
+        What Happens Internally
       
     </span>
   </a>
@@ -1681,241 +1575,110 @@
 
 
 <h1 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h1>
-<p>This guide walks you through a complete DBWarden workflow, from initial setup to managing database migrations.</p>
-<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Python 3.10+ installed</li>
-<li>A database (PostgreSQL, MySQL, SQLite, or ClickHouse)</li>
-<li>Basic familiarity with SQL and SQLAlchemy</li>
-</ul>
-<h2 id="step-1-install-dbwarden">Step 1: Install DBWarden<a class="headerlink" href="#step-1-install-dbwarden" title="Permanent link">&para;</a></h2>
+<p>This guide takes you from zero to a working migration flow in about 10 minutes.</p>
+<h2 id="1-install">1) Install<a class="headerlink" href="#1-install" title="Permanent link">&para;</a></h2>
 <div class="codehilite"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>dbwarden
 </code></pre></div>
 
-<h2 id="step-2-create-your-project-structure">Step 2: Create Your Project Structure<a class="headerlink" href="#step-2-create-your-project-structure" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code>myproject/
-├── warden.toml
-├── models/
-│   └── __init__.py
-├── migrations/
-└── app.py
-</code></pre></div>
-
-<h2 id="step-3-initialize-dbwarden">Step 3: Initialize DBWarden<a class="headerlink" href="#step-3-initialize-dbwarden" title="Permanent link">&para;</a></h2>
+<h2 id="2-initialize-project">2) Initialize Project<a class="headerlink" href="#2-initialize-project" title="Permanent link">&para;</a></h2>
+<p>From your project root:</p>
 <div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>init
 </code></pre></div>
 
-<p>Output:</p>
-<div class="codehilite"><pre><span></span><code>Created configuration file: /home/user/myproject/warden.toml
-DBWarden migrations directory created: /home/user/myproject/migrations/default
-</code></pre></div>
-
-<h2 id="step-4-configure-database-connection">Step 4: Configure Database Connection<a class="headerlink" href="#step-4-configure-database-connection" title="Permanent link">&para;</a></h2>
-<p>Edit the generated <code>warden.toml</code>:</p>
+<p>This creates <code>warden.toml</code> and a <code>migrations/</code> directory.</p>
+<h2 id="3-configure-databases">3) Configure Databases<a class="headerlink" href="#3-configure-databases" title="Permanent link">&para;</a></h2>
+<p>Minimal single-database config:</p>
 <div class="codehilite"><pre><span></span><code><span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;primary&quot;</span>
 
-<span class="k">[database]</span>
 <span class="k">[database.primary]</span>
 <span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/myapp&quot;</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/main&quot;</span>
 <span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/primary&quot;</span>
 </code></pre></div>
 
-<p>For SQLite:</p>
+<p>Recommended local dev config (separate dev DB):</p>
 <div class="codehilite"><pre><span></span><code><span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;primary&quot;</span>
 
-<span class="k">[database]</span>
 <span class="k">[database.primary]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./myapp.db&quot;</span>
+<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/main&quot;</span>
 <span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/primary&quot;</span>
+
+<span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
+<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
 </code></pre></div>
 
-<p>For ClickHouse:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;analytics&quot;</span>
-
-<span class="k">[database]</span>
-<span class="k">[database.analytics]</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;clickhouse&quot;</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;clickhouse://user:password@localhost:8123/analytics&quot;</span>
-<span class="n">migrations_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;migrations/analytics&quot;</span>
-</code></pre></div>
-
-<h2 id="step-5-define-your-sqlalchemy-models">Step 5: Define Your SQLAlchemy Models<a class="headerlink" href="#step-5-define-your-sqlalchemy-models" title="Permanent link">&para;</a></h2>
-<p>Create your models in the <code>models/</code> directory:</p>
+<h2 id="4-add-sqlalchemy-models">4) Add SQLAlchemy Models<a class="headerlink" href="#4-add-sqlalchemy-models" title="Permanent link">&para;</a></h2>
 <div class="codehilite"><pre><span></span><code><span class="c1"># models/user.py</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span><span class="p">,</span> <span class="n">DateTime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy</span><span class="w"> </span><span class="kn">import</span> <span class="n">Column</span><span class="p">,</span> <span class="n">DateTime</span><span class="p">,</span> <span class="n">Integer</span><span class="p">,</span> <span class="n">String</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">sqlalchemy.orm</span><span class="w"> </span><span class="kn">import</span> <span class="n">declarative_base</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">dt</span>
 
 <span class="n">Base</span> <span class="o">=</span> <span class="n">declarative_base</span><span class="p">()</span>
+
 
 <span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">Base</span><span class="p">):</span>
     <span class="n">__tablename__</span> <span class="o">=</span> <span class="s2">&quot;users&quot;</span>
 
-    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">autoincrement</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-    <span class="n">username</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">50</span><span class="p">),</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="nb">id</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">Integer</span><span class="p">,</span> <span class="n">primary_key</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
     <span class="n">email</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">String</span><span class="p">(</span><span class="mi">255</span><span class="p">),</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nullable</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-    <span class="n">created_at</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">)</span>
+    <span class="n">created_at</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">DateTime</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">dt</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">)</span>
 </code></pre></div>
 
-<h2 id="step-6-generate-migration-from-models">Step 6: Generate Migration from Models<a class="headerlink" href="#step-6-generate-migration-from-models" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;create users table&quot;</span>
+<h2 id="5-generate-migration">5) Generate Migration<a class="headerlink" href="#5-generate-migration" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;create users table&quot;</span><span class="w"> </span>-d<span class="w"> </span>primary
 </code></pre></div>
 
-<p>Output:</p>
-<div class="codehilite"><pre><span></span><code>Created migration file: /home/user/myproject/migrations/primary/primary__0001_create_users.sql
-Tables included: users
+<p>DBWarden creates a file like:</p>
+<div class="codehilite"><pre><span></span><code>migrations/primary/primary__0001_create_users_table.sql
 </code></pre></div>
 
-<h2 id="step-7-review-the-migration">Step 7: Review the Migration<a class="headerlink" href="#step-7-review-the-migration" title="Permanent link">&para;</a></h2>
-<p>Check the generated SQL:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- migrations/primary/primary__0001_create_users.sql</span>
+<h2 id="6-review-generated-sql">6) Review Generated SQL<a class="headerlink" href="#6-review-generated-sql" title="Permanent link">&para;</a></h2>
+<p>Every migration has explicit <code>-- upgrade</code> and <code>-- rollback</code> sections.</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
 
-<span class="c1">-- upgrade</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="n">AUTOINCREMENT</span><span class="p">,</span>
-<span class="w">    </span><span class="n">username</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">UNIQUE</span><span class="p">,</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
 <span class="w">    </span><span class="n">email</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">UNIQUE</span><span class="p">,</span>
 <span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">DATETIME</span>
-<span class="p">)</span>
+<span class="p">);</span>
 
 <span class="c1">-- rollback</span>
 
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span>
+<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
 </code></pre></div>
 
-<h2 id="step-8-apply-the-migration">Step 8: Apply the Migration<a class="headerlink" href="#step-8-apply-the-migration" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>migrate<span class="w"> </span>--verbose
+<h2 id="7-apply-migration">7) Apply Migration<a class="headerlink" href="#7-apply-migration" title="Permanent link">&para;</a></h2>
+<p>Production-like target:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
 </code></pre></div>
 
-<p>Output:</p>
-<div class="codehilite"><pre><span></span><code><span class="o">[</span><span class="n">INFO</span><span class="o">]</span><span class="w"> </span><span class="n">Applying</span><span class="w"> </span><span class="nl">migration</span><span class="p">:</span><span class="w"> </span><span class="n">primary__0001_create_users</span><span class="p">.</span><span class="k">sql</span><span class="w"> </span><span class="p">(</span><span class="nl">version</span><span class="p">:</span><span class="w"> </span><span class="mi">0001</span><span class="p">)</span>
-<span class="n">Migrations</span><span class="w"> </span><span class="n">completed</span><span class="w"> </span><span class="nl">successfully</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="n">migrations</span><span class="w"> </span><span class="n">applied</span><span class="p">.</span>
+<p>Local dev target:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
 </code></pre></div>
 
-<h2 id="step-9-check-migration-status">Step 9: Check Migration Status<a class="headerlink" href="#step-9-check-migration-status" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>status
+<h2 id="8-check-state">8) Check State<a class="headerlink" href="#8-check-state" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>status<span class="w"> </span>-d<span class="w"> </span>primary
+dbwarden<span class="w"> </span><span class="nb">history</span><span class="w"> </span>-d<span class="w"> </span>primary
 </code></pre></div>
 
-<p>Output:</p>
-<div class="codehilite"><pre><span></span><code> Migration Status - primary              
-┏━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Status  ┃ Version ┃ Filename                   ┃
-┡━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ Applied │ 0001    │ primary__0001_create_users.sql │
-└─────────┴─────────┴────────────────────────────────┘
-
-Applied: 1
-Pending: 0
-Total: 1
-</code></pre></div>
-
-<h2 id="multi-database-support">Multi-Database Support<a class="headerlink" href="#multi-database-support" title="Permanent link">&para;</a></h2>
-<h3 id="adding-more-databases">Adding More Databases<a class="headerlink" href="#adding-more-databases" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>database<span class="w"> </span>add<span class="w"> </span>analytics<span class="w"> </span>--url<span class="w"> </span><span class="s2">&quot;postgresql://user:pass@localhost:5432/analytics&quot;</span>
-dbwarden<span class="w"> </span>database<span class="w"> </span>list
-</code></pre></div>
-
-<p>Output:</p>
-<div class="codehilite"><pre><span></span><code><span class="nx">Databases</span><span class="p">:</span>
-<span class="w">  </span><span class="nx">primary</span><span class="w"> </span><span class="p">(</span><span class="k">default</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">postgresql</span><span class="p">:</span><span class="c1">//user:***@localhost:5432/myapp</span>
-<span class="w">    </span><span class="k">type</span><span class="p">:</span><span class="w"> </span><span class="nx">postgresql</span>
-<span class="w">    </span><span class="nx">migrations</span><span class="p">:</span><span class="w"> </span><span class="nx">migrations</span><span class="o">/</span><span class="nx">primary</span>
-<span class="w">  </span><span class="nx">analytics</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nx">postgresql</span><span class="p">:</span><span class="c1">//user:***@localhost:5432/analytics</span>
-<span class="w">    </span><span class="k">type</span><span class="p">:</span><span class="w"> </span><span class="nx">postgresql</span>
-<span class="w">    </span><span class="nx">migrations</span><span class="p">:</span><span class="w"> </span><span class="nx">migrations</span><span class="o">/</span><span class="nx">analytics</span>
-</code></pre></div>
-
-<h3 id="migrating-specific-database">Migrating Specific Database<a class="headerlink" href="#migrating-specific-database" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>analytics
-dbwarden<span class="w"> </span>status<span class="w"> </span>-d<span class="w"> </span>analytics
-</code></pre></div>
-
-<h3 id="migrating-all-databases">Migrating All Databases<a class="headerlink" href="#migrating-all-databases" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>migrate<span class="w"> </span>--all
-</code></pre></div>
-
-<h2 id="common-workflows">Common Workflows<a class="headerlink" href="#common-workflows" title="Permanent link">&para;</a></h2>
-<h3 id="daily-development">Daily Development<a class="headerlink" href="#daily-development" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Make changes to your models</span>
-<span class="c1"># 2. Generate migration</span>
-dbwarden<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;describe your changes&quot;</span>
-
-<span class="c1"># 3. Apply migration</span>
-dbwarden<span class="w"> </span>migrate<span class="w"> </span>--verbose
-
-<span class="c1"># 4. Check status</span>
-dbwarden<span class="w"> </span>status
-</code></pre></div>
-
-<h3 id="deploying-to-production">Deploying to Production<a class="headerlink" href="#deploying-to-production" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Review pending migrations</span>
-dbwarden<span class="w"> </span>status
-
-<span class="c1"># 2. Apply with verbose to monitor</span>
-dbwarden<span class="w"> </span>migrate<span class="w"> </span>--verbose
-
-<span class="c1"># 3. Verify</span>
-dbwarden<span class="w"> </span><span class="nb">history</span>
-</code></pre></div>
-
-<h3 id="rolling-back-a-bad-migration">Rolling Back a Bad Migration<a class="headerlink" href="#rolling-back-a-bad-migration" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Check history</span>
-dbwarden<span class="w"> </span><span class="nb">history</span>
-
-<span class="c1"># 2. Rollback the last migration</span>
-dbwarden<span class="w"> </span>rollback
-
-<span class="c1"># 3. Or rollback to specific version</span>
-dbwarden<span class="w"> </span>rollback<span class="w"> </span>--to-version<span class="w"> </span><span class="m">0001</span>
-</code></pre></div>
-
-<h2 id="supported-databases">Supported Databases<a class="headerlink" href="#supported-databases" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Database</th>
-<th>Type Value</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>PostgreSQL</td>
-<td><code>postgresql</code></td>
-<td>SERIAL, TIMESTAMP, BYTEA</td>
-</tr>
-<tr>
-<td>MySQL</td>
-<td><code>mysql</code></td>
-<td>AUTO_INCREMENT, ENUM</td>
-</tr>
-<tr>
-<td>SQLite</td>
-<td><code>sqlite</code></td>
-<td>Built-in, no drivers</td>
-</tr>
-<tr>
-<td>ClickHouse</td>
-<td><code>clickhouse</code></td>
-<td>Analytics, MergeTree</td>
-</tr>
-<tr>
-<td>MariaDB</td>
-<td><code>mariadb</code></td>
-<td>MySQL-compatible</td>
-</tr>
-</tbody>
-</table>
+<h2 id="what-happens-internally">What Happens Internally<a class="headerlink" href="#what-happens-internally" title="Permanent link">&para;</a></h2>
+<p>On <code>migrate</code>, DBWarden:</p>
+<ol>
+<li>Loads config and resolves target DB</li>
+<li>Creates migration metadata/lock tables if missing</li>
+<li>Acquires migration lock</li>
+<li>Parses pending files and executes statements</li>
+<li>Stores applied records and checksums</li>
+<li>Releases lock</li>
+</ol>
+<p>This is why migration state stays deterministic across environments.</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Learn about <a href="../migration-files/">Migration Files</a> structure</li>
-<li>Explore <a href="../commands/">Commands</a> in detail</li>
-<li>Understand <a href="../models/">SQLAlchemy Models</a> integration</li>
-<li>Check <a href="../configuration/">Configuration</a> for all options</li>
-<li>Read <a href="../databases/">Supported Databases</a> for database-specific features</li>
+<li><a href="../configuration/">Configuration</a></li>
+<li><a href="../commands/">Commands Overview</a></li>
+<li><a href="../migration-files/">Migration Files</a></li>
+<li><a href="../sql-translation/">SQL Translation</a></li>
 </ul>
 
 

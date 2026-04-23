@@ -13,7 +13,7 @@
       
       
       
-        <link rel="prev" href="../databases/">
+        <link rel="prev" href="../operations-runbook/">
       
       
         <link rel="next" href="../cli-reference/">
@@ -338,6 +338,63 @@
     
   
   Supported Databases
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../sql-translation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  SQL Translation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture-deep-dive/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Deep Dive
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../operations-runbook/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Operations Runbook
 
       </a>
     </li>
@@ -1073,6 +1130,87 @@
       
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../sql-translation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Translation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture-deep-dive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
     
   
   
@@ -1144,469 +1282,13 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Migration Locking">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#automatic-locking" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Automatic Locking
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-lock-management" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Manual Lock Management
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#lock-implementation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Lock Implementation
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
-  <a href="#checksum-validation" class="md-nav__link">
+  <a href="#checksum-integrity" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Checksum Validation
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Checksum Validation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#how-it-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How It Works
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#checksum-algorithm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Checksum Algorithm
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#validation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Validation
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#squash-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Squash Migrations
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Squash Migrations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#when-to-squash" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When to Squash
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#process" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Process
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#beforeafter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Before/After
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-squash" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Manual Squash
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#custom-model-paths" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Custom Model Paths
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Custom Model Paths">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#priority" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Priority
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#postgresql-schema-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PostgreSQL Schema Support
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="PostgreSQL Schema Support">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#configuration_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#schemas-use-fully-qualified-names-in-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        schemas, use fully qualified names in migrations:
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#transactions-in-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Transactions in Migrations
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Transactions in Migrations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-transaction" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Transaction
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#complex-migration-pattern" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complex Migration Pattern
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cicd-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI/CD Integration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="CI/CD Integration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#github-actions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GitHub Actions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#gitlab-ci" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GitLab CI
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#docker-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Docker Integration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#kubernetes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Kubernetes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#environment-specific-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Environment-Specific Migrations
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Environment-Specific Migrations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-migration-tags" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using Migration Tags
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#programmatic-execution" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Programmatic Execution
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#performance-optimization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Performance Optimization
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Performance Optimization">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#batch-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Batch Migrations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#parallel-checks-future" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parallel Checks (Future)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#migration-recovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration Recovery
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Migration Recovery">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#after-failed-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        After Failed Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-state-correction" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Manual State Correction
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#best-practices-summary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Best Practices Summary
+        Checksum Integrity
       
     </span>
   </a>
@@ -1614,60 +1296,65 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#common-patterns" class="md-nav__link">
+  <a href="#repeatable-migrations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Common Patterns
+        Repeatable Migrations
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Common Patterns">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pattern-1-safe-column-addition" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pattern 1: Safe Column Addition
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pattern-2-safe-data-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pattern 2: Safe Data Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pattern-3-version-based-feature-flags" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pattern 3: Version-Based Feature Flags
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+  <a href="#dependency-and-seed-headers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        See Also
+        Dependency and Seed Headers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dev-mode-translation-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dev Mode + Translation Strategy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#safe-deployment-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safe Deployment Pattern
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cicd-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CI/CD Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure-recovery-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure Recovery Checklist
       
     </span>
   </a>
@@ -1744,469 +1431,13 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Migration Locking">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#automatic-locking" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Automatic Locking
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-lock-management" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Manual Lock Management
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#lock-implementation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Lock Implementation
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
-  <a href="#checksum-validation" class="md-nav__link">
+  <a href="#checksum-integrity" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Checksum Validation
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Checksum Validation">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#how-it-works" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How It Works
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#checksum-algorithm" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Checksum Algorithm
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#validation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Validation
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#squash-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Squash Migrations
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Squash Migrations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#when-to-squash" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When to Squash
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#process" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Process
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#beforeafter" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Before/After
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-squash" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Manual Squash
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#custom-model-paths" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Custom Model Paths
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Custom Model Paths">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#priority" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Priority
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#postgresql-schema-support" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PostgreSQL Schema Support
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="PostgreSQL Schema Support">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#configuration_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#schemas-use-fully-qualified-names-in-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        schemas, use fully qualified names in migrations:
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#transactions-in-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Transactions in Migrations
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Transactions in Migrations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-transaction" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Transaction
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#complex-migration-pattern" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complex Migration Pattern
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#cicd-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        CI/CD Integration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="CI/CD Integration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#github-actions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GitHub Actions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#gitlab-ci" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        GitLab CI
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#docker-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Docker Integration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#kubernetes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Kubernetes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#environment-specific-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Environment-Specific Migrations
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Environment-Specific Migrations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-migration-tags" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Using Migration Tags
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#programmatic-execution" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Programmatic Execution
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#performance-optimization" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Performance Optimization
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Performance Optimization">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#batch-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Batch Migrations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#parallel-checks-future" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parallel Checks (Future)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#migration-recovery" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration Recovery
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Migration Recovery">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#after-failed-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        After Failed Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-state-correction" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Manual State Correction
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#best-practices-summary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Best Practices Summary
+        Checksum Integrity
       
     </span>
   </a>
@@ -2214,60 +1445,65 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#common-patterns" class="md-nav__link">
+  <a href="#repeatable-migrations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Common Patterns
+        Repeatable Migrations
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Common Patterns">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#pattern-1-safe-column-addition" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pattern 1: Safe Column Addition
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pattern-2-safe-data-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pattern 2: Safe Data Migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pattern-3-version-based-feature-flags" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pattern 3: Version-Based Feature Flags
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+  <a href="#dependency-and-seed-headers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        See Also
+        Dependency and Seed Headers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dev-mode-translation-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dev Mode + Translation Strategy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#safe-deployment-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safe Deployment Pattern
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cicd-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CI/CD Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#failure-recovery-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Failure Recovery Checklist
       
     </span>
   </a>
@@ -2295,460 +1531,129 @@
 
 
 <h1 id="advanced-features">Advanced Features<a class="headerlink" href="#advanced-features" title="Permanent link">&para;</a></h1>
-<p>This guide covers advanced DBWarden features and techniques for complex migration scenarios.</p>
+<p>This page covers operational behavior and internals for non-trivial migration workflows.</p>
 <h2 id="migration-locking">Migration Locking<a class="headerlink" href="#migration-locking" title="Permanent link">&para;</a></h2>
-<p>DBWarden uses a locking mechanism to prevent concurrent migration execution.</p>
-<h3 id="automatic-locking">Automatic Locking<a class="headerlink" href="#automatic-locking" title="Permanent link">&para;</a></h3>
-<p>Locks are automatically acquired and released during:
-- <code>migrate</code>
-- <code>rollback</code></p>
-<h3 id="manual-lock-management">Manual Lock Management<a class="headerlink" href="#manual-lock-management" title="Permanent link">&para;</a></h3>
-<p>Check lock status:</p>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>lock-status
+<p>DBWarden prevents concurrent migration mutation with a lock table.</p>
+<p>Commands that use lock protection:</p>
+<ul>
+<li><code>migrate</code></li>
+<li><code>rollback</code></li>
+</ul>
+<p>Inspect or recover lock state:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>lock-status<span class="w"> </span>-d<span class="w"> </span>primary
+dbwarden<span class="w"> </span>unlock<span class="w"> </span>-d<span class="w"> </span>primary
 </code></pre></div>
 
-<p>Force unlock (emergency):</p>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>unlock
+<p>Internal flow:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">migrate_with_lock</span><span class="p">(</span><span class="n">db_name</span><span class="p">):</span>
+    <span class="n">create_lock_table_if_missing</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
+    <span class="n">lock</span> <span class="o">=</span> <span class="n">acquire_lock</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">run_pending_migrations</span><span class="p">(</span><span class="n">db_name</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">release_lock</span><span class="p">(</span><span class="n">lock</span><span class="p">)</span>
 </code></pre></div>
 
-<h3 id="lock-implementation">Lock Implementation<a class="headerlink" href="#lock-implementation" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- dbwarden_lock table</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">dbwarden_lock</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">locked</span><span class="w"> </span><span class="nb">BOOLEAN</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">FALSE</span><span class="p">,</span>
-<span class="w">    </span><span class="n">acquired_at</span><span class="w"> </span><span class="n">DATETIME</span><span class="p">,</span>
-<span class="w">    </span><span class="n">release_at</span><span class="w"> </span><span class="n">DATETIME</span>
-<span class="p">);</span>
-</code></pre></div>
-
-<h2 id="checksum-validation">Checksum Validation<a class="headerlink" href="#checksum-validation" title="Permanent link">&para;</a></h2>
-<p>DBWarden validates migration integrity using checksums.</p>
-<h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
-<ol>
-<li><strong>Before execution</strong>: Calculate checksum of migration file</li>
-<li><strong>After execution</strong>: Store checksum in database</li>
-<li><strong>Future runs</strong>: Verify checksum matches stored value</li>
-</ol>
-<h3 id="checksum-algorithm">Checksum Algorithm<a class="headerlink" href="#checksum-algorithm" title="Permanent link">&para;</a></h3>
-<p>Uses SHA-256 hash of SQL statements:</p>
+<h2 id="checksum-integrity">Checksum Integrity<a class="headerlink" href="#checksum-integrity" title="Permanent link">&para;</a></h2>
+<p>Each migration execution stores a checksum in <code>dbwarden_migrations</code>.</p>
+<p>Purpose:</p>
+<ul>
+<li>Detect modified migration files</li>
+<li>Support repeatable migration behaviors</li>
+<li>Avoid re-applying equivalent content accidentally</li>
+</ul>
+<p>Conceptual checksum code:</p>
 <div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
 
-<span class="k">def</span><span class="w"> </span><span class="nf">calculate_checksum</span><span class="p">(</span><span class="n">sql_statements</span><span class="p">):</span>
-    <span class="n">content</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sql_statements</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">content</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">checksum</span><span class="p">(</span><span class="n">statements</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">return</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">statements</span><span class="p">)</span><span class="o">.</span><span class="n">encode</span><span class="p">())</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
 </code></pre></div>
 
-<h3 id="validation">Validation<a class="headerlink" href="#validation" title="Permanent link">&para;</a></h3>
-<p>On migration run:</p>
-<div class="codehilite"><pre><span></span><code><span class="n">stored_checksum</span> <span class="o">=</span> <span class="n">get_stored_checksum</span><span class="p">()</span>
-<span class="n">current_checksum</span> <span class="o">=</span> <span class="n">calculate_checksum</span><span class="p">(</span><span class="n">sql_statements</span><span class="p">)</span>
-
-<span class="k">if</span> <span class="n">stored_checksum</span> <span class="o">!=</span> <span class="n">current_checksum</span><span class="p">:</span>
-    <span class="k">raise</span> <span class="n">MigrationChecksumError</span><span class="p">(</span><span class="s2">&quot;Migration file has been modified!&quot;</span><span class="p">)</span>
-</code></pre></div>
-
-<h2 id="squash-migrations">Squash Migrations<a class="headerlink" href="#squash-migrations" title="Permanent link">&para;</a></h2>
-<p>Combine multiple migrations into one.</p>
-<h3 id="when-to-squash">When to Squash<a class="headerlink" href="#when-to-squash" title="Permanent link">&para;</a></h3>
+<h2 id="repeatable-migrations">Repeatable Migrations<a class="headerlink" href="#repeatable-migrations" title="Permanent link">&para;</a></h2>
+<p>DBWarden supports three migration classes:</p>
 <ul>
-<li>After 10+ small migrations</li>
-<li>Before major releases</li>
-<li>During maintenance windows</li>
+<li><code>NNNN_*.sql</code>: versioned, run once in order</li>
+<li><code>RA__*.sql</code>: runs always</li>
+<li><code>ROC__*.sql</code>: runs when checksum changed</li>
 </ul>
-<h3 id="process">Process<a class="headerlink" href="#process" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Ensure all migrations applied</span>
-dbwarden<span class="w"> </span>migrate
+<p>Use repeatables for views, procedures, policies, and objects that should be refreshed.</p>
+<h2 id="dependency-and-seed-headers">Dependency and Seed Headers<a class="headerlink" href="#dependency-and-seed-headers" title="Permanent link">&para;</a></h2>
+<p>Migration files can include metadata headers parsed before execution.</p>
+<p>Dependency example:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">-- depends_on: [&quot;0001&quot;, &quot;0002&quot;]</span>
 
-<span class="c1"># 2. Squash migrations</span>
-dbwarden<span class="w"> </span>squash
-
-<span class="c1"># 3. New migration created</span>
-ls<span class="w"> </span>migrations/
-<span class="c1"># 0001_initial_schema.sql  (consolidated)</span>
-</code></pre></div>
-
-<h3 id="beforeafter">Before/After<a class="headerlink" href="#beforeafter" title="Permanent link">&para;</a></h3>
-<p><strong>Before:</strong></p>
-<div class="codehilite"><pre><span></span><code><span class="mf">0001</span><span class="n">_create_users</span><span class="mf">.</span><span class="n">sql</span>
-<span class="mf">0002</span><span class="n">_add_email</span><span class="mf">.</span><span class="n">sql</span>
-<span class="mf">0003</span><span class="n">_add_username</span><span class="mf">.</span><span class="n">sql</span>
-<span class="mf">0004</span><span class="n">_add_password</span><span class="mf">.</span><span class="n">sql</span>
-<span class="mf">0005</span><span class="n">_add_bio</span><span class="mf">.</span><span class="n">sql</span>
-</code></pre></div>
-
-<p><strong>After:</strong></p>
-<div class="codehilite"><pre><span></span><code><span class="mf">0001</span><span class="n">_initial_schema</span><span class="mf">.</span><span class="n">sql</span>
-</code></pre></div>
-
-<h3 id="manual-squash">Manual Squash<a class="headerlink" href="#manual-squash" title="Permanent link">&para;</a></h3>
-<p>For more control:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># 1. Create new migration</span>
-dbwarden<span class="w"> </span>new<span class="w"> </span><span class="s2">&quot;consolidate user migrations&quot;</span>
-
-<span class="c1"># 2. Edit file, combine SQL from all migrations</span>
-</code></pre></div>
-
-<h2 id="custom-model-paths">Custom Model Paths<a class="headerlink" href="#custom-model-paths" title="Permanent link">&para;</a></h2>
-<p>Configure multiple model directories.</p>
-<h3 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>DBWARDEN_MODEL_PATHS=models/,app/models/,core/database/models/
-</code></pre></div>
-
-<h3 id="priority">Priority<a class="headerlink" href="#priority" title="Permanent link">&para;</a></h3>
-<p>Paths are processed in order:
-1. First path's models processed first
-2. Duplicate tables (same <code>__tablename__</code>) are skipped after first occurrence</p>
-<h2 id="postgresql-schema-support">PostgreSQL Schema Support<a class="headerlink" href="#postgresql-schema-support" title="Permanent link">&para;</a></h2>
-<h3 id="configuration_1">Configuration<a class="headerlink" href="#configuration_1" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>DBWARDEN_POSTGRES_SCHEMA=my_schema
-</code></pre></div>
-
-<h3 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h3>
-<p>All migrations run in specified schema:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">my_schema</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(...</span><span class="w"> </span><span class="n">Multiple</span><span class="w"> </span><span class="n">Schemas</span>
-
-<span class="k">For</span><span class="w"> </span><span class="n">multiple</span><span class="p">);</span>
-</code></pre></div>
-
-<h3 id="schemas-use-fully-qualified-names-in-migrations">schemas, use fully qualified names in migrations:<a class="headerlink" href="#schemas-use-fully-qualified-names-in-migrations" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">analytics</span><span class="p">.</span><span class="n">events</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span>
-<span class="p">);</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">public</span><span class="p">.</span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">email</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span>
-<span class="p">);</span>
+<span class="c1">-- upgrade</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">invoices</span><span class="w"> </span><span class="p">(...);</span>
 
 <span class="c1">-- rollback</span>
-
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">public</span><span class="p">.</span><span class="n">users</span><span class="p">;</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">analytics</span><span class="p">.</span><span class="n">events</span><span class="p">;</span>
+<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">invoices</span><span class="p">;</span>
 </code></pre></div>
 
-<h2 id="transactions-in-migrations">Transactions in Migrations<a class="headerlink" href="#transactions-in-migrations" title="Permanent link">&para;</a></h2>
-<h3 id="basic-transaction">Basic Transaction<a class="headerlink" href="#basic-transaction" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
+<p>Seed marker example:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">-- seed</span>
 
-<span class="k">BEGIN</span><span class="p">;</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">total</span><span class="w"> </span><span class="nb">DECIMAL</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span>
-<span class="p">);</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">order_items</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">order_id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">REFERENCES</span><span class="w"> </span><span class="n">orders</span><span class="p">(</span><span class="n">id</span><span class="p">)</span>
-<span class="p">);</span>
-
-<span class="k">COMMIT</span><span class="p">;</span>
+<span class="c1">-- upgrade</span>
+<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">service_types</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;api&#39;</span><span class="p">);</span>
 
 <span class="c1">-- rollback</span>
-
-<span class="k">BEGIN</span><span class="p">;</span>
-
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">order_items</span><span class="p">;</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">orders</span><span class="p">;</span>
-
-<span class="k">COMMIT</span><span class="p">;</span>
+<span class="k">DELETE</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">service_types</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;api&#39;</span><span class="p">;</span>
 </code></pre></div>
 
-<h3 id="complex-migration-pattern">Complex Migration Pattern<a class="headerlink" href="#complex-migration-pattern" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
-
-<span class="c1">-- Step 1: Create new table with new structure</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts_new</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">author_id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<span class="w">    </span><span class="n">title</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<span class="w">    </span><span class="n">content</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
-<span class="w">    </span><span class="n">slug</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span><span class="w"> </span><span class="k">UNIQUE</span><span class="p">,</span>
-<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">DATETIME</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span>
-<span class="p">);</span>
-
-<span class="c1">-- Step 2: Copy data with transformation</span>
-<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">posts_new</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">author_id</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">slug</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">)</span>
-<span class="k">SELECT</span><span class="w"> </span>
-<span class="w">    </span><span class="n">id</span><span class="p">,</span><span class="w"> </span>
-<span class="w">    </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span>
-<span class="w">    </span><span class="n">title</span><span class="p">,</span><span class="w"> </span>
-<span class="w">    </span><span class="n">content</span><span class="p">,</span><span class="w"> </span>
-<span class="w">    </span><span class="k">LOWER</span><span class="p">(</span><span class="k">REPLACE</span><span class="p">(</span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39; &#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;-&#39;</span><span class="p">)),</span>
-<span class="w">    </span><span class="n">created_at</span>
-<span class="k">FROM</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
-
-<span class="c1">-- Step 3: Drop old table</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
-
-<span class="c1">-- Step 4: Rename new table</span>
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts_new</span><span class="w"> </span><span class="k">RENAME</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
-
-<span class="c1">-- rollback</span>
-
-<span class="c1">-- Reverse all steps</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts_old</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<span class="w">    </span><span class="n">title</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<span class="w">    </span><span class="n">content</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
-<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">DATETIME</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span>
-<span class="p">);</span>
-
-<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">posts_old</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">)</span>
-<span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">author_id</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
-
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
-
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts_old</span><span class="w"> </span><span class="k">RENAME</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
+<h2 id="dev-mode-translation-strategy">Dev Mode + Translation Strategy<a class="headerlink" href="#dev-mode-translation-strategy" title="Permanent link">&para;</a></h2>
+<p>When you run with <code>--dev</code> and target a SQLite dev DB, DBWarden translates unsupported backend-specific SQL model types/defaults to SQLite-compatible output.</p>
+<p>Default behavior:</p>
+<ul>
+<li>Convert supported patterns (for example <code>UUID -&gt; TEXT</code>)</li>
+<li>Fallback unsupported types to <code>TEXT</code></li>
+<li>Log warning for lossy conversions</li>
+</ul>
+<p>Strict behavior:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>--strict-translation<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;sync&quot;</span><span class="w"> </span>-d<span class="w"> </span>primary
 </code></pre></div>
 
-<h2 id="cicd-integration">CI/CD Integration<a class="headerlink" href="#cicd-integration" title="Permanent link">&para;</a></h2>
-<h3 id="github-actions">GitHub Actions<a class="headerlink" href="#github-actions" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Database Migrations</span>
+<p>With strict mode, unsupported conversions fail fast.</p>
+<h2 id="safe-deployment-pattern">Safe Deployment Pattern<a class="headerlink" href="#safe-deployment-pattern" title="Permanent link">&para;</a></h2>
+<p>Recommended release sequence:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># 1) Preview pending state</span>
+dbwarden<span class="w"> </span>status<span class="w"> </span>-d<span class="w"> </span>primary
 
-<span class="nt">on</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">push</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">branches</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">main</span><span class="p p-Indicator">]</span>
-<span class="w">  </span><span class="nt">workflow_dispatch</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">inputs</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">target</span><span class="p">:</span>
-<span class="w">        </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;Target</span><span class="nv"> </span><span class="s">version</span><span class="nv"> </span><span class="s">to</span><span class="nv"> </span><span class="s">migrate</span><span class="nv"> </span><span class="s">to&#39;</span>
-<span class="w">        </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+<span class="c1"># 2) Create backup if needed and apply</span>
+dbwarden<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary<span class="w"> </span>--with-backup
+
+<span class="c1"># 3) Verify migration history</span>
+dbwarden<span class="w"> </span><span class="nb">history</span><span class="w"> </span>-d<span class="w"> </span>primary
+</code></pre></div>
+
+<p>For multi-database systems:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>migrate<span class="w"> </span>--all<span class="w"> </span>--with-backup
+</code></pre></div>
+
+<h2 id="cicd-example">CI/CD Example<a class="headerlink" href="#cicd-example" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">db-migrations</span>
+<span class="nt">on</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">push</span><span class="p p-Indicator">]</span>
 
 <span class="nt">jobs</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">migrate</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">runs-on</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ubuntu-latest</span>
 <span class="w">    </span><span class="nt">steps</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v3</span>
-
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Set up Python</span>
-<span class="w">        </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/setup-python@v4</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/checkout@v4</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actions/setup-python@v5</span>
 <span class="w">        </span><span class="nt">with</span><span class="p">:</span>
-<span class="w">          </span><span class="nt">python-version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.11&#39;</span>
-
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Install DBWarden</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-<span class="w">          </span><span class="no">pip install dbwarden</span>
-
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Run Migrations</span>
-<span class="w">        </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">|</span>
-<span class="w">          </span><span class="no">if [ &quot;${{ github.event.inputs.target }}&quot; ]; then</span>
-<span class="w">            </span><span class="no">dbwarden migrate --to-version ${{ github.event.inputs.target }}</span>
-<span class="w">          </span><span class="no">else</span>
-<span class="w">            </span><span class="no">dbwarden migrate --verbose</span>
-<span class="w">          </span><span class="no">fi</span>
-<span class="w">        </span><span class="nt">env</span><span class="p">:</span>
-<span class="w">          </span><span class="nt">DBWARDEN_SQLALCHEMY_URL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.DATABASE_URL }}</span>
-<span class="w">          </span><span class="nt">DBWARDEN_ASYNC</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${{ secrets.DBWARDEN_ASYNC || &#39;false&#39; }}</span>
+<span class="w">          </span><span class="nt">python-version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3.12&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pip install dbwarden</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dbwarden status -d primary</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dbwarden migrate -d primary</span>
 </code></pre></div>
 
-<h3 id="gitlab-ci">GitLab CI<a class="headerlink" href="#gitlab-ci" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="nt">stages</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">migrate</span>
-
-<span class="nt">migrate</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">stage</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">migrate</span>
-<span class="w">  </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python:3.11</span>
-<span class="w">  </span><span class="nt">script</span><span class="p">:</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pip install dbwarden</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dbwarden migrate --verbose</span>
-<span class="w">  </span><span class="nt">variables</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">DBWARDEN_SQLALCHEMY_URL</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">$DATABASE_URL</span>
-<span class="w">  </span><span class="nt">only</span><span class="p">:</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">main</span>
-</code></pre></div>
-
-<h3 id="docker-integration">Docker Integration<a class="headerlink" href="#docker-integration" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="k">FROM</span><span class="w"> </span><span class="s">python:3.11-slim</span>
-
-<span class="k">WORKDIR</span><span class="w"> </span><span class="s">/app</span>
-
-<span class="k">COPY</span><span class="w"> </span>requirements.txt<span class="w"> </span>.
-<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>--no-cache-dir<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-
-<span class="k">COPY</span><span class="w"> </span>.<span class="w"> </span>.
-
-<span class="k">RUN</span><span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>dbwarden
-
-<span class="c"># Run migrations on container start</span>
-<span class="k">CMD</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;sh&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;-c&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;dbwarden migrate &amp;&amp; your_app&quot;</span><span class="p">]</span>
-</code></pre></div>
-
-<h3 id="kubernetes">Kubernetes<a class="headerlink" href="#kubernetes" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="nt">apiVersion</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">batch/v1</span>
-<span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Job</span>
-<span class="nt">metadata</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">dbwarden-migrate</span>
-<span class="nt">spec</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">template</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">spec</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">containers</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">migrate</span>
-<span class="w">        </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">your-app:latest</span>
-<span class="w">        </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;dbwarden&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;migrate&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;--verbose&quot;</span><span class="p p-Indicator">]</span>
-<span class="w">        </span><span class="nt">env</span><span class="p">:</span>
-<span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DBWARDEN_SQLALCHEMY_URL</span>
-<span class="w">          </span><span class="nt">valueFrom</span><span class="p">:</span>
-<span class="w">            </span><span class="nt">secretKeyRef</span><span class="p">:</span>
-<span class="w">              </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">db-credentials</span>
-<span class="w">              </span><span class="nt">key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">url</span>
-<span class="w">      </span><span class="nt">restartPolicy</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">OnFailure</span>
-</code></pre></div>
-
-<h2 id="environment-specific-migrations">Environment-Specific Migrations<a class="headerlink" href="#environment-specific-migrations" title="Permanent link">&para;</a></h2>
-<h3 id="using-migration-tags">Using Migration Tags<a class="headerlink" href="#using-migration-tags" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- 0001_base_schema.sql (always run)</span>
-
-<span class="c1">-- upgrade</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">));</span>
-<span class="c1">-- rollback</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
-</code></pre></div>
-
-<div class="codehilite"><pre><span></span><code><span class="c1">-- 0002_demo_data.sql (demo only)</span>
-
-<span class="c1">-- upgrade</span>
-<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span><span class="n">email</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;demo@example.com&#39;</span><span class="p">);</span>
-<span class="c1">-- rollback</span>
-<span class="k">DELETE</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;demo@example.com&#39;</span><span class="p">;</span>
-</code></pre></div>
-
-<h3 id="programmatic-execution">Programmatic Execution<a class="headerlink" href="#programmatic-execution" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dbwarden.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_config</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">dbwarden.commands.migrate</span><span class="w"> </span><span class="kn">import</span> <span class="n">migrate_cmd</span>
-
-<span class="c1"># Apply migrations with target version</span>
-<span class="n">migrate_cmd</span><span class="p">(</span><span class="n">to_version</span><span class="o">=</span><span class="s2">&quot;0001&quot;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-</code></pre></div>
-
-<h2 id="performance-optimization">Performance Optimization<a class="headerlink" href="#performance-optimization" title="Permanent link">&para;</a></h2>
-<h3 id="batch-migrations">Batch Migrations<a class="headerlink" href="#batch-migrations" title="Permanent link">&para;</a></h3>
-<p>For many small migrations:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># Apply all pending</span>
-dbwarden<span class="w"> </span>migrate
-
-<span class="c1"># Or apply specific number</span>
-dbwarden<span class="w"> </span>migrate<span class="w"> </span>--count<span class="w"> </span><span class="m">10</span>
-</code></pre></div>
-
-<h3 id="parallel-checks-future">Parallel Checks (Future)<a class="headerlink" href="#parallel-checks-future" title="Permanent link">&para;</a></h3>
-<p>Currently migrations run sequentially for safety.</p>
-<h2 id="migration-recovery">Migration Recovery<a class="headerlink" href="#migration-recovery" title="Permanent link">&para;</a></h2>
-<h3 id="after-failed-migration">After Failed Migration<a class="headerlink" href="#after-failed-migration" title="Permanent link">&para;</a></h3>
+<h2 id="failure-recovery-checklist">Failure Recovery Checklist<a class="headerlink" href="#failure-recovery-checklist" title="Permanent link">&para;</a></h2>
 <ol>
-<li>Check lock status</li>
-<li>Unlock if necessary</li>
-<li>Verify database state</li>
-<li>Fix migration file</li>
-<li>Re-apply</li>
+<li>Run <code>dbwarden lock-status -d &lt;name&gt;</code></li>
+<li>If lock is stale, run <code>dbwarden unlock -d &lt;name&gt;</code></li>
+<li>Check partial state with <code>dbwarden history -d &lt;name&gt;</code></li>
+<li>Re-run migration with <code>--verbose</code></li>
+<li>If needed, rollback and re-apply in smaller steps</li>
 </ol>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>lock-status
-dbwarden<span class="w"> </span>unlock<span class="w">  </span><span class="c1"># if locked</span>
-dbwarden<span class="w"> </span><span class="nb">history</span>
-dbwarden<span class="w"> </span>status
-<span class="c1"># Fix migration file</span>
-dbwarden<span class="w"> </span>migrate
-</code></pre></div>
-
-<h3 id="manual-state-correction">Manual State Correction<a class="headerlink" href="#manual-state-correction" title="Permanent link">&para;</a></h3>
-<p>In emergencies, manually update migration records:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- Remove last migration record</span>
-<span class="k">DELETE</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">dbwarden_migrations</span>
-<span class="k">WHERE</span><span class="w"> </span><span class="k">version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;0001&#39;</span>
-<span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">applied_at</span><span class="w"> </span><span class="k">DESC</span>
-<span class="k">LIMIT</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
-</code></pre></div>
-
-<h2 id="best-practices-summary">Best Practices Summary<a class="headerlink" href="#best-practices-summary" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Practice</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Idempotent migrations</strong></td>
-<td>Safe to run multiple times</td>
-</tr>
-<tr>
-<td><strong>Include rollback</strong></td>
-<td>Always have a rollback plan</td>
-</tr>
-<tr>
-<td><strong>Test migrations</strong></td>
-<td>On staging before production</td>
-</tr>
-<tr>
-<td><strong>Backup first</strong></td>
-<td>Especially in production</td>
-</tr>
-<tr>
-<td><strong>Version control</strong></td>
-<td>Commit migration files</td>
-</tr>
-<tr>
-<td><strong>Review SQL</strong></td>
-<td>Before applying</td>
-</tr>
-<tr>
-<td><strong>Document complex migrations</strong></td>
-<td>Comment your SQL</td>
-</tr>
-<tr>
-<td><strong>Use transactions</strong></td>
-<td>For multi-step changes</td>
-</tr>
-</tbody>
-</table>
-<h2 id="common-patterns">Common Patterns<a class="headerlink" href="#common-patterns" title="Permanent link">&para;</a></h2>
-<h3 id="pattern-1-safe-column-addition">Pattern 1: Safe Column Addition<a class="headerlink" href="#pattern-1-safe-column-addition" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">bio</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">;</span>
-<span class="k">UPDATE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">bio</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s1">&#39;&#39;</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">bio</span><span class="w"> </span><span class="k">IS</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span>
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">ALTER</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">bio</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span>
-
-<span class="c1">-- rollback</span>
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">ALTER</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">bio</span><span class="w"> </span><span class="k">DROP</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">;</span>
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">DROP</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">bio</span><span class="p">;</span>
-</code></pre></div>
-
-<h3 id="pattern-2-safe-data-migration">Pattern 2: Safe Data Migration<a class="headerlink" href="#pattern-2-safe-data-migration" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">new_email</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">);</span>
-
-<span class="k">UPDATE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">SET</span><span class="w"> </span><span class="n">new_email</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">email</span><span class="p">;</span>
-
-<span class="c1">-- AFTER VERIFICATION:</span>
-<span class="c1">-- ALTER TABLE users DROP COLUMN email;</span>
-<span class="c1">-- ALTER TABLE users RENAME COLUMN new_email TO email;</span>
-</code></pre></div>
-
-<h3 id="pattern-3-version-based-feature-flags">Pattern 3: Version-Based Feature Flags<a class="headerlink" href="#pattern-3-version-based-feature-flags" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">feature_flags</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">SERIAL</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="w"> </span><span class="k">UNIQUE</span><span class="p">,</span>
-<span class="w">    </span><span class="n">enabled</span><span class="w"> </span><span class="nb">BOOLEAN</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">FALSE</span>
-<span class="p">);</span>
-
-<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">feature_flags</span><span class="w"> </span><span class="p">(</span><span class="n">name</span><span class="p">,</span><span class="w"> </span><span class="n">enabled</span><span class="p">)</span><span class="w"> </span><span class="k">VALUES</span><span class="w"> </span><span class="p">(</span><span class="s1">&#39;new_checkout&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">FALSE</span><span class="p">);</span>
-
-<span class="c1">-- rollback</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">feature_flags</span><span class="p">;</span>
-</code></pre></div>
-
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
-<ul>
-<li><a href="../commands/">Commands</a>: All command reference</li>
-<li><a href="../migration-files/">Migration Files</a>: Writing advanced migrations</li>
-<li><a href="../models/">Models</a>: Advanced model patterns</li>
-</ul>
 
 
 

@@ -13,10 +13,10 @@
       
       
       
-        <link rel="prev" href="../quickstart/">
+        <link rel="prev" href="../sql-translation/">
       
       
-        <link rel="next" href="init/">
+        <link rel="next" href="../operations-runbook/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Commands Overview - DBWarden Documentation</title>
+        <title>Architecture Deep Dive - DBWarden Documentation</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#commands-overview" class="md-skip">
+        <a href="#architecture-deep-dive" class="md-skip">
           Skip to content
         </a>
       
@@ -110,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Commands Overview
+              Architecture Deep Dive
             
           </span>
         </div>
@@ -271,13 +271,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="./" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../commands/" class="md-tabs__link">
           
   
   
@@ -369,9 +367,11 @@
   
   
   
+    
   
-    <li class="md-tabs__item">
-      <a href="../architecture-deep-dive/" class="md-tabs__link">
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
         
   
   
@@ -598,31 +598,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -640,7 +635,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -655,37 +650,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Commands Overview
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../commands/" class="md-nav__link">
         
   
   
@@ -701,147 +669,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#global-flags" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Global Flags
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#command-groups" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Command Groups
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#setup" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Setup
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#migration-authoring" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration Authoring
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#migration-execution" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration Execution
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#inspection-and-diagnostics" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Inspection and Diagnostics
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#lock-operations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Lock Operations
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#recommended-daily-flow" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Recommended Daily Flow
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multi-database-execution-patterns" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Database Execution Patterns
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#how-execution-commands-work-internally" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        How Execution Commands Work Internally
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See Also
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -854,7 +681,7 @@
   
   
     <li class="md-nav__item">
-      <a href="init/" class="md-nav__link">
+      <a href="../commands/init/" class="md-nav__link">
         
   
   
@@ -882,7 +709,7 @@
   
   
     <li class="md-nav__item">
-      <a href="database/" class="md-nav__link">
+      <a href="../commands/database/" class="md-nav__link">
         
   
   
@@ -910,7 +737,7 @@
   
   
     <li class="md-nav__item">
-      <a href="make-migrations/" class="md-nav__link">
+      <a href="../commands/make-migrations/" class="md-nav__link">
         
   
   
@@ -938,7 +765,7 @@
   
   
     <li class="md-nav__item">
-      <a href="new/" class="md-nav__link">
+      <a href="../commands/new/" class="md-nav__link">
         
   
   
@@ -966,7 +793,7 @@
   
   
     <li class="md-nav__item">
-      <a href="migrate/" class="md-nav__link">
+      <a href="../commands/migrate/" class="md-nav__link">
         
   
   
@@ -994,7 +821,7 @@
   
   
     <li class="md-nav__item">
-      <a href="rollback/" class="md-nav__link">
+      <a href="../commands/rollback/" class="md-nav__link">
         
   
   
@@ -1022,7 +849,7 @@
   
   
     <li class="md-nav__item">
-      <a href="history/" class="md-nav__link">
+      <a href="../commands/history/" class="md-nav__link">
         
   
   
@@ -1050,7 +877,7 @@
   
   
     <li class="md-nav__item">
-      <a href="status/" class="md-nav__link">
+      <a href="../commands/status/" class="md-nav__link">
         
   
   
@@ -1078,7 +905,7 @@
   
   
     <li class="md-nav__item">
-      <a href="check-db/" class="md-nav__link">
+      <a href="../commands/check-db/" class="md-nav__link">
         
   
   
@@ -1106,7 +933,7 @@
   
   
     <li class="md-nav__item">
-      <a href="diff/" class="md-nav__link">
+      <a href="../commands/diff/" class="md-nav__link">
         
   
   
@@ -1134,7 +961,7 @@
   
   
     <li class="md-nav__item">
-      <a href="squash/" class="md-nav__link">
+      <a href="../commands/squash/" class="md-nav__link">
         
   
   
@@ -1162,7 +989,7 @@
   
   
     <li class="md-nav__item">
-      <a href="lock/" class="md-nav__link">
+      <a href="../commands/lock/" class="md-nav__link">
         
   
   
@@ -1190,7 +1017,7 @@
   
   
     <li class="md-nav__item">
-      <a href="version/" class="md-nav__link">
+      <a href="../commands/version/" class="md-nav__link">
         
   
   
@@ -1330,10 +1157,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../architecture-deep-dive/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1349,6 +1203,147 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#layered-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Layered Architecture
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#config-resolution-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Config Resolution Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-execution-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration Execution Lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#rollback-lifecycle" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Rollback Lifecycle
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#model-to-sql-generation-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model-to-SQL Generation Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#repeatable-migration-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Repeatable Migration Logic
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#checksum-and-integrity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checksum and Integrity
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#concurrency-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concurrency Model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#sql-translation-path-dev-sqlite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SQL Translation Path (Dev SQLite)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-propagation-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Propagation Strategy
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#extension-points" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Extension Points
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1461,10 +1456,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#global-flags" class="md-nav__link">
+  <a href="#layered-architecture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Global Flags
+        Layered Architecture
       
     </span>
   </a>
@@ -1472,10 +1467,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#command-groups" class="md-nav__link">
+  <a href="#config-resolution-pipeline" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Command Groups
+        Config Resolution Pipeline
       
     </span>
   </a>
@@ -1483,10 +1478,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#setup" class="md-nav__link">
+  <a href="#migration-execution-lifecycle" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Setup
+        Migration Execution Lifecycle
       
     </span>
   </a>
@@ -1494,10 +1489,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#migration-authoring" class="md-nav__link">
+  <a href="#rollback-lifecycle" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration Authoring
+        Rollback Lifecycle
       
     </span>
   </a>
@@ -1505,10 +1500,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#migration-execution" class="md-nav__link">
+  <a href="#model-to-sql-generation-pipeline" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration Execution
+        Model-to-SQL Generation Pipeline
       
     </span>
   </a>
@@ -1516,10 +1511,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#inspection-and-diagnostics" class="md-nav__link">
+  <a href="#repeatable-migration-logic" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Inspection and Diagnostics
+        Repeatable Migration Logic
       
     </span>
   </a>
@@ -1527,10 +1522,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#lock-operations" class="md-nav__link">
+  <a href="#checksum-and-integrity" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Lock Operations
+        Checksum and Integrity
       
     </span>
   </a>
@@ -1538,10 +1533,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#recommended-daily-flow" class="md-nav__link">
+  <a href="#concurrency-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Recommended Daily Flow
+        Concurrency Model
       
     </span>
   </a>
@@ -1549,10 +1544,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#multi-database-execution-patterns" class="md-nav__link">
+  <a href="#sql-translation-path-dev-sqlite" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Multi-Database Execution Patterns
+        SQL Translation Path (Dev SQLite)
       
     </span>
   </a>
@@ -1560,10 +1555,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-execution-commands-work-internally" class="md-nav__link">
+  <a href="#error-propagation-strategy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        How Execution Commands Work Internally
+        Error Propagation Strategy
       
     </span>
   </a>
@@ -1571,10 +1566,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+  <a href="#extension-points" class="md-nav__link">
     <span class="md-ellipsis">
       
-        See Also
+        Extension Points
       
     </span>
   </a>
@@ -1601,185 +1596,147 @@
   
 
 
-<h1 id="commands-overview">Commands Overview<a class="headerlink" href="#commands-overview" title="Permanent link">&para;</a></h1>
-<p>DBWarden commands are organized by workflow: setup, generation, execution, inspection, and operations.</p>
-<h2 id="global-flags">Global Flags<a class="headerlink" href="#global-flags" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Flag</th>
-<th>What it does</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--dev</code></td>
-<td>Use <code>dev_database_url</code> / <code>dev_database_type</code> for the selected database</td>
-</tr>
-<tr>
-<td><code>--strict-translation</code></td>
-<td>In dev SQLite flows, fail instead of fallback on lossy SQL translation</td>
-</tr>
-<tr>
-<td><code>-h</code>, <code>--help</code></td>
-<td>Show command help</td>
-</tr>
-</tbody>
-</table>
-<h2 id="command-groups">Command Groups<a class="headerlink" href="#command-groups" title="Permanent link">&para;</a></h2>
-<h2 id="setup">Setup<a class="headerlink" href="#setup" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Command</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="init/">init</a></td>
-<td>Initialize <code>warden.toml</code> and migration folder structure</td>
-</tr>
-<tr>
-<td><a href="database/">database</a></td>
-<td>Add/list/remove configured databases</td>
-</tr>
-</tbody>
-</table>
-<h2 id="migration-authoring">Migration Authoring<a class="headerlink" href="#migration-authoring" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Command</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="make-migrations/">make-migrations</a></td>
-<td>Generate SQL from SQLAlchemy models</td>
-</tr>
-<tr>
-<td><a href="new/">new</a></td>
-<td>Create manual migration template</td>
-</tr>
-<tr>
-<td><a href="squash/">squash</a></td>
-<td>Merge consecutive migrations</td>
-</tr>
-</tbody>
-</table>
-<h2 id="migration-execution">Migration Execution<a class="headerlink" href="#migration-execution" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Command</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="migrate/">migrate</a></td>
-<td>Apply pending migrations</td>
-</tr>
-<tr>
-<td><a href="rollback/">rollback</a></td>
-<td>Roll back applied migrations</td>
-</tr>
-</tbody>
-</table>
-<h2 id="inspection-and-diagnostics">Inspection and Diagnostics<a class="headerlink" href="#inspection-and-diagnostics" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Command</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="status/">status</a></td>
-<td>Show applied/pending migration state</td>
-</tr>
-<tr>
-<td><a href="history/">history</a></td>
-<td>Show execution history</td>
-</tr>
-<tr>
-<td><a href="check-db/">check-db</a></td>
-<td>Inspect live database schema</td>
-</tr>
-<tr>
-<td><a href="diff/">diff</a></td>
-<td>Compare models vs current schema</td>
-</tr>
-</tbody>
-</table>
-<h2 id="lock-operations">Lock Operations<a class="headerlink" href="#lock-operations" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Command</th>
-<th>Purpose</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><a href="lock/">lock-status</a></td>
-<td>Inspect migration lock state</td>
-</tr>
-<tr>
-<td><a href="lock/">unlock</a></td>
-<td>Clear lock in recovery scenarios</td>
-</tr>
-</tbody>
-</table>
-<h2 id="recommended-daily-flow">Recommended Daily Flow<a class="headerlink" href="#recommended-daily-flow" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code><span class="c1"># 1) Generate migration</span>
-dbwarden<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;add billing tables&quot;</span><span class="w"> </span>-d<span class="w"> </span>primary
-
-<span class="c1"># 2) Review generated SQL file</span>
-
-<span class="c1"># 3) Apply migration locally</span>
-dbwarden<span class="w"> </span>--dev<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
-
-<span class="c1"># 4) Validate state</span>
-dbwarden<span class="w"> </span>status<span class="w"> </span>-d<span class="w"> </span>primary
+<h1 id="architecture-deep-dive">Architecture Deep Dive<a class="headerlink" href="#architecture-deep-dive" title="Permanent link">&para;</a></h1>
+<p>This page explains how DBWarden works internally across config loading, migration planning, SQL execution, and state tracking.</p>
+<h2 id="layered-architecture">Layered Architecture<a class="headerlink" href="#layered-architecture" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code>CLI (Typer)
+  -&gt; Commands layer
+    -&gt; Engine layer (planning/parsing/version/checksum/model discovery)
+      -&gt; Repository layer (migration + lock records)
+        -&gt; Database layer (SQLAlchemy connections + SQL execution)
 </code></pre></div>
 
-<h2 id="multi-database-execution-patterns">Multi-Database Execution Patterns<a class="headerlink" href="#multi-database-execution-patterns" title="Permanent link">&para;</a></h2>
-<p>Single database:</p>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
-</code></pre></div>
-
-<p>All databases in sequence:</p>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>migrate<span class="w"> </span>--all
-</code></pre></div>
-
-<p>Dev mode on selected database:</p>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>analytics
-</code></pre></div>
-
-<h2 id="how-execution-commands-work-internally">How Execution Commands Work Internally<a class="headerlink" href="#how-execution-commands-work-internally" title="Permanent link">&para;</a></h2>
-<p>For <code>migrate</code> and <code>rollback</code>, DBWarden follows this algorithm:</p>
-<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">execute_migration_operation</span><span class="p">(</span><span class="n">target_db</span><span class="p">):</span>
-    <span class="n">ensure_metadata_tables_exist</span><span class="p">(</span><span class="n">target_db</span><span class="p">)</span>
-    <span class="n">acquire_lock</span><span class="p">(</span><span class="n">target_db</span><span class="p">)</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="n">plan</span> <span class="o">=</span> <span class="n">build_execution_plan</span><span class="p">(</span><span class="n">target_db</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">:</span>
-            <span class="n">run_sql</span><span class="p">(</span><span class="n">step</span><span class="o">.</span><span class="n">statements</span><span class="p">)</span>
-            <span class="n">record_migration_event</span><span class="p">(</span><span class="n">step</span><span class="p">)</span>
-    <span class="k">finally</span><span class="p">:</span>
-        <span class="n">release_lock</span><span class="p">(</span><span class="n">target_db</span><span class="p">)</span>
-</code></pre></div>
-
-<p>The lock guarantees only one migration process mutates a given database at a time.</p>
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<p>Responsibilities:</p>
 <ul>
-<li><a href="../cli-reference/">CLI Reference</a></li>
-<li><a href="../migration-files/">Migration Files</a></li>
-<li><a href="../advanced/">Advanced Features</a></li>
+<li>CLI: argument parsing and global flags (<code>--dev</code>, <code>--strict-translation</code>)</li>
+<li>Commands: orchestrate use cases (<code>migrate</code>, <code>rollback</code>, <code>make-migrations</code>)</li>
+<li>Engine: read migration files, resolve order, compute checksums, discover models</li>
+<li>Repositories: write/read migration and lock metadata</li>
+<li>Database: establish backend connection and execute SQL statements</li>
+</ul>
+<h2 id="config-resolution-pipeline">Config Resolution Pipeline<a class="headerlink" href="#config-resolution-pipeline" title="Permanent link">&para;</a></h2>
+<p>When a command needs a database config:</p>
+<ol>
+<li>Locate <code>warden.toml</code> from current directory upward</li>
+<li>Parse multi-database config</li>
+<li>Select database (<code>-d</code> or default)</li>
+<li>If <code>--dev</code> is enabled, swap active URL/type to dev fields</li>
+<li>Validate uniqueness and consistency rules</li>
+</ol>
+<p>Conceptual flow:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">resolve_database</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="n">cfg</span> <span class="o">=</span> <span class="n">get_multi_db_config</span><span class="p">()</span>
+    <span class="n">selected</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">databases</span><span class="p">[</span><span class="n">name</span> <span class="ow">or</span> <span class="n">cfg</span><span class="o">.</span><span class="n">default</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">is_dev_mode</span><span class="p">():</span>
+        <span class="n">selected</span> <span class="o">=</span> <span class="n">apply_dev_overrides</span><span class="p">(</span><span class="n">selected</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">selected</span>
+</code></pre></div>
+
+<h2 id="migration-execution-lifecycle">Migration Execution Lifecycle<a class="headerlink" href="#migration-execution-lifecycle" title="Permanent link">&para;</a></h2>
+<p>For <code>migrate</code>:</p>
+<div class="codehilite"><pre><span></span><code>1. Ensure metadata tables exist
+2. Ensure lock table exists
+3. Acquire lock
+4. Read migration directory
+5. Build pending plan (versioned + repeatable)
+6. Execute SQL statements
+7. Insert migration records/checksums
+8. Release lock
+</code></pre></div>
+
+<p>Conceptual pseudocode:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">migrate</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+    <span class="n">create_migrations_table_if_not_exists</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">create_lock_table_if_not_exists</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">acquire_lock</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">plan</span> <span class="o">=</span> <span class="n">build_execution_plan</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">migration</span> <span class="ow">in</span> <span class="n">plan</span><span class="p">:</span>
+            <span class="n">run_sql</span><span class="p">(</span><span class="n">migration</span><span class="o">.</span><span class="n">upgrade_statements</span><span class="p">,</span> <span class="n">db</span><span class="p">)</span>
+            <span class="n">record_execution</span><span class="p">(</span><span class="n">migration</span><span class="p">,</span> <span class="n">db</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">release_lock</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+</code></pre></div>
+
+<h2 id="rollback-lifecycle">Rollback Lifecycle<a class="headerlink" href="#rollback-lifecycle" title="Permanent link">&para;</a></h2>
+<p>Rollback follows the same lock discipline as migrate, but executes rollback SQL from selected migration files in reverse order.</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">rollback</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">target</span><span class="p">):</span>
+    <span class="n">acquire_lock</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">applied</span> <span class="o">=</span> <span class="n">get_applied_migrations</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+        <span class="n">to_rollback</span> <span class="o">=</span> <span class="n">select_target</span><span class="p">(</span><span class="n">applied</span><span class="p">,</span> <span class="n">target</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">migration</span> <span class="ow">in</span> <span class="n">to_rollback</span><span class="p">:</span>
+            <span class="n">run_sql</span><span class="p">(</span><span class="n">migration</span><span class="o">.</span><span class="n">rollback_statements</span><span class="p">,</span> <span class="n">db</span><span class="p">)</span>
+            <span class="n">remove_execution_record</span><span class="p">(</span><span class="n">migration</span><span class="p">,</span> <span class="n">db</span><span class="p">)</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">release_lock</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+</code></pre></div>
+
+<h2 id="model-to-sql-generation-pipeline">Model-to-SQL Generation Pipeline<a class="headerlink" href="#model-to-sql-generation-pipeline" title="Permanent link">&para;</a></h2>
+<p><code>make-migrations</code> pipeline:</p>
+<div class="codehilite"><pre><span></span><code>1. Discover model paths
+2. Import model modules
+3. Extract table/column metadata
+4. Detect existing schema (db + migration files)
+5. Generate CREATE/ALTER SQL
+6. Add rollback SQL
+7. Write migration file
+</code></pre></div>
+
+<p>Conceptual pseudocode:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">generate_migration</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="n">db</span><span class="p">):</span>
+    <span class="n">model_tables</span> <span class="o">=</span> <span class="n">discover_model_tables</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">known_schema</span> <span class="o">=</span> <span class="n">load_known_schema</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+    <span class="n">diff</span> <span class="o">=</span> <span class="n">compare</span><span class="p">(</span><span class="n">model_tables</span><span class="p">,</span> <span class="n">known_schema</span><span class="p">)</span>
+    <span class="n">upgrade</span><span class="p">,</span> <span class="n">rollback</span> <span class="o">=</span> <span class="n">render_sql</span><span class="p">(</span><span class="n">diff</span><span class="p">,</span> <span class="n">db</span><span class="p">)</span>
+    <span class="n">write_migration_file</span><span class="p">(</span><span class="n">description</span><span class="p">,</span> <span class="n">upgrade</span><span class="p">,</span> <span class="n">rollback</span><span class="p">,</span> <span class="n">db</span><span class="p">)</span>
+</code></pre></div>
+
+<h2 id="repeatable-migration-logic">Repeatable Migration Logic<a class="headerlink" href="#repeatable-migration-logic" title="Permanent link">&para;</a></h2>
+<p>DBWarden supports:</p>
+<ul>
+<li>Versioned (<code>NNNN_</code>): run once by version ordering</li>
+<li>Runs always (<code>RA__</code>): run every migration execution</li>
+<li>Runs on change (<code>ROC__</code>): run only if checksum changed</li>
+</ul>
+<p>For <code>ROC__</code>, DBWarden compares current file checksum with stored checksum to decide whether execution is needed.</p>
+<h2 id="checksum-and-integrity">Checksum and Integrity<a class="headerlink" href="#checksum-and-integrity" title="Permanent link">&para;</a></h2>
+<p>DBWarden computes checksums from SQL statements and stores them in <code>dbwarden_migrations</code>.</p>
+<p>This enables:</p>
+<ul>
+<li>idempotent detection behavior</li>
+<li>repeatable migration update logic</li>
+<li>corruption/modification signals</li>
+</ul>
+<h2 id="concurrency-model">Concurrency Model<a class="headerlink" href="#concurrency-model" title="Permanent link">&para;</a></h2>
+<p>Migration mutating commands are serialized per database using lock state stored in DB tables.</p>
+<p>If lock is stale:</p>
+<ul>
+<li>inspect via <code>dbwarden lock-status</code></li>
+<li>recover via <code>dbwarden unlock</code></li>
+</ul>
+<h2 id="sql-translation-path-dev-sqlite">SQL Translation Path (Dev SQLite)<a class="headerlink" href="#sql-translation-path-dev-sqlite" title="Permanent link">&para;</a></h2>
+<p>When using <code>--dev</code> and the target database resolves to SQLite:</p>
+<ol>
+<li>Model column type/default is extracted</li>
+<li>Translation attempts backend-compatible mapping</li>
+<li>Unsupported conversions fallback to <code>TEXT</code> (default behavior) with warnings</li>
+<li>If <code>--strict-translation</code> is enabled, fallback becomes an error</li>
+</ol>
+<p>This behavior is used during SQL generation, not by rewriting migration files after generation.</p>
+<h2 id="error-propagation-strategy">Error Propagation Strategy<a class="headerlink" href="#error-propagation-strategy" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Validation errors are raised early at config/load phases</li>
+<li>Execution errors abort migration run and preserve failure context</li>
+<li>Lock release occurs in <code>finally</code> blocks to reduce deadlocks</li>
+</ul>
+<h2 id="extension-points">Extension Points<a class="headerlink" href="#extension-points" title="Permanent link">&para;</a></h2>
+<p>Current architecture naturally supports future additions such as:</p>
+<ul>
+<li>config providers from Python code (<code>set_config</code>, <code>--settings</code>)</li>
+<li>additional migration planners</li>
+<li>backend-specific SQL rendering modules</li>
+<li>observability hooks for command lifecycle events</li>
 </ul>
 
 

@@ -13,28 +13,28 @@
       
       
       
-        <link rel="prev" href="../">
+        <link rel="prev" href="../databases/">
       
       
-        <link rel="next" href="../database/">
+        <link rel="next" href="../architecture-deep-dive/">
       
       
         
       
       
-      <link rel="icon" href="../../assets/icon.png">
+      <link rel="icon" href="../assets/icon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
     
     
       
-        <title>init - DBWarden Documentation</title>
+        <title>SQL Translation - DBWarden Documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -53,7 +53,7 @@
       
     
     
-    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#init-command" class="md-skip">
+        <a href="#sql-translation" class="md-skip">
           Skip to content
         </a>
       
@@ -90,7 +90,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href="../.." title="DBWarden Documentation" class="md-header__button md-logo" aria-label="DBWarden Documentation" data-md-component="logo">
+    <a href=".." title="DBWarden Documentation" class="md-header__button md-logo" aria-label="DBWarden Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -110,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              init
+              SQL Translation
             
           </span>
         </div>
@@ -197,7 +197,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../.." class="md-tabs__link">
+      <a href=".." class="md-tabs__link">
         
   
   
@@ -216,7 +216,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../installation/" class="md-tabs__link">
+      <a href="../installation/" class="md-tabs__link">
         
   
   
@@ -235,7 +235,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../configuration/" class="md-tabs__link">
+      <a href="../configuration/" class="md-tabs__link">
         
   
   
@@ -254,7 +254,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../quickstart/" class="md-tabs__link">
+      <a href="../quickstart/" class="md-tabs__link">
         
   
   
@@ -271,13 +271,11 @@
   
   
   
-    
-  
   
     
     
-      <li class="md-tabs__item md-tabs__item--active">
-        <a href="../" class="md-tabs__link">
+      <li class="md-tabs__item">
+        <a href="../commands/" class="md-tabs__link">
           
   
   
@@ -295,7 +293,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../migration-files/" class="md-tabs__link">
+      <a href="../migration-files/" class="md-tabs__link">
         
   
   
@@ -314,7 +312,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../models/" class="md-tabs__link">
+      <a href="../models/" class="md-tabs__link">
         
   
   
@@ -333,7 +331,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../databases/" class="md-tabs__link">
+      <a href="../databases/" class="md-tabs__link">
         
   
   
@@ -350,9 +348,11 @@
   
   
   
+    
   
-    <li class="md-tabs__item">
-      <a href="../../sql-translation/" class="md-tabs__link">
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
         
   
   
@@ -371,7 +371,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../architecture-deep-dive/" class="md-tabs__link">
+      <a href="../architecture-deep-dive/" class="md-tabs__link">
         
   
   
@@ -390,7 +390,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../operations-runbook/" class="md-tabs__link">
+      <a href="../operations-runbook/" class="md-tabs__link">
         
   
   
@@ -409,7 +409,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../advanced/" class="md-tabs__link">
+      <a href="../advanced/" class="md-tabs__link">
         
   
   
@@ -428,7 +428,7 @@
   
   
     <li class="md-tabs__item">
-      <a href="../../cli-reference/" class="md-tabs__link">
+      <a href="../cli-reference/" class="md-tabs__link">
         
   
   
@@ -463,7 +463,7 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href="../.." title="DBWarden Documentation" class="md-nav__button md-logo" aria-label="DBWarden Documentation" data-md-component="logo">
+    <a href=".." title="DBWarden Documentation" class="md-nav__button md-logo" aria-label="DBWarden Documentation" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
@@ -493,7 +493,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../.." class="md-nav__link">
+      <a href=".." class="md-nav__link">
         
   
   
@@ -520,7 +520,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../installation/" class="md-nav__link">
+      <a href="../installation/" class="md-nav__link">
         
   
   
@@ -547,7 +547,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../configuration/" class="md-nav__link">
+      <a href="../configuration/" class="md-nav__link">
         
   
   
@@ -574,7 +574,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../quickstart/" class="md-nav__link">
+      <a href="../quickstart/" class="md-nav__link">
         
   
   
@@ -598,31 +598,26 @@
       
   
   
-    
   
   
-  
     
     
     
     
-      
-        
-        
       
       
         
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
             
   
   
@@ -640,7 +635,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -658,7 +653,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../" class="md-nav__link">
+      <a href="../commands/" class="md-nav__link">
         
   
   
@@ -683,37 +678,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    init
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../commands/init/" class="md-nav__link">
         
   
   
@@ -729,136 +697,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#description" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Description
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#what-it-does" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What It Does
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#generated-wardentoml" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Generated warden.toml
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#directory-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Directory Structure
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#adding-multiple-databases" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding Multiple Databases
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#important-notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Important Notes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See Also
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -871,7 +709,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../database/" class="md-nav__link">
+      <a href="../commands/database/" class="md-nav__link">
         
   
   
@@ -899,7 +737,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../make-migrations/" class="md-nav__link">
+      <a href="../commands/make-migrations/" class="md-nav__link">
         
   
   
@@ -927,7 +765,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../new/" class="md-nav__link">
+      <a href="../commands/new/" class="md-nav__link">
         
   
   
@@ -955,7 +793,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../migrate/" class="md-nav__link">
+      <a href="../commands/migrate/" class="md-nav__link">
         
   
   
@@ -983,7 +821,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../rollback/" class="md-nav__link">
+      <a href="../commands/rollback/" class="md-nav__link">
         
   
   
@@ -1011,7 +849,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../history/" class="md-nav__link">
+      <a href="../commands/history/" class="md-nav__link">
         
   
   
@@ -1039,7 +877,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../status/" class="md-nav__link">
+      <a href="../commands/status/" class="md-nav__link">
         
   
   
@@ -1067,7 +905,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../check-db/" class="md-nav__link">
+      <a href="../commands/check-db/" class="md-nav__link">
         
   
   
@@ -1095,7 +933,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../diff/" class="md-nav__link">
+      <a href="../commands/diff/" class="md-nav__link">
         
   
   
@@ -1123,7 +961,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../squash/" class="md-nav__link">
+      <a href="../commands/squash/" class="md-nav__link">
         
   
   
@@ -1151,7 +989,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../lock/" class="md-nav__link">
+      <a href="../commands/lock/" class="md-nav__link">
         
   
   
@@ -1179,7 +1017,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../version/" class="md-nav__link">
+      <a href="../commands/version/" class="md-nav__link">
         
   
   
@@ -1214,7 +1052,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../migration-files/" class="md-nav__link">
+      <a href="../migration-files/" class="md-nav__link">
         
   
   
@@ -1241,7 +1079,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../models/" class="md-nav__link">
+      <a href="../models/" class="md-nav__link">
         
   
   
@@ -1268,7 +1106,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../databases/" class="md-nav__link">
+      <a href="../databases/" class="md-nav__link">
         
   
   
@@ -1292,10 +1130,37 @@
       
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../../sql-translation/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Translation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1311,6 +1176,103 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#why-sql-translation-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why SQL Translation Exists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#type-translation-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Type Translation Behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#default-expression-translation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Default Expression Translation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#strict-translation-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Strict Translation Mode
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recommended-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended Setup
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#notes-and-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Notes and Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1322,7 +1284,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../architecture-deep-dive/" class="md-nav__link">
+      <a href="../architecture-deep-dive/" class="md-nav__link">
         
   
   
@@ -1349,7 +1311,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../operations-runbook/" class="md-nav__link">
+      <a href="../operations-runbook/" class="md-nav__link">
         
   
   
@@ -1376,7 +1338,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../advanced/" class="md-nav__link">
+      <a href="../advanced/" class="md-nav__link">
         
   
   
@@ -1403,7 +1365,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../cli-reference/" class="md-nav__link">
+      <a href="../cli-reference/" class="md-nav__link">
         
   
   
@@ -1450,10 +1412,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#description" class="md-nav__link">
+  <a href="#why-sql-translation-exists" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Description
+        Why SQL Translation Exists
       
     </span>
   </a>
@@ -1461,10 +1423,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
+  <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Usage
+        How It Works
       
     </span>
   </a>
@@ -1472,10 +1434,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#options" class="md-nav__link">
+  <a href="#type-translation-behavior" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Options
+        Type Translation Behavior
       
     </span>
   </a>
@@ -1483,10 +1445,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#what-it-does" class="md-nav__link">
+  <a href="#default-expression-translation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        What It Does
+        Default Expression Translation
       
     </span>
   </a>
@@ -1494,10 +1456,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
+  <a href="#strict-translation-mode" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example
+        Strict Translation Mode
       
     </span>
   </a>
@@ -1505,10 +1467,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#generated-wardentoml" class="md-nav__link">
+  <a href="#recommended-setup" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Generated warden.toml
+        Recommended Setup
       
     </span>
   </a>
@@ -1516,43 +1478,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#directory-structure" class="md-nav__link">
+  <a href="#notes-and-limitations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Directory Structure
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#adding-multiple-databases" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Adding Multiple Databases
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#important-notes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Important Notes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See Also
+        Notes and Limitations
       
     </span>
   </a>
@@ -1579,103 +1508,87 @@
   
 
 
-<h1 id="init-command">init Command<a class="headerlink" href="#init-command" title="Permanent link">&para;</a></h1>
-<p>Initialize the DBWarden migrations directory and configuration.</p>
-<h2 id="description">Description<a class="headerlink" href="#description" title="Permanent link">&para;</a></h2>
-<p>The <code>init</code> command creates the <code>migrations/</code> directory and a <code>warden.toml</code> config file. This is the first command you run when setting up DBWarden in a new project.</p>
-<h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>init
-dbwarden<span class="w"> </span>init<span class="w"> </span>--database<span class="w"> </span>primary
-</code></pre></div>
-
-<h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Option</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>--database</code>, <code>-d</code></td>
-<td>Database name to create migration directory for</td>
-</tr>
-</tbody>
-</table>
-<h2 id="what-it-does">What It Does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h2>
-<ol>
-<li>Creates a <code>warden.toml</code> configuration file (if it doesn't exist)</li>
-<li>Creates a <code>migrations/&lt;name&gt;/</code> directory for the default database</li>
-<li>Sets up the directory structure for storing migration files</li>
-<li>Does NOT create any database tables or modify the database</li>
-</ol>
-<h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code>$<span class="w"> </span>dbwarden<span class="w"> </span>init
-Created<span class="w"> </span>configuration<span class="w"> </span>file:<span class="w"> </span>/home/user/myproject/warden.toml
-DBWarden<span class="w"> </span>migrations<span class="w"> </span>directory<span class="w"> </span>created:<span class="w"> </span>/home/user/myproject/migrations/default
-
-Next<span class="w"> </span>steps:
-<span class="w">  </span><span class="m">1</span>.<span class="w"> </span>Edit<span class="w"> </span>warden.toml<span class="w"> </span>with<span class="w"> </span>your<span class="w"> </span>database<span class="w"> </span>connection<span class="w"> </span>URLs
-<span class="w">  </span><span class="m">2</span>.<span class="w"> </span>Run<span class="w"> </span><span class="s1">&#39;dbwarden make-migrations -d &lt;name&gt;&#39;</span><span class="w"> </span>to<span class="w"> </span>generate<span class="w"> </span>migrations
-</code></pre></div>
-
-<h2 id="generated-wardentoml">Generated warden.toml<a class="headerlink" href="#generated-wardentoml" title="Permanent link">&para;</a></h2>
-<p>The command creates a starter configuration with the new multi-database format:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1"># DBWarden Configuration</span>
-<span class="c1"># See documentation: https://emiliano-gandini-outeda.me/DBWarden/</span>
-
-<span class="c1"># Default database</span>
-<span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;default&quot;</span>
-
-<span class="c1"># Database configurations</span>
-<span class="k">[database]</span>
-<span class="k">[database.default]</span>
-<span class="c1"># Database type: sqlite, postgresql, mysql, mariadb, clickhouse</span>
-<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
-<span class="c1"># Database connection URL (required)</span>
-<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
-
-<span class="c1"># PostgreSQL schema (optional, only for postgresql)</span>
-<span class="c1"># postgres_schema = &quot;public&quot;</span>
-
-<span class="c1"># Paths to SQLAlchemy models for auto-migration (optional)</span>
-<span class="c1"># model_paths = [&quot;app/models/&quot;]</span>
-
-<span class="c1"># Migration directory (optional, defaults to &quot;migrations/&lt;name&gt;&quot;)</span>
-<span class="c1"># migrations_dir = &quot;migrations/default&quot;</span>
-</code></pre></div>
-
-<h2 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h2>
-<p>After running <code>init</code>, your project structure will look like:</p>
-<div class="codehilite"><pre><span></span><code>myproject/
-├── migrations/
-│   └── default/           # Created by init command
-├── models/
-│   └── user.py
-├── warden.toml            # Created by init command
-└── app.py
-</code></pre></div>
-
-<h2 id="adding-multiple-databases">Adding Multiple Databases<a class="headerlink" href="#adding-multiple-databases" title="Permanent link">&para;</a></h2>
-<p>After init, use <code>dbwarden database add</code> to add more databases:</p>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>database<span class="w"> </span>add<span class="w"> </span>analytics<span class="w"> </span>--url<span class="w"> </span><span class="s2">&quot;postgresql://user:pass@localhost:5432/analytics&quot;</span>
-dbwarden<span class="w"> </span>database<span class="w"> </span>add<span class="w"> </span>legacy<span class="w"> </span>--url<span class="w"> </span><span class="s2">&quot;mysql://user:pass@localhost:3306/legacy&quot;</span>
-</code></pre></div>
-
-<h2 id="important-notes">Important Notes<a class="headerlink" href="#important-notes" title="Permanent link">&para;</a></h2>
+<h1 id="sql-translation">SQL Translation<a class="headerlink" href="#sql-translation" title="Permanent link">&para;</a></h1>
+<p>DBWarden includes a SQL translation layer to support development workflows where your primary database differs from your development database.</p>
+<p>The most common case is:</p>
 <ul>
-<li><strong>No database changes</strong>: This command only creates local files</li>
-<li><strong>Safe to run multiple times</strong>: Running <code>init</code> again is safe; it won't overwrite existing migrations or warden.toml</li>
-<li><strong>Required before other commands</strong>: Most DBWarden commands require the migrations directory to exist</li>
-<li><strong>Creates default database</strong>: The first database created is named "default" and uses SQLite</li>
+<li>Primary database: PostgreSQL/MySQL/MariaDB/ClickHouse</li>
+<li>Development database: SQLite (<code>--dev</code> mode)</li>
 </ul>
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<h2 id="why-sql-translation-exists">Why SQL Translation Exists<a class="headerlink" href="#why-sql-translation-exists" title="Permanent link">&para;</a></h2>
+<p>SQLite does not support all backend-specific SQL types and default expressions used by other databases.</p>
+<p>Without translation, generated migrations can fail in local development when they contain backend-specific types like <code>UUID</code>, <code>JSONB</code>, or default expressions like <code>now()</code>.</p>
+<p>DBWarden translation solves this by adapting generated SQL for SQLite compatibility.</p>
+<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<p>When you run commands in development mode and target a SQLite dev database:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;sync models&quot;</span><span class="w"> </span>-d<span class="w"> </span>primary
+</code></pre></div>
+
+<p>DBWarden uses this flow:</p>
+<ol>
+<li>Loads the selected database config and resolves <code>dev_database_url</code>.</li>
+<li>Detects that the active target backend is SQLite.</li>
+<li>Extracts model metadata from SQLAlchemy models.</li>
+<li>Translates backend-specific types/defaults to SQLite-compatible SQL.</li>
+<li>Generates migration SQL with translated definitions.</li>
+</ol>
+<p>Translation is applied during migration generation, not as a post-processing regex pass.</p>
+<h2 id="type-translation-behavior">Type Translation Behavior<a class="headerlink" href="#type-translation-behavior" title="Permanent link">&para;</a></h2>
+<p>DBWarden maps many backend-specific types to SQLite-compatible types.</p>
+<p>Examples:</p>
 <ul>
-<li><a href="../make-migrations/">make-migrations</a>: Generate migrations from models</li>
-<li><a href="../new/">new</a>: Create manual migrations</li>
-<li><a href="../../configuration/">Configuration</a>: Full configuration guide</li>
-<li><a href="../../databases/">Databases</a>: Supported databases</li>
+<li><code>UUID</code> -&gt; <code>TEXT</code></li>
+<li><code>JSON</code> / <code>JSONB</code> -&gt; <code>TEXT</code></li>
+<li><code>TIMESTAMPTZ</code> -&gt; <code>DATETIME</code></li>
+<li><code>SERIAL</code> / <code>BIGSERIAL</code> -&gt; <code>INTEGER</code></li>
+<li><code>Nullable(UInt64)</code> (ClickHouse) -&gt; <code>INTEGER</code></li>
+</ul>
+<p>For unsupported or unknown types that cannot be converted safely:</p>
+<ul>
+<li>DBWarden falls back to <code>TEXT</code></li>
+<li>Logs a warning indicating the fallback</li>
+</ul>
+<h2 id="default-expression-translation">Default Expression Translation<a class="headerlink" href="#default-expression-translation" title="Permanent link">&para;</a></h2>
+<p>DBWarden also handles unsupported default expressions.</p>
+<p>Examples of expressions that may be removed for SQLite compatibility:</p>
+<ul>
+<li><code>now()</code></li>
+<li><code>gen_random_uuid()</code></li>
+<li>sequence-based defaults (like <code>nextval(...)</code>)</li>
+</ul>
+<p>In non-strict mode, unsupported defaults are removed and a warning is logged.</p>
+<h2 id="strict-translation-mode">Strict Translation Mode<a class="headerlink" href="#strict-translation-mode" title="Permanent link">&para;</a></h2>
+<p>If you want hard failures instead of fallback behavior:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>--strict-translation<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;sync models&quot;</span><span class="w"> </span>-d<span class="w"> </span>primary
+</code></pre></div>
+
+<p>In strict mode:</p>
+<ul>
+<li>Unknown/unsupported type conversions raise errors</li>
+<li>Unsupported default expression conversions raise errors</li>
+</ul>
+<p>Use this when you want to catch every lossy conversion early.</p>
+<h2 id="recommended-setup">Recommended Setup<a class="headerlink" href="#recommended-setup" title="Permanent link">&para;</a></h2>
+<p>For fast local testing and predictable developer workflows, use SQLite as your dev database:</p>
+<div class="codehilite"><pre><span></span><code><span class="n">default</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;primary&quot;</span>
+
+<span class="k">[database.primary]</span>
+<span class="n">database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql&quot;</span>
+<span class="n">sqlalchemy_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;postgresql://user:password@localhost:5432/main&quot;</span>
+<span class="n">dev_database_type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite&quot;</span>
+<span class="n">dev_database_url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;sqlite:///./development.db&quot;</span>
+</code></pre></div>
+
+<p>Then run development commands with:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>--dev<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
+dbwarden<span class="w"> </span>--dev<span class="w"> </span>make-migrations<span class="w"> </span><span class="s2">&quot;add indexes&quot;</span><span class="w"> </span>-d<span class="w"> </span>primary
+</code></pre></div>
+
+<h2 id="notes-and-limitations">Notes and Limitations<a class="headerlink" href="#notes-and-limitations" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Translation focuses on compatibility for local development.</li>
+<li>Some backend features cannot be represented exactly in SQLite.</li>
+<li>For production accuracy, always test migrations against your production-like database too.</li>
 </ul>
 
 
@@ -1726,10 +1639,10 @@ dbwarden<span class="w"> </span>database<span class="w"> </span>add<span class="
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "search.suggest", "search.highlight"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>

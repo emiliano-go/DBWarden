@@ -352,6 +352,63 @@
   
   
     <li class="md-tabs__item">
+      <a href="../sql-translation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  SQL Translation
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../architecture-deep-dive/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Architecture Deep Dive
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../operations-runbook/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Operations Runbook
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../advanced/" class="md-tabs__link">
         
   
@@ -1055,18 +1112,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#file-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        File Structure
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="File Structure">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#naming-convention" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1076,148 +1121,81 @@
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#internal-structure" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#file-anatomy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Internal Structure
+        File Anatomy
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-migrations" class="md-nav__link">
+  <a href="#migration-types" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example Migrations
+        Migration Types
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Example Migrations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#create-table" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Create Table
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#add-column" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Add Column
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#complex-migration-with-transactions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complex Migration with Transactions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#sql-support" class="md-nav__link">
+  <a href="#internal-execution-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SQL Support
+        Internal Execution Model
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="SQL Support">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#supported-sql-statements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported SQL Statements
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#database-specific-sql" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Database-Specific SQL
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#version-management" class="md-nav__link">
+  <a href="#example-versioned-migration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Version Management
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Version Management">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#version-formats" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Version Formats
+        Example: Versioned Migration
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#version-ordering" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#example-runs-always-migration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Version Ordering
+        Example: Runs-Always Migration
       
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#example-runs-on-change-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Runs-On-Change Migration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata Headers
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1230,235 +1208,13 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Best Practices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-one-migration-per-feature" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. One Migration Per Feature
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-descriptive-names" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Descriptive Names
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-always-include-rollback" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Always Include Rollback
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-idempotent-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Idempotent Migrations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#5-use-transactions-for-complex-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Use Transactions for Complex Changes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
-  <a href="#migration-lifecycle" class="md-nav__link">
+  <a href="#validation-checklist-before-commit" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration Lifecycle
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#directory-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Directory Structure
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Directory Structure">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#single-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Single Database
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#multi-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Database
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#git-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Git Integration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Git Integration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#add-to-version-control" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Add to Version Control
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#migration-file-rules" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration File Rules
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#handling-migration-conflicts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Handling Migration Conflicts
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Troubleshooting
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Troubleshooting">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#migration-not-found" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration Not Found
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#parsing-errors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parsing Errors
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#duplicate-versions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Duplicate Versions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#wrong-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Wrong Database
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See Also
+        Validation Checklist Before Commit
       
     </span>
   </a>
@@ -1515,6 +1271,87 @@
     
   
     Supported Databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sql-translation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Translation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture-deep-dive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Deep Dive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../operations-runbook/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Operations Runbook
   
 
     
@@ -1608,18 +1445,6 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#file-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        File Structure
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="File Structure">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
   <a href="#naming-convention" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1629,148 +1454,81 @@
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#internal-structure" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#file-anatomy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Internal Structure
+        File Anatomy
       
     </span>
   </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#example-migrations" class="md-nav__link">
+  <a href="#migration-types" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example Migrations
+        Migration Types
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="Example Migrations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#create-table" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Create Table
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#add-column" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Add Column
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#complex-migration-with-transactions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complex Migration with Transactions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#sql-support" class="md-nav__link">
+  <a href="#internal-execution-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SQL Support
+        Internal Execution Model
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="SQL Support">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#supported-sql-statements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported SQL Statements
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#database-specific-sql" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Database-Specific SQL
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#version-management" class="md-nav__link">
+  <a href="#example-versioned-migration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Version Management
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Version Management">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#version-formats" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Version Formats
+        Example: Versioned Migration
       
     </span>
   </a>
   
 </li>
-        
-          <li class="md-nav__item">
-  <a href="#version-ordering" class="md-nav__link">
+      
+        <li class="md-nav__item">
+  <a href="#example-runs-always-migration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Version Ordering
+        Example: Runs-Always Migration
       
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
+      
+        <li class="md-nav__item">
+  <a href="#example-runs-on-change-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: Runs-On-Change Migration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata Headers
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1783,235 +1541,13 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Best Practices">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-one-migration-per-feature" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. One Migration Per Feature
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-descriptive-names" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Descriptive Names
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-always-include-rollback" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Always Include Rollback
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#4-idempotent-migrations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        4. Idempotent Migrations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#5-use-transactions-for-complex-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        5. Use Transactions for Complex Changes
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
         <li class="md-nav__item">
-  <a href="#migration-lifecycle" class="md-nav__link">
+  <a href="#validation-checklist-before-commit" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration Lifecycle
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#directory-structure" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Directory Structure
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Directory Structure">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#single-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Single Database
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#multi-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multi-Database
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#git-integration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Git Integration
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Git Integration">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#add-to-version-control" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Add to Version Control
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#migration-file-rules" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration File Rules
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#handling-migration-conflicts" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Handling Migration Conflicts
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#troubleshooting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Troubleshooting
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Troubleshooting">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#migration-not-found" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration Not Found
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#parsing-errors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Parsing Errors
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#duplicate-versions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Duplicate Versions
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#wrong-database" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Wrong Database
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See Also
+        Validation Checklist Before Commit
       
     </span>
   </a>
@@ -2039,324 +1575,141 @@
 
 
 <h1 id="migration-files">Migration Files<a class="headerlink" href="#migration-files" title="Permanent link">&para;</a></h1>
-<p>Migration files are the heart of DBWarden. They contain SQL statements that modify your database schema.</p>
-<h2 id="file-structure">File Structure<a class="headerlink" href="#file-structure" title="Permanent link">&para;</a></h2>
-<h3 id="naming-convention">Naming Convention<a class="headerlink" href="#naming-convention" title="Permanent link">&para;</a></h3>
-<p>Migration files follow this naming pattern:</p>
-<div class="codehilite"><pre><span></span><code>{dbname}__{number}_{description}.sql
+<p>Migration files are executable SQL units with explicit upgrade and rollback behavior.</p>
+<h2 id="naming-convention">Naming Convention<a class="headerlink" href="#naming-convention" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code>{database_name}__{version}_{description}.sql
 </code></pre></div>
 
-<p><strong>Components:</strong>
-- <code>{dbname}</code>: Database name (e.g., <code>primary</code>, <code>analytics</code>)
-- <code>{number}</code>: 4-digit sequential number (auto-incremented)
-- <code>{description}</code>: Lowercase, underscore-separated description</p>
-<p><strong>Examples:</strong></p>
+<p>Examples:</p>
 <div class="codehilite"><pre><span></span><code>primary__0001_initial_schema.sql
-primary__0002_create_users_table.sql
-primary__0003_add_user_posts_relationship.sql
+primary__0002_add_users_table.sql
 analytics__0001_create_events.sql
 </code></pre></div>
 
-<p><strong>Note:</strong> In multi-database setups, migration files are prefixed with the database name (<code>{dbname}__</code>) to keep migrations organized per database. The <code>{dbname}</code> prefix matches the database name defined in <code>warden.toml</code>.</p>
-<h3 id="internal-structure">Internal Structure<a class="headerlink" href="#internal-structure" title="Permanent link">&para;</a></h3>
-<p>Each migration file has two sections:</p>
+<h2 id="file-anatomy">File Anatomy<a class="headerlink" href="#file-anatomy" title="Permanent link">&para;</a></h2>
+<p>Every migration file must include two sections:</p>
 <div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
 
-<span class="c1">-- Your upgrade SQL statements here</span>
+<span class="c1">-- SQL applied during migrate</span>
 
 <span class="c1">-- rollback</span>
 
-<span class="c1">-- Your rollback SQL statements here</span>
+<span class="c1">-- SQL applied during rollback</span>
 </code></pre></div>
 
-<h2 id="example-migrations">Example Migrations<a class="headerlink" href="#example-migrations" title="Permanent link">&para;</a></h2>
-<h3 id="create-table">Create Table<a class="headerlink" href="#create-table" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- migrations/0001_create_users.sql</span>
+<h2 id="migration-types">Migration Types<a class="headerlink" href="#migration-types" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Prefix</th>
+<th>Type</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NNNN_</code></td>
+<td>Versioned</td>
+<td>Runs once in version order</td>
+</tr>
+<tr>
+<td><code>RA__</code></td>
+<td>Runs always</td>
+<td>Runs each <code>migrate</code> execution</td>
+</tr>
+<tr>
+<td><code>ROC__</code></td>
+<td>Runs on change</td>
+<td>Runs only when checksum changed</td>
+</tr>
+</tbody>
+</table>
+<h2 id="internal-execution-model">Internal Execution Model<a class="headerlink" href="#internal-execution-model" title="Permanent link">&para;</a></h2>
+<p>When <code>migrate</code> runs, DBWarden builds an execution plan from migration files:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_plan</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">applied_versions</span><span class="p">):</span>
+    <span class="n">versioned</span> <span class="o">=</span> <span class="n">parse_versioned_files</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="n">repeatable</span> <span class="o">=</span> <span class="n">parse_repeatable_files</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
 
-<span class="c1">-- upgrade</span>
+    <span class="n">pending_versioned</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">versioned</span> <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">version</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">applied_versions</span><span class="p">]</span>
+    <span class="n">pending_ra</span> <span class="o">=</span> <span class="n">repeatable</span><span class="o">.</span><span class="n">runs_always</span>
+    <span class="n">pending_roc</span> <span class="o">=</span> <span class="n">changed_only</span><span class="p">(</span><span class="n">repeatable</span><span class="o">.</span><span class="n">runs_on_change</span><span class="p">)</span>
 
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="w"> </span><span class="n">AUTOINCREMENT</span><span class="p">,</span>
-<span class="w">    </span><span class="n">username</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">UNIQUE</span><span class="p">,</span>
+    <span class="k">return</span> <span class="n">pending_versioned</span> <span class="o">+</span> <span class="n">pending_ra</span> <span class="o">+</span> <span class="n">pending_roc</span>
+</code></pre></div>
+
+<p>Then each migration:</p>
+<ol>
+<li>Parses <code>-- upgrade</code> statements</li>
+<li>Executes statements in order</li>
+<li>Stores execution metadata/checksum</li>
+</ol>
+<h2 id="example-versioned-migration">Example: Versioned Migration<a class="headerlink" href="#example-versioned-migration" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
+
+<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
+<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
 <span class="w">    </span><span class="n">email</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">255</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="w"> </span><span class="k">UNIQUE</span><span class="p">,</span>
-<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">DATETIME</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span>
+<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">DATETIME</span>
 <span class="p">);</span>
-
-<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
 
 <span class="c1">-- rollback</span>
 
-<span class="k">DROP</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="p">;</span>
 <span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
 </code></pre></div>
 
-<h3 id="add-column">Add Column<a class="headerlink" href="#add-column" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- migrations/0002_add_user_profile.sql</span>
+<h2 id="example-runs-always-migration">Example: Runs-Always Migration<a class="headerlink" href="#example-runs-always-migration" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
 
-<span class="c1">-- upgrade</span>
-
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">bio</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">;</span>
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">ADD</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">avatar_url</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">500</span><span class="p">);</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">active_users</span><span class="w"> </span><span class="k">AS</span>
+<span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">email</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">WHERE</span><span class="w"> </span><span class="n">is_active</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">TRUE</span><span class="p">;</span>
 
 <span class="c1">-- rollback</span>
 
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">DROP</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">avatar_url</span><span class="p">;</span>
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="k">DROP</span><span class="w"> </span><span class="k">COLUMN</span><span class="w"> </span><span class="n">bio</span><span class="p">;</span>
+<span class="k">DROP</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">active_users</span><span class="p">;</span>
 </code></pre></div>
 
-<h3 id="complex-migration-with-transactions">Complex Migration with Transactions<a class="headerlink" href="#complex-migration-with-transactions" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- migrations/0003_migrate_to_new_schema.sql</span>
+<p>Filename example: <code>primary__RA__refresh_active_users_view.sql</code></p>
+<h2 id="example-runs-on-change-migration">Example: Runs-On-Change Migration<a class="headerlink" href="#example-runs-on-change-migration" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
 
-<span class="c1">-- upgrade</span>
-
-<span class="k">BEGIN</span><span class="p">;</span>
-
-<span class="c1">-- Create new table</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts_new</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">author_id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<span class="w">    </span><span class="n">title</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<span class="w">    </span><span class="n">content</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
-<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">DATETIME</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span>
-<span class="p">);</span>
-
-<span class="c1">-- Copy data</span>
-<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">posts_new</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">author_id</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">)</span>
-<span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
-
-<span class="c1">-- Drop old table</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
-
-<span class="c1">-- Rename new table</span>
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts_new</span><span class="w"> </span><span class="k">RENAME</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
-
-<span class="k">COMMIT</span><span class="p">;</span>
+<span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">update_updated_at</span><span class="p">()</span>
+<span class="k">RETURNS</span><span class="w"> </span><span class="k">TRIGGER</span><span class="w"> </span><span class="k">AS</span><span class="w"> </span><span class="err">$$</span>
+<span class="k">BEGIN</span>
+<span class="w">  </span><span class="k">NEW</span><span class="p">.</span><span class="n">updated_at</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">NOW</span><span class="p">();</span>
+<span class="w">  </span><span class="k">RETURN</span><span class="w"> </span><span class="k">NEW</span><span class="p">;</span>
+<span class="k">END</span><span class="p">;</span>
+<span class="err">$$</span><span class="w"> </span><span class="k">LANGUAGE</span><span class="w"> </span><span class="n">plpgsql</span><span class="p">;</span>
 
 <span class="c1">-- rollback</span>
 
-<span class="k">BEGIN</span><span class="p">;</span>
-
-<span class="c1">-- Reverse the migration</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts_old</span><span class="w"> </span><span class="p">(</span>
-<span class="w">    </span><span class="n">id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span>
-<span class="w">    </span><span class="n">user_id</span><span class="w"> </span><span class="nb">INTEGER</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<span class="w">    </span><span class="n">title</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">200</span><span class="p">)</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">NULL</span><span class="p">,</span>
-<span class="w">    </span><span class="n">content</span><span class="w"> </span><span class="nb">TEXT</span><span class="p">,</span>
-<span class="w">    </span><span class="n">created_at</span><span class="w"> </span><span class="n">DATETIME</span><span class="w"> </span><span class="k">DEFAULT</span><span class="w"> </span><span class="k">CURRENT_TIMESTAMP</span>
-<span class="p">);</span>
-
-<span class="k">INSERT</span><span class="w"> </span><span class="k">INTO</span><span class="w"> </span><span class="n">posts_old</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">user_id</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="p">)</span>
-<span class="k">SELECT</span><span class="w"> </span><span class="n">id</span><span class="p">,</span><span class="w"> </span><span class="n">author_id</span><span class="p">,</span><span class="w"> </span><span class="n">title</span><span class="p">,</span><span class="w"> </span><span class="n">content</span><span class="p">,</span><span class="w"> </span><span class="n">created_at</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
-
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
-
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">posts_old</span><span class="w"> </span><span class="k">RENAME</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="n">posts</span><span class="p">;</span>
-
-<span class="k">COMMIT</span><span class="p">;</span>
+<span class="k">DROP</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">update_updated_at</span><span class="p">();</span>
 </code></pre></div>
 
-<h2 id="sql-support">SQL Support<a class="headerlink" href="#sql-support" title="Permanent link">&para;</a></h2>
-<h3 id="supported-sql-statements">Supported SQL Statements<a class="headerlink" href="#supported-sql-statements" title="Permanent link">&para;</a></h3>
-<ul>
-<li><code>CREATE TABLE</code></li>
-<li><code>ALTER TABLE ADD/DROP/MODIFY COLUMN</code></li>
-<li><code>DROP TABLE</code></li>
-<li><code>CREATE INDEX</code></li>
-<li><code>DROP INDEX</code></li>
-<li><code>CREATE/DROP VIEW</code></li>
-<li><code>CREATE/DROP TRIGGER</code></li>
-<li><code>INSERT</code>, <code>UPDATE</code>, <code>DELETE</code> (for data migration)</li>
-<li><code>BEGIN</code>, <code>COMMIT</code>, <code>ROLLBACK</code> (transactions)</li>
-</ul>
-<h3 id="database-specific-sql">Database-Specific SQL<a class="headerlink" href="#database-specific-sql" title="Permanent link">&para;</a></h3>
-<p>DBWarden supports database-specific SQL:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- PostgreSQL</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="n">EXTENSION</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="ss">&quot;uuid-ossp&quot;</span><span class="p">;</span>
-
-<span class="c1">-- MySQL</span>
-<span class="k">ALTER</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="n">ENGINE</span><span class="o">=</span><span class="n">InnoDB</span><span class="p">;</span>
-
-<span class="c1">-- SQLite</span>
-<span class="n">PRAGMA</span><span class="w"> </span><span class="n">foreign_keys</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="k">ON</span><span class="p">;</span>
+<p>Filename example: <code>primary__ROC__update_timestamp_trigger.sql</code></p>
+<h2 id="metadata-headers">Metadata Headers<a class="headerlink" href="#metadata-headers" title="Permanent link">&para;</a></h2>
+<p>Dependency header:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">-- depends_on: [&quot;0004&quot;, &quot;0005&quot;]</span>
 </code></pre></div>
 
-<h2 id="version-management">Version Management<a class="headerlink" href="#version-management" title="Permanent link">&para;</a></h2>
-<h3 id="version-formats">Version Formats<a class="headerlink" href="#version-formats" title="Permanent link">&para;</a></h3>
-<p><strong>Sequential Number (Django-style):</strong></p>
-<div class="codehilite"><pre><span></span><code>primary__0001_description.sql
+<p>Seed header:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1">-- seed</span>
 </code></pre></div>
 
-<ul>
-<li>Unique: Auto-incremented sequential number</li>
-<li>Ordered: Naturally sorted numerically</li>
-<li>Automatic: Generated by <code>make-migrations</code></li>
-</ul>
-<p><strong>Custom Number:</strong></p>
-<div class="codehilite"><pre><span></span><code>primary__9999_custom_description.sql
-</code></pre></div>
-
-<ul>
-<li>Manual: Set with <code>--version</code></li>
-<li>Explicit: You control numbering</li>
-<li>Use when: Need to insert migration between existing ones</li>
-</ul>
-<h3 id="version-ordering">Version Ordering<a class="headerlink" href="#version-ordering" title="Permanent link">&para;</a></h3>
-<p>DBWarden sorts migrations:
-- By database name (for multi-database setups)
-- Numerically by the 4-digit prefix within each database
-- Allows: <code>0001</code>, <code>0002</code>, ..., <code>9999</code></p>
+<p>Headers are parsed before SQL execution and used by ordering logic.</p>
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
-<h3 id="1-one-migration-per-feature">1. One Migration Per Feature<a class="headerlink" href="#1-one-migration-per-feature" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>GOOD:
-├── 0001_initial_schema.sql
-├── 0002_create_users.sql
-├── 0003_create_posts.sql
-└── 0004_add_comments.sql
-
-BAD:
-└── 0001_users_posts_comments_all.sql
-</code></pre></div>
-
-<h3 id="2-descriptive-names">2. Descriptive Names<a class="headerlink" href="#2-descriptive-names" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>GOOD: 0004_add_user_email_verification.sql
-BAD:  0004_changes.sql
-</code></pre></div>
-
-<h3 id="3-always-include-rollback">3. Always Include Rollback<a class="headerlink" href="#3-always-include-rollback" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- GOOD: Has rollback</span>
-<span class="c1">-- upgrade</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
-<span class="c1">-- rollback</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
-
-<span class="c1">-- BAD: No rollback</span>
-<span class="c1">-- upgrade</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="w"> </span><span class="nb">VARCHAR</span><span class="p">(</span><span class="mi">100</span><span class="p">));</span>
-</code></pre></div>
-
-<h3 id="4-idempotent-migrations">4. Idempotent Migrations<a class="headerlink" href="#4-idempotent-migrations" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- GOOD: Idempotent</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span><span class="n">id</span><span class="w"> </span><span class="nb">INT</span><span class="w"> </span><span class="k">PRIMARY</span><span class="w"> </span><span class="k">KEY</span><span class="p">);</span>
-
-<span class="c1">-- GOOD: Safe to run twice</span>
-<span class="k">DROP</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">idx_users_email</span><span class="p">;</span>
-<span class="k">CREATE</span><span class="w"> </span><span class="k">INDEX</span><span class="w"> </span><span class="n">idx_users_email</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="n">users</span><span class="p">(</span><span class="n">email</span><span class="p">);</span>
-</code></pre></div>
-
-<h3 id="5-use-transactions-for-complex-changes">5. Use Transactions for Complex Changes<a class="headerlink" href="#5-use-transactions-for-complex-changes" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- Wrap in transaction for atomicity</span>
-<span class="k">BEGIN</span><span class="p">;</span>
-<span class="c1">-- All changes</span>
-<span class="k">COMMIT</span><span class="p">;</span>
-</code></pre></div>
-
-<h2 id="migration-lifecycle">Migration Lifecycle<a class="headerlink" href="#migration-lifecycle" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code>┌─────────────┐
-│ New File    │ Created by make-migrations or new
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ Pending     │ Not yet applied
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ Applied     │ migrate command executed
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│ Recorded    │ Added to dbwarden_migrations table
-└─────────────┘
-</code></pre></div>
-
-<h2 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h2>
-<h3 id="single-database">Single Database<a class="headerlink" href="#single-database" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>project/
-├── migrations/
-│   ├── primary/
-│   │   ├── primary__0001_initial_schema.sql
-│   │   ├── primary__0002_create_users.sql
-│   │   └── .gitkeep
-│   └── .gitkeep
-├── models/
-│   └── user.py
-├── warden.toml
-└── pyproject.toml
-</code></pre></div>
-
-<h3 id="multi-database">Multi-Database<a class="headerlink" href="#multi-database" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>project/
-├── migrations/
-│   ├── primary/
-│   │   ├── primary__0001_initial_schema.sql
-│   │   └── primary__0002_create_users.sql
-│   ├── analytics/
-│   │   ├── analytics__0001_create_events.sql
-│   │   └── analytics__0002_create_reports.sql
-│   └── legacy/
-│       └── legacy__0001_initial.sql
-├── models/
-│   └── user.py
-├── warden.toml
-└── pyproject.toml
-</code></pre></div>
-
-<p>Each database has its own migration directory containing migrations prefixed with the database name.</p>
-<h2 id="git-integration">Git Integration<a class="headerlink" href="#git-integration" title="Permanent link">&para;</a></h2>
-<h3 id="add-to-version-control">Add to Version Control<a class="headerlink" href="#add-to-version-control" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>git<span class="w"> </span>add<span class="w"> </span>migrations/
-git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;Add database migrations&quot;</span>
-</code></pre></div>
-
-<h3 id="migration-file-rules">Migration File Rules<a class="headerlink" href="#migration-file-rules" title="Permanent link">&para;</a></h3>
-<ol>
-<li><strong>Never modify applied migrations</strong></li>
-<li><strong>Always create new migrations for changes</strong></li>
-<li><strong>Review migration SQL before applying</strong></li>
-</ol>
-<h3 id="handling-migration-conflicts">Handling Migration Conflicts<a class="headerlink" href="#handling-migration-conflicts" title="Permanent link">&para;</a></h3>
-<p>When merging branches:</p>
-<ol>
-<li>Review both migration sequences</li>
-<li>Combine if needed (or use squash)</li>
-<li>Ensure order is preserved</li>
-<li>Test after merge</li>
-</ol>
-<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
-<h3 id="migration-not-found">Migration Not Found<a class="headerlink" href="#migration-not-found" title="Permanent link">&para;</a></h3>
-<p>Check file naming:</p>
-<div class="codehilite"><pre><span></span><code>WRONG: desc.sql                          (missing number)
-WRONG: 1_desc.sql                        (not 4 digits)
-WRONG: 0001_desc.sql                     (missing dbname prefix)
-RIGHT: primary__0001_desc.sql
-</code></pre></div>
-
-<h3 id="parsing-errors">Parsing Errors<a class="headerlink" href="#parsing-errors" title="Permanent link">&para;</a></h3>
-<p>Ensure proper section markers:</p>
-<div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade         (lowercase, no extra spaces)</span>
-<span class="c1">-- rollback        (lowercase)</span>
-</code></pre></div>
-
-<h3 id="duplicate-versions">Duplicate Versions<a class="headerlink" href="#duplicate-versions" title="Permanent link">&para;</a></h3>
-<p>Use unique version numbers within each database:</p>
-<div class="codehilite"><pre><span></span><code>ERROR: primary__0001_feature.sql already exists
-FIX: Use primary__0002_feature.sql or let auto-numbering handle it
-</code></pre></div>
-
-<h3 id="wrong-database">Wrong Database<a class="headerlink" href="#wrong-database" title="Permanent link">&para;</a></h3>
-<p>If migrations aren't being detected:
-1. Check migration filename prefix matches database name in <code>warden.toml</code>
-2. Verify migrations are in the correct directory (e.g., <code>migrations/primary/</code>)
-3. Use <code>dbwarden status -d &lt;database&gt;</code> to check status for specific database</p>
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../commands/make-migrations/">make-migrations</a>: Auto-generate migrations</li>
-<li><a href="../commands/new/">new</a>: Create manual migrations</li>
-<li><a href="../commands/migrate/">migrate</a>: Apply migrations</li>
-<li><a href="../commands/rollback/">rollback</a>: Revert migrations</li>
+<li>Keep one logical change per migration file</li>
+<li>Always write rollback SQL that actually restores previous state</li>
+<li>Prefer explicit SQL over side effects in application code</li>
+<li>Review generated SQL before running <code>migrate</code></li>
+<li>For complex data moves, use transactional blocks where backend supports it</li>
 </ul>
+<h2 id="validation-checklist-before-commit">Validation Checklist Before Commit<a class="headerlink" href="#validation-checklist-before-commit" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>status<span class="w"> </span>-d<span class="w"> </span>primary
+dbwarden<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
+dbwarden<span class="w"> </span>rollback<span class="w"> </span>--count<span class="w"> </span><span class="m">1</span><span class="w"> </span>-d<span class="w"> </span>primary
+dbwarden<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
+</code></pre></div>
 
 
 
