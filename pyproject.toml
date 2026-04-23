@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dbwarden"
-version = "0.3.6"
+version = "0.4"
 description = "Database migration system for Python/SQLAlchemy projects"
 readme = "README.md"
 license = "MIT"
