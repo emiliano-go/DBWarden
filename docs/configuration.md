@@ -1,124 +1,132 @@
 # Configuration
 
-DBWarden reads settings from `warden.toml` in the current directory or parent directories.
+DBWarden uses Python configuration through `database_config(...)` calls.
 
-## Minimal Config
+This page shows all configuration options. For a step-by-step workflow, see the [Tutorial](tutorial/your-first-migration.md).
 
-```toml
-default = "primary"
+## Single database example
 
-[database.primary]
-database_type = "postgresql"
-sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
-migrations_dir = "migrations/primary"
+```python
+from dbwarden import database_config
+
+
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://user:password@localhost:5432/main",
+    migrations_dir="migrations/primary",
+)
 ```
 
-## Multi-Database Config
+## Multi-database example
 
-```toml
-default = "primary"
+```python
+from dbwarden import database_config
 
-[database.primary]
-database_type = "postgresql"
-sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
-migrations_dir = "migrations/primary"
 
-[database.analytics]
-database_type = "clickhouse"
-sqlalchemy_url = "clickhouse://user:password@localhost:8123/analytics"
-migrations_dir = "migrations/analytics"
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://user:password@localhost:5432/main",
+    model_paths=["app/models/api"],
+)
+
+database_config(
+    database_name="analytics",
+    database_type="clickhouse",
+    database_url="clickhouse://user:password@localhost:8123/analytics",
+    model_paths=["app/models/metrics"],
+)
 ```
 
-## Development Database Config
+## Dev database example
 
-Recommended setup:
-
-```toml
-[database.primary]
-database_type = "postgresql"
-sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
-migrations_dir = "migrations/primary"
-
-dev_database_type = "sqlite"
-dev_database_url = "sqlite:///./development.db"
+```python
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://user:password@localhost:5432/main",
+    dev_database_type="sqlite",
+    dev_database_url="sqlite:///./development.db",
+)
 ```
 
 Use with:
 
 ```bash
-dbwarden --dev migrate -d primary
+dbwarden --dev migrate --database primary
 ```
 
-## Field Reference
+## Source resolution
 
-| Field | Required | Description |
-|------|----------|-------------|
-| `default` | yes | Default database name used when `-d` is omitted |
-| `database.<name>.sqlalchemy_url` | yes | Primary DB URL |
-| `database.<name>.database_type` | no | Explicit backend type, inferred from URL if omitted |
-| `database.<name>.migrations_dir` | no | Migration folder, defaults to `migrations/<name>` |
-| `database.<name>.model_paths` | no | List of model paths for auto-generation |
-| `database.<name>.postgres_schema` | no | PostgreSQL search path override |
-| `database.<name>.dev_database_url` | no | Dev DB URL used with `--dev` |
-| `database.<name>.dev_database_type` | no | Dev backend type, inferred if omitted |
+DBWarden resolves config source in this order:
 
-## Internal Loading Rules
+1. discovered `dbwarden.py`
+2. full scan for files containing `database_config(...)`
+3. `DBWARDEN_CONFIG_MODULE` environment variable
 
-DBWarden config loading pipeline:
+If more than one discovered source exists, DBWarden fails fast with an ambiguity error.
+
+## Validation rules
+
+- exactly one `default=True`
+- duplicate database names are rejected
+- duplicate URL/target collisions are rejected
+- if more than one database is configured, `model_paths` is required on each
+- overlapping `model_paths` require explicit `overlap_models=True`
+
+## Secure display mode
+
+Set `secure_values=True` when you want display commands to show variable expressions instead of resolved values for non-literal arguments.
 
 ```python
-def get_database(name=None):
-    cfg = get_multi_db_config()
-    selected = cfg.databases[name or cfg.default]
-    if is_dev_mode():
-        return with_dev_url_and_type(selected)
-    return selected
+DATABASE_URL = "postgresql://..."
+
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url=DATABASE_URL,
+    secure_values=True,
+)
 ```
 
-This means the same command code path works for production and dev mode; only active connection values switch.
+Reference: [Configuration API](reference/configuration-api.md)
 
-## Validation Rules
+## Next Steps in Your Workflow
 
-DBWarden validates config aggressively to prevent dangerous mistakes.
+Now that your configuration is set up, here's the recommended learning path:
 
-1. `default` must exist in `[database.*]`
-2. Every DB entry must have `sqlalchemy_url`
-3. `dev_database_type` requires `dev_database_url`
-4. URLs must be unique across primary and dev URLs
-5. Physical DB targets must be unique (even if URLs differ by credentials)
+### Generate your first migration
 
-Example invalid setup (same target DB):
+Now that DBWarden knows about your database, the next step is creating your first migration:
 
-```toml
-[database.primary]
-sqlalchemy_url = "postgresql://user1:pass1@localhost:5432/main"
+- [Your First Migration](tutorial/your-first-migration.md)
 
-[database.reporting]
-sqlalchemy_url = "postgresql://user2:pass2@localhost:5432/main"
-```
+### Apply and manage migrations
 
-## SQL Translation Settings
+Once migrations exist, learn how to run them safely:
 
-When using `--dev` with SQLite, translation is enabled for backend-specific model SQL.
+- [Applying Migrations](tutorial/applying-migrations.md)
+- [Rolling Back](tutorial/rolling-back.md)
+- [Checking Status](tutorial/checking-status.md)
 
-- Non-strict mode: unsupported conversions fallback to `TEXT` with warning
-- Strict mode: fail on unsupported conversion
+### Optimize your development loop
 
-```bash
-dbwarden --dev --strict-translation make-migrations "sync" -d primary
-```
+Use dev mode for fast local iterations:
 
-## Troubleshooting
+- [Dev Mode](tutorial/dev-mode.md)
 
-`Database '<name>' not found`:
+### Scale to multiple databases
 
-- Verify database key exists in `warden.toml`
-- Verify `default` references an existing key
+If your project uses more than one database:
 
-`has no dev_database_url configured` in `--dev` mode:
+- [Multi-Database Setup](tutorial/multi-database-setup.md)
 
-- Add `dev_database_url` for target database
+## Navigation
 
-Duplicate URL/target errors:
-
-- Ensure each configured primary/dev DB points to a distinct physical target
+- Previous: [First Steps](getting-started/first-steps.md)
+- Next: [Your First Migration](tutorial/your-first-migration.md)

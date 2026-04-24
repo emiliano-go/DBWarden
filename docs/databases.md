@@ -16,35 +16,43 @@ DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
 
 PostgreSQL:
 
-```toml
-[database.primary]
-database_type = "postgresql"
-sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
-postgres_schema = "public"
+```python
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://user:password@localhost:5432/main",
+)
 ```
 
 MySQL:
 
-```toml
-[database.legacy]
-database_type = "mysql"
-sqlalchemy_url = "mysql://user:password@localhost:3306/legacy"
+```python
+database_config(
+    database_name="legacy",
+    database_type="mysql",
+    database_url="mysql://user:password@localhost:3306/legacy",
+)
 ```
 
 SQLite:
 
-```toml
-[database.dev]
-database_type = "sqlite"
-sqlalchemy_url = "sqlite:///./development.db"
+```python
+database_config(
+    database_name="dev",
+    database_type="sqlite",
+    database_url="sqlite:///./development.db",
+)
 ```
 
 ClickHouse:
 
-```toml
-[database.analytics]
-database_type = "clickhouse"
-sqlalchemy_url = "clickhouse://user:password@localhost:8123/analytics"
+```python
+database_config(
+    database_name="analytics",
+    database_type="clickhouse",
+    database_url="clickhouse://user:password@localhost:8123/analytics",
+)
 ```
 
 ## Internal Connection Handling
@@ -71,12 +79,15 @@ Recommended pattern:
 - SQLite for dev DB via `dev_database_url`
 - Run local commands with `--dev`
 
-```toml
-[database.primary]
-database_type = "postgresql"
-sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
-dev_database_type = "sqlite"
-dev_database_url = "sqlite:///./development.db"
+```python
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://user:password@localhost:5432/main",
+    dev_database_type="sqlite",
+    dev_database_url="sqlite:///./development.db",
+)
 ```
 
 ```bash

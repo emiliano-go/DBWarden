@@ -18,32 +18,47 @@ theme:
 
 nav:
   - Home: index.md
-  - Installation: installation.md
-  - Configuration: configuration.md
-  - Quick Start: quickstart.md
-  - Commands:
-      - Commands Overview: commands.md
-      - init: commands/init.md
-      - database: commands/database.md
-      - make-migrations: commands/make-migrations.md
-      - new: commands/new.md
-      - migrate: commands/migrate.md
-      - rollback: commands/rollback.md
-      - history: commands/history.md
-      - status: commands/status.md
-      - check-db: commands/check-db.md
-      - diff: commands/diff.md
-      - squash: commands/squash.md
-      - lock/unlock: commands/lock.md
-      - version: commands/version.md
-  - Migration Files: migration-files.md
-  - SQLAlchemy Models: models.md
-  - Supported Databases: databases.md
-  - SQL Translation: sql-translation.md
-  - Architecture Deep Dive: architecture-deep-dive.md
-  - Operations Runbook: operations-runbook.md
-  - Advanced Features: advanced.md
-  - CLI Reference: cli-reference.md
+  - Getting Started:
+      - Introduction: getting-started/introduction.md
+      - Installation: installation.md
+      - First Steps: getting-started/first-steps.md
+  - Tutorial:
+      - Configuration: configuration.md
+      - Your First Migration: tutorial/your-first-migration.md
+      - Applying Migrations: tutorial/applying-migrations.md
+      - Rolling Back: tutorial/rolling-back.md
+      - Checking Status: tutorial/checking-status.md
+      - Dev Mode: tutorial/dev-mode.md
+      - Multi-Database Setup: tutorial/multi-database-setup.md
+  - Advanced User Guide:
+      - Migration File Format: migration-files.md
+      - SQL Translation: sql-translation.md
+      - Migration Locking: advanced/migration-locking.md
+      - Checksum Integrity: advanced/checksum-integrity.md
+      - Squashing Migrations: advanced/squashing-migrations.md
+      - CI/CD Patterns: advanced/ci-cd-patterns.md
+      - Safe Deployment: advanced/safe-deployment.md
+  - Reference:
+      - CLI Reference:
+          - Overview: cli-reference.md
+          - init: commands/init.md
+          - settings/database: commands/database.md
+          - make-migrations: commands/make-migrations.md
+          - new: commands/new.md
+          - migrate: commands/migrate.md
+          - rollback: commands/rollback.md
+          - history: commands/history.md
+          - status: commands/status.md
+          - check-db: commands/check-db.md
+          - diff: commands/diff.md
+          - squash: commands/squash.md
+          - lock/unlock: commands/lock.md
+          - version: commands/version.md
+      - Supported Databases: databases.md
+      - Configuration API: reference/configuration-api.md
+      - Architecture: architecture-deep-dive.md
+      - SQLAlchemy Models: models.md
+      - Migrate from TOML: reference/migrate-from-toml.md
 
 markdown_extensions:
   - admonition
