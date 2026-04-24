@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../../assets/icon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
@@ -3645,7 +3645,7 @@
 <p>FastAPI needs to serialize the object after the route returns, so <code>expire_on_commit=False</code> is essential.</p>
 <h2 id="connection-pool-exhaustion">Connection Pool Exhaustion<a class="headerlink" href="#connection-pool-exhaustion" title="Permanent link">&para;</a></h2>
 <h3 id="symptoms">Symptoms<a class="headerlink" href="#symptoms" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code>TimeoutError: QueuePool limit of size 5 overflow 10 reached
+<div class="codehilite"><pre><span></span><code><span class="n">TimeoutError</span><span class="o">:</span><span class="w"> </span><span class="n">QueuePool</span><span class="w"> </span><span class="n">limit</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">size</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="n">overflow</span><span class="w"> </span><span class="mi">10</span><span class="w"> </span><span class="n">reached</span>
 </code></pre></div>
 
 <p>This happens when:

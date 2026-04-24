@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/icon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
@@ -3874,7 +3874,7 @@ dbwarden<span class="w"> </span><span class="nb">history</span><span class="w"> 
 </code></pre></div>
 
 <p>When you run <code>dbwarden migrate</code>:</p>
-<div class="codehilite"><pre><span></span><code>Error: Duplicate database_name &#39;primary&#39;
+<div class="codehilite"><pre><span></span><code><span class="n">Error</span><span class="o">:</span><span class="w"> </span><span class="n">Duplicate</span><span class="w"> </span><span class="n">database_name</span><span class="w"> </span><span class="s1">&#39;primary&#39;</span>
 </code></pre></div>
 
 <p>Validation happens <strong>before</strong> any commands execute.</p>
@@ -3981,16 +3981,16 @@ dbwarden<span class="w"> </span>migrate<span class="w">        </span><span clas
 </code></pre></div>
 
 <h3 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h3>
-<div class="codehilite"><pre><span></span><code><span class="nx">Command</span><span class="p">:</span><span class="w"> </span><span class="nx">dbwarden</span><span class="w"> </span><span class="o">--</span><span class="nx">dev</span><span class="w"> </span><span class="nx">migrate</span>
+<div class="codehilite"><pre><span></span><code><span class="n">Command</span><span class="o">:</span><span class="w"> </span><span class="n">dbwarden</span><span class="w"> </span><span class="o">--</span><span class="n">dev</span><span class="w"> </span><span class="n">migrate</span>
 <span class="w">    </span><span class="err">↓</span>
-<span class="nx">Check</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="o">--</span><span class="nx">dev</span><span class="w"> </span><span class="nx">flag</span>
+<span class="n">Check</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="o">--</span><span class="n">dev</span><span class="w"> </span><span class="n">flag</span>
 <span class="w">    </span><span class="err">↓</span>
-<span class="nx">Swap</span><span class="w"> </span><span class="nx">database_type</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">dev_database_type</span>
-<span class="nx">Swap</span><span class="w"> </span><span class="nx">database_url</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="nx">dev_database_url</span>
+<span class="n">Swap</span><span class="w"> </span><span class="n">database_type</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">dev_database_type</span>
+<span class="n">Swap</span><span class="w"> </span><span class="n">database_url</span><span class="w"> </span><span class="err">→</span><span class="w"> </span><span class="n">dev_database_url</span>
 <span class="w">    </span><span class="err">↓</span>
-<span class="nx">Connect</span><span class="w"> </span><span class="nx">to</span><span class="w"> </span><span class="nx">dev</span><span class="w"> </span><span class="nx">database</span>
+<span class="n">Connect</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="n">dev</span><span class="w"> </span><span class="n">database</span>
 <span class="w">    </span><span class="err">↓</span>
-<span class="nx">Execute</span><span class="w"> </span><span class="nx">command</span>
+<span class="n">Execute</span><span class="w"> </span><span class="n">command</span>
 </code></pre></div>
 
 <h3 id="why-use-it">Why Use It?<a class="headerlink" href="#why-use-it" title="Permanent link">&para;</a></h3>
