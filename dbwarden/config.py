@@ -1,146 +1,124 @@
+from __future__ import annotations
+
+import ast
+import importlib
+import importlib.util
+import os
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
-import tomllib
 from sqlalchemy.engine import make_url
 
+from dbwarden.config_registry import register_reset_hook, registered_entries, reset_registry
+from dbwarden.config_schema import DatabaseEntry
 from dbwarden.constants import TOML_FILE
 from dbwarden.exceptions import ConfigurationError
 
 DatabaseType = Literal["sqlite", "postgresql", "mysql", "mariadb", "clickhouse"]
 
+_IGNORE_DIRS = {
+    ".git",
+    ".venv",
+    "venv",
+    "node_modules",
+    "dist",
+    "build",
+    "site",
+    "__pycache__",
+    ".mypy_cache",
+    ".pytest_cache",
+}
+
 
 @dataclass
 class DatabaseConfig:
-    """
-    Configuration settings for a single database.
-
-    Attributes:
-        sqlalchemy_url (str): The SQLAlchemy database connection URL.
-        database_type (DatabaseType): The database type (sqlite, postgresql, mysql, mariadb, clickhouse).
-        model_paths (list[str] | None): Optional list of paths to SQLAlchemy
-            model files for automatic migration generation. Defaults to None.
-        migrations_dir (str): Directory for migration files. Defaults to "migrations".
-        postgres_schema (str | None): Optional PostgreSQL schema to use.
-            Defaults to None.
-    """
-
     sqlalchemy_url: str
     database_type: DatabaseType
+    secure_values: bool = False
+    secure_display_values: dict[str, str] = field(default_factory=dict)
     model_paths: list[str] | None = None
     migrations_dir: str = "migrations"
     postgres_schema: str | None = None
     dev_database_url: str | None = None
     dev_database_type: DatabaseType | None = None
+    overlap_models: bool = False
 
 
 @dataclass
 class MultiDbConfig:
-    """
-    Multi-database configuration for DBWarden.
-
-    Attributes:
-        databases (dict[str, DatabaseConfig]): Dictionary mapping database names to configs.
-        default (str): Name of the default database. Defaults to "default".
-    """
-
     databases: dict[str, DatabaseConfig] = field(default_factory=dict)
     default: str = "default"
 
 
+@dataclass
+class _ResolvedSource:
+    kind: Literal["file", "module"]
+    value: str
+
+
 _USE_DEV_DATABASE = False
 _STRICT_TRANSLATION = False
+_RESOLVED_SOURCE_CACHE: _ResolvedSource | None = None
 
 
 def set_dev_mode(enabled: bool) -> None:
-    """Enable or disable development database mode for this process."""
     global _USE_DEV_DATABASE
     _USE_DEV_DATABASE = enabled
 
 
 def is_dev_mode() -> bool:
-    """Return whether development database mode is enabled."""
     return _USE_DEV_DATABASE
 
 
 def set_strict_translation(enabled: bool) -> None:
-    """Enable or disable strict SQL translation mode for this process."""
     global _STRICT_TRANSLATION
     _STRICT_TRANSLATION = enabled
 
 
 def is_strict_translation() -> bool:
-    """Return whether strict SQL translation mode is enabled."""
     return _STRICT_TRANSLATION
 
 
+def _clear_source_cache() -> None:
+    global _RESOLVED_SOURCE_CACHE
+    _RESOLVED_SOURCE_CACHE = None
+
+
+register_reset_hook(_clear_source_cache)
+
+
 def get_toml_path() -> Path | None:
-    """
-    Find the warden.toml file by searching up the directory tree.
+    """Backward-compatible helper retained for callers.
 
-    Returns:
-        Path | None: The path to warden.toml if found, None otherwise.
+    TOML is no longer the primary source. This returns path if present
+    but runtime config loading does not depend on it.
     """
+
     current = Path.cwd().resolve()
-
     while True:
         toml_path = current / TOML_FILE
         if toml_path.exists():
             return toml_path
-
         if current.parent == current:
             break
         current = current.parent
-
     return None
 
 
 def _infer_database_type(sqlalchemy_url: str) -> DatabaseType:
-    """
-    Infer database type from SQLAlchemy URL.
-
-    Args:
-        sqlalchemy_url: The database connection URL.
-
-    Returns:
-        DatabaseType: The inferred database type.
-    """
     url_lower = sqlalchemy_url.lower()
     if url_lower.startswith("sqlite"):
         return "sqlite"
-    elif url_lower.startswith("postgresql") or url_lower.startswith("postgres"):
+    if url_lower.startswith("postgresql") or url_lower.startswith("postgres"):
         return "postgresql"
-    elif url_lower.startswith("mysql"):
+    if url_lower.startswith("mysql"):
         return "mysql"
-    elif url_lower.startswith("mariadb"):
+    if url_lower.startswith("mariadb"):
         return "mariadb"
-    elif url_lower.startswith("clickhouse"):
+    if url_lower.startswith("clickhouse"):
         return "clickhouse"
     return "sqlite"
-
-
-def _validate_database_type(
-    database_type: str, name: str, field_name: str
-) -> DatabaseType:
-    if not isinstance(database_type, str):
-        raise ConfigurationError(
-            f"Invalid {field_name} for database '{name}'. Must be a string."
-        )
-
-    explicit_type = database_type.lower()
-    if explicit_type not in (
-        "sqlite",
-        "postgresql",
-        "mysql",
-        "mariadb",
-        "clickhouse",
-    ):
-        raise ConfigurationError(
-            f"Invalid {field_name} '{explicit_type}' for database '{name}'. "
-            f"Must be one of: sqlite, postgresql, mysql, mariadb, clickhouse"
-        )
-    return explicit_type  # type: ignore[return-value]
 
 
 def _normalized_url(url: str) -> str:
@@ -152,7 +130,6 @@ def _normalized_url(url: str) -> str:
 
 
 def _build_database_target_key(url: str, db_type: str, base_dir: Path) -> str:
-    """Return a canonical key for identifying the physical target database."""
     parsed = make_url(url)
 
     if db_type == "sqlite":
@@ -174,170 +151,307 @@ def _build_database_target_key(url: str, db_type: str, base_dir: Path) -> str:
     return f"{db_type}::{host}:{port}/{database}"
 
 
-def _validate_unique_database_targets(
-    databases: dict[str, DatabaseConfig],
-    base_dir: Path,
-) -> None:
-    normalized_urls: dict[str, str] = {}
-    target_keys: dict[str, str] = {}
+def _discover_dbwarden_files(root: Path) -> list[Path]:
+    matches: list[Path] = []
+    for current, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in _IGNORE_DIRS]
+        if "dbwarden.py" in files:
+            matches.append(Path(current) / "dbwarden.py")
+    return sorted(matches)
 
-    for name, config in databases.items():
-        entries = [("sqlalchemy_url", config.sqlalchemy_url, config.database_type)]
-        if config.dev_database_url and config.dev_database_type:
-            entries.append(
-                (
-                    "dev_database_url",
-                    config.dev_database_url,
-                    config.dev_database_type,
-                )
+
+def _workspace_root() -> Path:
+    current = Path.cwd().resolve()
+    while True:
+        if (current / ".git").exists():
+            return current
+        if current.parent == current:
+            return Path.cwd().resolve()
+        current = current.parent
+
+
+def _file_has_database_config_call(path: Path) -> bool:
+    try:
+        source = path.read_text(encoding="utf-8", errors="ignore")
+        tree = ast.parse(source)
+    except Exception:
+        return False
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Name) and func.id == "database_config":
+                return True
+    return False
+
+
+def _full_scan_database_config_calls(root: Path) -> list[Path]:
+    matches: list[Path] = []
+    for current, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in _IGNORE_DIRS]
+        for filename in files:
+            if not filename.endswith(".py"):
+                continue
+            path = Path(current) / filename
+            if _file_has_database_config_call(path):
+                matches.append(path)
+    return sorted(matches)
+
+
+def _is_literal_node(node: ast.AST) -> bool:
+    if isinstance(node, ast.Constant):
+        return True
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        return all(_is_literal_node(el) for el in node.elts)
+    if isinstance(node, ast.Dict):
+        return all(
+            (k is None or _is_literal_node(k)) and _is_literal_node(v)
+            for k, v in zip(node.keys, node.values)
+        )
+    return False
+
+
+def _extract_variable_value_expressions(path: Path) -> list[dict[str, str]]:
+    try:
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source)
+    except Exception:
+        return []
+
+    call_metadata: list[dict[str, str]] = []
+    for node in tree.body:
+        if not isinstance(node, ast.Expr) or not isinstance(node.value, ast.Call):
+            continue
+        call = node.value
+        if not isinstance(call.func, ast.Name) or call.func.id != "database_config":
+            continue
+
+        variable_kwargs: dict[str, str] = {}
+        for kw in call.keywords:
+            if kw.arg is None:
+                continue
+            if _is_literal_node(kw.value):
+                continue
+            expr = ast.get_source_segment(source, kw.value)
+            if expr is None:
+                expr = ast.unparse(kw.value)
+            variable_kwargs[kw.arg] = expr.strip()
+        call_metadata.append(variable_kwargs)
+    return call_metadata
+
+
+def _resolve_source() -> _ResolvedSource:
+    global _RESOLVED_SOURCE_CACHE
+    if _RESOLVED_SOURCE_CACHE is not None:
+        return _RESOLVED_SOURCE_CACHE
+
+    root = _workspace_root()
+    dbwarden_files = _discover_dbwarden_files(root)
+    if len(dbwarden_files) > 1:
+        paths = "\n".join(str(p) for p in dbwarden_files)
+        raise ConfigurationError(
+            "Multiple dbwarden.py files found. Keep exactly one.\n" + paths
+        )
+    if len(dbwarden_files) == 1:
+        _RESOLVED_SOURCE_CACHE = _ResolvedSource("file", str(dbwarden_files[0]))
+        return _RESOLVED_SOURCE_CACHE
+
+    callsite_files = _full_scan_database_config_calls(root)
+    if len(callsite_files) > 1:
+        paths = "\n".join(str(p) for p in callsite_files)
+        raise ConfigurationError(
+            "Multiple database_config(...) call sites found. Keep exactly one source or set DBWARDEN_CONFIG_MODULE.\n"
+            + paths
+        )
+    if len(callsite_files) == 1:
+        _RESOLVED_SOURCE_CACHE = _ResolvedSource("file", str(callsite_files[0]))
+        return _RESOLVED_SOURCE_CACHE
+
+    module_name = os.getenv("DBWARDEN_CONFIG_MODULE")
+    if module_name:
+        _RESOLVED_SOURCE_CACHE = _ResolvedSource("module", module_name)
+        return _RESOLVED_SOURCE_CACHE
+
+    raise ConfigurationError(
+        "No configuration found. Add database_config(...) call(s), create dbwarden.py with dbwarden init, "
+        "or set DBWARDEN_CONFIG_MODULE."
+    )
+
+
+def get_settings_source_file() -> Path:
+    """Return resolved settings source file for mutating commands."""
+    source = _resolve_source()
+    if source.kind != "file":
+        raise ConfigurationError(
+            "Settings mutator commands require a file-based config source. "
+            "Use a local dbwarden.py or full-scan-resolved file source."
+        )
+    return Path(source.value)
+
+
+def _import_source(source: _ResolvedSource) -> Path:
+    if source.kind == "module":
+        importlib.import_module(source.value)
+        return Path.cwd().resolve()
+
+    path = Path(source.value)
+    module_name = f"_dbwarden_user_config_{abs(hash(str(path)))}"
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ConfigurationError(f"Could not load config source: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return path.parent
+
+
+def _entry_model_paths(entry: DatabaseEntry) -> set[str]:
+    return {p for p in (entry.model_paths or [])}
+
+
+def _finalize_entries(
+    entries: list[DatabaseEntry],
+    base_dir: Path,
+    variable_value_expressions: list[dict[str, str]] | None = None,
+) -> MultiDbConfig:
+    if not entries:
+        raise ConfigurationError(
+            "No database_config(...) call found. Add dbwarden init or set DBWARDEN_CONFIG_MODULE."
+        )
+
+    defaults = [e for e in entries if e.default]
+    if len(defaults) != 1:
+        raise ConfigurationError(
+            f"Exactly one default=True required, found {len(defaults)}"
+        )
+
+    if len(entries) > 1:
+        missing_model_paths = [e.database_name for e in entries if not e.model_paths]
+        if missing_model_paths:
+            names = ", ".join(missing_model_paths)
+            raise ConfigurationError(
+                f"model_paths is required when more than one database is configured. Missing for: {names}"
             )
 
-        for field_name, url, db_type in entries:
-            url_key = _normalized_url(url)
-            owner = f"{name}.{field_name}"
+    databases: dict[str, DatabaseConfig] = {}
+    url_owners: dict[str, str] = {}
+    migration_owners: dict[str, str] = {}
+    target_owners: dict[str, str] = {}
 
-            if url_key in normalized_urls:
-                previous_owner = normalized_urls[url_key]
-                raise ConfigurationError(
-                    "Duplicate database URL detected in warden.toml: "
-                    f"'{owner}' and '{previous_owner}' point to the same URL."
-                )
-            normalized_urls[url_key] = owner
+    for index, entry in enumerate(entries):
+        if entry.database_name in databases:
+            raise ConfigurationError(f"Duplicate database_name: '{entry.database_name}'")
 
-            target_key = _build_database_target_key(url, db_type, base_dir)
-            if target_key in target_keys:
-                previous_owner = target_keys[target_key]
+        migrations_dir = entry.migrations_dir or f"migrations/{entry.database_name}"
+        if migrations_dir in migration_owners:
+            raise ConfigurationError(
+                f"Duplicate migrations_dir: '{migrations_dir}' in '{entry.database_name}' and '{migration_owners[migrations_dir]}'"
+            )
+        migration_owners[migrations_dir] = entry.database_name
+
+        normalized_url = _normalized_url(entry.database_url)
+        if normalized_url in url_owners:
+            raise ConfigurationError(
+                f"Duplicate database_url: '{entry.database_url}'"
+            )
+        url_owners[normalized_url] = entry.database_name
+
+        target_key = _build_database_target_key(
+            entry.database_url,
+            entry.database_type,
+            base_dir,
+        )
+        if target_key in target_owners:
+            raise ConfigurationError(
+                "Duplicate database target detected: "
+                f"'{entry.database_name}' collides with '{target_owners[target_key]}'"
+            )
+        target_owners[target_key] = entry.database_name
+
+        if entry.dev_database_type and not entry.dev_database_url:
+            raise ConfigurationError(
+                f"dev_database_url is required when dev_database_type is set for '{entry.database_name}'"
+            )
+
+        if entry.dev_database_url:
+            dev_url_key = _normalized_url(entry.dev_database_url)
+            owner = url_owners.get(dev_url_key)
+            if owner is not None:
                 raise ConfigurationError(
-                    "Duplicate database target detected in warden.toml: "
-                    f"'{owner}' and '{previous_owner}' point to the same database target."
+                    f"Duplicate dev_database_url: '{entry.dev_database_url}'"
                 )
-            target_keys[target_key] = owner
+            url_owners[dev_url_key] = entry.database_name
+
+            dev_type = entry.dev_database_type or _infer_database_type(
+                entry.dev_database_url
+            )
+            dev_target_key = _build_database_target_key(
+                entry.dev_database_url,
+                dev_type,
+                base_dir,
+            )
+            if dev_target_key in target_owners:
+                raise ConfigurationError(
+                    "Duplicate database target detected for dev database: "
+                    f"'{entry.database_name}' collides with '{target_owners[dev_target_key]}'"
+                )
+            target_owners[dev_target_key] = entry.database_name
+
+        secure_display_values: dict[str, str] = {}
+        if entry.secure_values and variable_value_expressions is not None:
+            if index < len(variable_value_expressions):
+                secure_display_values = variable_value_expressions[index]
+
+        databases[entry.database_name] = DatabaseConfig(
+            sqlalchemy_url=entry.database_url,
+            database_type=entry.database_type,
+            secure_values=entry.secure_values,
+            secure_display_values=secure_display_values,
+            model_paths=entry.model_paths,
+            migrations_dir=migrations_dir,
+            postgres_schema=None,
+            dev_database_url=entry.dev_database_url,
+            dev_database_type=entry.dev_database_type,
+            overlap_models=entry.overlap_models,
+        )
+
+    # model_paths overlap validation
+    for i, left in enumerate(entries):
+        for right in entries[i + 1 :]:
+            if left.overlap_models or right.overlap_models:
+                continue
+            overlap = _entry_model_paths(left).intersection(_entry_model_paths(right))
+            if overlap:
+                overlap_path = sorted(overlap)[0]
+                raise ConfigurationError(
+                    "model_paths overlap detected: "
+                    f"path '{overlap_path}' from '{right.database_name}' is also defined in '{left.database_name}'; "
+                    "set overlap_models=True to allow"
+                )
+
+    default_name = defaults[0].database_name
+    return MultiDbConfig(databases=databases, default=default_name)
 
 
 def get_multi_db_config() -> MultiDbConfig:
-    """
-    Load multi-database configuration from warden.toml file.
-
-    Returns:
-        MultiDbConfig: Multi-database configuration dataclass.
-
-    Raises:
-        ConfigurationError: If warden.toml is not found or is missing required values.
-    """
-    toml_path = get_toml_path()
-
-    if not toml_path:
-        raise ConfigurationError(
-            f"warden.toml not found. Please create a warden.toml file in {Path.cwd()} or a parent directory.\n"
-            f"Required format:\n"
-            f'  default = "primary"\n'
-            f"  [database.primary]\n"
-            f'  sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"\n'
-            f'  migrations_dir = "migrations/primary"\n'
-            f'  model_paths = ["./models/"]'
+    source = _resolve_source()
+    variable_value_expressions: list[dict[str, str]] | None = None
+    if source.kind == "file":
+        variable_value_expressions = _extract_variable_value_expressions(
+            Path(source.value)
         )
+    reset_registry()
+    base_dir = _import_source(source)
+    entries = registered_entries()
+    return _finalize_entries(entries, base_dir, variable_value_expressions)
 
-    with open(toml_path, "rb") as f:
-        config_data = tomllib.load(f)
 
-    config_dir = toml_path.parent
-
-    toml_config = config_data.get("warden", config_data)
-
-    default = toml_config.get("default", "default")
-    databases: dict[str, DatabaseConfig] = {}
-
-    database_section = toml_config.get("database", {})
-    if not database_section:
-        raise ConfigurationError(
-            "No [database] section found in warden.toml. "
-            "Multi-database format is required.\n"
-            f'  default = "primary"\n'
-            f"  [database.primary]\n"
-            f'  sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"'
-        )
-
-    for name, db_config in database_section.items():
-        if not isinstance(db_config, dict):
-            raise ConfigurationError(
-                f"Invalid database configuration for '{name}'. Expected a table with settings."
-            )
-
-        sqlalchemy_url = db_config.get("sqlalchemy_url")
-        if not sqlalchemy_url:
-            raise ConfigurationError(
-                f"sqlalchemy_url is required for database '{name}' in warden.toml. "
-                f'Example: sqlalchemy_url = "postgresql://user:password@localhost:5432/mydb"'
-            )
-
-        database_type = _infer_database_type(sqlalchemy_url)
-        if "database_type" in db_config:
-            database_type = _validate_database_type(
-                db_config["database_type"],
-                name,
-                "database_type",
-            )
-
-        model_paths = None
-        if "model_paths" in db_config:
-            model_paths = db_config["model_paths"]
-            if isinstance(model_paths, str):
-                model_paths = [p.strip() for p in model_paths.split(",") if p.strip()]
-
-        migrations_dir = db_config.get("migrations_dir", f"migrations/{name}")
-        postgres_schema = db_config.get("postgres_schema", None)
-
-        dev_database_url = db_config.get("dev_database_url")
-        dev_database_type = None
-        if "dev_database_type" in db_config and not dev_database_url:
-            raise ConfigurationError(
-                f"dev_database_url is required when dev_database_type is set for database '{name}'."
-            )
-
-        if dev_database_url:
-            dev_database_type = _infer_database_type(dev_database_url)
-            if "dev_database_type" in db_config:
-                dev_database_type = _validate_database_type(
-                    db_config["dev_database_type"],
-                    name,
-                    "dev_database_type",
-                )
-
-        databases[name] = DatabaseConfig(
-            sqlalchemy_url=sqlalchemy_url,
-            database_type=database_type,
-            model_paths=model_paths,
-            migrations_dir=migrations_dir,
-            postgres_schema=postgres_schema,
-            dev_database_url=dev_database_url,
-            dev_database_type=dev_database_type,
-        )
-
-    if default not in databases:
-        available = list(databases.keys())
-        raise ConfigurationError(
-            f"Default database '{default}' not found in [database] section. "
-            f"Available databases: {available}"
-        )
-
-    _validate_unique_database_targets(databases, config_dir)
-
-    return MultiDbConfig(databases=databases, default=default)
+def display_value(db: DatabaseConfig, field_name: str, value: Any) -> Any:
+    if db.secure_values and field_name in db.secure_display_values:
+        return db.secure_display_values[field_name]
+    return value
 
 
 def get_database(name: str | None = None) -> DatabaseConfig:
-    """
-    Get database config by name or default.
-
-    Args:
-        name: Database name. If None, returns the default database.
-
-    Returns:
-        DatabaseConfig: Configuration for the specified database.
-
-    Raises:
-        ConfigurationError: If database name is not found.
-    """
     config = get_multi_db_config()
 
     if name is None:
@@ -346,8 +460,7 @@ def get_database(name: str | None = None) -> DatabaseConfig:
     if name not in config.databases:
         available = list(config.databases.keys())
         raise ConfigurationError(
-            f"Database '{name}' not found in warden.toml. "
-            f"Available databases: {available}"
+            f"Database '{name}' not found in settings config. Available databases: {available}"
         )
 
     selected = config.databases[name]
@@ -372,21 +485,8 @@ def get_database(name: str | None = None) -> DatabaseConfig:
 
 
 def list_databases() -> list[str]:
-    """
-    List all configured database names.
-
-    Returns:
-        list[str]: List of database names.
-    """
-    config = get_multi_db_config()
-    return list(config.databases.keys())
+    return list(get_multi_db_config().databases.keys())
 
 
 def get_config() -> DatabaseConfig:
-    """
-    Get the default database config (for backward compatibility).
-
-    Returns:
-        DatabaseConfig: Configuration for the default database.
-    """
     return get_database(None)
