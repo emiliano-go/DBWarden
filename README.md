@@ -1,25 +1,53 @@
-<div align="center">
-
-<img src="https://raw.githubusercontent.com/emiliano-gandini-outeda/DBWarden/refs/heads/main/assets/icon.png" width="128" height="128" style="border-radius: 20px;">
-
-# DBWarden
-
-A database migration system for Python/SQLAlchemy projects.
-
-## Django-like migration managment, made for FastAPI
-
-<a href="https://emiliano-gandini-outeda.github.io/DBWarden/">
-  <img src="https://img.shields.io/badge/docs-mkdocs-blue.svg" alt="Documentation">
-</a>
-<a href="https://deepwiki.com/emiliano-gandini-outeda/DBWarden">
-  <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
-</a>
+<p align="center">
+  <img src="assets/icon.png" alt="DBWarden" width="128"/>
+</p>
+<p align="center">
+    <em>The database toolkit for FastAPI. Lightweight, explicit, and built to stay out of your way.</em>
+</p>
+<p align="center">
+  <a href="https://pypi.org/project/dbwarden"><img src="https://img.shields.io/pypi/v/dbwarden?color=%2334D058&label=pypi" alt="PyPI version"/></a>
+  <a href="https://pypi.org/project/dbwarden"><img src="https://img.shields.io/pypi/pyversions/dbwarden.svg?color=%2334D058" alt="Python versions"/></a>
+  <a href="https://github.com/emiliano-gandini-outeda/DBWarden/blob/main/LICENSE"><img src="https://img.shields.io/github/license/emiliano-gandini-outeda/DBWarden?color=%2334D058" alt="License"/></a>
+</p>
 
 ---
 
-<img src="https://github.com/emiliano-gandini-outeda/DBWarden/blob/main/assets/banner.png?raw=true" width="100%">
+**Documentation**: [https://dbwarden.readthedocs.io](https://dbwarden.readthedocs.io)
 
-</div>
+**Source Code**: [https://github.com/emiliano-gandini-outeda/DBWarden](https://github.com/emiliano-gandini-outeda/DBWarden)
+
+---
+
+DBWarden is a database toolkit for FastAPI and SQLAlchemy projects.
+It handles migrations, async sessions, startup validation, and health
+checks — all from a single configuration source.
+
+> **Experimental**: DBWarden is under active development.
+> Breaking changes may occur between versions.
+
+## Key Features
+
+- **SQL-first**: Migrations are plain SQL. What you write is exactly what
+  runs against your database. No DSL, no surprises.
+- **Rollback included**: Every migration carries both upgrade and rollback
+  SQL. Rolling back is a first-class operation, not an afterthought.
+- **FastAPI-native**: Async session dependency, lifespan helpers, and a
+  mountable health router designed around FastAPI's patterns.
+- **One config, everything**: The same `database_config(...)` call that
+  defines your migrations also drives your sessions and health checks.
+  No split configs.
+- **Dev mode**: Run SQLite locally against a PostgreSQL production schema.
+  DBWarden translates the SQL automatically.
+- **Multi-database**: Configure and migrate multiple databases from a
+  single project, with full isolation and uniqueness guarantees.
+- **Safe by default**: Migration locking, checksum integrity, collision
+  detection, and schema drift checks before you deploy. DBWarden protects
+  your database — from accidents and from itself.
+
+## Requirements
+
+- Python 3.10+
+- SQLAlchemy
 
 ## Installation
 
@@ -27,114 +55,34 @@ A database migration system for Python/SQLAlchemy projects.
 pip install dbwarden
 ```
 
-## Configuration
-
-**⚠️ Warning**
-
-This is an experimental package. Your fuckups are not mine to fix. You have been warned.
-
-*Even though this is an experimental package, I added lots of failsafes to protect the connected DB as to avoid issues.*
-
-Create `warden.toml` in your project:
-
-```toml
-# Default database
-default = "primary"
-
-# Database configurations
-[database.primary]
-database_type = "sqlite"
-sqlalchemy_url = "sqlite:///./development.db"
-dev_database_type = "sqlite"
-dev_database_url = "sqlite:///./dev.db"
-
-[database.analytics]
-database_type = "postgresql"
-sqlalchemy_url = "postgresql://user:password@localhost:5432/analytics"
-```
-
-## Basic Commands
-
-| Command | Description |
-|---------|-------------|
-| `dbwarden init` | Initialize migrations directory |
-| `dbwarden database list` | List all configured databases |
-| `dbwarden database add <name>` | Add a new database |
-| `dbwarden make-migrations "name"` | Generate SQL from SQLAlchemy models |
-| `dbwarden migrate` | Apply pending migrations |
-| `dbwarden migrate -d <name>` | Migrate specific database |
-| `dbwarden --dev migrate -d <name>` | Migrate using development DB URL |
-| `dbwarden migrate --all` | Migrate all databases |
-| `dbwarden rollback` | Revert the last migration |
-| `dbwarden history` | Show migration history |
-| `dbwarden status` | Show current status |
-
-## Multi-Database Support
-
-Manage multiple databases from a single configuration:
+With FastAPI integration:
 
 ```bash
-# Add databases
-dbwarden database add analytics --url "postgresql://user:pass@localhost:5432/analytics"
-dbwarden database add legacy --url "mysql://user:pass@localhost:3306/legacy"
-
-# List all databases
-dbwarden database list
-
-# Migrate specific database
-dbwarden migrate -d analytics
-
-# Migrate all databases (sequentially)
-dbwarden migrate --all
+pip install "dbwarden[fastapi]"
 ```
 
-## Development Recommendation
+## Quickstart
 
-Use SQLite as your development database (`dev_database_url`) when working with `--dev`.
-DBWarden translates unsupported backend-specific model types/defaults to SQLite-compatible SQL during migration generation.
-If a type cannot be translated, DBWarden falls back to `TEXT` and logs a warning.
+### 1. Configure
 
-Use strict mode to fail on unsupported conversions:
-
-```bash
-dbwarden --dev --strict-translation make-migrations "sync models" -d primary
-```
-
-## Dev Mode + SQL Translation Example
-
-If your primary DB is PostgreSQL but you want lightweight local testing on SQLite:
-
-```toml
-default = "primary"
-
-[database.primary]
-database_type = "postgresql"
-sqlalchemy_url = "postgresql://user:password@localhost:5432/main"
-migrations_dir = "migrations/primary"
-
-dev_database_type = "sqlite"
-dev_database_url = "sqlite:///./development.db"
-```
-
-Generate and run migrations in dev mode:
-
-```bash
-# Generate migration SQL adapted for SQLite dev database
-dbwarden --dev make-migrations "add billing tables" -d primary
-
-# Apply migrations in SQLite dev database
-dbwarden --dev migrate -d primary
-
-# Optional: fail if any type/default cannot be translated cleanly
-dbwarden --dev --strict-translation make-migrations "validate translation" -d primary
-```
-
-## SQLAlchemy Models
-
-DBWarden automatically detects models in `models/`:
+Run `dbwarden init` to scaffold your config file, then edit `dbwarden.py`:
 
 ```python
-# models/user.py
+from dbwarden import database_config
+
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://user:password@localhost:5432/myapp",
+    dev_database_type="sqlite",
+    dev_database_url="sqlite:///./dev.db",
+)
+```
+
+### 2. Define your models
+
+```python
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import declarative_base
 
@@ -143,48 +91,134 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
-    name = Column(String(100))
-    email = Column(String(255), unique=True)
+    email = Column(String(255), unique=True, nullable=False)
 ```
 
-## Complete Example
+### 3. Generate a migration
 
 ```bash
-# 1. Initialize
-dbwarden init
-
-# 2. Create models in models/
-
-# 3. Add more databases
-dbwarden database add analytics --url "postgresql://user:pass@localhost:5432/analytics"
-
-# 4. Generate migration from models
 dbwarden make-migrations "create users table"
-
-# 5. Apply
-dbwarden migrate --verbose
-
-# 6. Migrate all databases
-dbwarden migrate --all
-
-# 7. View history
-dbwarden history
 ```
+
+DBWarden creates a versioned SQL file with both upgrade and rollback:
+
+```sql
+-- upgrade
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE
+);
+
+-- rollback
+
+DROP TABLE users;
+```
+
+### 4. Apply
+
+```bash
+dbwarden migrate
+```
+
+### 5. Check status
+
+```bash
+dbwarden status
+```
+
+That's it. Your schema is versioned, reviewable, and reversible.
+
+---
+
+## FastAPI Integration
+
+```python
+from contextlib import asynccontextmanager
+from typing import Annotated
+
+from fastapi import Depends, FastAPI
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from dbwarden.fastapi import DBWardenHealthRouter, get_session, migration_context
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with migration_context(mode="check"):
+        yield
+
+
+app = FastAPI(lifespan=lifespan)
+app.include_router(DBWardenHealthRouter(), prefix="/health")
+
+SessionDep = Annotated[AsyncSession, Depends(get_session())]
+
+
+@app.get("/users")
+async def list_users(session: SessionDep):
+    result = await session.execute(select(User))
+    return result.scalars().all()
+```
+
+One config source. Sessions, health checks, and startup validation — handled.
+
+---
+
+## Multi-Database
+
+```python
+from dbwarden import database_config
+
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://user:password@localhost:5432/main",
+    model_paths=["models/primary"],
+)
+
+database_config(
+    database_name="analytics",
+    database_type="postgresql",
+    database_url="postgresql://user:password@localhost:5432/analytics",
+    model_paths=["models/analytics"],
+)
+```
+
+```bash
+dbwarden migrate --all
+```
+
+---
+
+## Dev Mode
+
+Use SQLite locally while targeting PostgreSQL in production.
+DBWarden translates backend-specific SQL automatically:
+
+```bash
+dbwarden --dev migrate
+```
+
+The `dev_database_type` and `dev_database_url` fields in your config
+define the local target. Your migration files stay unchanged.
+
+---
 
 ## Supported Databases
 
-| Database | Type Value | Features |
-|----------|------------|----------|
-| PostgreSQL | `postgresql` | SERIAL, TIMESTAMP, BYTEA |
-| MySQL | `mysql` | AUTO_INCREMENT, ENUM |
-| SQLite | `sqlite` | Built-in, zero config |
-| ClickHouse | `clickhouse` | Analytics, MergeTree |
-| MariaDB | `mariadb` | MySQL-compatible |
+| Database   | `database_type` value |
+|------------|-----------------------|
+| PostgreSQL | `postgresql`          |
+| MySQL      | `mysql`               |
+| MariaDB    | `mariadb`             |
+| SQLite     | `sqlite`              |
+| ClickHouse | `clickhouse`          |
 
-## Docs
-
-For more information, see [DBWarden Docs](http://emiliano-gandini-outeda.me/DBWarden/) or [DBWarden DeepWiki page](https://deepwiki.com/emiliano-gandini-outeda/DBWarden)
+---
 
 ## License
 
-This Project is Licensed under the MIT License. See [LICENSE](https://github.com/emiliano-gandini-outeda/DBWarden/blob/main/LICENSE)
+MIT
