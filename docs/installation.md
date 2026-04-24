@@ -1,53 +1,33 @@
 # Installation
 
-This guide covers all aspects of installing DBWarden, from basic installation to advanced configurations.
+This guide covers installing DBWarden in your project and verifying it works correctly.
 
-## Prerequisites
+## Requirements
 
 - Python 3.10 or higher
-- pip or poetry for package management
-- Access to a target database (PostgreSQL, MySQL, or SQLite)
+- A project that uses SQLAlchemy for database models
+- pip or another Python package manager
 
-## Basic Installation
-
-### Using pip
+## Install using pip
 
 ```bash
 pip install dbwarden
 ```
 
-### Using poetry
+### With poetry
+
+If your project uses Poetry:
 
 ```bash
 poetry add dbwarden
 ```
 
-## Database-Specific Installations
+### Development dependencies
 
-DBWarden supports multiple databases. Install the dependencies for your specific database:
-
-### PostgreSQL
+To also install testing and linting tools:
 
 ```bash
-pip install dbwarden psycopg2-binary
-```
-
-### MySQL
-
-```bash
-pip install dbwarden mysql-connector-python
-```
-
-### SQLite
-
-SQLite support is included by default with SQLAlchemy.
-
-## Complete Development Installation
-
-Install all dependencies including development tools:
-
-```bash
-pip install dbwarden[dev]
+pip install "dbwarden[dev]"
 ```
 
 Or with poetry:
@@ -56,156 +36,103 @@ Or with poetry:
 poetry add --group dev dbwarden
 ```
 
-## Verifying Installation
+## Database drivers
 
-Verify that DBWarden is installed correctly:
+DBWarden uses SQLAlchemy under the hood. Your project already has a database driver, but you can ensure specific drivers:
+
+```bash
+# PostgreSQL (most common)
+pip install psycopg2-binary
+
+# MySQL/MariaDB
+pip install mysql-connector-python
+
+# SQLite comes bundled with Python
+```
+
+## Verify installation
+
+After installing, confirm DBWarden is available:
 
 ```bash
 dbwarden version
 ```
 
-You should see output similar to:
+You should see output:
 
 ```
-DBWarden Version: 0.2.0
-Python Version: 3.12.7 (main, Jan 19 2026, 23:31:25) [GCC 15.2.1 20251112]
+0.5
 ```
 
-## Installation from Source
+## Initialize in your project
 
-For development or to get the latest features:
+Create the DBWarden structure in your project directory:
 
 ```bash
-git clone https://github.com/emiliano-gandini-outeda/dbwarden.git
-cd dbwarden
-pip install -e .
+dbwarden init
 ```
 
-## Virtual Environment Setup
+This creates:
 
-It is recommended to install DBWarden in a virtual environment:
+- a `migrations/` directory structure
+- a `dbwarden.py` config scaffold (or discovers your existing config source)
 
-### Using venv
+## What happens during init
+
+When you run `init`, DBWarden:
+
+1. Creates `migrations/` if missing
+2. Creates `dbwarden.py` (or updates existing config source) with import scaffolding
+3. Does not overwrite existing `database_config(...)` definitions you have added
+
+You can run `init` safely on an existing project - it is idempotent.
+
+## Quick configuration
+
+After init, configure your first database by editing `dbwarden.py` (or your existing config file that contains `database_config(...)` calls):
+
+```python
+from dbwarden import database_config
+
+
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://user:password@localhost:5432/mydb",
+    dev_database_type="sqlite",
+    dev_database_url="sqlite:///./development.db",
+)
+```
+
+The `dev_database_*` fields are optional but recommended - they enable fast local iterations with `--dev`.
+
+## Verify configuration loads
 
 ```bash
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-# or
-.\venv\Scripts\activate  # Windows
-pip install dbwarden
+dbwarden settings show --all
 ```
 
-### Using poetry
+You should see your database entry printed with type and URL.
 
-```bash
-poetry install
-poetry shell
-```
+## Common installation issues
 
-## Docker Integration
+**Command not found after pip install**
 
-DBWarden can be used within Docker containers:
+- Ensure your virtual environment is activated
+- Try uninstalling and reinstalling: `pip uninstall dbwarden && pip install dbwarden`
 
-```dockerfile
-FROM python:3.12-slim
+**Import errors or missing module warnings**
 
-WORKDIR /app
+- Upgrade pip and reinstall: `pip install --upgrade pip dbwarden`
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+**Database driver errors**
 
-COPY . .
-
-RUN pip install dbwarden
-
-CMD ["dbwarden", "--help"]
-```
-
-### Docker Compose Example
-
-```yaml
-services:
-  app:
-    build: .
-    volumes:
-      - .:/app
-    depends_on:
-      - db
-
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: myapp
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
-```
-
-Note: Create a `warden.toml` file for DBWarden configuration instead of using `.env` for database settings.
-
-## System Requirements
-
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| Python | 3.10 | 3.11+ |
-| RAM | 512 MB | 1 GB+ |
-| Disk | 100 MB | 500 MB+ |
-| Database | PostgreSQL 12+ | PostgreSQL 15+ |
-
-## Troubleshooting
-
-### Command Not Found
-
-If `dbwarden` command is not found after installation:
-
-1. Ensure your virtual environment is activated
-2. Check if pip installed the package correctly:
-
-```bash
-pip show dbwarden
-```
-
-3. Add the Python scripts directory to your PATH:
-
-```bash
-# Linux/macOS
-export PATH="$HOME/.local/bin:$PATH"
-
-# Windows
-setx PATH "%PATH%;%APPDATA%\Python\PythonXX\Scripts"
-```
-
-### Import Errors
-
-If you encounter import errors:
-
-```bash
-pip install --upgrade pip
-pip install --upgrade dbwarden
-```
-
-### Database Driver Issues
-
-Ensure you have the correct database driver installed:
-
-```bash
-# PostgreSQL
-pip install psycopg2-binary
-
-# MySQL
-pip install mysql-connector-python
-
-# SQLite (included)
-# No additional driver needed
-```
+- Install the appropriate driver for your target database (see Database drivers section above)
 
 ## Upgrading
 
-To upgrade DBWarden to the latest version:
+To update to a newer version:
 
 ```bash
 pip install --upgrade dbwarden
@@ -216,3 +143,10 @@ Or with poetry:
 ```bash
 poetry update dbwarden
 ```
+
+Check the release notes when upgrading major versions - there may be configuration or workflow changes.
+
+## Navigation
+
+- Previous: [Introduction](getting-started/introduction.md)
+- Next: [First Steps](getting-started/first-steps.md)
