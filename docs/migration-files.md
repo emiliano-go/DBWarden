@@ -1,8 +1,14 @@
-# Migration Files
+# Migration File Format
 
-Migration files are executable SQL units with explicit upgrade and rollback behavior.
+Migration files are the execution contract in DBWarden.
 
-## Naming Convention
+Everything that changes your database should be represented in explicit SQL files that can be reviewed, tested, and rolled back.
+
+## File naming and location
+
+Versioned migrations are stored under each database migrations directory (default: `migrations/<database_name>`).
+
+Canonical filename pattern:
 
 ```text
 {database_name}__{version}_{description}.sql
@@ -16,51 +22,62 @@ primary__0002_add_users_table.sql
 analytics__0001_create_events.sql
 ```
 
-## File Anatomy
+## Required sections
 
-Every migration file must include two sections:
+Each migration file must define both:
 
 ```sql
 -- upgrade
 
--- SQL applied during migrate
-
 -- rollback
-
--- SQL applied during rollback
 ```
 
-## Migration Types
+- `-- upgrade`: statements applied during `migrate`
+- `-- rollback`: statements applied during `rollback`
 
-| Prefix | Type | Behavior |
-|--------|------|----------|
-| `NNNN_` | Versioned | Runs once in version order |
-| `RA__` | Runs always | Runs each `migrate` execution |
-| `ROC__` | Runs on change | Runs only when checksum changed |
+If rollback is weak or incomplete, production recovery is weak or incomplete.
 
-## Internal Execution Model
+## Migration classes
 
-When `migrate` runs, DBWarden builds an execution plan from migration files:
+DBWarden supports three execution classes:
+
+| Prefix | Class | Behavior |
+|--------|-------|----------|
+| `NNNN_` | Versioned | Runs once in ordered version sequence |
+| `RA__` | Runs always | Runs on every `migrate` execution |
+| `ROC__` | Runs on change | Runs when checksum changed |
+
+### When to use each
+
+- `NNNN_`: schema evolution (tables, columns, indexes, constraints)
+- `RA__`: objects that should always be refreshed (views, grants)
+- `ROC__`: routines/policies that should apply only when content changes
+
+## Execution model
+
+At runtime, DBWarden builds a plan from file discovery + migration metadata:
+
+1. read versioned files and filter already-applied versions
+2. include `RA__` files
+3. include changed `ROC__` files
+4. execute with lock protection
+5. record metadata and checksums
+
+Conceptual plan:
 
 ```python
 def build_plan(directory, applied_versions):
     versioned = parse_versioned_files(directory)
     repeatable = parse_repeatable_files(directory)
-
     pending_versioned = [m for m in versioned if m.version not in applied_versions]
     pending_ra = repeatable.runs_always
     pending_roc = changed_only(repeatable.runs_on_change)
-
     return pending_versioned + pending_ra + pending_roc
 ```
 
-Then each migration:
+## Examples
 
-1. Parses `-- upgrade` statements
-2. Executes statements in order
-3. Stores execution metadata/checksum
-
-## Example: Versioned Migration
+### Versioned migration
 
 ```sql
 -- upgrade
@@ -76,7 +93,9 @@ CREATE TABLE IF NOT EXISTS users (
 DROP TABLE users;
 ```
 
-## Example: Runs-Always Migration
+### Runs-always migration (`RA__`)
+
+Filename example: `primary__RA__refresh_active_users_view.sql`
 
 ```sql
 -- upgrade
@@ -89,9 +108,9 @@ SELECT id, email FROM users WHERE is_active = TRUE;
 DROP VIEW IF EXISTS active_users;
 ```
 
-Filename example: `primary__RA__refresh_active_users_view.sql`
+### Runs-on-change migration (`ROC__`)
 
-## Example: Runs-On-Change Migration
+Filename example: `primary__ROC__update_timestamp_trigger.sql`
 
 ```sql
 -- upgrade
@@ -109,9 +128,9 @@ $$ LANGUAGE plpgsql;
 DROP FUNCTION IF EXISTS update_updated_at();
 ```
 
-Filename example: `primary__ROC__update_timestamp_trigger.sql`
+## Metadata headers
 
-## Metadata Headers
+Headers are parsed before SQL execution and can influence ordering/behavior.
 
 Dependency header:
 
@@ -119,27 +138,39 @@ Dependency header:
 -- depends_on: ["0004", "0005"]
 ```
 
-Seed header:
+Seed marker:
 
 ```sql
 -- seed
 ```
 
-Headers are parsed before SQL execution and used by ordering logic.
+## Authoring guidelines
 
-## Best Practices
+- One logical change per migration file
+- Keep DDL explicit; avoid hidden application-side schema effects
+- Keep rollback idempotent when possible (`IF EXISTS`, safe predicates)
+- For data migrations, use bounded, reversible operations
+- Prefer small migrations over large monolithic SQL scripts
 
-- Keep one logical change per migration file
-- Always write rollback SQL that actually restores previous state
-- Prefer explicit SQL over side effects in application code
-- Review generated SQL before running `migrate`
-- For complex data moves, use transactional blocks where backend supports it
+## Review checklist
 
-## Validation Checklist Before Commit
+Before merge:
+
+- upgrade section matches intended schema change
+- rollback section restores prior valid state
+- indexes/constraints/defaults are explicit
+- no environment-specific literals accidentally committed
+
+Before release:
 
 ```bash
-dbwarden status -d primary
-dbwarden migrate -d primary
-dbwarden rollback --count 1 -d primary
-dbwarden migrate -d primary
+dbwarden status --database primary
+dbwarden migrate --database primary
+dbwarden rollback --database primary --count 1
+dbwarden migrate --database primary
 ```
+
+## Navigation
+
+- Previous: [Multi-Database Setup](tutorial/multi-database-setup.md)
+- Next: [SQL Translation](sql-translation.md)

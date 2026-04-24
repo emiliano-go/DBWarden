@@ -20,6 +20,13 @@ from dbwarden.commands import (
     handle_status,
     handle_unlock,
     handle_version,
+    handle_settings_show_command,
+    handle_settings_default_set_command,
+    handle_settings_database_add_command,
+    handle_settings_database_remove_command,
+    handle_settings_database_rename_command,
+    handle_settings_database_set_dev_command,
+    handle_settings_database_clear_dev_command,
 )
 from dbwarden.logging import get_logger
 
@@ -32,6 +39,8 @@ All commands support the --verbose / -v flag for detailed output.""",
 
 database_app = typer.Typer(help="Manage databases in warden.toml")
 app.add_typer(database_app, name="database")
+settings_app = typer.Typer(help="Manage DBWarden Python settings")
+app.add_typer(settings_app, name="settings")
 
 
 @app.callback()
@@ -106,6 +115,92 @@ def database_remove(
 ):
     """Remove a database from the configuration."""
     handle_database_remove(name=name, force=force)
+
+
+@settings_app.command("show")
+def settings_show(
+    database: str | None = typer.Argument(None, help="Database name"),
+    all_databases: bool = typer.Option(False, "--all", help="Show all databases"),
+):
+    """Show current settings configuration."""
+    handle_settings_show_command(database=database, all_databases=all_databases)
+
+
+@settings_app.command("default-database")
+def settings_default_database_set(
+    name: str = typer.Argument(..., help="Database name to set as default"),
+):
+    """Set default database."""
+    handle_settings_default_set_command(name)
+
+
+@settings_app.command("database-add")
+def settings_database_add(
+    name: str = typer.Argument(..., help="Database name"),
+    database_type: str = typer.Option(..., "--type", "-t", help="Database type"),
+    url: str = typer.Option(..., "--url", "-u", help="Database URL"),
+    migrations_dir: str | None = typer.Option(
+        None, "--migrations-dir", help="Migrations directory"
+    ),
+    model_paths: list[str] | None = typer.Option(
+        None, "--model-path", help="Model path (repeatable)"
+    ),
+    dev_type: str | None = typer.Option(None, "--dev-type", help="Dev database type"),
+    dev_url: str | None = typer.Option(None, "--dev-url", help="Dev database URL"),
+    overlap_models: bool = typer.Option(
+        False,
+        "--overlap-models",
+        help="Allow model path overlap with other databases",
+    ),
+    default: bool = typer.Option(False, "--default", help="Set as default database"),
+):
+    """Add database settings entry."""
+    handle_settings_database_add_command(
+        name=name,
+        database_type=database_type,
+        url=url,
+        migrations_dir=migrations_dir,
+        model_paths=model_paths,
+        dev_type=dev_type,
+        dev_url=dev_url,
+        overlap_models=overlap_models,
+        default=default,
+    )
+
+
+@settings_app.command("database-remove")
+def settings_database_remove(
+    name: str = typer.Argument(..., help="Database name"),
+):
+    """Remove database settings entry."""
+    handle_settings_database_remove_command(name)
+
+
+@settings_app.command("database-rename")
+def settings_database_rename(
+    old: str = typer.Argument(..., help="Current database name"),
+    new: str = typer.Argument(..., help="New database name"),
+):
+    """Rename database entry."""
+    handle_settings_database_rename_command(old, new)
+
+
+@settings_app.command("database-set-dev")
+def settings_database_set_dev(
+    name: str = typer.Argument(..., help="Database name"),
+    dev_type: str = typer.Option(..., "--type", help="Dev database type"),
+    dev_url: str = typer.Option(..., "--url", help="Dev database URL"),
+):
+    """Set development database settings."""
+    handle_settings_database_set_dev_command(name, dev_type, dev_url)
+
+
+@settings_app.command("database-clear-dev")
+def settings_database_clear_dev(
+    name: str = typer.Argument(..., help="Database name"),
+):
+    """Clear development database settings."""
+    handle_settings_database_clear_dev_command(name)
 
 
 @app.command()

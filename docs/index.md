@@ -1,69 +1,104 @@
 # DBWarden
 
-DBWarden is a SQL-first migration system for Python projects using SQLAlchemy.
+DBWarden is a SQL-first migration system for Python + SQLAlchemy projects.
 
-It helps teams keep schema changes explicit, reviewable, and safe across development, staging, and production.
+It is built for teams that want migration changes to stay explicit, reviewable, and safe from local development to production.
 
-## Why Teams Use It
+## What DBWarden Is
 
-- Generate migration files from SQLAlchemy models
-- Keep upgrade and rollback SQL in the same file
-- Run migrations per database or across all configured databases
-- Use migration locking to avoid concurrent execution issues
-- Compare model schema and live database schema before deploying
-- Use `--dev` mode to run local workflows on a separate development database
+- A migration workflow centered on SQL files you can review
+- A CLI for generating, applying, rolling back, and auditing migrations
+- A multi-database migration tool with lock and checksum safety built in
+
+## What DBWarden Is Not
+
+- An ORM replacement
+- A hidden auto-migration engine that mutates schema silently
+- A deployment platform
+
+## Key Features
+
+- Explicit `--upgrade` and `--rollback` SQL sections in every migration
+- Multi-database support from one config source
+- Dev mode (`--dev`) with optional SQLite translation workflow
+- Locking and checksum integrity checks
+- Status/history visibility for release and incident workflows
+
+## Requirements
+
+- Python 3.10+
+- SQLAlchemy models for model-driven migration generation
+- A supported database backend (PostgreSQL, MySQL, MariaDB, SQLite, ClickHouse)
+
+## Installation
+
+```bash
+pip install dbwarden
+dbwarden init
+```
 
 ## 60-Second Workflow
 
 ```bash
-# 1) Initialize project and config
+# 1) Initialize project
 dbwarden init
 
 # 2) Generate SQL migration from models
-dbwarden make-migrations "create users table"
+dbwarden make-migrations "create users table" --database primary
 
-# 3) Apply pending migrations
-dbwarden migrate
+# 3) Apply migrations
+dbwarden migrate --database primary
 
-# 4) Check current state
-dbwarden status
+# 4) Verify state
+dbwarden status --database primary
 ```
 
-## How It Works Internally
+## Minimal Config Example
 
-DBWarden executes a predictable pipeline:
+```python
+from dbwarden import database_config
 
-1. Load database config from `warden.toml`
-2. Resolve target database (`--database`, default, or `--all`)
-3. Parse migration files and model metadata
-4. Build SQL execution plan (versioned + repeatables)
-5. Acquire migration lock
-6. Execute SQL and write records in `dbwarden_migrations`
-7. Release lock and print summary
 
-High-level architecture:
-
-```text
-CLI (Typer)
-  -> Commands
-    -> Engine (parser/version/ordering/checksum/model discovery)
-      -> Repositories (migration records + lock records)
-        -> Database layer (SQLAlchemy connection + SQL execution)
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://user:password@localhost:5432/main",
+    model_paths=["app/models"],
+)
 ```
 
-## Learn by Path
+## Example Upgrade (Dev Loop)
 
-- New users: [Installation](installation.md) -> [Quick Start](quickstart.md)
-- Project setup: [Configuration](configuration.md)
-- Daily usage: [Commands Overview](commands.md) and [CLI Reference](cli-reference.md)
-- SQL behavior: [Migration Files](migration-files.md)
-- Model behavior: [SQLAlchemy Models](models.md)
-- Cross-dialect dev support: [SQL Translation](sql-translation.md)
-- Operations and edge cases: [Advanced Features](advanced.md)
+```bash
+# Generate and apply against dev database
+dbwarden --dev make-migrations "add indexes" --database primary
+dbwarden --dev migrate --database primary
 
-## Design Principles
+# Validate status/history
+dbwarden --dev status --database primary
+dbwarden --dev history --database primary
+```
+
+## Why Teams Choose This Model
 
 - SQL is the source of truth
 - Rollback is mandatory, not optional
-- Multi-database support is first-class
-- Local dev should be simple (`--dev` + SQLite recommended)
+- One migration flow works for one DB or many DBs
+- Operational safety is first-class (locks, checksums, auditable history)
+
+## Recap
+
+With one `database_config(...)` definition and one migration command loop, you get:
+
+- typed config validation
+- deterministic migration plans
+- explicit SQL artifacts in version control
+- safe execution with recovery-oriented tooling
+
+## Where to Go Next
+
+- Start here: [Getting Started](getting-started/introduction.md)
+- Learn the workflow: [Tutorial - User Guide](tutorial/your-first-migration.md)
+- Go deeper: [Advanced User Guide](migration-files.md)
+- Lookup details: [Reference](cli-reference.md)

@@ -1,121 +1,222 @@
 # CLI Reference
 
+Pure command lookup for DBWarden CLI.
+
 ## Syntax
 
 ```bash
 dbwarden [GLOBAL_OPTIONS] COMMAND [ARGS] [COMMAND_OPTIONS]
 ```
 
-## Global Options
+## Global options
 
 | Option | Description |
-|--------|-------------|
-| `--dev` | Use `dev_database_url` / `dev_database_type` for selected database |
-| `--strict-translation` | Fail on lossy SQL translation in dev SQLite workflows |
-| `--help`, `-h` | Show help |
+|---|---|
+| `--dev` | Use `dev_database_url` and `dev_database_type` for selected database |
+| `--strict-translation` | Fail on unsupported/lossy dev SQLite translation |
+| `--help` | Show help |
 
-## Command Index
+## Setup and configuration
 
-Setup:
-
-- `init`
-- `database list`
-- `database add`
-- `database remove`
-
-Migration authoring:
-
-- `make-migrations`
-- `new`
-- `squash`
-
-Migration execution:
-
-- `migrate`
-- `rollback`
-
-Inspection:
-
-- `status`
-- `history`
-- `check-db`
-- `diff`
-
-Operations:
-
-- `lock-status`
-- `unlock`
-- `version`
-
-## Common Usage Examples
+### `init`
 
 ```bash
-# initialize
 dbwarden init
-
-# generate migration from models
-dbwarden make-migrations "add billing tables" -d primary
-
-# apply migrations
-dbwarden migrate -d primary
-
-# apply migrations in development mode
-dbwarden --dev migrate -d primary
-
-# strict translation check for dev SQLite
-dbwarden --dev --strict-translation make-migrations "sync" -d primary
-
-# inspect state
-dbwarden status -d primary
-dbwarden history -d primary
+dbwarden init --database primary
 ```
 
-## Multi-Database Patterns
+### `settings show`
 
 ```bash
-# one database
-dbwarden migrate -d analytics
+dbwarden settings show
+dbwarden settings show primary
+dbwarden settings show --all
+```
 
-# all databases sequentially
+### `settings default-database`
+
+```bash
+dbwarden settings default-database primary
+```
+
+### `settings database-add`
+
+```bash
+dbwarden settings database-add analytics \
+  --type clickhouse \
+  --url "http://user:pass@localhost:8123/analytics" \
+  --model-path app/models/analytics
+```
+
+Options:
+
+- `--type`
+- `--url`
+- `--migrations-dir`
+- `--model-path` (repeatable)
+- `--dev-type`
+- `--dev-url`
+- `--overlap-models`
+- `--default`
+
+### `settings database-remove`
+
+```bash
+dbwarden settings database-remove analytics
+```
+
+### `settings database-rename`
+
+```bash
+dbwarden settings database-rename primary main
+```
+
+### `settings database-set-dev`
+
+```bash
+dbwarden settings database-set-dev primary --type sqlite --url "sqlite:///./development.db"
+```
+
+### `settings database-clear-dev`
+
+```bash
+dbwarden settings database-clear-dev primary
+```
+
+## Migration authoring
+
+### `make-migrations`
+
+```bash
+dbwarden make-migrations "create users table" --database primary
+dbwarden make-migrations --verbose --database primary
+```
+
+Options: `--database`, `--verbose`
+
+### `new`
+
+```bash
+dbwarden new "manual hotfix" --database primary
+dbwarden new "backfill" --database primary --version 0042
+```
+
+Options: `--database`, `--version`
+
+### `squash`
+
+```bash
+dbwarden squash --database primary
+```
+
+Options: `--database`, `--verbose`
+
+## Migration execution
+
+### `migrate`
+
+```bash
+dbwarden migrate --database primary
 dbwarden migrate --all
+dbwarden migrate --database primary --to-version 0010
+dbwarden migrate --database primary --count 2
+dbwarden migrate --database primary --with-backup
+dbwarden migrate --database primary --baseline --to-version 0005
 ```
 
-If `--all` is used, DBWarden iterates through configured database names in config order.
+Options:
 
-## Internal Behavior of Global Flags
+- `--database`, `--all`
+- `--to-version`, `--count`
+- `--baseline`
+- `--with-backup`, `--backup-dir`
+- `--verbose`
 
-`--dev`:
+### `rollback`
 
-1. Enables runtime dev mode
-2. Switches active config from `sqlalchemy_url` to `dev_database_url`
-3. Keeps migration directory and database selection semantics unchanged
-
-`--strict-translation`:
-
-1. Enables strict translation mode
-2. During model-to-SQL generation, unsupported SQLite conversions raise errors
-3. Prevents silent fallback to `TEXT`
-
-Conceptual callback flow:
-
-```python
-def app_callback(dev=False, strict_translation=False):
-    set_dev_mode(dev)
-    set_strict_translation(strict_translation)
+```bash
+dbwarden rollback --database primary
+dbwarden rollback --database primary --count 2
+dbwarden rollback --database primary --to-version 0007
 ```
 
-## Option Cheatsheet
+Options: `--database`, `--count`, `--to-version`, `--verbose`
 
-| Command | Main options |
-|---------|--------------|
-| `migrate` | `-d`, `--all`, `-c`, `-t`, `-v`, `--baseline`, `--with-backup` |
-| `rollback` | `-d`, `-c`, `-t`, `-v`, `--all` |
-| `make-migrations` | `-d`, `-v` |
-| `check-db` | `-d`, `-o` |
-| `status` | `-d`, `--all` |
+## Inspection and diagnostics
 
-## Tips
+### `status`
 
-- Use `dbwarden <command> --help` for full per-command details.
-- Prefer `--dev` for local iteration and `migrate -d <name>` for production-like validation.
-- In CI, run `status` before and after `migrate` to make changes auditable.
+```bash
+dbwarden status --database primary
+dbwarden status --all
+```
+
+### `history`
+
+```bash
+dbwarden history --database primary
+```
+
+### `check-db`
+
+```bash
+dbwarden check-db --database primary
+dbwarden check-db --database primary --out json
+```
+
+Output formats: `txt`, `json`, `yaml`
+
+### `diff`
+
+```bash
+dbwarden diff all --database primary
+dbwarden diff models --database primary
+dbwarden diff migrations --database primary
+```
+
+## Locking
+
+### `lock-status`
+
+```bash
+dbwarden lock-status --database primary
+```
+
+### `unlock`
+
+```bash
+dbwarden unlock --database primary
+```
+
+## Utility
+
+### `config`
+
+```bash
+dbwarden config
+```
+
+### `version`
+
+```bash
+dbwarden version
+```
+
+## Legacy compatibility commands
+
+The `database` command group remains as a compatibility alias to `settings` flows.
+
+Examples:
+
+```bash
+dbwarden database list
+dbwarden database add analytics --type sqlite --url "sqlite:///./analytics.db"
+dbwarden database remove analytics
+```
+
+Prefer `settings` commands for new workflows.
+
+## Navigation
+
+- Previous: [Safe Deployment](advanced/safe-deployment.md)
+- Next: [Supported Databases](databases.md)

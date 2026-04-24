@@ -50,10 +50,16 @@ class TestDatabaseOperations:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
 
-            with open("warden.toml", "w") as f:
-                f.write('default = "primary"\n')
-                f.write("[database.primary]\n")
-                f.write(f'sqlalchemy_url = "sqlite:///{temp_db}"\n')
+            with open("dbwarden.py", "w", encoding="utf-8") as f:
+                f.write("from dbwarden import database_config\n\n")
+                f.write(
+                    "database_config(\n"
+                    "    database_name='primary',\n"
+                    "    default=True,\n"
+                    "    database_type='sqlite',\n"
+                    f"    database_url='sqlite:///{temp_db}',\n"
+                    ")\n"
+                )
 
             yield {"db_path": temp_db}
 
