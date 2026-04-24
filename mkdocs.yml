@@ -30,6 +30,12 @@ nav:
       - Checking Status: tutorial/checking-status.md
       - Dev Mode: tutorial/dev-mode.md
       - Multi-Database Setup: tutorial/multi-database-setup.md
+  - FastAPI Integration:
+      - Overview: fastapi/overview.md
+      - get_session: fastapi/get-session.md
+      - migration_context: fastapi/migration-context.md
+      - DBWardenHealthRouter: fastapi/health-router.md
+      - Full Example: fastapi/full-example.md
   - Advanced User Guide:
       - Migration File Format: migration-files.md
       - SQL Translation: sql-translation.md
