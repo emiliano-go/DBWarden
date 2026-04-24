@@ -1,0 +1,4729 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Database migration system for Python/SQLAlchemy projects">
+      
+      
+        <meta name="author" content="Emiliano Gandini Outeda">
+      
+      
+      
+        <link rel="prev" href="../session-dependency/">
+      
+      
+        <link rel="next" href="../health-endpoints/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/icon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+    
+    
+      
+        <title>Startup Checks - DBWarden Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#startup-checks" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="DBWarden Documentation" class="md-header__button md-logo" aria-label="DBWarden Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            DBWarden Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Startup Checks
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/emiliano-gandini-outeda/dbwarden" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../getting-started/introduction/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../configuration/" class="md-tabs__link">
+          
+  
+  
+  Configuration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../tutorial/your-first-migration/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../../" class="md-tabs__link">
+          
+  
+  
+  FastAPI Integration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../migration-files/" class="md-tabs__link">
+          
+  
+  
+  Advanced User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../cli-reference/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="DBWarden Documentation" class="md-nav__button md-logo" aria-label="DBWarden Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    DBWarden Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/emiliano-gandini-outeda/dbwarden" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/first-steps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Steps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/quick-start/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/connection-urls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connection URLs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/model-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Model Discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/dev-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dev Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/multi-database/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/production-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Docs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorial/your-first-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorial/applying-migrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Applying Migrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorial/rolling-back/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rolling Back
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorial/checking-status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checking Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorial/dev-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dev Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorial/multi-database-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Database Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FastAPI Integration
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    FastAPI Integration
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorial
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../first-steps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Steps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-dependency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Dependency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Checks
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Checks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-are-startup-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Are Startup Checks?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-use-startup-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Use Startup Checks?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#your-first-startup-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Your First Startup Check
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Your First Startup Check">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#if-database-is-healthy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If Database Is Healthy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#if-database-has-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If Database Has Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-mode-vs-migrate-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check Mode vs Migrate Mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Check Mode vs Migrate Mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#check-mode-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check Mode (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migrate-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migrate Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-function-signature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete Function Signature
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#all-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="All Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        database
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#all_databases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        all_databases
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dev" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dev
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strict_translation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        strict_translation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with_backup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        with_backup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backup_dir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        backup_dir
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verbose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        verbose
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#allow_in_production" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        allow_in_production
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fail_fast" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fail_fast
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#only_dev" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        only_dev
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pattern-1-production-check-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 1: Production - Check Only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-2-development-auto-migrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 2: Development - Auto Migrate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-3-hybrid-dev-migrates-prod-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 3: Hybrid - Dev Migrates, Prod Checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-4-no-checks-cicd-handles-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 4: No Checks (CI/CD Handles It)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#direct-helper-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct Helper Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Direct Helper Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#check_schema_on_startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        check_schema_on_startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migrate_on_startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        migrate_on_startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#connection-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection Errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pending-migrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pending Migrations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-migration-blocked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production Migration Blocked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiple-databases-one-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Databases, One Fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#comparison-check-vs-migrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison: Check vs Migrate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Detection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Detection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#development-environments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Environments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-environments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production Environments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-it-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why It Matters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#app-starts-but-migrations-not-checked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        App Starts But Migrations Not Checked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#checks-pass-but-routes-fail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checks Pass But Routes Fail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slow-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slow Startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-blocked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production Blocked
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recap
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's Next?
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../health-endpoints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Health Endpoints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../complete-application/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Complete Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/multi-database/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/transaction-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transaction Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/engine-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engine Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../advanced/production-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Legacy Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview (Old)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../get-session/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    get_session (Old)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migration-context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    migration_context (Old)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../health-router/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DBWardenHealthRouter (Old)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../full-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Full Example (Old)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../migration-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration File Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql-translation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Translation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../advanced/migration-locking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration Locking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../advanced/checksum-integrity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checksum Integrity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../advanced/squashing-migrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Squashing Migrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../advanced/ci-cd-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI/CD Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../advanced/safe-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safe Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_1" id="__nav_7_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/init/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    init
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/database/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    settings/database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/make-migrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    make-migrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/new/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    new
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/migrate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    migrate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/rollback/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rollback
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    history
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/check-db/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    check-db
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/diff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    diff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/squash/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    squash
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/lock/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    lock/unlock
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../commands/version/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    version
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../databases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supported Databases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/configuration-api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture-deep-dive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQLAlchemy Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/migrate-from-toml/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migrate from TOML
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-are-startup-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Are Startup Checks?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#why-use-startup-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why Use Startup Checks?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Example
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#your-first-startup-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Your First Startup Check
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Your First Startup Check">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#if-database-is-healthy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If Database Is Healthy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#if-database-has-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        If Database Has Issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#check-mode-vs-migrate-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check Mode vs Migrate Mode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Check Mode vs Migrate Mode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#check-mode-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Check Mode (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migrate-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migrate Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#complete-function-signature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Complete Function Signature
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#all-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        All Parameters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="All Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        database
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#all_databases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        all_databases
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dev" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        dev
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#strict_translation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        strict_translation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with_backup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        with_backup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#backup_dir" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        backup_dir
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verbose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        verbose
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#allow_in_production" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        allow_in_production
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fail_fast" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        fail_fast
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#only_dev" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        only_dev
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pattern-1-production-check-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 1: Production - Check Only
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-2-development-auto-migrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 2: Development - Auto Migrate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-3-hybrid-dev-migrates-prod-checks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 3: Hybrid - Dev Migrates, Prod Checks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-4-no-checks-cicd-handles-it" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 4: No Checks (CI/CD Handles It)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#direct-helper-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Direct Helper Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Direct Helper Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#check_schema_on_startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        check_schema_on_startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migrate_on_startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        migrate_on_startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#connection-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection Errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pending-migrations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pending Migrations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-migration-blocked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production Migration Blocked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiple-databases-one-fails" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Databases, One Fails
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#comparison-check-vs-migrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison: Check vs Migrate
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#environment-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Detection
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Environment Detection">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#development-environments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Development Environments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-environments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production Environments
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#why-it-matters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Why It Matters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#app-starts-but-migrations-not-checked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        App Starts But Migrations Not Checked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#checks-pass-but-routes-fail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Checks Pass But Routes Fail
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#slow-startup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Slow Startup
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#production-blocked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Production Blocked
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recap
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#whats-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What's Next?
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="startup-checks">Startup Checks<a class="headerlink" href="#startup-checks" title="Permanent link">&para;</a></h1>
+<p>Learn how to validate your database before your FastAPI app accepts traffic.</p>
+<h2 id="what-are-startup-checks">What Are Startup Checks?<a class="headerlink" href="#what-are-startup-checks" title="Permanent link">&para;</a></h2>
+<p>Startup checks run when your app boots, <strong>before</strong> it starts accepting requests. They verify:</p>
+<ul>
+<li>✅ Database connectivity</li>
+<li>✅ Migration state</li>
+<li>✅ Schema integrity</li>
+</ul>
+<p>If checks fail, your app won't start. This prevents serving traffic with a broken or outdated database.</p>
+<h2 id="why-use-startup-checks">Why Use Startup Checks?<a class="headerlink" href="#why-use-startup-checks" title="Permanent link">&para;</a></h2>
+<p><strong>Without startup checks:</strong>
+- App starts even if database is down
+- First requests fail with connection errors
+- Users see errors while you debug
+- Hard to diagnose deployment issues</p>
+<p><strong>With startup checks:</strong>
+- App fails to start if database has issues
+- Kubernetes restarts the pod automatically
+- No user-facing errors
+- Clear logs showing what's wrong</p>
+<h2 id="quick-example">Quick Example<a class="headerlink" href="#quick-example" title="Permanent link">&para;</a></h2>
+<p>Add a startup check in <strong>3 lines</strong>:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">asynccontextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dbwarden.fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">migration_context</span>
+
+
+<span class="nd">@asynccontextmanager</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">):</span>
+        <span class="k">yield</span>  <span class="c1"># App runs here</span>
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">lifespan</span><span class="o">=</span><span class="n">lifespan</span><span class="p">)</span>
+</code></pre></div>
+
+<p>That's it! Your app now validates the database on startup.</p>
+<h2 id="your-first-startup-check">Your First Startup Check<a class="headerlink" href="#your-first-startup-check" title="Permanent link">&para;</a></h2>
+<p>Let's start with a complete minimal example:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">contextlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">asynccontextmanager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">FastAPI</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dbwarden.fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">migration_context</span>
+
+
+<span class="nd">@asynccontextmanager</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+    <span class="c1"># Runs before app starts accepting requests</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">):</span>
+        <span class="k">yield</span>  <span class="c1"># App serves traffic</span>
+    <span class="c1"># Runs on shutdown (cleanup)</span>
+
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">lifespan</span><span class="o">=</span><span class="n">lifespan</span><span class="p">)</span>
+
+
+<span class="nd">@app</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">root</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;Hello World&quot;</span><span class="p">}</span>
+</code></pre></div>
+
+<p>Start your app:</p>
+<div class="codehilite"><pre><span></span><code>uvicorn<span class="w"> </span>main:app
+</code></pre></div>
+
+<h3 id="if-database-is-healthy">If Database Is Healthy<a class="headerlink" href="#if-database-is-healthy" title="Permanent link">&para;</a></h3>
+<p>You'll see:</p>
+<div class="codehilite"><pre><span></span><code>INFO:     Started server process [12345]
+INFO:     Waiting for application startup.
+INFO:     DBWarden: migration_context mode=check outcome=ok duration_ms=45
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000
+</code></pre></div>
+
+<p>The app starts successfully!</p>
+<h3 id="if-database-has-issues">If Database Has Issues<a class="headerlink" href="#if-database-has-issues" title="Permanent link">&para;</a></h3>
+<p>If the database is unreachable or has pending migrations:</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">INFO</span>:<span class="w">     </span><span class="nv">Started</span><span class="w"> </span><span class="nv">server</span><span class="w"> </span><span class="nv">process</span><span class="w"> </span>[<span class="mi">12345</span>]
+<span class="nv">INFO</span>:<span class="w">     </span><span class="nv">Waiting</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nv">application</span><span class="w"> </span><span class="nv">startup</span>.
+<span class="nv">ERROR</span>:<span class="w">    </span><span class="nv">Application</span><span class="w"> </span><span class="nv">startup</span><span class="w"> </span><span class="nv">failed</span>.<span class="w"> </span><span class="nv">Exiting</span>.
+<span class="nv">RuntimeError</span>:<span class="w"> </span><span class="nv">Startup</span><span class="w"> </span><span class="nv">check</span><span class="w"> </span><span class="nv">failed</span>:<span class="w"> </span><span class="nv">primary</span>:<span class="w"> </span><span class="nv">could</span><span class="w"> </span><span class="nv">not</span><span class="w"> </span><span class="k">connect</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">server</span>
+</code></pre></div>
+
+<p>The app <strong>exits immediately</strong>. No requests are served.</p>
+<div class="admonition tip">
+<p class="admonition-title">Fail Fast = Good</p>
+<p>Failing fast on startup is better than serving broken requests. Kubernetes will restart your pod automatically.</p>
+</div>
+<h2 id="check-mode-vs-migrate-mode">Check Mode vs Migrate Mode<a class="headerlink" href="#check-mode-vs-migrate-mode" title="Permanent link">&para;</a></h2>
+<p><code>migration_context</code> has two modes:</p>
+<h3 id="check-mode-recommended">Check Mode (Recommended)<a class="headerlink" href="#check-mode-recommended" title="Permanent link">&para;</a></h3>
+<p>Validates without making changes:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<p><strong>What it does:</strong>
+- ✅ Checks database connectivity
+- ✅ Verifies migration state
+- ✅ Reports pending migrations
+- ❌ Does <strong>not</strong> apply migrations
+- ❌ Does <strong>not</strong> modify schema</p>
+<p><strong>Use for:</strong>
+- Production deployments
+- Staging environments
+- When migrations run in separate jobs</p>
+<h3 id="migrate-mode">Migrate Mode<a class="headerlink" href="#migrate-mode" title="Permanent link">&para;</a></h3>
+<p>Applies migrations on startup:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;migrate&quot;</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<p><strong>What it does:</strong>
+- ✅ Checks database connectivity
+- ✅ Applies pending migrations
+- ✅ Updates schema
+- ⚠️ Modifies your database</p>
+<p><strong>Use for:</strong>
+- Local development
+- Simple deployments
+- Single-instance apps
+- When you want auto-migration</p>
+<div class="admonition warning">
+<p class="admonition-title">Production Risk</p>
+<p>Migrate mode is <strong>blocked in production</strong> by default. Set <code>allow_in_production=True</code> to override (not recommended for most apps).</p>
+</div>
+<h2 id="complete-function-signature">Complete Function Signature<a class="headerlink" href="#complete-function-signature" title="Permanent link">&para;</a></h2>
+<div class="codehilite"><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">migration_context</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;migrate&quot;</span><span class="p">,</span> <span class="s2">&quot;check&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;check&quot;</span><span class="p">,</span>
+    <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">all_databases</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">dev</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">strict_translation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">with_backup</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">backup_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">allow_in_production</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">fail_fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">only_dev</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AsyncContextManager</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;FastAPI lifespan helper for startup migration/check logic.&quot;&quot;&quot;</span>
+</code></pre></div>
+
+<h2 id="all-parameters">All Parameters<a class="headerlink" href="#all-parameters" title="Permanent link">&para;</a></h2>
+<h3 id="mode"><code>mode</code><a class="headerlink" href="#mode" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>"check"</code> | <code>"migrate"</code><br />
+<strong>Default:</strong> <code>"check"</code></p>
+<p>What to do on startup:
+- <code>"check"</code> - Read-only validation (recommended)
+- <code>"migrate"</code> - Apply pending migrations</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Check only (recommended for production)</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">):</span>
+    <span class="k">yield</span>
+
+<span class="c1"># Apply migrations (useful for dev)</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;migrate&quot;</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<h3 id="database"><code>database</code><a class="headerlink" href="#database" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>str | None</code><br />
+<strong>Default:</strong> <code>None</code> (uses default database)</p>
+<p>Which database to check/migrate:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Check default database</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">):</span>
+    <span class="k">yield</span>
+
+<span class="c1"># Check specific database</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">,</span> <span class="n">database</span><span class="o">=</span><span class="s2">&quot;analytics&quot;</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<h3 id="all_databases"><code>all_databases</code><a class="headerlink" href="#all_databases" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>bool</code><br />
+<strong>Default:</strong> <code>False</code></p>
+<p>Check/migrate all configured databases:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Check all databases</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">,</span> <span class="n">all_databases</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<p>If you have multiple databases and want to validate all of them on startup, use this.</p>
+<div class="admonition tip">
+<p class="admonition-title">Multi-Database Apps</p>
+<p>For apps with multiple databases, always use <code>all_databases=True</code> in production to ensure all databases are healthy.</p>
+</div>
+<h3 id="dev"><code>dev</code><a class="headerlink" href="#dev" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>bool</code><br />
+<strong>Default:</strong> <code>False</code></p>
+<p>Use <code>dev_database_url</code> instead of <code>database_url</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Use dev database</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">,</span> <span class="n">dev</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<p>Or set environment variable:</p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">ENVIRONMENT</span><span class="o">=</span>development
+</code></pre></div>
+
+<h3 id="strict_translation"><code>strict_translation</code><a class="headerlink" href="#strict_translation" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>bool</code><br />
+<strong>Default:</strong> <code>False</code></p>
+<p>Enable strict SQL translation mode (advanced):</p>
+<div class="codehilite"><pre><span></span><code><span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">,</span> <span class="n">strict_translation</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<h3 id="with_backup"><code>with_backup</code><a class="headerlink" href="#with_backup" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>bool</code><br />
+<strong>Default:</strong> <code>False</code></p>
+<p>Create backup before migrations (migrate mode only):</p>
+<div class="codehilite"><pre><span></span><code><span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;migrate&quot;</span><span class="p">,</span>
+    <span class="n">with_backup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">backup_dir</span><span class="o">=</span><span class="s2">&quot;./backups&quot;</span>
+<span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<div class="admonition warning">
+<p class="admonition-title">Migrate Mode Only</p>
+<p>This parameter only applies when <code>mode="migrate"</code>. Ignored in check mode.</p>
+</div>
+<h3 id="backup_dir"><code>backup_dir</code><a class="headerlink" href="#backup_dir" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>str | None</code><br />
+<strong>Default:</strong> <code>None</code> (uses default backup location)</p>
+<p>Where to store backups:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;migrate&quot;</span><span class="p">,</span>
+    <span class="n">with_backup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">backup_dir</span><span class="o">=</span><span class="s2">&quot;/var/backups/dbwarden&quot;</span>
+<span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<h3 id="verbose"><code>verbose</code><a class="headerlink" href="#verbose" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>bool</code><br />
+<strong>Default:</strong> <code>False</code></p>
+<p>Enable detailed logging:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<p>Useful for debugging startup issues.</p>
+<h3 id="allow_in_production"><code>allow_in_production</code><a class="headerlink" href="#allow_in_production" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>bool</code><br />
+<strong>Default:</strong> <code>False</code></p>
+<p>Allow migrate mode in production:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span>
+    <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;migrate&quot;</span><span class="p">,</span>
+    <span class="n">allow_in_production</span><span class="o">=</span><span class="kc">True</span>  <span class="c1"># ⚠️ Use with caution</span>
+<span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<p>By default, <code>mode="migrate"</code> is <strong>blocked</strong> when <code>ENVIRONMENT</code> is <code>prod</code> or <code>production</code>. This prevents accidental schema changes in production.</p>
+<div class="admonition danger">
+<p class="admonition-title">Production Risk</p>
+<p>Only enable this if you understand the risks:
+- No rollback on migration failure
+- Downtime during migration
+- Potential data loss
+- Race conditions with multiple pods</p>
+</div>
+<p><strong>Better approach:</strong> Run migrations in a separate job before deployment.</p>
+<h3 id="fail_fast"><code>fail_fast</code><a class="headerlink" href="#fail_fast" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>bool</code><br />
+<strong>Default:</strong> <code>True</code></p>
+<p>Exit immediately on failure:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Fail fast (recommended)</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">,</span> <span class="n">fail_fast</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">yield</span>
+
+<span class="c1"># Continue on failure (not recommended)</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">,</span> <span class="n">fail_fast</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<p>When <code>fail_fast=True</code>:
+- App exits if checks fail
+- Clear error message in logs
+- Kubernetes restarts pod</p>
+<p>When <code>fail_fast=False</code>:
+- Logs warning but continues
+- App starts even with database issues
+- First requests may fail</p>
+<div class="admonition tip">
+<p class="admonition-title">Keep Fail Fast Enabled</p>
+<p><code>fail_fast=True</code> is the right default for production. If you can't start, you shouldn't serve traffic.</p>
+</div>
+<h3 id="only_dev"><code>only_dev</code><a class="headerlink" href="#only_dev" title="Permanent link">&para;</a></h3>
+<p><strong>Type:</strong> <code>bool</code><br />
+<strong>Default:</strong> <code>False</code></p>
+<p>Only run checks in development environments:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Only check in dev, skip in prod</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">,</span> <span class="n">only_dev</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<p>This skips checks unless <code>ENVIRONMENT</code> is one of:
+- <code>dev</code>
+- <code>development</code>
+- <code>local</code>
+- <code>test</code>
+- <code>testing</code></p>
+<p><strong>When to use:</strong>
+- You run migrations in CI/CD before deployment
+- You have separate health checks in production
+- You want faster production startup</p>
+<div class="admonition warning">
+<p class="admonition-title">Production Safety</p>
+<p>If you use <code>only_dev=True</code>, make sure you have other mechanisms to validate database health in production (like health endpoints or separate migration jobs).</p>
+</div>
+<h2 id="common-patterns">Common Patterns<a class="headerlink" href="#common-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="pattern-1-production-check-only">Pattern 1: Production - Check Only<a class="headerlink" href="#pattern-1-production-check-only" title="Permanent link">&para;</a></h3>
+<p>Recommended for most production apps:</p>
+<div class="codehilite"><pre><span></span><code><span class="nd">@asynccontextmanager</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span>
+        <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">,</span>
+        <span class="n">all_databases</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">fail_fast</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">yield</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">lifespan</span><span class="o">=</span><span class="n">lifespan</span><span class="p">)</span>
+</code></pre></div>
+
+<ul>
+<li>✅ Validates all databases</li>
+<li>✅ Fails fast on issues</li>
+<li>✅ No schema changes</li>
+<li>✅ Safe for multiple pods</li>
+</ul>
+<h3 id="pattern-2-development-auto-migrate">Pattern 2: Development - Auto Migrate<a class="headerlink" href="#pattern-2-development-auto-migrate" title="Permanent link">&para;</a></h3>
+<p>Convenient for local development:</p>
+<div class="codehilite"><pre><span></span><code><span class="nd">@asynccontextmanager</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span>
+        <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;migrate&quot;</span><span class="p">,</span>
+        <span class="n">only_dev</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Only in dev</span>
+        <span class="n">with_backup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">yield</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">lifespan</span><span class="o">=</span><span class="n">lifespan</span><span class="p">)</span>
+</code></pre></div>
+
+<ul>
+<li>✅ Auto-applies migrations locally</li>
+<li>✅ Creates backups</li>
+<li>✅ Skipped in production</li>
+<li>✅ Detailed logging</li>
+</ul>
+<h3 id="pattern-3-hybrid-dev-migrates-prod-checks">Pattern 3: Hybrid - Dev Migrates, Prod Checks<a class="headerlink" href="#pattern-3-hybrid-dev-migrates-prod-checks" title="Permanent link">&para;</a></h3>
+<p>Different behavior per environment:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="nd">@asynccontextmanager</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+    <span class="n">is_dev</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s2">&quot;ENVIRONMENT&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;dev&quot;</span><span class="p">,</span> <span class="s2">&quot;development&quot;</span><span class="p">,</span> <span class="s2">&quot;local&quot;</span><span class="p">]</span>
+
+    <span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span>
+        <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;migrate&quot;</span> <span class="k">if</span> <span class="n">is_dev</span> <span class="k">else</span> <span class="s2">&quot;check&quot;</span><span class="p">,</span>
+        <span class="n">all_databases</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">fail_fast</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="k">yield</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">lifespan</span><span class="o">=</span><span class="n">lifespan</span><span class="p">)</span>
+</code></pre></div>
+
+<ul>
+<li>✅ Migrates automatically in dev</li>
+<li>✅ Only checks in production</li>
+<li>✅ One configuration for all environments</li>
+</ul>
+<h3 id="pattern-4-no-checks-cicd-handles-it">Pattern 4: No Checks (CI/CD Handles It)<a class="headerlink" href="#pattern-4-no-checks-cicd-handles-it" title="Permanent link">&para;</a></h3>
+<p>If you run migrations in a separate job:</p>
+<div class="codehilite"><pre><span></span><code><span class="nd">@asynccontextmanager</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+    <span class="c1"># No migration_context - migrations handled by CI/CD</span>
+    <span class="k">yield</span>
+    <span class="c1"># Just cleanup on shutdown if needed</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">lifespan</span><span class="o">=</span><span class="n">lifespan</span><span class="p">)</span>
+</code></pre></div>
+
+<p>Use this when:
+- Migrations run in Kubernetes init containers
+- CI/CD applies migrations before deployment
+- You use tools like Flyway or Liquibase</p>
+<h2 id="direct-helper-functions">Direct Helper Functions<a class="headerlink" href="#direct-helper-functions" title="Permanent link">&para;</a></h2>
+<p>If you don't want to use <code>migration_context</code>, you can call the helpers directly:</p>
+<h3 id="check_schema_on_startup"><code>check_schema_on_startup</code><a class="headerlink" href="#check_schema_on_startup" title="Permanent link">&para;</a></h3>
+<p>Read-only validation:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dbwarden.fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">check_schema_on_startup</span>
+
+<span class="nd">@asynccontextmanager</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="n">check_schema_on_startup</span><span class="p">(</span>
+        <span class="n">all_databases</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">fail_fast</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="c1"># results is a list of HealthResult objects</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<p><strong>Function signature:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">check_schema_on_startup</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">all_databases</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">dev</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">strict_translation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">only_dev</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">fail_fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">HealthResult</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run read-only startup schema checks.&quot;&quot;&quot;</span>
+</code></pre></div>
+
+<p><strong>Returns:</strong> List of <code>HealthResult</code> objects with health status per database.</p>
+<h3 id="migrate_on_startup"><code>migrate_on_startup</code><a class="headerlink" href="#migrate_on_startup" title="Permanent link">&para;</a></h3>
+<p>Apply migrations:</p>
+<div class="codehilite"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dbwarden.fastapi</span><span class="w"> </span><span class="kn">import</span> <span class="n">migrate_on_startup</span>
+
+<span class="nd">@asynccontextmanager</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+    <span class="n">migrate_on_startup</span><span class="p">(</span>
+        <span class="n">all_databases</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">with_backup</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">only_dev</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<p><strong>Function signature:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">migrate_on_startup</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">database</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">all_databases</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">dev</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">strict_translation</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">with_backup</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">backup_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">allow_in_production</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">fail_fast</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">only_dev</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run migration workflow at startup.&quot;&quot;&quot;</span>
+</code></pre></div>
+
+<div class="admonition info">
+<p class="admonition-title">Why Use Helpers?</p>
+<p>Use these when you need more control or want to access the health results. For most cases, <code>migration_context</code> is simpler.</p>
+</div>
+<h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
+<h3 id="connection-errors">Connection Errors<a class="headerlink" href="#connection-errors" title="Permanent link">&para;</a></h3>
+<p>If database is unreachable:</p>
+<div class="codehilite"><pre><span></span><code><span class="nv">RuntimeError</span>:<span class="w"> </span><span class="nv">Startup</span><span class="w"> </span><span class="nv">check</span><span class="w"> </span><span class="nv">failed</span>:<span class="w"> </span><span class="nv">primary</span>:<span class="w"> </span><span class="nv">could</span><span class="w"> </span><span class="nv">not</span><span class="w"> </span><span class="k">connect</span><span class="w"> </span><span class="nv">to</span><span class="w"> </span><span class="nv">server</span>:<span class="w"> </span>
+<span class="nv">Connection</span><span class="w"> </span><span class="nv">refused</span><span class="w"> </span><span class="ss">(</span><span class="nv">host</span>:<span class="mi">5432</span><span class="ss">)</span>
+</code></pre></div>
+
+<p><strong>Solution:</strong>
+- Check database is running
+- Verify connection URL
+- Check network/firewall
+- Ensure credentials are correct</p>
+<h3 id="pending-migrations">Pending Migrations<a class="headerlink" href="#pending-migrations" title="Permanent link">&para;</a></h3>
+<p>If migrations are pending and <code>mode="check"</code>:</p>
+<div class="codehilite"><pre><span></span><code>RuntimeError: Startup check failed: primary: 3 pending migrations
+</code></pre></div>
+
+<p><strong>Solution:</strong></p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># Apply migrations manually</span>
+dbwarden<span class="w"> </span>migrate
+
+<span class="c1"># Or use migrate mode</span>
+<span class="c1"># migration_context(mode=&quot;migrate&quot;)</span>
+</code></pre></div>
+
+<h3 id="production-migration-blocked">Production Migration Blocked<a class="headerlink" href="#production-migration-blocked" title="Permanent link">&para;</a></h3>
+<p>If you try <code>mode="migrate"</code> in production:</p>
+<div class="codehilite"><pre><span></span><code>RuntimeError: migrate_on_startup is blocked in production unless 
+allow_in_production=True
+</code></pre></div>
+
+<p><strong>Solution:</strong>
+- Run migrations in a separate job
+- Or add <code>allow_in_production=True</code> (not recommended)</p>
+<h3 id="multiple-databases-one-fails">Multiple Databases, One Fails<a class="headerlink" href="#multiple-databases-one-fails" title="Permanent link">&para;</a></h3>
+<p>If <code>all_databases=True</code> and one database fails:</p>
+<div class="codehilite"><pre><span></span><code><span class="nt">RuntimeError</span><span class="o">:</span><span class="w"> </span><span class="nt">Startup</span><span class="w"> </span><span class="nt">check</span><span class="w"> </span><span class="nt">failed</span><span class="o">:</span><span class="w"> </span><span class="nt">primary</span><span class="o">:</span><span class="w"> </span><span class="nt">ok</span><span class="o">;</span><span class="w"> </span><span class="nt">analytics</span><span class="o">:</span><span class="w"> </span><span class="nt">connection</span><span class="w"> </span><span class="nt">refused</span>
+</code></pre></div>
+
+<p>The app exits even if some databases are healthy. Fix all databases before starting.</p>
+<h2 id="comparison-check-vs-migrate">Comparison: Check vs Migrate<a class="headerlink" href="#comparison-check-vs-migrate" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Check Mode</strong></th>
+<th><strong>Migrate Mode</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Reads schema</strong></td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><strong>Checks connectivity</strong></td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><strong>Reports pending migrations</strong></td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><strong>Applies migrations</strong></td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><strong>Modifies database</strong></td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><strong>Production safe (multi-pod)</strong></td>
+<td>✅</td>
+<td>⚠️ Risky</td>
+</tr>
+<tr>
+<td><strong>Can rollback</strong></td>
+<td>N/A</td>
+<td>❌</td>
+</tr>
+<tr>
+<td><strong>Requires lock</strong></td>
+<td>❌</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><strong>Fast</strong></td>
+<td>✅ (&lt; 100ms)</td>
+<td>⚠️ Depends on migrations</td>
+</tr>
+</tbody>
+</table>
+<h2 id="environment-detection">Environment Detection<a class="headerlink" href="#environment-detection" title="Permanent link">&para;</a></h2>
+<p>DBWarden detects your environment from the <code>ENVIRONMENT</code> variable:</p>
+<h3 id="development-environments">Development Environments<a class="headerlink" href="#development-environments" title="Permanent link">&para;</a></h3>
+<p>Detected as "development":
+- <code>dev</code>
+- <code>development</code>
+- <code>local</code>
+- <code>test</code>
+- <code>testing</code></p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">ENVIRONMENT</span><span class="o">=</span>development
+</code></pre></div>
+
+<h3 id="production-environments">Production Environments<a class="headerlink" href="#production-environments" title="Permanent link">&para;</a></h3>
+<p>Detected as "production":
+- <code>prod</code>
+- <code>production</code></p>
+<div class="codehilite"><pre><span></span><code><span class="nb">export</span><span class="w"> </span><span class="nv">ENVIRONMENT</span><span class="o">=</span>production
+</code></pre></div>
+
+<h3 id="why-it-matters">Why It Matters<a class="headerlink" href="#why-it-matters" title="Permanent link">&para;</a></h3>
+<p>Some parameters behave differently based on environment:</p>
+<p><strong><code>only_dev=True</code></strong> → Skipped in production
+<strong><code>allow_in_production=False</code></strong> → Migrate mode blocked in production</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="app-starts-but-migrations-not-checked">App Starts But Migrations Not Checked<a class="headerlink" href="#app-starts-but-migrations-not-checked" title="Permanent link">&para;</a></h3>
+<p>Check that <code>migration_context</code> is actually running:</p>
+<div class="codehilite"><pre><span></span><code><span class="nd">@asynccontextmanager</span>
+<span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">lifespan</span><span class="p">(</span><span class="n">app</span><span class="p">:</span> <span class="n">FastAPI</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Lifespan starting...&quot;</span><span class="p">)</span>  <span class="c1"># Debug</span>
+    <span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Passed checks!&quot;</span><span class="p">)</span>  <span class="c1"># Debug</span>
+        <span class="k">yield</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Lifespan ending...&quot;</span><span class="p">)</span>  <span class="c1"># Debug</span>
+</code></pre></div>
+
+<p>Make sure you're passing <code>lifespan</code> to <code>FastAPI</code>:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># ✅ Correct</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">(</span><span class="n">lifespan</span><span class="o">=</span><span class="n">lifespan</span><span class="p">)</span>
+
+<span class="c1"># ❌ Wrong - lifespan not used</span>
+<span class="n">app</span> <span class="o">=</span> <span class="n">FastAPI</span><span class="p">()</span>
+</code></pre></div>
+
+<h3 id="checks-pass-but-routes-fail">Checks Pass But Routes Fail<a class="headerlink" href="#checks-pass-but-routes-fail" title="Permanent link">&para;</a></h3>
+<p>If startup checks pass but routes fail with connection errors:</p>
+<ol>
+<li><strong>Different databases?</strong> - Startup checks one database, routes use another</li>
+<li><strong>Connection pool exhausted?</strong> - Too many concurrent requests</li>
+<li><strong>Database restarted?</strong> - Connection was valid at startup but not now</li>
+</ol>
+<h3 id="slow-startup">Slow Startup<a class="headerlink" href="#slow-startup" title="Permanent link">&para;</a></h3>
+<p>If startup is slow:</p>
+<ol>
+<li><strong>Migrations taking time?</strong> - Use <code>mode="check"</code> instead of <code>mode="migrate"</code></li>
+<li><strong>Multiple databases?</strong> - Each one adds latency</li>
+<li><strong>Network latency?</strong> - Database is far away</li>
+<li><strong>First connection slow?</strong> - Normal for some databases (initial SSL handshake)</li>
+</ol>
+<p>Use <code>verbose=True</code> to see timing:</p>
+<div class="codehilite"><pre><span></span><code><span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<h3 id="production-blocked">Production Blocked<a class="headerlink" href="#production-blocked" title="Permanent link">&para;</a></h3>
+<p>If you see "blocked in production" errors:</p>
+<div class="codehilite"><pre><span></span><code><span class="c1"># ❌ This is blocked</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;migrate&quot;</span><span class="p">):</span>
+    <span class="k">yield</span>
+
+<span class="c1"># ✅ Solutions:</span>
+
+<span class="c1"># 1. Use check mode</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;check&quot;</span><span class="p">):</span>
+    <span class="k">yield</span>
+
+<span class="c1"># 2. Use only_dev</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;migrate&quot;</span><span class="p">,</span> <span class="n">only_dev</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">yield</span>
+
+<span class="c1"># 3. Override (not recommended)</span>
+<span class="k">async</span> <span class="k">with</span> <span class="n">migration_context</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s2">&quot;migrate&quot;</span><span class="p">,</span> <span class="n">allow_in_production</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="k">yield</span>
+</code></pre></div>
+
+<h2 id="recap">Recap<a class="headerlink" href="#recap" title="Permanent link">&para;</a></h2>
+<p>You learned:</p>
+<p>✅ Startup checks validate database before serving traffic<br />
+✅ Use <code>migration_context</code> in FastAPI lifespan<br />
+✅ Check mode for production (safe, read-only)<br />
+✅ Migrate mode for development (auto-applies migrations)<br />
+✅ All parameters and when to use them<br />
+✅ Common patterns for different environments<br />
+✅ Direct helper functions for more control<br />
+✅ Environment detection and production safety<br />
+✅ Troubleshooting common issues  </p>
+<h2 id="whats-next">What's Next?<a class="headerlink" href="#whats-next" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href="../complete-application/">Complete Application</a></strong> - Full working example</li>
+<li><strong><a href="../health-endpoints/">Health Endpoints</a></strong> - Runtime health monitoring</li>
+<li><strong><a href="../../advanced/production-patterns/">Production Patterns</a></strong> - K8s, CI/CD strategies</li>
+<li><strong><a href="../../advanced/multi-database/">Multi-Database</a></strong> - Multiple databases</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.tabs", "navigation.sections", "search.suggest", "search.highlight"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

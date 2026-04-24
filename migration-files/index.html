@@ -13,10 +13,10 @@
       
       
       
-        <link rel="prev" href="../commands/version/">
+        <link rel="prev" href="../fastapi/full-example/">
       
       
-        <link rel="next" href="../models/">
+        <link rel="next" href="../sql-translation/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Migration Files - DBWarden Documentation</title>
+        <title>Migration File Format - DBWarden Documentation</title>
       
     
     
@@ -76,7 +76,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#migration-files" class="md-skip">
+        <a href="#migration-file-format" class="md-skip">
           Skip to content
         </a>
       
@@ -110,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Migration Files
+              Migration File Format
             
           </span>
         </div>
@@ -215,55 +215,18 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../installation/" class="md-tabs__link">
-        
-  
-  
     
-  
-  Installation
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../configuration/" class="md-tabs__link">
-        
-  
-  
     
+      <li class="md-tabs__item">
+        <a href="../getting-started/introduction/" class="md-tabs__link">
+          
   
-  Configuration
+  
+  Getting Started
 
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../quickstart/" class="md-tabs__link">
-        
-  
-  
+        </a>
+      </li>
     
-  
-  Quick Start
-
-      </a>
-    </li>
   
 
       
@@ -275,11 +238,51 @@
     
     
       <li class="md-tabs__item">
-        <a href="../commands/" class="md-tabs__link">
+        <a href="../configuration/" class="md-tabs__link">
           
   
   
-  Commands
+  Configuration
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorial/your-first-migration/" class="md-tabs__link">
+          
+  
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../fastapi/" class="md-tabs__link">
+          
+  
+  
+  FastAPI Integration
 
         </a>
       </li>
@@ -294,17 +297,18 @@
     
   
   
-    <li class="md-tabs__item md-tabs__item--active">
-      <a href="./" class="md-tabs__link">
-        
-  
-  
     
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
   
-  Migration Files
+  
+  Advanced User Guide
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
   
 
       
@@ -313,131 +317,28 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../models/" class="md-tabs__link">
-        
-  
-  
     
-  
-  SQLAlchemy Models
-
-      </a>
-    </li>
-  
-
+    
       
-        
   
   
-  
-  
-    <li class="md-tabs__item">
-      <a href="../databases/" class="md-tabs__link">
-        
   
   
     
+    
+      <li class="md-tabs__item">
+        <a href="../cli-reference/" class="md-tabs__link">
+          
   
-  Supported Databases
+  
+  Reference
 
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../sql-translation/" class="md-tabs__link">
-        
-  
-  
+        </a>
+      </li>
     
   
-  SQL Translation
 
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../architecture-deep-dive/" class="md-tabs__link">
-        
-  
-  
     
-  
-  Architecture Deep Dive
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../operations-runbook/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Operations Runbook
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../advanced/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  Advanced Features
-
-      </a>
-    </li>
-  
-
-      
-        
-  
-  
-  
-  
-    <li class="md-tabs__item">
-      <a href="../cli-reference/" class="md-tabs__link">
-        
-  
-  
-    
-  
-  CLI Reference
-
-      </a>
-    </li>
   
 
       
@@ -519,6 +420,86 @@
   
   
   
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../installation/" class="md-nav__link">
         
@@ -539,6 +520,42 @@
     </li>
   
 
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/first-steps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Steps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
     
       
       
@@ -546,9 +563,25 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../configuration/" class="md-nav__link">
+    
+    
+    
+    
+      
+      
         
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -562,19 +595,56 @@
   
   
 
-      </a>
-    </li>
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Configuration
   
 
-    
-      
-      
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
   
   
   
   
     <li class="md-nav__item">
-      <a href="../quickstart/" class="md-nav__link">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/quick-start/" class="md-nav__link">
         
   
   
@@ -590,6 +660,465 @@
   
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/connection-urls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Connection URLs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/model-discovery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Model Discovery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/dev-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dev Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/multi-database/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/production-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Docs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/your-first-migration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Migration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/applying-migrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Applying Migrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/rolling-back/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rolling Back
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/checking-status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checking Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/dev-mode/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dev Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/multi-database-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Database Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -624,7 +1153,7 @@
   <span class="md-ellipsis">
     
   
-    Commands
+    FastAPI Integration
   
 
     
@@ -640,7 +1169,7 @@
             <span class="md-nav__icon md-icon"></span>
             
   
-    Commands
+    FastAPI Integration
   
 
           </label>
@@ -653,14 +1182,1271 @@
   
   
     <li class="md-nav__item">
-      <a href="../commands/" class="md-nav__link">
+      <a href="../fastapi/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Commands Overview
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_2" id="__nav_5_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorial
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/tutorial/first-steps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    First Steps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/tutorial/session-dependency/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Session Dependency
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/tutorial/startup-checks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Startup Checks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/tutorial/health-endpoints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Health Endpoints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/tutorial/complete-application/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Complete Application
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_3" id="__nav_5_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/advanced/multi-database/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Multi-Database
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/advanced/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/advanced/transaction-management/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transaction Management
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/advanced/engine-lifecycle/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engine Lifecycle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/advanced/production-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_6" id="__nav_5_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Legacy Docs
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Legacy Docs
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview (Old)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/get-session/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    get_session (Old)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/migration-context/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    migration_context (Old)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/health-router/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DBWardenHealthRouter (Old)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fastapi/full-example/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Full Example (Old)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration File Format
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration File Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#file-naming-and-location" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File naming and location
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#required-sections" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Required sections
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#migration-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Migration classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-to-use-each" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to use each
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution model
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#versioned-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Versioned migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runs-always-migration-ra__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runs-always migration (RA__)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#runs-on-change-migration-roc__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Runs-on-change migration (ROC__)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata headers
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authoring-guidelines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Authoring guidelines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#review-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Navigation
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sql-translation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Translation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/migration-locking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Migration Locking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/checksum-integrity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Checksum Integrity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/squashing-migrations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Squashing Migrations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/ci-cd-patterns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI/CD Patterns
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../advanced/safe-deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safe Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_1" id="__nav_7_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
   
 
     
@@ -716,7 +2502,7 @@
   <span class="md-ellipsis">
     
   
-    database
+    settings/database
   
 
     
@@ -1044,220 +2830,10 @@
     </li>
   
 
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Migration Files
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Migration Files
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#naming-convention" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Naming Convention
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#file-anatomy" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        File Anatomy
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#migration-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration Types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#internal-execution-model" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Internal Execution Model
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example-versioned-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example: Versioned Migration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example-runs-always-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example: Runs-Always Migration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#example-runs-on-change-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example: Runs-On-Change Migration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#metadata-headers" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Metadata Headers
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#best-practices" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Best Practices
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#validation-checklist-before-commit" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Validation Checklist Before Commit
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../models/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    SQLAlchemy Models
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
+              
+            
+              
+                
   
   
   
@@ -1282,22 +2858,23 @@
     </li>
   
 
-    
-      
-      
+              
+            
+              
+                
   
   
   
   
     <li class="md-nav__item">
-      <a href="../sql-translation/" class="md-nav__link">
+      <a href="../reference/configuration-api/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    SQL Translation
+    Configuration API
   
 
     
@@ -1309,9 +2886,10 @@
     </li>
   
 
-    
-      
-      
+              
+            
+              
+                
   
   
   
@@ -1324,7 +2902,7 @@
   <span class="md-ellipsis">
     
   
-    Architecture Deep Dive
+    Architecture
   
 
     
@@ -1336,22 +2914,23 @@
     </li>
   
 
-    
-      
-      
+              
+            
+              
+                
   
   
   
   
     <li class="md-nav__item">
-      <a href="../operations-runbook/" class="md-nav__link">
+      <a href="../models/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Operations Runbook
+    SQLAlchemy Models
   
 
     
@@ -1363,22 +2942,23 @@
     </li>
   
 
-    
-      
-      
+              
+            
+              
+                
   
   
   
   
     <li class="md-nav__item">
-      <a href="../advanced/" class="md-nav__link">
+      <a href="../reference/migrate-from-toml/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Advanced Features
+    Migrate from TOML
   
 
     
@@ -1390,30 +2970,11 @@
     </li>
   
 
-    
+              
+            
+          </ul>
+        </nav>
       
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-reference/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    CLI Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1445,10 +3006,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#naming-convention" class="md-nav__link">
+  <a href="#file-naming-and-location" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Naming Convention
+        File naming and location
       
     </span>
   </a>
@@ -1456,10 +3017,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#file-anatomy" class="md-nav__link">
+  <a href="#required-sections" class="md-nav__link">
     <span class="md-ellipsis">
       
-        File Anatomy
+        Required sections
       
     </span>
   </a>
@@ -1467,10 +3028,38 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#migration-types" class="md-nav__link">
+  <a href="#migration-classes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration Types
+        Migration classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Migration classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#when-to-use-each" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When to use each
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#execution-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Execution model
       
     </span>
   </a>
@@ -1478,46 +3067,52 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#internal-execution-model" class="md-nav__link">
+  <a href="#examples" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Internal Execution Model
+        Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#versioned-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Versioned migration
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#example-versioned-migration" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#runs-always-migration-ra__" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example: Versioned Migration
+        Runs-always migration (RA__)
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#example-runs-always-migration" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#runs-on-change-migration-roc__" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example: Runs-Always Migration
+        Runs-on-change migration (ROC__)
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#example-runs-on-change-migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Example: Runs-On-Change Migration
-      
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1525,7 +3120,7 @@
   <a href="#metadata-headers" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Metadata Headers
+        Metadata headers
       
     </span>
   </a>
@@ -1533,10 +3128,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#best-practices" class="md-nav__link">
+  <a href="#authoring-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Best Practices
+        Authoring guidelines
       
     </span>
   </a>
@@ -1544,10 +3139,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#validation-checklist-before-commit" class="md-nav__link">
+  <a href="#review-checklist" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Validation Checklist Before Commit
+        Review checklist
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#navigation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Navigation
       
     </span>
   </a>
@@ -1574,9 +3180,12 @@
   
 
 
-<h1 id="migration-files">Migration Files<a class="headerlink" href="#migration-files" title="Permanent link">&para;</a></h1>
-<p>Migration files are executable SQL units with explicit upgrade and rollback behavior.</p>
-<h2 id="naming-convention">Naming Convention<a class="headerlink" href="#naming-convention" title="Permanent link">&para;</a></h2>
+<h1 id="migration-file-format">Migration File Format<a class="headerlink" href="#migration-file-format" title="Permanent link">&para;</a></h1>
+<p>Migration files are the execution contract in DBWarden.</p>
+<p>Everything that changes your database should be represented in explicit SQL files that can be reviewed, tested, and rolled back.</p>
+<h2 id="file-naming-and-location">File naming and location<a class="headerlink" href="#file-naming-and-location" title="Permanent link">&para;</a></h2>
+<p>Versioned migrations are stored under each database migrations directory (default: <code>migrations/&lt;database_name&gt;</code>).</p>
+<p>Canonical filename pattern:</p>
 <div class="codehilite"><pre><span></span><code>{database_name}__{version}_{description}.sql
 </code></pre></div>
 
@@ -1586,23 +3195,25 @@ primary__0002_add_users_table.sql
 analytics__0001_create_events.sql
 </code></pre></div>
 
-<h2 id="file-anatomy">File Anatomy<a class="headerlink" href="#file-anatomy" title="Permanent link">&para;</a></h2>
-<p>Every migration file must include two sections:</p>
+<h2 id="required-sections">Required sections<a class="headerlink" href="#required-sections" title="Permanent link">&para;</a></h2>
+<p>Each migration file must define both:</p>
 <div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
 
-<span class="c1">-- SQL applied during migrate</span>
-
 <span class="c1">-- rollback</span>
-
-<span class="c1">-- SQL applied during rollback</span>
 </code></pre></div>
 
-<h2 id="migration-types">Migration Types<a class="headerlink" href="#migration-types" title="Permanent link">&para;</a></h2>
+<ul>
+<li><code>-- upgrade</code>: statements applied during <code>migrate</code></li>
+<li><code>-- rollback</code>: statements applied during <code>rollback</code></li>
+</ul>
+<p>If rollback is weak or incomplete, production recovery is weak or incomplete.</p>
+<h2 id="migration-classes">Migration classes<a class="headerlink" href="#migration-classes" title="Permanent link">&para;</a></h2>
+<p>DBWarden supports three execution classes:</p>
 <table>
 <thead>
 <tr>
 <th>Prefix</th>
-<th>Type</th>
+<th>Class</th>
 <th>Behavior</th>
 </tr>
 </thead>
@@ -1610,40 +3221,47 @@ analytics__0001_create_events.sql
 <tr>
 <td><code>NNNN_</code></td>
 <td>Versioned</td>
-<td>Runs once in version order</td>
+<td>Runs once in ordered version sequence</td>
 </tr>
 <tr>
 <td><code>RA__</code></td>
 <td>Runs always</td>
-<td>Runs each <code>migrate</code> execution</td>
+<td>Runs on every <code>migrate</code> execution</td>
 </tr>
 <tr>
 <td><code>ROC__</code></td>
 <td>Runs on change</td>
-<td>Runs only when checksum changed</td>
+<td>Runs when checksum changed</td>
 </tr>
 </tbody>
 </table>
-<h2 id="internal-execution-model">Internal Execution Model<a class="headerlink" href="#internal-execution-model" title="Permanent link">&para;</a></h2>
-<p>When <code>migrate</code> runs, DBWarden builds an execution plan from migration files:</p>
+<h3 id="when-to-use-each">When to use each<a class="headerlink" href="#when-to-use-each" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>NNNN_</code>: schema evolution (tables, columns, indexes, constraints)</li>
+<li><code>RA__</code>: objects that should always be refreshed (views, grants)</li>
+<li><code>ROC__</code>: routines/policies that should apply only when content changes</li>
+</ul>
+<h2 id="execution-model">Execution model<a class="headerlink" href="#execution-model" title="Permanent link">&para;</a></h2>
+<p>At runtime, DBWarden builds a plan from file discovery + migration metadata:</p>
+<ol>
+<li>read versioned files and filter already-applied versions</li>
+<li>include <code>RA__</code> files</li>
+<li>include changed <code>ROC__</code> files</li>
+<li>execute with lock protection</li>
+<li>record metadata and checksums</li>
+</ol>
+<p>Conceptual plan:</p>
 <div class="codehilite"><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">build_plan</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">applied_versions</span><span class="p">):</span>
     <span class="n">versioned</span> <span class="o">=</span> <span class="n">parse_versioned_files</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
     <span class="n">repeatable</span> <span class="o">=</span> <span class="n">parse_repeatable_files</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
-
     <span class="n">pending_versioned</span> <span class="o">=</span> <span class="p">[</span><span class="n">m</span> <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="n">versioned</span> <span class="k">if</span> <span class="n">m</span><span class="o">.</span><span class="n">version</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">applied_versions</span><span class="p">]</span>
     <span class="n">pending_ra</span> <span class="o">=</span> <span class="n">repeatable</span><span class="o">.</span><span class="n">runs_always</span>
     <span class="n">pending_roc</span> <span class="o">=</span> <span class="n">changed_only</span><span class="p">(</span><span class="n">repeatable</span><span class="o">.</span><span class="n">runs_on_change</span><span class="p">)</span>
-
     <span class="k">return</span> <span class="n">pending_versioned</span> <span class="o">+</span> <span class="n">pending_ra</span> <span class="o">+</span> <span class="n">pending_roc</span>
 </code></pre></div>
 
-<p>Then each migration:</p>
-<ol>
-<li>Parses <code>-- upgrade</code> statements</li>
-<li>Executes statements in order</li>
-<li>Stores execution metadata/checksum</li>
-</ol>
-<h2 id="example-versioned-migration">Example: Versioned Migration<a class="headerlink" href="#example-versioned-migration" title="Permanent link">&para;</a></h2>
+<h2 id="examples">Examples<a class="headerlink" href="#examples" title="Permanent link">&para;</a></h2>
+<h3 id="versioned-migration">Versioned migration<a class="headerlink" href="#versioned-migration" title="Permanent link">&para;</a></h3>
 <div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
 
 <span class="k">CREATE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">NOT</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">users</span><span class="w"> </span><span class="p">(</span>
@@ -1657,7 +3275,8 @@ analytics__0001_create_events.sql
 <span class="k">DROP</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="n">users</span><span class="p">;</span>
 </code></pre></div>
 
-<h2 id="example-runs-always-migration">Example: Runs-Always Migration<a class="headerlink" href="#example-runs-always-migration" title="Permanent link">&para;</a></h2>
+<h3 id="runs-always-migration-ra__">Runs-always migration (<code>RA__</code>)<a class="headerlink" href="#runs-always-migration-ra__" title="Permanent link">&para;</a></h3>
+<p>Filename example: <code>primary__RA__refresh_active_users_view.sql</code></p>
 <div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
 
 <span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="n">active_users</span><span class="w"> </span><span class="k">AS</span>
@@ -1668,8 +3287,8 @@ analytics__0001_create_events.sql
 <span class="k">DROP</span><span class="w"> </span><span class="k">VIEW</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">active_users</span><span class="p">;</span>
 </code></pre></div>
 
-<p>Filename example: <code>primary__RA__refresh_active_users_view.sql</code></p>
-<h2 id="example-runs-on-change-migration">Example: Runs-On-Change Migration<a class="headerlink" href="#example-runs-on-change-migration" title="Permanent link">&para;</a></h2>
+<h3 id="runs-on-change-migration-roc__">Runs-on-change migration (<code>ROC__</code>)<a class="headerlink" href="#runs-on-change-migration-roc__" title="Permanent link">&para;</a></h3>
+<p>Filename example: <code>primary__ROC__update_timestamp_trigger.sql</code></p>
 <div class="codehilite"><pre><span></span><code><span class="c1">-- upgrade</span>
 
 <span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="n">update_updated_at</span><span class="p">()</span>
@@ -1685,31 +3304,44 @@ analytics__0001_create_events.sql
 <span class="k">DROP</span><span class="w"> </span><span class="k">FUNCTION</span><span class="w"> </span><span class="k">IF</span><span class="w"> </span><span class="k">EXISTS</span><span class="w"> </span><span class="n">update_updated_at</span><span class="p">();</span>
 </code></pre></div>
 
-<p>Filename example: <code>primary__ROC__update_timestamp_trigger.sql</code></p>
-<h2 id="metadata-headers">Metadata Headers<a class="headerlink" href="#metadata-headers" title="Permanent link">&para;</a></h2>
+<h2 id="metadata-headers">Metadata headers<a class="headerlink" href="#metadata-headers" title="Permanent link">&para;</a></h2>
+<p>Headers are parsed before SQL execution and can influence ordering/behavior.</p>
 <p>Dependency header:</p>
 <div class="codehilite"><pre><span></span><code><span class="c1">-- depends_on: [&quot;0004&quot;, &quot;0005&quot;]</span>
 </code></pre></div>
 
-<p>Seed header:</p>
+<p>Seed marker:</p>
 <div class="codehilite"><pre><span></span><code><span class="c1">-- seed</span>
 </code></pre></div>
 
-<p>Headers are parsed before SQL execution and used by ordering logic.</p>
-<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<h2 id="authoring-guidelines">Authoring guidelines<a class="headerlink" href="#authoring-guidelines" title="Permanent link">&para;</a></h2>
 <ul>
-<li>Keep one logical change per migration file</li>
-<li>Always write rollback SQL that actually restores previous state</li>
-<li>Prefer explicit SQL over side effects in application code</li>
-<li>Review generated SQL before running <code>migrate</code></li>
-<li>For complex data moves, use transactional blocks where backend supports it</li>
+<li>One logical change per migration file</li>
+<li>Keep DDL explicit; avoid hidden application-side schema effects</li>
+<li>Keep rollback idempotent when possible (<code>IF EXISTS</code>, safe predicates)</li>
+<li>For data migrations, use bounded, reversible operations</li>
+<li>Prefer small migrations over large monolithic SQL scripts</li>
 </ul>
-<h2 id="validation-checklist-before-commit">Validation Checklist Before Commit<a class="headerlink" href="#validation-checklist-before-commit" title="Permanent link">&para;</a></h2>
-<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>status<span class="w"> </span>-d<span class="w"> </span>primary
-dbwarden<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
-dbwarden<span class="w"> </span>rollback<span class="w"> </span>--count<span class="w"> </span><span class="m">1</span><span class="w"> </span>-d<span class="w"> </span>primary
-dbwarden<span class="w"> </span>migrate<span class="w"> </span>-d<span class="w"> </span>primary
+<h2 id="review-checklist">Review checklist<a class="headerlink" href="#review-checklist" title="Permanent link">&para;</a></h2>
+<p>Before merge:</p>
+<ul>
+<li>upgrade section matches intended schema change</li>
+<li>rollback section restores prior valid state</li>
+<li>indexes/constraints/defaults are explicit</li>
+<li>no environment-specific literals accidentally committed</li>
+</ul>
+<p>Before release:</p>
+<div class="codehilite"><pre><span></span><code>dbwarden<span class="w"> </span>status<span class="w"> </span>--database<span class="w"> </span>primary
+dbwarden<span class="w"> </span>migrate<span class="w"> </span>--database<span class="w"> </span>primary
+dbwarden<span class="w"> </span>rollback<span class="w"> </span>--database<span class="w"> </span>primary<span class="w"> </span>--count<span class="w"> </span><span class="m">1</span>
+dbwarden<span class="w"> </span>migrate<span class="w"> </span>--database<span class="w"> </span>primary
 </code></pre></div>
+
+<h2 id="navigation">Navigation<a class="headerlink" href="#navigation" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Previous: <a href="../tutorial/multi-database-setup/">Multi-Database Setup</a></li>
+<li>Next: <a href="../sql-translation/">SQL Translation</a></li>
+</ul>
 
 
 
