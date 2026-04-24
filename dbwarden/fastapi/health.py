@@ -16,6 +16,20 @@ def _aggregate_status(items: list[DatabaseHealth]) -> str:
     return "ok"
 
 
+def _status_to_code(status: str) -> int:
+    """Convert health status to HTTP status code.
+    
+    - "ok" -> 200 (healthy)
+    - "degraded" -> 200 (state, not a failure)
+    - "error" -> 503 (service unavailable)
+    """
+    if status == "ok":
+        return 200
+    if status == "degraded":
+        return 200  # Degraded is not a failure, caller decides how to handle
+    return 503  # Error means service unavailable
+
+
 def DBWardenHealthRouter() -> APIRouter:
     """Create DBWarden FastAPI health router.
 
@@ -31,7 +45,7 @@ def DBWardenHealthRouter() -> APIRouter:
         results = check_startup(all_databases=True)
         payload = [DatabaseHealth(**r.__dict__) for r in results]
         status = _aggregate_status(payload)
-        code = 200 if status == "ok" else 503
+        code = _status_to_code(status)
         return JSONResponse(status_code=code, content=HealthResponse(status=status, databases=payload).model_dump())
 
     @router.get("/{database_name}", response_model=HealthResponse)
@@ -43,7 +57,7 @@ def DBWardenHealthRouter() -> APIRouter:
         result = check_database_health(database_name)
         payload = [DatabaseHealth(**result.__dict__)]
         status = _aggregate_status(payload)
-        code = 200 if status == "ok" else 503
+        code = _status_to_code(status)
         return JSONResponse(status_code=code, content=HealthResponse(status=status, databases=payload).model_dump())
 
     return router
