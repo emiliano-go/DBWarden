@@ -1,121 +1,278 @@
 # CLI Reference
 
+This page is a command and flag lookup.
+
+For guided usage, start with the Tutorial pages.
+
 ## Syntax
 
 ```bash
 dbwarden [GLOBAL_OPTIONS] COMMAND [ARGS] [COMMAND_OPTIONS]
 ```
 
-## Global Options
+## Global options
 
 | Option | Description |
 |--------|-------------|
-| `--dev` | Use `dev_database_url` / `dev_database_type` for selected database |
-| `--strict-translation` | Fail on lossy SQL translation in dev SQLite workflows |
-| `--help`, `-h` | Show help |
+| `--dev` | Use `dev_database_url`/`dev_database_type` for selected database |
+| `--strict-translation` | Fail on unsupported/lossy SQL translation in dev SQLite workflows |
+| `--help` | Show help |
 
-## Command Index
+## Configuration and setup
 
-Setup:
+### `init`
 
-- `init`
-- `database list`
-- `database add`
-- `database remove`
-
-Migration authoring:
-
-- `make-migrations`
-- `new`
-- `squash`
-
-Migration execution:
-
-- `migrate`
-- `rollback`
-
-Inspection:
-
-- `status`
-- `history`
-- `check-db`
-- `diff`
-
-Operations:
-
-- `lock-status`
-- `unlock`
-- `version`
-
-## Common Usage Examples
+Initialize DBWarden in current project.
 
 ```bash
-# initialize
 dbwarden init
-
-# generate migration from models
-dbwarden make-migrations "add billing tables" -d primary
-
-# apply migrations
-dbwarden migrate -d primary
-
-# apply migrations in development mode
-dbwarden --dev migrate -d primary
-
-# strict translation check for dev SQLite
-dbwarden --dev --strict-translation make-migrations "sync" -d primary
-
-# inspect state
-dbwarden status -d primary
-dbwarden history -d primary
+dbwarden init --database primary
 ```
 
-## Multi-Database Patterns
+Creates migrations directories and config scaffold if missing.
+
+### `settings show`
+
+Show resolved settings.
 
 ```bash
-# one database
-dbwarden migrate -d analytics
+dbwarden settings show
+dbwarden settings show --database primary
+dbwarden settings show --all
+```
 
-# all databases sequentially
+### `settings default-database`
+
+Set default database entry.
+
+```bash
+dbwarden settings default-database primary
+```
+
+### `settings database add`
+
+Add database entry to config source.
+
+```bash
+dbwarden settings database add analytics \
+  --type clickhouse \
+  --url clickhouse://user:pass@localhost:8123/analytics \
+  --model-path app/models/analytics
+```
+
+Common options:
+
+- `--type`
+- `--url`
+- `--migrations-dir`
+- `--model-path` (repeatable)
+- `--dev-type`
+- `--dev-url`
+- `--overlap-models`
+- `--default`
+
+### `settings database remove`
+
+```bash
+dbwarden settings database remove analytics
+```
+
+### `settings database rename`
+
+```bash
+dbwarden settings database rename primary main
+```
+
+### `settings database set-dev`
+
+```bash
+dbwarden settings database set-dev primary \
+  --dev-type sqlite \
+  --dev-url sqlite:///./development.db
+```
+
+### `settings database clear-dev`
+
+```bash
+dbwarden settings database clear-dev primary
+```
+
+## Migration authoring
+
+### `make-migrations`
+
+Generate migration SQL from models.
+
+```bash
+dbwarden make-migrations -d "add billing table" --database primary
+dbwarden --dev make-migrations -d "sync dev" --database primary
+```
+
+Options:
+
+- `-d, --description` text description
+- `--database` target database name
+- `-v, --verbose`
+
+### `new`
+
+Create manual migration file.
+
+```bash
+dbwarden new -d "manual hotfix" --database primary
+dbwarden new -d "backfill" --database primary --version 0042
+```
+
+Options:
+
+- `-d, --description`
+- `--version`
+- `--database`
+
+### `squash`
+
+Combine migration files when workflow permits.
+
+```bash
+dbwarden squash --database primary
+```
+
+## Migration execution
+
+### `migrate`
+
+Apply pending migrations.
+
+```bash
+dbwarden migrate --database primary
 dbwarden migrate --all
+dbwarden migrate --database primary --to-version 0010
+dbwarden migrate --database primary --count 2
+dbwarden migrate --database primary --with-backup
+dbwarden migrate --database primary --baseline --to-version 0005
 ```
 
-If `--all` is used, DBWarden iterates through configured database names in config order.
+Options:
 
-## Internal Behavior of Global Flags
+- `--database`
+- `--all`
+- `--to-version`
+- `--count`
+- `--baseline`
+- `--with-backup`
+- `--backup-dir`
+- `-v, --verbose`
 
-`--dev`:
+### `rollback`
 
-1. Enables runtime dev mode
-2. Switches active config from `sqlalchemy_url` to `dev_database_url`
-3. Keeps migration directory and database selection semantics unchanged
+Rollback applied migrations.
 
-`--strict-translation`:
-
-1. Enables strict translation mode
-2. During model-to-SQL generation, unsupported SQLite conversions raise errors
-3. Prevents silent fallback to `TEXT`
-
-Conceptual callback flow:
-
-```python
-def app_callback(dev=False, strict_translation=False):
-    set_dev_mode(dev)
-    set_strict_translation(strict_translation)
+```bash
+dbwarden rollback --database primary
+dbwarden rollback --database primary --count 2
+dbwarden rollback --database primary --to-version 0007
 ```
 
-## Option Cheatsheet
+Options:
 
-| Command | Main options |
-|---------|--------------|
-| `migrate` | `-d`, `--all`, `-c`, `-t`, `-v`, `--baseline`, `--with-backup` |
-| `rollback` | `-d`, `-c`, `-t`, `-v`, `--all` |
-| `make-migrations` | `-d`, `-v` |
-| `check-db` | `-d`, `-o` |
-| `status` | `-d`, `--all` |
+- `--database`
+- `--count`
+- `--to-version`
+- `-v, --verbose`
 
-## Tips
+## Inspection and diagnostics
 
-- Use `dbwarden <command> --help` for full per-command details.
-- Prefer `--dev` for local iteration and `migrate -d <name>` for production-like validation.
-- In CI, run `status` before and after `migrate` to make changes auditable.
+### `status`
+
+```bash
+dbwarden status --database primary
+dbwarden status --all
+```
+
+### `history`
+
+```bash
+dbwarden history --database primary
+```
+
+### `check-db`
+
+Inspect live schema.
+
+```bash
+dbwarden check-db --database primary
+dbwarden check-db --database primary --output json
+```
+
+Options:
+
+- `--database`
+- `--output` (`txt`, `json`, `yaml`)
+
+### `diff`
+
+Schema comparison helper.
+
+```bash
+dbwarden diff --database primary
+```
+
+## Lock operations
+
+### `lock-status`
+
+```bash
+dbwarden lock-status --database primary
+```
+
+### `unlock`
+
+```bash
+dbwarden unlock --database primary
+```
+
+## Utility commands
+
+### `config`
+
+Show active resolved configuration.
+
+```bash
+dbwarden config
+```
+
+### `version`
+
+```bash
+dbwarden version
+```
+
+## Common command patterns
+
+### Local dev loop
+
+```bash
+dbwarden --dev make-migrations -d "sync" --database primary
+dbwarden --dev migrate --database primary
+dbwarden --dev status --database primary
+```
+
+### Release loop
+
+```bash
+dbwarden status --database primary
+dbwarden migrate --database primary --with-backup
+dbwarden history --database primary
+```
+
+### Multi-database release
+
+```bash
+dbwarden migrate --all --with-backup
+dbwarden status --all
+```
+
+## Navigation
+
+- Previous: [Safe Deployment](advanced/safe-deployment.md)
+- Next: [Supported Databases](databases.md)
