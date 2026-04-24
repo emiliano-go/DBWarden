@@ -1,6 +1,7 @@
 from dbwarden.config import get_database
 from dbwarden.engine.version import get_migrations_directory
 from dbwarden.logging import get_logger
+from dbwarden.output import console
 from dbwarden.repositories import get_migration_records, migrations_table_exists
 
 
@@ -22,14 +23,17 @@ def diff_cmd(
     )
 
     if not migrations_table_exists(database):
-        print("No migrations table found. Run 'dbwarden migrate' first.")
+        console.print("No migrations table found. Run 'dbwarden migrate' first.", style="yellow")
         return
 
-    print("Diff functionality - compares database schema with models/migrations")
-    print("\nThis feature requires:")
-    print("  1. SQLAlchemy model definitions")
-    print("  2. model_paths in warden.toml")
-    print("\nFor now, use 'dbwarden check-db' to inspect the current database schema.")
+    console.print("Diff functionality - compares database schema with models/migrations", style="cyan")
+    console.print("\nThis feature requires:", style="bold white")
+    console.print("  1. SQLAlchemy model definitions", style="white")
+    console.print("  2. model_paths in dbwarden config", style="white")
+    console.print(
+        "\nFor now, use 'dbwarden check-db' to inspect the current database schema.",
+        style="white",
+    )
 
 
 def squash_cmd(verbose: bool = False, database: str | None = None) -> None:
@@ -49,23 +53,23 @@ def squash_cmd(verbose: bool = False, database: str | None = None) -> None:
     from dbwarden.repositories import get_migration_records
 
     if not migrations_table_exists(database):
-        print("No migrations found. Nothing to squash.")
+        console.print("No migrations found. Nothing to squash.", style="yellow")
         return
 
     records = get_migration_records(database)
     if not records:
-        print("No migrations applied. Nothing to squash.")
+        console.print("No migrations applied. Nothing to squash.", style="yellow")
         return
 
     pending_count = _get_pending_count(database)
     if pending_count > 0:
-        print(f"Cannot squash: {pending_count} migrations are pending.")
-        print("Please run 'dbwarden migrate' first.")
+        console.print(f"Cannot squash: {pending_count} migrations are pending.", style="yellow")
+        console.print("Please run 'dbwarden migrate' first.", style="white")
         return
 
     logger.info("Squash functionality - merges consecutive migrations")
-    print("This feature will combine multiple migration files into one.")
-    print("Use --help for more information on advanced usage.")
+    console.print("This feature will combine multiple migration files into one.", style="cyan")
+    console.print("Use --help for more information on advanced usage.", style="white")
 
 
 def _get_pending_count(database: str | None = None) -> int:
@@ -85,10 +89,10 @@ def lock_status_cmd(database: str | None = None) -> None:
 
     is_locked = check_lock(database)
     if is_locked:
-        print("Migration lock: ACTIVE")
-        print("Another migration process may be running.")
+        console.print("Migration lock: ACTIVE", style="yellow")
+        console.print("Another migration process may be running.", style="white")
     else:
-        print("Migration lock: INACTIVE")
+        console.print("Migration lock: INACTIVE", style="green")
 
 
 def unlock_cmd(database: str | None = None) -> None:
@@ -97,6 +101,6 @@ def unlock_cmd(database: str | None = None) -> None:
 
     success = release_lock(database)
     if success:
-        print("Migration lock released successfully.")
+        console.print("Migration lock released successfully.", style="green")
     else:
-        print("Failed to release lock. Lock may not be held.")
+        console.print("Failed to release lock. Lock may not be held.", style="bold red")

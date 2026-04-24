@@ -1,8 +1,8 @@
-from rich.console import Console
 from rich.table import Table
 
 from dbwarden.engine.version import get_migrations_directory
 from dbwarden.logging import get_logger
+from dbwarden.output import console
 from dbwarden.repositories import (
     get_migrated_versions,
     migrations_table_exists,
@@ -12,15 +12,15 @@ from dbwarden.repositories import (
 def status_single(database: str | None = None) -> None:
     """Display migration status for a single database."""
     logger = get_logger()
-    console = Console()
 
     db_name = database or "default"
 
     try:
         migrations_dir = get_migrations_directory(database)
     except Exception:
-        print(
-            f"Migrations directory not found for database '{db_name}'. Run 'dbwarden init' first."
+        console.print(
+            f"Migrations directory not found for database '{db_name}'. Run 'dbwarden init' first.",
+            style="yellow",
         )
         return
 
@@ -52,9 +52,9 @@ def status_single(database: str | None = None) -> None:
 
     console.print(table)
 
-    print(f"\nApplied: {len(applied_versions)}")
-    print(f"Pending: {len(pending_versions)}")
-    print(f"Total: {len(all_migrations)}")
+    console.print(f"\nApplied: {len(applied_versions)}", style="green")
+    console.print(f"Pending: {len(pending_versions)}", style="yellow")
+    console.print(f"Total: {len(all_migrations)}", style="cyan")
 
     if pending_versions:
         logger.info(f"Pending migrations: {', '.join(pending_versions)}")
@@ -72,10 +72,13 @@ def status_cmd(
         databases = config.databases
 
         for db_name in databases:
-            print(f"\n{'=' * 50}")
+            console.print(f"\n{'=' * 50}", style="dim")
             try:
                 status_single(db_name)
             except Exception as e:
-                print(f"Error getting status for database '{db_name}': {e}")
+                console.print(
+                    f"Error getting status for database '{db_name}': {e}",
+                    style="bold red",
+                )
     else:
         status_single(database)

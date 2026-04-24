@@ -1,12 +1,12 @@
 from typing import Any
 
-from rich.console import Console
 from sqlalchemy import inspect
 
 from dbwarden.config import get_database
 from dbwarden.database.connection import get_db_connection
 from dbwarden.engine.version import get_migrations_directory
 from dbwarden.logging import get_logger
+from dbwarden.output import console
 
 
 def check_db_cmd(output_format: str = "txt", database: str | None = None) -> None:
@@ -56,16 +56,16 @@ def check_db_cmd(output_format: str = "txt", database: str | None = None) -> Non
                 ],
             }
 
-    print(f"\n=== Database Schema: {db_name} ===\n")
+    console.print(f"\n=== Database Schema: {db_name} ===\n", style="bold cyan")
 
     if output_format == "json":
         import json
 
-        print(json.dumps(schema_info, indent=2, default=str))
+        console.print(json.dumps(schema_info, indent=2, default=str), style="white")
     elif output_format == "yaml":
         import yaml
 
-        print(yaml.dump(schema_info, default_flow_style=False))
+        console.print(yaml.dump(schema_info, default_flow_style=False), style="white")
     elif output_format == "txt":
         _print_txt(schema_info)
     else:
@@ -74,8 +74,6 @@ def check_db_cmd(output_format: str = "txt", database: str | None = None) -> Non
 
 def _print_txt(schema_info: dict[str, Any]) -> None:
     """Print schema in text format."""
-    console = Console()
-
     for table, info in schema_info.items():
         console.print(f"\n[bold cyan]Table: {table}[/bold cyan]")
         console.print("-" * 50)
