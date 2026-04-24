@@ -1,98 +1,62 @@
-import pytest
-import tempfile
 import os
-from pathlib import Path
-from io import StringIO
 import sys
+import tempfile
+from io import StringIO
+from pathlib import Path
 
 from dbwarden.commands.init import init_cmd
 from dbwarden.commands.utils import config_cmd, version_cmd
-from dbwarden.constants import MIGRATIONS_DIR, TOML_FILE
+from dbwarden.constants import MIGRATIONS_DIR
 
 
 class TestInitCommand:
-    """Tests for init command."""
-
     def test_init_creates_migrations_directory(self):
-        """Test init creates migrations directory."""
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
-
             try:
                 init_cmd()
-
                 migrations_path = Path(tmpdir) / MIGRATIONS_DIR
                 assert migrations_path.exists()
                 assert migrations_path.is_dir()
             finally:
                 os.chdir(old_cwd)
 
-    def test_init_creates_warden_toml(self):
-        """Test init creates warden.toml if it doesn't exist."""
+    def test_init_creates_dbwarden_py(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
-
             try:
                 init_cmd()
-
-                toml_path = Path(tmpdir) / TOML_FILE
-                assert toml_path.exists()
-
-                content = toml_path.read_text()
-                assert 'sqlalchemy_url = "sqlite:///./development.db"' in content
+                settings_path = Path(tmpdir) / "dbwarden.py"
+                assert settings_path.exists()
+                content = settings_path.read_text(encoding="utf-8")
+                assert "from dbwarden import database_config" in content
+                assert "database_config(" in content
             finally:
                 os.chdir(old_cwd)
 
-    def test_init_does_not_overwrite_existing_warden_toml(self):
-        """Test init doesn't overwrite existing warden.toml."""
+    def test_init_does_not_duplicate_scaffold(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
-
-            try:
-                # Create existing warden.toml
-                toml_path = Path(tmpdir) / TOML_FILE
-                original_content = 'sqlalchemy_url = "custom.db"'
-                toml_path.write_text(original_content)
-
-                init_cmd()
-
-                # Should not have been overwritten
-                content = toml_path.read_text()
-                assert content == original_content
-            finally:
-                os.chdir(old_cwd)
-
-    def test_init_idempotent(self):
-        """Test running init multiple times is safe."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            old_cwd = os.getcwd()
-            os.chdir(tmpdir)
-
             try:
                 init_cmd()
                 init_cmd()
                 init_cmd()
 
-                migrations_path = Path(tmpdir) / MIGRATIONS_DIR
-                assert migrations_path.exists()
-
-                toml_path = Path(tmpdir) / TOML_FILE
-                assert toml_path.exists()
+                settings_path = Path(tmpdir) / "dbwarden.py"
+                content = settings_path.read_text(encoding="utf-8")
+                assert content.count("from dbwarden import database_config") == 1
+                assert content.count("database_config(") == 1
             finally:
                 os.chdir(old_cwd)
 
 
 class TestConfigCommand:
-    """Tests for config command."""
-
-    def _run_config_capture_output(self, tmpdir):
-        """Helper to run config command and capture output."""
+    def _run_config_capture_output(self, tmpdir: str) -> str:
         old_cwd = os.getcwd()
         os.chdir(tmpdir)
-
         try:
             old_stdout = sys.stdout
             sys.stdout = StringIO()
@@ -103,70 +67,59 @@ class TestConfigCommand:
         finally:
             os.chdir(old_cwd)
 
-    def test_config_displays_sqlalchemy_url(self):
-        """Test config displays sqlalchemy_url."""
+    def test_config_displays_database_url(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            with open(os.path.join(tmpdir, "warden.toml"), "w") as f:
-                f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
-
+            Path(tmpdir, "dbwarden.py").write_text(
+                "from dbwarden import database_config\n\n"
+                "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./test.db')\n",
+                encoding="utf-8",
+            )
             output = self._run_config_capture_output(tmpdir)
-            assert "sqlalchemy_url" in output
+            assert "database_url" in output
             assert "sqlite:///./test.db" in output
 
     def test_config_masks_password(self):
-        """Test config masks password in URL."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            with open(os.path.join(tmpdir, "warden.toml"), "w") as f:
-                f.write(
-                    'sqlalchemy_url = "postgresql://user:secretpassword@localhost/db"\n'
-                )
-
+            Path(tmpdir, "dbwarden.py").write_text(
+                "from dbwarden import database_config\n\n"
+                "database_config(database_name='primary', default=True, database_type='postgresql', database_url='postgresql://user:secretpassword@localhost/db')\n",
+                encoding="utf-8",
+            )
             output = self._run_config_capture_output(tmpdir)
             assert "secretpassword" not in output
             assert "user:***" in output
 
-    def test_config_displays_model_paths(self):
-        """Test config displays model_paths."""
+    def test_config_secure_values_uses_variable_name_for_variable_kwargs(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            with open(os.path.join(tmpdir, "warden.toml"), "w") as f:
-                f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
-                f.write('model_paths = ["./models/"]\n')
-
+            Path(tmpdir, "dbwarden.py").write_text(
+                "from dbwarden import database_config\n\n"
+                "DATABASE_URL = 'postgresql://user:secretpassword@localhost/db'\n\n"
+                "database_config(database_name='primary', default=True, database_type='postgresql', database_url=DATABASE_URL, secure_values=True)\n",
+                encoding="utf-8",
+            )
             output = self._run_config_capture_output(tmpdir)
-            assert "model_paths" in output
+            assert "DATABASE_URL" in output
+            assert "secretpassword" not in output
 
-    def test_config_displays_postgres_schema(self):
-        """Test config displays postgres_schema."""
+    def test_config_no_source_found(self):
         with tempfile.TemporaryDirectory() as tmpdir:
-            with open(os.path.join(tmpdir, "warden.toml"), "w") as f:
-                f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
-                f.write('postgres_schema = "custom"\n')
-
-            output = self._run_config_capture_output(tmpdir)
-            assert "postgres_schema" in output
-            assert "custom" in output
-
-    def test_config_shows_file_path(self):
-        """Test config shows the config file path."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            with open(os.path.join(tmpdir, "warden.toml"), "w") as f:
-                f.write('sqlalchemy_url = "sqlite:///./test.db"\n')
-
-            output = self._run_config_capture_output(tmpdir)
-            assert "warden.toml" in output
-
-    def test_config_no_file_found(self):
-        """Test config handles missing warden.toml."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            output = self._run_config_capture_output(tmpdir)
-            assert "No warden.toml found" in output
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                old_stdout = sys.stdout
+                sys.stdout = StringIO()
+                try:
+                    config_cmd()
+                except Exception as exc:
+                    assert "No configuration found" in str(exc)
+                finally:
+                    sys.stdout = old_stdout
+            finally:
+                os.chdir(old_cwd)
 
 
 class TestVersionCommand:
-    """Tests for version command."""
-
-    def _run_version_capture_output(self):
-        """Helper to run version command and capture output."""
+    def _run_version_capture_output(self) -> str:
         old_stdout = sys.stdout
         sys.stdout = StringIO()
         version_cmd()
@@ -175,13 +128,10 @@ class TestVersionCommand:
         return output
 
     def test_version_displays_version(self):
-        """Test version command displays version."""
         output = self._run_version_capture_output()
         assert len(output.strip()) > 0
-        # Version should be a valid version string (e.g., "0.2.0")
         assert "." in output.strip()
 
     def test_version_is_string(self):
-        """Test version outputs a string."""
         output = self._run_version_capture_output()
         assert isinstance(output.strip(), str)

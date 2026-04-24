@@ -1,9 +1,4 @@
 from dbwarden.commands.check_db import check_db_cmd
-from dbwarden.commands.database import (
-    handle_database_add,
-    handle_database_list,
-    handle_database_remove,
-)
 from dbwarden.commands.extra import diff_cmd, lock_status_cmd, squash_cmd, unlock_cmd
 from dbwarden.commands.history import history_cmd
 from dbwarden.commands.init import init_cmd
@@ -11,8 +6,52 @@ from dbwarden.commands.make_migrations import make_migrations_cmd, new_migration
 from dbwarden.commands.migrate import migrate_cmd
 from dbwarden.commands.rollback import rollback_cmd
 from dbwarden.commands.status import status_cmd
+from dbwarden.commands.settings import (
+    handle_settings_database_add,
+    handle_settings_database_clear_dev,
+    handle_settings_database_remove,
+    handle_settings_database_rename,
+    handle_settings_database_set_dev,
+    handle_settings_default_set,
+    handle_settings_show,
+)
 from dbwarden.commands.utils import config_cmd, version_cmd
-from dbwarden.exceptions import DirectoryNotFoundError
+from dbwarden.exceptions import ConfigurationError
+
+
+def handle_database_list() -> None:
+    """Legacy alias for settings list."""
+    handle_settings_show(database=None, all_databases=True)
+
+
+def handle_database_add(
+    name: str,
+    url: str,
+    database_type: str | None = None,
+    model_paths: list[str] | None = None,
+    migrations_dir: str | None = None,
+    default: bool = False,
+) -> None:
+    """Legacy alias for settings database add."""
+    if not database_type:
+        raise ConfigurationError("--type is required for legacy database add command")
+    handle_settings_database_add(
+        name=name,
+        database_type=database_type,
+        url=url,
+        migrations_dir=migrations_dir,
+        model_paths=model_paths,
+        default=default,
+    )
+
+
+def handle_database_remove(name: str, force: bool = False) -> None:
+    """Legacy alias for settings database remove.
+
+    force is ignored under settings-backed config.
+    """
+    _ = force
+    handle_settings_database_remove(name)
 
 
 def handle_init(database: str | None = None) -> None:
@@ -110,3 +149,56 @@ def handle_lock_status(database: str | None = None) -> None:
 def handle_unlock(database: str | None = None) -> None:
     """Handle unlock command."""
     unlock_cmd(database=database)
+
+
+def handle_settings_show_command(
+    database: str | None = None,
+    all_databases: bool = False,
+) -> None:
+    handle_settings_show(database=database, all_databases=all_databases)
+
+
+def handle_settings_default_set_command(name: str) -> None:
+    handle_settings_default_set(name)
+
+
+def handle_settings_database_add_command(
+    name: str,
+    database_type: str,
+    url: str,
+    migrations_dir: str | None = None,
+    model_paths: list[str] | None = None,
+    dev_type: str | None = None,
+    dev_url: str | None = None,
+    overlap_models: bool = False,
+    default: bool = False,
+) -> None:
+    handle_settings_database_add(
+        name=name,
+        database_type=database_type,
+        url=url,
+        migrations_dir=migrations_dir,
+        model_paths=model_paths,
+        dev_type=dev_type,
+        dev_url=dev_url,
+        overlap_models=overlap_models,
+        default=default,
+    )
+
+
+def handle_settings_database_remove_command(name: str) -> None:
+    handle_settings_database_remove(name)
+
+
+def handle_settings_database_rename_command(old: str, new: str) -> None:
+    handle_settings_database_rename(old, new)
+
+
+def handle_settings_database_set_dev_command(
+    name: str, dev_type: str, dev_url: str
+) -> None:
+    handle_settings_database_set_dev(name, dev_type, dev_url)
+
+
+def handle_settings_database_clear_dev_command(name: str) -> None:
+    handle_settings_database_clear_dev(name)

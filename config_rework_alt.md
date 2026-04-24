@@ -301,6 +301,7 @@ export DBWARDEN_CONFIG_MODULE="myapp.settings.dbwarden_settings"
 def load_runtime_config() -> MultiDatabaseConfig:
     source = resolve_source()
     registry.reset()
+    resolver_cache.clear()  # clear per-process source cache for deterministic tests
 
     if source.kind == "file":
         import_module_from_path(source.path)
@@ -316,8 +317,18 @@ def load_runtime_config() -> MultiDatabaseConfig:
 
     # Phase 2: Global validation
     cfg = finalize_registry(entries)
+
+    # Dev-mode swap happens after validation and before returning:
+    # if dev mode is enabled for selected DB, replace database_url/database_type
+    # with dev_database_url/dev_database_type equivalents.
     return cfg
 ```
+
+Cache invalidation contract:
+
+- Resolver source cache is per-process.
+- Cache must be cleared whenever `registry.reset()` runs.
+- Test harnesses must call reset between tests to avoid stale-source false positives.
 
 ---
 
@@ -384,21 +395,32 @@ Idempotency:
 
 - rerunning `init` must not duplicate import or scaffold block
 
+Scaffold detection anchor rule:
+
+- If file already contains any `database_config(` call, init treats scaffold as existing and does not append a new block.
+- This remains true even if the existing call uses a non-default database name (for example `main` instead of `primary`).
+- Import insertion remains independent: add import only if missing.
+
 ---
 
 ## 11) Settings CLI (Mutators)
 
-Command group: `dbwarden config ...`
+Command group: `dbwarden settings ...`
+
+Note on naming:
+
+- Python API uses `database_config(...)`
+- CLI uses `dbwarden settings ...` to avoid ambiguity while debugging/logging
 
 Commands:
 
-- `dbwarden config show`
-- `dbwarden config default-database set <name>`
-- `dbwarden config database add <name> --type <type> --url <url> [--migrations-dir ...] [--model-path ...] [--dev-type ...] [--dev-url ...] [--overlap-models] [--default]`
-- `dbwarden config database remove <name>`
-- `dbwarden config database rename <old> <new>`
-- `dbwarden config database set-dev <name> --type <type> --url <url>`
-- `dbwarden config database clear-dev <name>`
+- `dbwarden settings show`
+- `dbwarden settings default-database set <name>`
+- `dbwarden settings database add <name> --type <type> --url <url> [--migrations-dir ...] [--model-path ...] [--dev-type ...] [--dev-url ...] [--overlap-models] [--default]`
+- `dbwarden settings database remove <name>`
+- `dbwarden settings database rename <old> <new>`
+- `dbwarden settings database set-dev <name> --type <type> --url <url>`
+- `dbwarden settings database clear-dev <name>`
 
 Mutator lifecycle:
 
@@ -433,6 +455,42 @@ Using `transform_error()` for clear field-path prefixes.
 
 ## 13) Implementation Steps
 
+Execution checklist:
+
+- [ ] Phase A: Schema & Converter
+  - [ ] Add `attrs` + `cattrs` dependencies
+  - [ ] Implement `DatabaseEntry` / `MultiDatabaseConfig`
+  - [ ] Add converter and error formatting helper
+  - [ ] Add unit tests for required fields and type coercion
+- [ ] Phase B: Registry
+  - [ ] Implement in-memory registry and `database_config(...)`
+  - [ ] Implement finalize-time uniqueness/default/model overlap checks
+  - [ ] Ensure cache invalidation is wired to `registry.reset()`
+- [ ] Phase C: Source Resolver
+  - [ ] Implement `dbwarden.py` discovery (strict one-file rule)
+  - [ ] Implement full-scan fallback for `database_config(`
+  - [ ] Implement `DBWARDEN_CONFIG_MODULE` fallback
+  - [ ] Implement per-process source cache with invalidation rules
+- [ ] Phase D: Runtime Integration
+  - [ ] Replace TOML load path with runtime resolver + registry finalize
+  - [ ] Keep existing command stack working (`migrate`, `status`, etc.)
+  - [ ] Apply `--dev` URL/type swap before returning selected config
+- [ ] Phase E: Init & Mutators
+  - [ ] Rewrite `dbwarden init` to inject import + scaffold call
+  - [ ] Implement idempotency anchor (`any database_config(` means scaffold exists)
+  - [ ] Implement `dbwarden settings ...` group and mutators
+- [ ] Phase F: Testing + Docs
+  - [ ] Expand unit/integration tests for resolver and registry
+  - [ ] Run full test suite and fix regressions
+  - [ ] Update docs pages and publish
+
+Test command matrix:
+
+- [ ] `pytest tests/test_config.py`
+- [ ] `pytest tests/test_commands.py`
+- [ ] `pytest tests/test_cli_dev_mode.py`
+- [ ] `pytest` (full suite)
+
 ### Phase A: Schema & Converter
 
 1. Add `attrs` + `cattrs` to dependencies
@@ -449,7 +507,12 @@ Using `transform_error()` for clear field-path prefixes.
 
 ### Phase C: Source Resolver
 
-Implementation unchanged from original design.
+Implementation unchanged from original design, with explicit cache behavior:
+
+1. Add per-process source cache after first successful source resolution.
+2. Cache key may be static per workspace process.
+3. Invalidate cache when `registry.reset()` is called.
+4. Tests must reset registry/cache between test cases.
 
 ### Phase D: Integration
 
