@@ -22,6 +22,7 @@ from dbwarden.engine.version import (
     generate_migration_filename,
 )
 from dbwarden.logging import get_logger
+from dbwarden.output import console
 
 
 def get_pending_migration_statements(migrations_dir: str) -> set[str]:
@@ -77,9 +78,9 @@ def make_migrations_cmd(
 
     if not model_paths:
         logger.warning("No model paths found. Please set model_paths in warden.toml")
-        print("No SQLAlchemy models found. Please:")
-        print("  1. Create models/ directory with your SQLAlchemy models")
-        print("  2. Or set model_paths in warden.toml")
+        console.print("No SQLAlchemy models found. Please:", style="yellow")
+        console.print("  1. Create models/ directory with your SQLAlchemy models", style="white")
+        console.print("  2. Or set model_paths in dbwarden config", style="white")
         return
 
     logger.log_model_paths(model_paths)
@@ -88,7 +89,7 @@ def make_migrations_cmd(
 
     if not tables:
         logger.warning("No tables found in models")
-        print("No tables found in the specified model paths.")
+        console.print("No tables found in the specified model paths.", style="yellow")
         return
 
     for table in tables:
@@ -107,8 +108,9 @@ def make_migrations_cmd(
     )
 
     if not upgrade_sql.strip():
-        print(
-            "No new migrations to generate - all models already covered by existing migrations."
+        console.print(
+            "No new migrations to generate - all models already covered by existing migrations.",
+            style="cyan",
         )
         return
 
@@ -127,8 +129,8 @@ def make_migrations_cmd(
         f.write(content)
 
     logger.info(f"Created migration file: {filename}")
-    print(f"Created migration file: {filepath}")
-    print(f"Tables included: {', '.join(t.name for t in tables)}")
+    console.print(f"Created migration file: {filepath}", style="green")
+    console.print(f"Tables included: {', '.join(t.name for t in tables)}", style="cyan")
 
 
 def generate_migration_sql(
@@ -254,4 +256,4 @@ def new_migration_cmd(
         f.write(content)
 
     logger.info(f"Created migration file: {filename}")
-    print(f"Created migration file: {filepath}")
+    console.print(f"Created migration file: {filepath}", style="green")

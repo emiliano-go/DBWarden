@@ -3,6 +3,7 @@ import time
 from dbwarden.engine.file_parser import parse_rollback_statements
 from dbwarden.engine.version import get_migrations_directory
 from dbwarden.logging import get_logger
+from dbwarden.output import console
 from dbwarden.repositories import (
     create_lock_table_if_not_exists,
     create_migrations_table_if_not_exists,
@@ -48,7 +49,7 @@ def rollback_cmd(
     )
 
     if not latest_versions:
-        print("Nothing to rollback.")
+        console.print("Nothing to rollback.", style="cyan")
         return
 
     versions_to_rollback = _get_versions_to_rollback(
@@ -77,8 +78,9 @@ def rollback_cmd(
         duration = time.time() - start_time
         logger.info(f"Rollback completed: {filename} in {duration:.2f}s")
 
-    print(
-        f"Rollback completed successfully: {len(versions_to_rollback)} migrations reverted."
+    console.print(
+        f"Rollback completed successfully: {len(versions_to_rollback)} migrations reverted.",
+        style="green",
     )
 
 

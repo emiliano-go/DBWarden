@@ -1,6 +1,6 @@
-# version Command
+# `version`
 
-Display the installed DBWarden version.
+Show DBWarden version.
 
 ## Usage
 
@@ -8,40 +8,6 @@ Display the installed DBWarden version.
 dbwarden version
 ```
 
-## Example
+## Notes
 
-```
-1.0.0
-```
-
-## Use Cases
-
-### Bug Reports
-
-Include version info in bug reports:
-
-```bash
-dbwarden version
-# Include in GitHub issue
-```
-
-### Upgrade Verification
-
-After upgrading:
-
-```bash
-dbwarden version
-# Should show new version
-```
-
-## Versioning
-
-DBWarden uses [Semantic Versioning](https://semver.org/):
-
-- **MAJOR**: Breaking changes
-- **MINOR**: New features (backward compatible)
-- **PATCH**: Bug fixes (backward compatible)
-
-## See Also
-
-- [Installation](../installation.md): Installation requirements
+- useful for support/debug and release verification
