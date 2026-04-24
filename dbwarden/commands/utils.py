@@ -1,44 +1,64 @@
-import tomllib
-from pathlib import Path
-
-from dbwarden.config import get_toml_path
+from dbwarden.config import display_value, get_multi_db_config
 from dbwarden.constants import DBWARDEN_VERSION
+from dbwarden.output import console
 
 
 def config_cmd() -> None:
-    """Display current warden.toml configuration."""
-    toml_path = get_toml_path()
+    """Display current DBWarden configuration."""
+    config = get_multi_db_config()
 
-    if not toml_path:
-        print("No warden.toml found.")
-        return
+    console.print("DBWarden Configuration:", style="bold cyan")
+    console.print("=" * 50, style="dim")
 
-    with open(toml_path, "rb") as f:
-        config = tomllib.load(f)
+    console.print(f"default: {config.default}", style="green")
+    console.print("databases:", style="bold white")
+    for name, db in config.databases.items():
+        marker = " (default)" if name == config.default else ""
+        database_url = display_value(
+            db,
+            "database_url",
+            _mask_password(db.sqlalchemy_url),
+        )
+        console.print(f"  - {name}{marker}", style="cyan")
+        console.print(
+            f"    database_type: {display_value(db, 'database_type', db.database_type)}",
+            style="white",
+        )
+        console.print(
+            f"    database_url: {database_url}",
+            style="white",
+            markup=False,
+            highlight=False,
+        )
+        console.print(
+            f"    migrations_dir: {display_value(db, 'migrations_dir', db.migrations_dir)}",
+            style="white",
+        )
+        if db.model_paths:
+            console.print(
+                f"    model_paths: {display_value(db, 'model_paths', db.model_paths)}",
+                style="white",
+            )
+        if db.dev_database_url:
+            dev_database_url = display_value(
+                db,
+                "dev_database_url",
+                _mask_password(db.dev_database_url),
+            )
+            console.print(
+                f"    dev_database_url: {dev_database_url}",
+                style="white",
+                markup=False,
+                highlight=False,
+            )
+        if db.dev_database_type:
+            console.print(
+                f"    dev_database_type: {display_value(db, 'dev_database_type', db.dev_database_type)}",
+                style="white",
+            )
 
-    warden_config = config.get("warden", config)
-
-    print(f"DBWarden Configuration ({toml_path}):")
-    print("=" * 50)
-
-    if "sqlalchemy_url" in warden_config:
-        url = warden_config["sqlalchemy_url"]
-        if url:
-            masked_url = _mask_password(url)
-            print(f"sqlalchemy_url: {masked_url}")
-
-    if "model_paths" in warden_config:
-        model_paths = warden_config["model_paths"]
-        if model_paths:
-            print(f"model_paths: {model_paths}")
-
-    if "postgres_schema" in warden_config:
-        schema = warden_config["postgres_schema"]
-        if schema:
-            print(f"postgres_schema: {schema}")
-
-    print()
-    print(f"Config file: {toml_path}")
+    console.print()
+    console.print("Config source: python settings", style="dim")
 
 
 def _mask_password(url: str) -> str:
@@ -58,4 +78,4 @@ def _mask_password(url: str) -> str:
 
 def version_cmd() -> None:
     """Display DBWarden version."""
-    print(DBWARDEN_VERSION)
+    console.print(DBWARDEN_VERSION, style="bold green")

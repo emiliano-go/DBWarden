@@ -14,6 +14,7 @@ from dbwarden.engine.version import (
     resolve_migration_order,
 )
 from dbwarden.logging import get_logger
+from dbwarden.output import console
 from dbwarden.repositories import (
     create_migrations_table_if_not_exists,
     create_lock_table_if_not_exists,
@@ -126,7 +127,7 @@ def migrate_single(
     )
 
     if db_name:
-        print(f"\n=== Migrating database: {db_name} ===")
+        console.print(f"\n=== Migrating database: {db_name} ===", style="bold cyan")
 
     if with_backup:
         backup_directory = backup_dir or os.path.join(os.getcwd(), "backups")
@@ -147,7 +148,7 @@ def migrate_single(
 
         set_baseline_migration(migrations_dir, to_version, db_name)
         logger.log_baseline_set(to_version)
-        print(f"Baseline set at version: {to_version}")
+        console.print(f"Baseline set at version: {to_version}", style="green")
         return
 
     filepaths_by_version = _get_filepaths_by_version(
@@ -168,7 +169,7 @@ def migrate_single(
         and not runs_always_filepaths
         and not runs_on_change_filepaths
     ):
-        print("Migrations are up to date.")
+        console.print("Migrations are up to date.", style="cyan")
         return
 
     if filepaths_by_version:
@@ -256,8 +257,9 @@ def migrate_single(
         logger.log_migration_end("ROC", filename, duration)
 
     if versioned_count > 0:
-        print(
-            f"Migrations completed successfully: {versioned_count} migrations applied."
+        console.print(
+            f"Migrations completed successfully: {versioned_count} migrations applied.",
+            style="green",
         )
 
 
@@ -308,7 +310,7 @@ def migrate_cmd(
                     backup_dir=backup_dir,
                 )
             except Exception as e:
-                print(f"Error migrating database '{db_name}': {e}")
+                console.print(f"Error migrating database '{db_name}': {e}", style="bold red")
                 continue
     else:
         migrate_single(

@@ -10,6 +10,7 @@ from dbwarden.config import (
     get_multi_db_config,
 )
 from dbwarden.logging import get_logger
+from dbwarden.output import console
 
 
 def _write_toml(path: Path, data: dict) -> None:
@@ -31,7 +32,7 @@ def handle_database_list() -> None:
     logger = get_logger()
     config = get_multi_db_config()
 
-    print("Databases:")
+    console.print("Databases:", style="bold cyan")
     for name, db_config in config.databases.items():
         is_default = " (default)" if name == config.default else ""
         url = db_config.sqlalchemy_url
@@ -42,9 +43,9 @@ def handle_database_list() -> None:
                 if ":" in auth:
                     user, _ = auth.split(":", 1)
                     url = f"{parts[0]}://{user}:***@{rest}"
-        print(f"  {name}{is_default} - {url}")
-        print(f"    type: {db_config.database_type}")
-        print(f"    migrations: {db_config.migrations_dir}")
+        console.print(f"  {name}{is_default} - {url}", style="green")
+        console.print(f"    type: {db_config.database_type}", style="white")
+        console.print(f"    migrations: {db_config.migrations_dir}", style="white")
 
 
 def handle_database_add(
@@ -128,11 +129,11 @@ def handle_database_add(
     _write_toml(toml_path, config_data)
 
     logger.info(f"Added database '{name}' to warden.toml")
-    print(f"Added database '{name}' to warden.toml")
-    print(f"  URL: {url}")
-    print(f"  Migrations: {db_config['migrations_dir']}")
+    console.print(f"Added database '{name}' to warden.toml", style="green")
+    console.print(f"  URL: {url}", style="white")
+    console.print(f"  Migrations: {db_config['migrations_dir']}", style="white")
     if default:
-        print(f"  Set as default database")
+        console.print("  Set as default database", style="cyan")
 
 
 def _validate_new_database_uniqueness(
@@ -233,4 +234,4 @@ def handle_database_remove(name: str, force: bool = False) -> None:
     _write_toml(toml_path, config_data)
 
     logger.info(f"Removed database '{name}' from warden.toml")
-    print(f"Removed database '{name}' from warden.toml")
+    console.print(f"Removed database '{name}' from warden.toml", style="green")
