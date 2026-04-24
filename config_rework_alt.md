@@ -42,7 +42,7 @@ Multiple calls are allowed (one call per database configuration).
 7. `model_paths` must be present when total configured databases > 1.
 8. `migrations_dir` default is `migrations/<database_name>`.
 9. Model path overlap across databases is forbidden by default.
-10. Model path overlap is allowed only when `overlap_models=True` is set.
+10. `overlap_models=True` allows a DB to accept paths from other databases.
 11. Source resolution order:
     - discover `dbwarden.py`
     - fallback to full repo scan for `database_config(`
@@ -425,7 +425,7 @@ User-friendly error messages from cattrs:
 | Multiple defaults | `Exactly one default database required` |
 | Duplicate name | `Duplicate database_name: 'primary'` |
 | Duplicate URL | `Duplicate database_url: 'postgresql://...'` |
-| Overlap without flag | `model_paths overlap detected between 'primary' and 'analytics'; set overlap_models=True to allow` |
+| Overlap without flag | `model_paths overlap detected: path 'models/shared' from 'analytics' is also defined in 'primary'; set overlap_models=True on 'primary' to allow foreign paths` |
 
 Using `transform_error()` for clear field-path prefixes.
 
