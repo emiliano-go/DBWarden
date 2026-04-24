@@ -48,6 +48,11 @@ dev = [
     "pytest>=8.4.2",
     "clickhouse-connect>=0.7.15",
 ]
+fastapi = [
+    "fastapi>=0.136.1",
+    "asyncpg>=0.30.0",
+    "aiosqlite>=0.20.0",
+]
 postgres = [
     "psycopg2-binary>=2.9.11",
 ]
