@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.png" alt="DBWarden" width="128"/>
+  <img src="https://raw.githubusercontent.com/emiliano-gandini-outeda/DBWarden/refs/heads/main/assets/icon.png" alt="DBWarden" width="128"/>
 </p>
 <p align="center">
     <em>The database toolkit for FastAPI. Lightweight, explicit, and built to stay out of your way.</em>
