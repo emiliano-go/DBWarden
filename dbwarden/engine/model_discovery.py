@@ -27,6 +27,17 @@ from dbwarden.models import SchemaDifference
 
 Base = declarative_base()
 
+VALID_IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+
+def _validate_identifier(name: str, field: str = "identifier") -> None:
+    """Validate SQL identifier (table/column name)."""
+    if not name or not VALID_IDENTIFIER_RE.match(name):
+        raise ValueError(
+            f"Invalid {field}: '{name}'. "
+            "Must start with letter/underscore, contain only alphanumeric and underscore."
+        )
+
 
 def _get_backend_name(db_name: str | None = None) -> str:
     """Get the database backend name from config."""
@@ -506,6 +517,9 @@ def generate_add_column_sql(
     table_name: str, column: ModelColumn, db_name: str | None = None
 ) -> str:
     """Generate SQL for adding a column."""
+    _validate_identifier(table_name, "table_name")
+    _validate_identifier(column.name, "column_name")
+    
     backend = _get_backend_name(db_name)
     is_serial = (
         column.type.upper() in ("SERIAL", "BIGSERIAL")
@@ -552,6 +566,7 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
 
 def generate_drop_table_sql(table_name: str) -> str:
     """Generate DROP TABLE SQL."""
+    _validate_identifier(table_name, "table_name")
     return f"DROP TABLE {table_name}"
 
 
