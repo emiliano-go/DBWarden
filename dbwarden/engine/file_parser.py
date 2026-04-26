@@ -74,9 +74,11 @@ def parse_migration_header(file_path: str) -> MigrationMetadata:
                 import json
 
                 deps = json.loads(depends_match.group(1))
-                if isinstance(deps, list):
-                    metadata.depends_on = [str(d) for d in deps]
-            except (json.JSONDecodeError, TypeError):
+                if isinstance(deps, list) and all(
+                    isinstance(d, str) for d in deps
+                ):
+                    metadata.depends_on = deps
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
             continue
 
