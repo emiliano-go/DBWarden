@@ -97,7 +97,9 @@ def get_db_connection(db_name: str | None = None) -> Generator[Any, None, None]:
     global _connection_init_logged
     config = get_database(db_name)
 
-    actual_db_name = db_name or config.sqlalchemy_url.split("/")[-1].split("?")[0]
+    from sqlalchemy.engine import make_url
+    parsed = make_url(config.sqlalchemy_url)
+    actual_db_name = db_name or (parsed.database or "default")
     logger = get_logger(
         db_name=actual_db_name,
         db_type=config.database_type,
