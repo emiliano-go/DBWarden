@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 
 class DatabaseHealth(BaseModel):
     database: str
-    status: str
+    status: Literal["ok", "degraded", "error"]
     connected: bool
     pending_migrations: int
     lock_active: bool
@@ -13,5 +15,5 @@ class DatabaseHealth(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    status: str
+    status: Literal["ok", "degraded", "error"]
     databases: list[DatabaseHealth]
