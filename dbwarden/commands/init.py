@@ -1,14 +1,48 @@
 from pathlib import Path
+import os
+import tempfile
 
 from dbwarden.constants import MIGRATIONS_DIR
 from dbwarden.logging import get_logger
 from dbwarden.output import console
 
 
+def _atomic_write(path: Path, content: str) -> None:
+    """Write content atomically using rename."""
+    path = path.resolve()
+    dir_path = path.parent
+    
+    # Create temp file in same directory for atomic rename
+    fd, tmp_path = tempfile.mkstemp(
+        dir=str(dir_path),
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        text=True,
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+        
+        # Backup existing file
+        if path.exists():
+            backup_path = path.with_suffix(path.suffix + ".bak")
+            path.replace(backup_path)
+        
+        # Atomic rename from temp to final
+        os.replace(tmp_path, path)
+    except Exception:
+        # Clean up temp file on failure
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 def _ensure_settings_file(settings_path: Path, db_name: str) -> None:
     settings_path.parent.mkdir(parents=True, exist_ok=True)
     if not settings_path.exists():
-        settings_path.write_text("", encoding="utf-8")
+        _atomic_write(settings_path, "")
 
     content = settings_path.read_text(encoding="utf-8")
     lines = content.splitlines()
@@ -36,7 +70,7 @@ def _ensure_settings_file(settings_path: Path, db_name: str) -> None:
         updated = f"{updated.rstrip()}{scaffold}"
 
     if updated != content:
-        settings_path.write_text(updated, encoding="utf-8")
+        _atomic_write(settings_path, updated)
 
 
 def init_cmd(database: str | None = None) -> None:
