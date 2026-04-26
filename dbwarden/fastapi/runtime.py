@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -11,6 +12,28 @@ from dbwarden.config import get_database, get_multi_db_config, is_dev_mode, is_s
 from dbwarden.database.connection import get_db_connection
 from dbwarden.engine.version import get_migration_filepaths_by_version, get_migrations_directory
 from dbwarden.repositories import check_lock, get_migrated_versions, migrations_table_exists
+
+
+# Patterns that may contain sensitive data
+CREDENTIAL_PATTERNS = re.compile(
+    r"(password|passwd|pwd|secret|token|key|api_key|apikey|auth)[=:]\S+",
+    re.IGNORECASE
+)
+URL_CREDENTIAL_RE = re.compile(r"://[^:]+:[^@]+@")
+
+
+def _sanitize_error(error: str, include_details: bool = False) -> str:
+    """Strip sensitive data from error messages."""
+    if not error or not include_details:
+        return "Internal error" if include_details else ""
+    
+    # Remove credential-like patterns
+    error = CREDENTIAL_PATTERNS.sub("[REDACTED]", error)
+    
+    # Remove credentials from URLs
+    error = URL_CREDENTIAL_RE.sub("://[USER]:[PASS]@", error)
+    
+    return error
 
 
 @dataclass
@@ -84,7 +107,7 @@ def check_database_health(db_name: str | None) -> HealthResult:
             connected=False,
             pending_migrations=0,
             lock_active=False,
-            error=str(exc),
+            error=_sanitize_error(str(exc)),
         )
 
 
