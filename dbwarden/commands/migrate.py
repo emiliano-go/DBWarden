@@ -1,6 +1,7 @@
 import os
 import shutil
 import sqlite3
+import stat
 import time
 from datetime import datetime
 from pathlib import Path
@@ -38,8 +39,27 @@ def create_backup(sqlalchemy_url: str, backup_dir: str) -> str:
 
     Returns:
         str: Path to the backup file.
+
+    Raises:
+        ValueError: If backup_dir is world-writable.
     """
+    # Check backup_dir is not world-writable
+    backup_dir_path = Path(backup_dir)
+    try:
+        mode = backup_dir_path.stat().st_mode
+        if mode & stat.S_IWOTH:
+            raise ValueError(
+                f"Backup directory '{backup_dir}' is world-writable. "
+                "Use a secure directory with restricted permissions."
+            )
+    except FileNotFoundError:
+        # Directory doesn't exist yet - will be created with safe permissions
+        pass
+
     os.makedirs(backup_dir, exist_ok=True)
+    
+    # Ensure directory has safe permissions after creation
+    os.chmod(backup_dir, 0o755)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_path = os.path.join(backup_dir, f"backup_{timestamp}.db")
@@ -47,7 +67,9 @@ def create_backup(sqlalchemy_url: str, backup_dir: str) -> str:
     if sqlalchemy_url.startswith("sqlite:///"):
         db_path = sqlalchemy_url.replace("sqlite:///", "")
         if db_path:
-            shutil.copy2(db_path, backup_path)
+            # Copy without preserving permissions
+            shutil.copy(db_path, backup_path)
+            os.chmod(backup_path, 0o644)
         else:
             conn = sqlite3.connect(":memory:")
             conn.close()
