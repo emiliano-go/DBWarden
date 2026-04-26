@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Literal
 
 from dbwarden.commands.migrate import migrate_cmd
@@ -13,6 +15,21 @@ from dbwarden.fastapi.runtime import (
     runtime_flags,
 )
 from dbwarden.logging import get_logger
+
+
+def _validate_backup_dir(backup_dir: str | None, base_dir: Path) -> str | None:
+    """Validate backup directory is within project."""
+    if not backup_dir:
+        return backup_dir
+    
+    resolved = (base_dir / backup_dir).resolve()
+    base = base_dir.resolve()
+    
+    if not str(resolved).startswith(str(base) + os.sep):
+        raise ValueError(
+            f"backup_dir '{backup_dir}' must be within the project directory"
+        )
+    return str(resolved)
 
 
 def check_schema_on_startup(
@@ -77,6 +94,7 @@ def migrate_on_startup(
 
     try:
         with runtime_flags(dev=dev, strict_translation=strict_translation):
+            validated_backup_dir = _validate_backup_dir(backup_dir, Path.cwd())
             migrate_cmd(
                 count=None,
                 to_version=None,
@@ -85,7 +103,7 @@ def migrate_on_startup(
                 all_databases=all_databases,
                 baseline=False,
                 with_backup=with_backup,
-                backup_dir=backup_dir,
+                backup_dir=validated_backup_dir,
             )
     except Exception:
         if fail_fast:
