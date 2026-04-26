@@ -9,6 +9,18 @@ import os
 from typing import Optional
 
 
+def _validate_path_within_project(path: Path, base_dir: Path, config_value: str) -> None:
+    """Validate that resolved path stays within project."""
+    resolved = path.resolve()
+    base = base_dir.resolve()
+    
+    if not str(resolved).startswith(str(base) + os.sep):
+        raise DirectoryNotFoundError(
+            f"Migration directory '{config_value}' resolves outside project. "
+            f"Please use a path within the project."
+        )
+
+
 def get_migrations_directory(db_name: str | None = None) -> str:
     """
     Get the migrations directory path for a specific database.
@@ -20,13 +32,16 @@ def get_migrations_directory(db_name: str | None = None) -> str:
         str: Path to migrations directory.
 
     Raises:
-        DirectoryNotFoundError: If migrations directory is not found.
+        DirectoryNotFoundError: If migrations directory is not found or is outside project.
     """
     from dbwarden.config import get_database
 
     config = get_database(db_name)
     current_dir = Path.cwd()
     migrations_dir = current_dir / config.migrations_dir
+
+    # Validate path stays within project
+    _validate_path_within_project(migrations_dir, current_dir, config.migrations_dir)
 
     if not migrations_dir.exists() or not migrations_dir.is_dir():
         raise DirectoryNotFoundError(
