@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Literal
+import re
 
 import cattrs
 from attrs import define, field, validators
@@ -13,6 +14,16 @@ VALID_DATABASE_TYPES = frozenset(
     {"sqlite", "postgresql", "mysql", "mariadb", "clickhouse"}
 )
 
+DATABASE_NAME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_]*$")
+
+
+def _validate_database_name(_self, _attribute, value: str) -> None:
+    if not value or not DATABASE_NAME_RE.match(value):
+        raise ValueError(
+            "Invalid database_name. Must start with letter, contain only "
+            "alphanumeric and underscores."
+        )
+
 
 def _validate_database_type(_self, _attribute, value: str) -> None:
     if value not in VALID_DATABASE_TYPES:
@@ -24,7 +35,7 @@ def _validate_database_type(_self, _attribute, value: str) -> None:
 
 @define(slots=False)
 class DatabaseEntry:
-    database_name: str = field(validator=validators.min_len(1))
+    database_name: str = field(validator=_validate_database_name)
     database_type: DatabaseType = field(validator=_validate_database_type)
     database_url: str = field(validator=validators.min_len(1))
     secure_values: bool = False
