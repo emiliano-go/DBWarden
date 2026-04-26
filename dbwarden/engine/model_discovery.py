@@ -1,6 +1,5 @@
 import os
 import re
-import importlib.util
 import sys
 from pathlib import Path
 from types import ModuleType
@@ -151,17 +150,10 @@ def load_model_from_path(filepath: str) -> Optional[ModuleType]:
     Returns:
         The loaded module or None if failed.
     """
-    try:
-        spec = importlib.util.spec_from_file_location("models", filepath)
-        if spec is None or spec.loader is None:
-            return None
+    from dbwarden.sandbox import load_model_module
 
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-
-        return module
-    except Exception:
-        return None
+    base_dir = Path.cwd().resolve()
+    return load_model_module(Path(filepath), base_dir)
 
 
 def discover_models_in_directory(directory: str) -> List[str]:

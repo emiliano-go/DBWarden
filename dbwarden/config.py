@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import importlib
-import importlib.util
 import os
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -295,13 +294,12 @@ def _import_source(source: _ResolvedSource) -> Path:
         return Path.cwd().resolve()
 
     path = Path(source.value)
-    module_name = f"_dbwarden_user_config_{abs(hash(str(path)))}"
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    if spec is None or spec.loader is None:
-        raise ConfigurationError(f"Could not load config source: {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return path.parent
+    base_dir = path.parent.resolve()
+
+    from dbwarden.sandbox import load_config_module
+
+    load_config_module(path, base_dir)
+    return base_dir
 
 
 def _entry_model_paths(entry: DatabaseEntry) -> set[str]:
