@@ -1,6 +1,7 @@
 from typing import Optional
 
 from sqlalchemy import Result, Row, text
+from sqlalchemy.orm import Session
 
 from dbwarden.database.connection import get_db_connection
 from dbwarden.database.queries import QueryMethod, get_query
@@ -15,33 +16,47 @@ def run_migration(
     migration_type: str = "versioned",
     db_name: str | None = None,
 ) -> None:
-    """Execute SQL statements and record the migration."""
+    """Execute SQL statements and record the migration.
+    
+    All statements are executed in a single transaction.
+    If any statement fails, the entire migration is rolled back.
+    """
     from dbwarden.engine.checksum import calculate_checksum
     from dbwarden.engine.file_parser import get_description_from_filename
 
     with get_db_connection(db_name) as connection:
-        for statement in sql_statements:
-            connection.execute(text(statement))
+        # Use savepoint for all-or-nothing behavior
+        savepoint = connection.begin_nested()
+        try:
+            for statement in sql_statements:
+                connection.execute(text(statement))
 
-        if migration_operation == "upgrade":
-            description = get_description_from_filename(filename)
-            checksum = calculate_checksum(sql_statements)
+            if migration_operation == "upgrade":
+                description = get_description_from_filename(filename)
+                checksum = calculate_checksum(sql_statements)
 
-            connection.execute(
-                text(get_query(QueryMethod.INSERT_VERSION, db_name)),
-                parameters={
-                    "version": version,
-                    "description": description,
-                    "filename": filename,
-                    "migration_type": migration_type,
-                    "checksum": checksum,
-                },
-            )
-        elif migration_operation == "rollback":
-            connection.execute(
-                text(get_query(QueryMethod.DELETE_VERSION, db_name)),
-                parameters={"version": version},
-            )
+                connection.execute(
+                    text(get_query(QueryMethod.INSERT_VERSION, db_name)),
+                    parameters={
+                        "version": version,
+                        "description": description,
+                        "filename": filename,
+                        "migration_type": migration_type,
+                        "checksum": checksum,
+                    },
+                )
+            elif migration_operation == "rollback":
+                connection.execute(
+                    text(get_query(QueryMethod.DELETE_VERSION, db_name)),
+                    parameters={"version": version},
+                )
+
+            # All statements succeeded - commit the savepoint
+            savepoint.commit()
+        except Exception:
+            # Any failure - rollback the savepoint
+            savepoint.rollback()
+            raise
 
 
 def fetch_latest_versioned_migration(
@@ -212,6 +227,9 @@ def run_repeatable_migration(
     Runs the SQL statements and updates the existing migration record
     with a new checksum and applied_at timestamp.
 
+    All statements are executed in a single transaction.
+    If any statement fails, the entire migration is rolled back.
+
     Args:
         sql_statements: List of SQL statements to execute.
         filename: The migration filename.
@@ -225,15 +243,25 @@ def run_repeatable_migration(
     description = get_description_from_filename(filename)
 
     with get_db_connection(db_name) as connection:
-        for statement in sql_statements:
-            connection.execute(text(statement))
+        # Use savepoint for all-or-nothing behavior
+        savepoint = connection.begin_nested()
+        try:
+            for statement in sql_statements:
+                connection.execute(text(statement))
 
-        connection.execute(
-            text(get_query(QueryMethod.UPSERT_REPEATABLE_MIGRATION, db_name)),
-            parameters={
-                "description": description,
-                "filename": filename,
-                "migration_type": migration_type,
-                "checksum": checksum,
-            },
-        )
+            connection.execute(
+                text(get_query(QueryMethod.UPSERT_REPEATABLE_MIGRATION, db_name)),
+                parameters={
+                    "description": description,
+                    "filename": filename,
+                    "migration_type": migration_type,
+                    "checksum": checksum,
+                },
+            )
+
+            # All statements succeeded - commit the savepoint
+            savepoint.commit()
+        except Exception:
+            # Any failure - rollback the savepoint
+            savepoint.rollback()
+            raise
