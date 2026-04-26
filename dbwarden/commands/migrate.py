@@ -62,7 +62,20 @@ def create_backup(sqlalchemy_url: str, backup_dir: str) -> str:
     os.chmod(backup_dir, 0o755)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = os.path.join(backup_dir, f"backup_{timestamp}.db")
+    # Add microseconds + short random to prevent collision
+    import random
+    import uuid
+    unique = f"{timestamp}_{random.randint(0, 999):03d}"
+    backup_path = os.path.join(backup_dir, f"backup_{unique}.db")
+
+    # Handle collision with incrementing suffix
+    base = backup_path
+    counter = 1
+    while os.path.exists(backup_path):
+        backup_path = base.replace(".db", f"_{counter}.db")
+        counter += 1
+        if counter > 100:
+            raise RuntimeError("Too many backup collisions")
 
     if sqlalchemy_url.startswith("sqlite:///"):
         db_path = sqlalchemy_url.replace("sqlite:///", "")
