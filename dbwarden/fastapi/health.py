@@ -54,7 +54,7 @@ def DBWardenHealthRouter(
         @router.get("/", response_model=HealthResponse)
         async def overall_health() -> JSONResponse:
             results = check_startup(all_databases=True)
-            payload = [DatabaseHealth(**r.__dict__) for r in results]
+            payload = [r.to_database_health() for r in results]
             status = _aggregate_status(payload)
             code = _status_to_code(status)
             return JSONResponse(status_code=code, content=HealthResponse(status=status, databases=payload).model_dump())
@@ -67,7 +67,7 @@ def DBWardenHealthRouter(
                 raise HTTPException(status_code=404, detail="Database not found")
 
             result = check_database_health(database_name)
-            payload = [DatabaseHealth(**result.__dict__)]
+            payload = [result.to_database_health()]
             status = _aggregate_status(payload)
             code = _status_to_code(status)
             return JSONResponse(status_code=code, content=HealthResponse(status=status, databases=payload).model_dump())
@@ -84,7 +84,7 @@ def DBWardenHealthRouter(
         @router.get("/", response_model=HealthResponse)
         async def overall_health(_: None = Depends(require_auth)) -> JSONResponse:
             results = check_startup(all_databases=True)
-            payload = [DatabaseHealth(**r.__dict__) for r in results]
+            payload = [r.to_database_health() for r in results]
             status = _aggregate_status(payload)
             code = _status_to_code(status)
             return JSONResponse(status_code=code, content=HealthResponse(status=status, databases=payload).model_dump())
@@ -97,7 +97,7 @@ def DBWardenHealthRouter(
                 raise HTTPException(status_code=404, detail="Database not found")
 
             result = check_database_health(database_name)
-            payload = [DatabaseHealth(**result.__dict__)]
+            payload = [result.to_database_health()]
             status = _aggregate_status(payload)
             code = _status_to_code(status)
             return JSONResponse(status_code=code, content=HealthResponse(status=status, databases=payload).model_dump())
