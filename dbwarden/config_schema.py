@@ -15,6 +15,9 @@ VALID_DATABASE_TYPES = frozenset(
 )
 
 DATABASE_NAME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_]*$")
+MODEL_PATH_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_/]*$")
+MAX_PATH_LENGTH = 200
+MAX_PATH_COUNT = 10
 
 
 def _validate_database_name(_self, _attribute, value: str) -> None:
@@ -23,6 +26,29 @@ def _validate_database_name(_self, _attribute, value: str) -> None:
             "Invalid database_name. Must start with letter, contain only "
             "alphanumeric and underscores."
         )
+
+
+def _validate_model_paths_for_list(value: list[str]) -> None:
+    """Validate model_paths when it's a non-empty list."""
+    if not isinstance(value, list):
+        raise ValueError("model_paths must be a list")
+    if len(value) > MAX_PATH_COUNT:
+        raise ValueError(f"Too many model_paths: max {MAX_PATH_COUNT}")
+    for path in value:
+        if not isinstance(path, str):
+            raise ValueError("model_paths must contain strings")
+        if len(path) > MAX_PATH_LENGTH:
+            raise ValueError(
+                f"model_path too long: max {MAX_PATH_LENGTH} chars"
+            )
+        if ".." in path or path.startswith("/"):
+            raise ValueError(
+                f"Invalid model_path '{path}': no absolute paths or traversal"
+            )
+        if not MODEL_PATH_RE.match(path):
+            raise ValueError(
+                f"Invalid model_path '{path}': must be relative, alphanumeric/underscore"
+            )
 
 
 def _validate_database_type(_self, _attribute, value: str) -> None:
