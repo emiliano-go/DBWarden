@@ -17,6 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base
 
 from dbwarden.database.connection import get_db_connection
+from dbwarden.config import set_dev_mode
 from dbwarden.repositories import (
     create_migrations_table_if_not_exists,
     migrations_table_exists,
@@ -27,6 +28,13 @@ from dbwarden.repositories import (
 
 
 Base = declarative_base()
+
+
+@pytest.fixture(autouse=True)
+def reset_dev_mode():
+    set_dev_mode(False)
+    yield
+    set_dev_mode(False)
 
 
 class TestDatabaseOperations:
