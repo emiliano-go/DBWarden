@@ -38,7 +38,7 @@ DROP TABLE uploads
             ],
         )
 
-        upgrade_sql, rollback_sql = generate_migration_sql(
+        upgrade_sql, rollback_sql, _ = generate_migration_sql(
             [table], migrations_dir=tmpdir
         )
 
@@ -71,7 +71,7 @@ DROP TABLE users
             ],
         )
 
-        upgrade_sql, rollback_sql = generate_migration_sql(
+        upgrade_sql, rollback_sql, _ = generate_migration_sql(
             [table], migrations_dir=tmpdir
         )
 
