@@ -16,6 +16,7 @@ from dbwarden.engine.model_discovery import (
     extract_tables_from_database,
     ModelTable,
 )
+from dbwarden.engine.migration_name import Change, autogenerate_migration_name
 from dbwarden.engine.version import (
     get_migrations_directory,
     get_next_migration_number,
@@ -99,11 +100,8 @@ def make_migrations_cmd(
 
     migrations_dir = get_migrations_directory(database)
     next_number = get_next_migration_number(migrations_dir)
-    safe_desc = re.sub(r"[^a-zA-Z0-9]", "_", description or "auto_generated").lower()
 
-    filename = generate_migration_filename(db_name, safe_desc, next_number)
-
-    upgrade_sql, rollback_sql = generate_migration_sql(
+    upgrade_sql, rollback_sql, changes = generate_migration_sql(
         tables, migrations_dir, database, db_name
     )
 
@@ -114,6 +112,14 @@ def make_migrations_cmd(
         )
         return
 
+    if description is None and changes:
+        safe_desc = autogenerate_migration_name(changes)
+        if not safe_desc:
+            safe_desc = "auto_generated"
+    else:
+        safe_desc = re.sub(r"[^a-zA-Z0-9]", "_", description or "auto_generated").lower()
+
+    filename = generate_migration_filename(db_name, safe_desc, next_number)
     filepath = os.path.join(migrations_dir, filename)
 
     # Validate the final path stays within migrations directory
@@ -147,7 +153,7 @@ def generate_migration_sql(
     migrations_dir: str | None = None,
     database: str | None = None,
     db_name: str | None = None,
-) -> tuple[str, str]:
+) -> tuple[str, str, list[Change]]:
     """
     Generate upgrade and rollback SQL from table definitions.
 
@@ -162,7 +168,7 @@ def generate_migration_sql(
         db_name: Database name for filename generation.
 
     Returns:
-        Tuple of (upgrade_sql, rollback_sql).
+        Tuple of (upgrade_sql, rollback_sql, changes).
     """
     try:
         config = get_database(database)
@@ -186,6 +192,7 @@ def generate_migration_sql(
 
     upgrade_parts = []
     rollback_parts = []
+    changes: list[Change] = []
 
     for table in tables:
         existing_columns = known_tables.get(table.name, set())
@@ -194,6 +201,7 @@ def generate_migration_sql(
             create_sql = generate_create_table_sql(table, db_name)
             upgrade_parts.append(create_sql)
             rollback_parts.append(generate_drop_table_sql(table.name))
+            changes.append(Change(operation="create_table", table=table.name))
         else:
             for column in table.columns:
                 if column.name.lower() not in existing_columns:
@@ -202,6 +210,7 @@ def generate_migration_sql(
                     rollback_parts.append(
                         f"ALTER TABLE {table.name} DROP COLUMN {column.name}"
                     )
+                    changes.append(Change(operation="add_column", table=table.name, target=column.name))
 
                     known_tables.setdefault(table.name, set()).add(column.name.lower())
 
@@ -211,6 +220,7 @@ def generate_migration_sql(
         existing_statements = get_pending_migration_statements(migrations_dir)
         filtered_upgrade_parts = []
         filtered_rollback_parts = []
+        filtered_changes = []
 
         for upgrade_sql, rollback_sql in zip(upgrade_parts, rollback_parts):
             if upgrade_sql.strip() in existing_statements:
@@ -218,10 +228,16 @@ def generate_migration_sql(
             filtered_upgrade_parts.append(upgrade_sql)
             filtered_rollback_parts.append(rollback_sql)
 
+        for change, upgrade_sql in zip(changes, upgrade_parts):
+            if upgrade_sql.strip() in existing_statements:
+                continue
+            filtered_changes.append(change)
+
         upgrade_parts = filtered_upgrade_parts
         rollback_parts = filtered_rollback_parts
+        changes = filtered_changes
 
-    return "\n\n".join(upgrade_parts), "\n\n".join(rollback_parts)
+    return "\n\n".join(upgrade_parts), "\n\n".join(rollback_parts), changes
 
 
 def new_migration_cmd(
