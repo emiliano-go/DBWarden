@@ -36,9 +36,59 @@ app.include_router(DBWardenHealthRouter(), prefix="/health")
 This registers the following endpoints under the given prefix:
 
 | Method | Path | Description |
-|--------|------|-------------|
+|----------|------|-------------|
 | `GET` | `/health/` | Overall health — all databases, connectivity + migration state |
 | `GET` | `/health/{database_name}` | Health for a single named database |
+
+## Authentication
+
+By default, health endpoints require API key authentication in production. This prevents exposing internal operational details (database names, connection status, pending migrations, error messages) publicly.
+
+### Auth modes
+
+| Mode | Environment | Behavior |
+|------|-------------|----------|
+| `open` | `DBWARDEN_HEALTH_AUTH=open` | No authentication (suitable for dev/internal networks) |
+| `authenticated` | `DBWARDEN_HEALTH_AUTH=authenticated` | Requires `X-API-Key` header (default for production) |
+
+### Configuration
+
+**Via environment variable:**
+```bash
+# Production - require API key
+export DBWARDEN_HEALTH_AUTH=authenticated
+
+# Development - open access
+export DBWARDEN_HEALTH_AUTH=open
+```
+
+**Via parameter:**
+```python
+from dbwarden.fastapi import DBWardenHealthRouter
+
+# Open (no auth)
+router = DBWardenHealthRouter(auth_mode="open")
+
+# Authenticated with custom key
+router = DBWardenHealthRouter(auth_mode="authenticated", api_key="your-secure-key")
+```
+
+**Client usage:**
+```bash
+# Without auth (open mode)
+curl http://localhost:8000/health/
+
+# With auth (authenticated mode)
+curl -H "X-API-Key: your-secure-key" http://localhost:8000/health/
+```
+
+### Security
+
+Error messages are automatically sanitized to remove:
+- Credentials in connection strings (`password=...`, `token=...`)
+- URL-encoded credentials (`://user:pass@host`)
+
+This prevents leaking sensitive data in health responses.
 
 ## Endpoints
 
