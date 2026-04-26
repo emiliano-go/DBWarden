@@ -5,6 +5,7 @@ import re
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
+from typing import Literal
 
 from sqlalchemy import text
 
@@ -16,7 +17,7 @@ from dbwarden.repositories import check_lock, get_migrated_versions, migrations_
 
 # Patterns that may contain sensitive data
 CREDENTIAL_PATTERNS = re.compile(
-    r"(password|passwd|pwd|secret|token|key|api_key|apikey|auth)[=:]\S+",
+    r"(password|passwd|pwd|secret|token|api_key|apikey|auth)[=:]\S+",
     re.IGNORECASE
 )
 URL_CREDENTIAL_RE = re.compile(r"://[^:]+:[^@]+@")
@@ -36,14 +37,29 @@ def _sanitize_error(error: str, include_details: bool = False) -> str:
     return error
 
 
+HealthStatus = Literal["ok", "degraded", "error"]
+
+
 @dataclass
 class HealthResult:
     database: str
-    status: str
+    status: HealthStatus
     connected: bool
     pending_migrations: int
     lock_active: bool
     error: str | None = None
+
+    def to_database_health(self) -> "DatabaseHealth":
+        """Convert to Pydantic model - explicit construction."""
+        from dbwarden.fastapi.types import DatabaseHealth
+        return DatabaseHealth(
+            database=self.database,
+            status=self.status,
+            connected=self.connected,
+            pending_migrations=self.pending_migrations,
+            lock_active=self.lock_active,
+            error=self.error,
+        )
 
 
 def is_production_environment() -> bool:
@@ -52,8 +68,13 @@ def is_production_environment() -> bool:
 
 
 def is_development_environment() -> bool:
+    """Check if running in a development environment.
+    
+    Only dev/local/development are considered dev environments.
+    Test environments are NOT dev - they should behave like production.
+    """
     env = os.getenv("ENVIRONMENT", "").strip().lower()
-    return env in {"dev", "development", "local", "test", "testing"}
+    return env in {"dev", "development", "local"}
 
 
 @contextmanager
