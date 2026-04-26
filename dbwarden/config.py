@@ -247,7 +247,9 @@ def _resolve_source() -> _ResolvedSource:
     root = _workspace_root()
     dbwarden_files = _discover_dbwarden_files(root)
     if len(dbwarden_files) > 1:
-        paths = "\n".join(str(p) for p in dbwarden_files)
+        # Use relative paths to avoid leaking directory structure
+        rel_paths = [str(p.relative_to(root)) for p in dbwarden_files]
+        paths = "\n".join(rel_paths)
         raise ConfigurationError(
             "Multiple dbwarden.py files found. Keep exactly one.\n" + paths
         )
@@ -257,7 +259,9 @@ def _resolve_source() -> _ResolvedSource:
 
     callsite_files = _full_scan_database_config_calls(root)
     if len(callsite_files) > 1:
-        paths = "\n".join(str(p) for p in callsite_files)
+        # Use relative paths to avoid leaking directory structure
+        rel_paths = [str(p.relative_to(root)) for p in callsite_files]
+        paths = "\n".join(rel_paths)
         raise ConfigurationError(
             "Multiple database_config(...) call sites found. Keep exactly one source or set DBWARDEN_CONFIG_MODULE.\n"
             + paths
