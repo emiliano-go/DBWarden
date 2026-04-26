@@ -62,8 +62,9 @@ def DBWardenHealthRouter(
         @router.get("/{database_name}", response_model=HealthResponse)
         async def one_database_health(database_name: str) -> JSONResponse:
             cfg = get_multi_db_config()
+            # Validate without revealing the name
             if database_name not in cfg.databases:
-                raise HTTPException(status_code=404, detail=f"Database '{database_name}' not found")
+                raise HTTPException(status_code=404, detail="Database not found")
 
             result = check_database_health(database_name)
             payload = [DatabaseHealth(**result.__dict__)]
@@ -91,8 +92,9 @@ def DBWardenHealthRouter(
         @router.get("/{database_name}", response_model=HealthResponse)
         async def one_database_health(database_name: str, _: None = Depends(require_auth)) -> JSONResponse:
             cfg = get_multi_db_config()
+            # Validate first without revealing the name in error
             if database_name not in cfg.databases:
-                raise HTTPException(status_code=404, detail=f"Database '{database_name}' not found")
+                raise HTTPException(status_code=404, detail="Database not found")
 
             result = check_database_health(database_name)
             payload = [DatabaseHealth(**result.__dict__)]
