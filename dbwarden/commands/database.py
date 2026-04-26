@@ -61,13 +61,14 @@ def handle_database_add(
     current_dir = Path.cwd()
     toml_path = current_dir / TOML_FILE
 
-    if not toml_path.exists():
+    # Read directly - let it fail if doesn't exist (no check-then-use TOCTOU)
+    try:
+        with open(toml_path, "rb") as f:
+            config_data = tomllib.load(f)
+    except FileNotFoundError:
         raise FileNotFoundError(
             f"warden.toml not found in {current_dir}. Run 'dbwarden init' first."
         )
-
-    with open(toml_path, "rb") as f:
-        config_data = tomllib.load(f)
 
     if "warden" in config_data:
         warden = config_data["warden"]
