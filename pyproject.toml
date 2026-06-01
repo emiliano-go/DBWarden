@@ -22,7 +22,6 @@ keywords = [
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -49,7 +48,7 @@ dev = [
     "clickhouse-connect>=0.7.15",
 ]
 fastapi = [
-    "fastapi>=0.136.1",
+    "fastapi>=0.136.3",
     "asyncpg>=0.30.0",
     "aiosqlite>=0.20.0",
 ]
