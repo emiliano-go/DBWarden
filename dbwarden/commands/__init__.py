@@ -1,3 +1,4 @@
+from dbwarden.commands.check import check_cmd
 from dbwarden.commands.check_db import check_db_cmd
 from dbwarden.commands.extra import diff_cmd, lock_status_cmd, squash_cmd, unlock_cmd
 from dbwarden.commands.history import history_cmd
@@ -127,6 +128,15 @@ def handle_status(database: str | None = None, all_databases: bool = False) -> N
 def handle_check_db(output_format: str, database: str | None = None) -> None:
     """Handle check-db command."""
     check_db_cmd(output_format=output_format, database=database)
+
+
+def handle_check(
+    output_format: str,
+    database: str | None = None,
+    force: bool = False,
+) -> None:
+    """Handle safety check command."""
+    check_cmd(output_format=output_format, database=database, force=force)
 
 
 def handle_diff(diff_type: str, verbose: bool, database: str | None = None) -> None:
