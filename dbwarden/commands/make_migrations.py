@@ -12,7 +12,7 @@ from dbwarden.engine.model_discovery import (
     get_all_model_tables,
     auto_discover_model_paths,
     generate_create_table_sql,
-    generate_drop_table_sql,
+    generate_drop_object_sql,
     generate_add_column_sql,
     extract_tables_from_migrations,
     extract_tables_from_database,
@@ -252,7 +252,7 @@ def generate_migration_sql(
         if not existing_columns:
             create_sql = generate_create_table_sql(table, db_name)
             upgrade_parts.append(create_sql)
-            rollback_parts.append(generate_drop_table_sql(table.name))
+            rollback_parts.append(generate_drop_object_sql(table))
             changes.append(Change(operation="create_table", table=table.name))
         else:
             for column in table.columns:

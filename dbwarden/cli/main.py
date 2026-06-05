@@ -4,6 +4,7 @@ from dbwarden.cli.validators import validate_directory
 from dbwarden.config import set_dev_mode, set_strict_translation
 from dbwarden.commands import (
     handle_check_db,
+    handle_check,
     handle_config,
     handle_database_add,
     handle_database_list,
@@ -329,6 +330,25 @@ def status(
     """Show migration status (applied and pending)."""
     validate_directory()
     handle_status(database=database, all_databases=all_databases)
+
+
+@app.command()
+def check(
+    output: str = typer.Option(
+        "txt", "--out", "-o", help="Output format (json, txt)"
+    ),
+    force: bool = typer.Option(
+        False,
+        "--force",
+        help="Allow warning-level changes to pass",
+    ),
+    database: str | None = typer.Option(
+        None, "--database", "-d", help="Target database name"
+    ),
+):
+    """Run the schema safety analyzer."""
+    validate_directory()
+    handle_check(output_format=output, database=database, force=force)
 
 
 @app.command()
