@@ -86,6 +86,34 @@ def reset_connection_logging() -> None:
     _connection_init_logged = False
 
 
+_SANDBOX_URL: str | None = None
+_SANDBOX_DB_TYPE: str | None = None
+
+
+def set_sandbox_override(url: str, db_type: str) -> None:
+    """Set the sandbox database URL override for the current process."""
+    global _SANDBOX_URL, _SANDBOX_DB_TYPE
+    _SANDBOX_URL = url
+    _SANDBOX_DB_TYPE = db_type
+
+
+def clear_sandbox_override() -> None:
+    """Clear the sandbox database URL override."""
+    global _SANDBOX_URL, _SANDBOX_DB_TYPE
+    _SANDBOX_URL = None
+    _SANDBOX_DB_TYPE = None
+
+
+@contextmanager
+def sandbox_override(url: str, db_type: str):
+    """Context manager that temporarily sets the sandbox override."""
+    set_sandbox_override(url, db_type)
+    try:
+        yield
+    finally:
+        clear_sandbox_override()
+
+
 @contextmanager
 def get_db_connection(db_name: str | None = None) -> Generator[Any, None, None]:
     """
@@ -97,18 +125,21 @@ def get_db_connection(db_name: str | None = None) -> Generator[Any, None, None]:
     global _connection_init_logged
     config = get_database(db_name)
 
+    url = _SANDBOX_URL if _SANDBOX_URL is not None else config.sqlalchemy_url
+    db_type = _SANDBOX_DB_TYPE if _SANDBOX_DB_TYPE is not None else config.database_type
+
     from sqlalchemy.engine import make_url
-    parsed = make_url(config.sqlalchemy_url)
+    parsed = make_url(url)
     actual_db_name = db_name or (parsed.database or "default")
     logger = get_logger(
         db_name=actual_db_name,
-        db_type=config.database_type,
+        db_type=db_type,
     )
 
-    engine = _get_engine(config.sqlalchemy_url, config.database_type)
+    engine = _get_engine(url, db_type)
 
     if not _connection_init_logged:
-        logger.log_connection_init(config.database_type)
+        logger.log_connection_init(db_type)
         _connection_init_logged = True
 
     with engine.begin() as connection:
