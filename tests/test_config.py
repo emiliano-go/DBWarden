@@ -47,6 +47,25 @@ class TestConfig:
                 assert config.sqlalchemy_url == "sqlite:///./test.db"
                 assert config.database_type == "sqlite"
                 assert config.migrations_dir == "migrations/primary"
+                assert config.migration_table == "_dbwarden_migrations"
+            finally:
+                os.chdir(old)
+
+    def test_get_config_uses_custom_migration_table(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                _write_settings(
+                    Path("dbwarden.py"),
+                    [
+                        "from dbwarden import database_config",
+                        "",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./test.db', migration_table='custom_migrations')",
+                    ],
+                )
+                config = get_config()
+                assert config.migration_table == "custom_migrations"
             finally:
                 os.chdir(old)
 

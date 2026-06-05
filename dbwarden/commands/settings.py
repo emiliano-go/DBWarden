@@ -67,6 +67,7 @@ def _entry_kwargs(entry: DatabaseEntry) -> dict[str, Any]:
         "secure_values": entry.secure_values,
         "default": entry.default,
         "migrations_dir": entry.migrations_dir,
+        "migration_table": entry.migration_table,
         "model_paths": entry.model_paths,
         "dev_database_type": entry.dev_database_type,
         "dev_database_url": entry.dev_database_url,
@@ -83,6 +84,7 @@ def _render_entry(entry: DatabaseEntry) -> str:
         "database_url",
         "secure_values",
         "migrations_dir",
+        "migration_table",
         "model_paths",
         "dev_database_type",
         "dev_database_url",
@@ -167,6 +169,10 @@ def handle_settings_show(database: str | None = None, all_databases: bool = Fals
                 "Migrations Directory",
                 display_value(db, "migrations_dir", db.migrations_dir),
             )
+            _print_field(
+                "Migration Table",
+                display_value(db, "migration_table", db.migration_table),
+            )
             _print_field("Model Paths", display_value(db, "model_paths", db.model_paths))
             _print_field(
                 "Dev Database Type",
@@ -199,6 +205,10 @@ def handle_settings_show(database: str | None = None, all_databases: bool = Fals
     _print_field(
         "Migrations Directory",
         display_value(db, "migrations_dir", db.migrations_dir),
+    )
+    _print_field(
+        "Migration Table",
+        display_value(db, "migration_table", db.migration_table),
     )
     _print_field("Model Paths", display_value(db, "model_paths", db.model_paths))
     _print_field(
@@ -234,6 +244,7 @@ def handle_settings_database_add(
     database_type: str,
     url: str,
     migrations_dir: str | None = None,
+    migration_table: str | None = None,
     model_paths: list[str] | None = None,
     dev_type: str | None = None,
     dev_url: str | None = None,
@@ -254,6 +265,7 @@ def handle_settings_database_add(
             "database_type": database_type,
             "database_url": url,
             "migrations_dir": migrations_dir,
+            "migration_table": migration_table,
             "model_paths": model_paths,
             "dev_database_type": dev_type,
             "dev_database_url": dev_url,

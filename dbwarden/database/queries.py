@@ -2,7 +2,7 @@ from enum import Enum
 
 from sqlalchemy.engine import make_url
 
-from dbwarden.config import get_database
+from dbwarden.config import DEFAULT_MIGRATION_TABLE, get_database
 
 
 class QueryMethod(Enum):
@@ -31,7 +31,7 @@ class QueryMethod(Enum):
 
 SQLITE_QUERIES = {
     QueryMethod.CREATE_MIGRATIONS_TABLE: """
-        CREATE TABLE IF NOT EXISTS dbwarden_migrations (
+        CREATE TABLE IF NOT EXISTS {migration_table} (
             version VARCHAR(255),
             description VARCHAR(500),
             filename VARCHAR(500) UNIQUE,
@@ -48,29 +48,29 @@ SQLITE_QUERIES = {
         )
     """,
     QueryMethod.INSERT_VERSION: """
-        INSERT INTO dbwarden_migrations (version, description, filename, migration_type, checksum)
+        INSERT INTO {migration_table} (version, description, filename, migration_type, checksum)
         VALUES (:version, :description, :filename, :migration_type, :checksum)
     """,
     QueryMethod.DELETE_VERSION: """
-        DELETE FROM dbwarden_migrations WHERE version = :version
+        DELETE FROM {migration_table} WHERE version = :version
     """,
     QueryMethod.GET_ALL_MIGRATIONS: """
-        SELECT * FROM dbwarden_migrations ORDER BY applied_at ASC
+        SELECT * FROM {migration_table} ORDER BY applied_at ASC
     """,
     QueryMethod.GET_LATEST_VERSION: """
-        SELECT * FROM dbwarden_migrations
+        SELECT * FROM {migration_table}
         WHERE version IS NOT NULL
         ORDER BY applied_at DESC
         LIMIT 1
     """,
     QueryMethod.GET_MIGRATED_VERSIONS: """
-        SELECT version FROM dbwarden_migrations WHERE version IS NOT NULL ORDER BY applied_at ASC
+        SELECT version FROM {migration_table} WHERE version IS NOT NULL ORDER BY applied_at ASC
     """,
     QueryMethod.CHECK_IF_MIGRATIONS_TABLE_EXISTS: """
-        SELECT name FROM sqlite_master WHERE type='table' AND name='dbwarden_migrations'
+        SELECT name FROM sqlite_master WHERE type='table' AND name='{migration_table}'
     """,
     QueryMethod.CHECK_IF_VERSION_EXISTS: """
-        SELECT COUNT(*) FROM dbwarden_migrations WHERE version = :version
+        SELECT COUNT(*) FROM {migration_table} WHERE version = :version
     """,
     QueryMethod.ACQUIRE_LOCK: """
         INSERT OR REPLACE INTO dbwarden_lock (id, locked, acquired_at)
@@ -93,20 +93,20 @@ SQLITE_QUERIES = {
         SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name=:table_name
     """,
     QueryMethod.GET_RUNS_ON_CHANGE_CHECKSUMS: """
-        SELECT filename, checksum FROM dbwarden_migrations
+        SELECT filename, checksum FROM {migration_table}
         WHERE migration_type = 'runs_on_change'
     """,
     QueryMethod.GET_RUNS_ALWAYS_FILENAMES: """
-        SELECT filename FROM dbwarden_migrations
+        SELECT filename FROM {migration_table}
         WHERE migration_type = 'runs_always'
     """,
     QueryMethod.UPSERT_REPEATABLE_MIGRATION: """
-        INSERT OR REPLACE INTO dbwarden_migrations
+        INSERT OR REPLACE INTO {migration_table}
         (version, description, filename, migration_type, checksum)
         VALUES (NULL, :description, :filename, :migration_type, :checksum)
     """,
     QueryMethod.DELETE_REPEATABLE_BY_FILENAME: """
-        DELETE FROM dbwarden_migrations
+        DELETE FROM {migration_table}
         WHERE filename = :filename AND migration_type IN ('runs_always', 'runs_on_change')
     """,
 }
@@ -114,7 +114,7 @@ SQLITE_QUERIES = {
 
 POSTGRES_QUERIES = {
     QueryMethod.CREATE_MIGRATIONS_TABLE: """
-        CREATE TABLE IF NOT EXISTS dbwarden_migrations (
+        CREATE TABLE IF NOT EXISTS {migration_table} (
             version VARCHAR(255) UNIQUE,
             description VARCHAR(500),
             filename VARCHAR(500) UNIQUE,
@@ -131,7 +131,7 @@ POSTGRES_QUERIES = {
         )
     """,
     QueryMethod.INSERT_VERSION: """
-        INSERT INTO dbwarden_migrations (version, description, filename, migration_type, checksum)
+        INSERT INTO {migration_table} (version, description, filename, migration_type, checksum)
         VALUES (:version, :description, :filename, :migration_type, :checksum)
         ON CONFLICT (version) DO UPDATE SET
             checksum = EXCLUDED.checksum,
@@ -145,7 +145,7 @@ POSTGRES_QUERIES = {
     ],
     QueryMethod.CHECK_IF_MIGRATIONS_TABLE_EXISTS: """
         SELECT tablename FROM pg_catalog.pg_tables
-        WHERE schemaname = current_schema() AND tablename = 'dbwarden_migrations'
+        WHERE schemaname = current_schema() AND tablename = '{migration_table}'
     """,
     QueryMethod.CHECK_IF_VERSION_EXISTS: SQLITE_QUERIES[
         QueryMethod.CHECK_IF_VERSION_EXISTS
@@ -187,7 +187,7 @@ POSTGRES_QUERIES = {
         QueryMethod.GET_RUNS_ALWAYS_FILENAMES
     ],
     QueryMethod.UPSERT_REPEATABLE_MIGRATION: """
-        INSERT INTO dbwarden_migrations
+        INSERT INTO {migration_table}
         (version, description, filename, migration_type, checksum)
         VALUES (NULL, :description, :filename, :migration_type, :checksum)
         ON CONFLICT (filename)
@@ -205,7 +205,7 @@ POSTGRES_QUERIES = {
 
 MYSQL_QUERIES = {
     QueryMethod.CREATE_MIGRATIONS_TABLE: """
-        CREATE TABLE IF NOT EXISTS dbwarden_migrations (
+        CREATE TABLE IF NOT EXISTS {migration_table} (
             version VARCHAR(255),
             description VARCHAR(500),
             filename VARCHAR(500) UNIQUE,
@@ -231,7 +231,7 @@ MYSQL_QUERIES = {
     QueryMethod.CHECK_IF_MIGRATIONS_TABLE_EXISTS: """
         SELECT table_name AS name
         FROM information_schema.tables
-        WHERE table_schema = DATABASE() AND table_name = 'dbwarden_migrations'
+        WHERE table_schema = DATABASE() AND table_name = '{migration_table}'
     """,
     QueryMethod.CHECK_IF_VERSION_EXISTS: SQLITE_QUERIES[
         QueryMethod.CHECK_IF_VERSION_EXISTS
@@ -275,7 +275,7 @@ MYSQL_QUERIES = {
         QueryMethod.GET_RUNS_ALWAYS_FILENAMES
     ],
     QueryMethod.UPSERT_REPEATABLE_MIGRATION: """
-        INSERT INTO dbwarden_migrations
+        INSERT INTO {migration_table}
         (version, description, filename, migration_type, checksum)
         VALUES (NULL, :description, :filename, :migration_type, :checksum)
         ON DUPLICATE KEY UPDATE
@@ -292,7 +292,7 @@ MYSQL_QUERIES = {
 
 CLICKHOUSE_QUERIES = {
     QueryMethod.CREATE_MIGRATIONS_TABLE: """
-        CREATE TABLE IF NOT EXISTS dbwarden_migrations (
+        CREATE TABLE IF NOT EXISTS {migration_table} (
             version String,
             description String,
             filename String,
@@ -311,35 +311,35 @@ CLICKHOUSE_QUERIES = {
         ORDER BY id
     """,
     QueryMethod.INSERT_VERSION: """
-        INSERT INTO dbwarden_migrations (version, description, filename, migration_type, checksum)
+        INSERT INTO {migration_table} (version, description, filename, migration_type, checksum)
         VALUES (:version, :description, :filename, :migration_type, :checksum)
     """,
     QueryMethod.DELETE_VERSION: """
-        ALTER TABLE dbwarden_migrations DELETE WHERE version = :version
+        ALTER TABLE {migration_table} DELETE WHERE version = :version
     """,
     QueryMethod.GET_ALL_MIGRATIONS: """
         SELECT version, description, filename, migration_type, applied_at, checksum
-        FROM dbwarden_migrations
+        FROM {migration_table}
         ORDER BY applied_at ASC
     """,
     QueryMethod.GET_LATEST_VERSION: """
         SELECT version, description, filename, migration_type, applied_at, checksum
-        FROM dbwarden_migrations
+        FROM {migration_table}
         WHERE version IS NOT NULL
         ORDER BY applied_at DESC
         LIMIT 1
     """,
     QueryMethod.GET_MIGRATED_VERSIONS: """
-        SELECT version FROM dbwarden_migrations
+        SELECT version FROM {migration_table}
         WHERE version IS NOT NULL
         ORDER BY applied_at ASC
     """,
     QueryMethod.CHECK_IF_MIGRATIONS_TABLE_EXISTS: """
         SELECT name FROM system.tables
-        WHERE database = currentDatabase() AND name = 'dbwarden_migrations'
+        WHERE database = currentDatabase() AND name = '{migration_table}'
     """,
     QueryMethod.CHECK_IF_VERSION_EXISTS: """
-        SELECT count() FROM dbwarden_migrations WHERE version = :version
+        SELECT count() FROM {migration_table} WHERE version = :version
     """,
     QueryMethod.ACQUIRE_LOCK: """
         ALTER TABLE dbwarden_lock UPDATE locked = 1, acquired_at = now() WHERE id = 1
@@ -365,19 +365,19 @@ CLICKHOUSE_QUERIES = {
         WHERE database = currentDatabase() AND table = :table_name
     """,
     QueryMethod.GET_RUNS_ON_CHANGE_CHECKSUMS: """
-        SELECT filename, checksum FROM dbwarden_migrations
+        SELECT filename, checksum FROM {migration_table}
         WHERE migration_type = 'runs_on_change'
     """,
     QueryMethod.GET_RUNS_ALWAYS_FILENAMES: """
-        SELECT filename FROM dbwarden_migrations
+        SELECT filename FROM {migration_table}
         WHERE migration_type = 'runs_always'
     """,
     QueryMethod.UPSERT_REPEATABLE_MIGRATION: """
-        INSERT INTO dbwarden_migrations (version, description, filename, migration_type, checksum)
+        INSERT INTO {migration_table} (version, description, filename, migration_type, checksum)
         VALUES (NULL, :description, :filename, :migration_type, :checksum)
     """,
     QueryMethod.DELETE_REPEATABLE_BY_FILENAME: """
-        ALTER TABLE dbwarden_migrations DELETE WHERE filename = :filename AND migration_type IN ('runs_always', 'runs_on_change')
+        ALTER TABLE {migration_table} DELETE WHERE filename = :filename AND migration_type IN ('runs_always', 'runs_on_change')
     """,
 }
 
@@ -401,7 +401,16 @@ def _get_queries_for_backend(db_name: str | None = None) -> dict:
     return SQLITE_QUERIES
 
 
+def get_migration_table_name(db_name: str | None = None) -> str:
+    try:
+        return get_database(db_name).migration_table
+    except Exception:
+        return DEFAULT_MIGRATION_TABLE
+
+
 def get_query(method: QueryMethod, db_name: str | None = None, **kwargs) -> str:
     """Get a SQL query by method for current backend."""
-
-    return _get_queries_for_backend(db_name).get(method, "")
+    query = _get_queries_for_backend(db_name).get(method, "")
+    if not query:
+        return ""
+    return query.format(migration_table=get_migration_table_name(db_name), **kwargs)
