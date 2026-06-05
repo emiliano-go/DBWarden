@@ -48,6 +48,9 @@ dev = [
     "pytest>=8.4.2",
     "clickhouse-connect>=0.7.15",
 ]
+docs = [
+    "zensical",
+]
 fastapi = [
     "fastapi>=0.136.1",
     "asyncpg>=0.30.0",
