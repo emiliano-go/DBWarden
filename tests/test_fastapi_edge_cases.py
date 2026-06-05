@@ -226,7 +226,7 @@ class TestMigrationContextEdgeCases:
         mock_db.database_name = "primary"
         mock_db.database_type = "sqlite"
         mock_db.sqlalchemy_url = "sqlite:///:memory:"
-        mock_db.dev_sqlalchemy_url = None
+        mock_db.sqlalchemy_url_sync = "sqlite:///:memory:"
         mock_db.model_paths = None
 
         def mock_get_database(name=None):
@@ -280,7 +280,7 @@ class TestGetSessionEdgeCases:
         mock_db.database_name = "primary"
         mock_db.database_type = "sqlite"
         mock_db.sqlalchemy_url = "sqlite:///:memory:"
-        mock_db.dev_sqlalchemy_url = None
+        mock_db.sqlalchemy_url_sync = "sqlite:///:memory:"
 
         def mock_get_database(name=None):
             return mock_db
@@ -309,7 +309,7 @@ class TestGetSessionEdgeCases:
         mock_db.database_name = "primary"
         mock_db.database_type = "sqlite"
         mock_db.sqlalchemy_url = "sqlite:///:memory:"
-        mock_db.dev_sqlalchemy_url = None
+        mock_db.sqlalchemy_url_sync = "sqlite:///:memory:"
 
         def mock_get_database(name=None):
             return mock_db

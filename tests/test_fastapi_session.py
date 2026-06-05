@@ -49,7 +49,8 @@ class TestGetSession:
         mock_db.database_name = "primary"
         mock_db.database_type = "sqlite"
         mock_db.sqlalchemy_url = "sqlite:///:memory:"
-        mock_db.dev_sqlalchemy_url = None
+        mock_db.sqlalchemy_url_sync = "sqlite:///:memory:"
+        mock_db.sqlalchemy_url_async = None
 
         mock_multi = MagicMock()
         mock_multi.databases = {"primary": mock_db}
@@ -128,6 +129,8 @@ class TestGetSessionErrors:
         mock_db.database_name = "primary"
         mock_db.database_type = "unsupported"
         mock_db.sqlalchemy_url = "unsupported://localhost/db"
+        mock_db.sqlalchemy_url_sync = "unsupported://localhost/db"
+        mock_db.sqlalchemy_url_async = None
 
         def mock_get_database(name=None):
             return mock_db
