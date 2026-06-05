@@ -82,18 +82,18 @@ class TestConfigCommand:
         with tempfile.TemporaryDirectory() as tmpdir:
             Path(tmpdir, "dbwarden.py").write_text(
                 "from dbwarden import database_config\n\n"
-                "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./test.db')\n",
+                "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./test.db')\n",
                 encoding="utf-8",
             )
             output = self._run_config_capture_output(tmpdir)
-            assert "database_url" in output
+            assert "database_url_sync" in output
             assert "sqlite:///./test.db" in output
 
     def test_config_masks_password(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             Path(tmpdir, "dbwarden.py").write_text(
                 "from dbwarden import database_config\n\n"
-                "database_config(database_name='primary', default=True, database_type='postgresql', database_url='postgresql://user:secretpassword@localhost/db')\n",
+                "database_config(database_name='primary', default=True, database_type='postgresql', database_url_sync='postgresql://user:secretpassword@localhost/db')\n",
                 encoding="utf-8",
             )
             output = self._run_config_capture_output(tmpdir)
@@ -105,7 +105,7 @@ class TestConfigCommand:
             Path(tmpdir, "dbwarden.py").write_text(
                 "from dbwarden import database_config\n\n"
                 "DATABASE_URL = 'postgresql://user:secretpassword@localhost/db'\n\n"
-                "database_config(database_name='primary', default=True, database_type='postgresql', database_url=DATABASE_URL, secure_values=True)\n",
+                "database_config(database_name='primary', default=True, database_type='postgresql', database_url_sync=DATABASE_URL, secure_values=True)\n",
                 encoding="utf-8",
             )
             output = self._run_config_capture_output(tmpdir)

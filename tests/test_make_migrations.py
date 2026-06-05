@@ -111,7 +111,7 @@ def test_make_migrations_writes_plan_file_next_to_sql():
         try:
             Path("dbwarden.py").write_text(
                 "from dbwarden import database_config\n\n"
-                "database_config(database_name='primary', default=True, database_type='sqlite', database_url='sqlite:///./app.db', model_paths=['models'])\n",
+                "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./app.db', model_paths=['models'])\n",
                 encoding="utf-8",
             )
             Path("migrations/primary").mkdir(parents=True)

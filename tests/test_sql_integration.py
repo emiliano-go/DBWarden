@@ -65,7 +65,7 @@ class TestDatabaseOperations:
                     "    database_name='primary',\n"
                     "    default=True,\n"
                     "    database_type='sqlite',\n"
-                    f"    database_url='sqlite:///{temp_db}',\n"
+                    f"    database_url_sync='sqlite:///{temp_db}',\n"
                     ")\n"
                 )
 

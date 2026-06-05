@@ -20,7 +20,7 @@ def _write_settings(path: Path) -> None:
         "    database_name='primary',\n"
         "    default=True,\n"
         "    database_type='sqlite',\n"
-        "    database_url='sqlite:///./app.db',\n"
+        "    database_url_sync='sqlite:///./app.db',\n"
         "    model_paths=['models/primary'],\n"
         ")\n",
         encoding="utf-8",
