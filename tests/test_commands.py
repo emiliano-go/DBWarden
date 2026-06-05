@@ -36,6 +36,17 @@ class TestInitCommand:
             finally:
                 os.chdir(old_cwd)
 
+    def test_init_does_not_create_backup_on_first_run(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old_cwd = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                init_cmd()
+                assert Path(tmpdir, "dbwarden.py").exists()
+                assert not Path(tmpdir, "dbwarden.py.bak").exists()
+            finally:
+                os.chdir(old_cwd)
+
     def test_init_does_not_duplicate_scaffold(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()

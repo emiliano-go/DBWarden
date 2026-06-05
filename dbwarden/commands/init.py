@@ -41,10 +41,9 @@ def _atomic_write(path: Path, content: str) -> None:
 
 def _ensure_settings_file(settings_path: Path, db_name: str) -> None:
     settings_path.parent.mkdir(parents=True, exist_ok=True)
-    if not settings_path.exists():
-        _atomic_write(settings_path, "")
-
-    content = settings_path.read_text(encoding="utf-8")
+    content = ""
+    if settings_path.exists():
+        content = settings_path.read_text(encoding="utf-8")
     lines = content.splitlines()
 
     import_line = "from dbwarden import database_config"
