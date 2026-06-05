@@ -10,6 +10,7 @@ from dbwarden.engine.model_discovery import (
     extract_column_info,
     extract_table_from_model,
     generate_create_table_sql,
+    generate_drop_object_sql,
     generate_drop_table_sql,
     ModelColumn,
     ModelTable,
@@ -289,6 +290,65 @@ class TestSQLGeneration:
         assert "data String NOT NULL CODEC(ZSTD(3))" in sql
         assert "ENGINE = MergeTree()" in sql
 
+    def test_generate_clickhouse_create_table_sql_with_projection(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("author", "String", False, False, False, None, None),
+            ModelColumn("created_at", "DateTime", False, False, False, None, None),
+        ]
+
+        table = ModelTable(
+            name="posts",
+            columns=columns,
+            clickhouse_options={
+                "clickhouse_order_by": ["author", "created_at"],
+                "clickhouse_projections": [
+                    {"name": "by_author", "query": "SELECT * ORDER BY author"}
+                ],
+            },
+        )
+
+        sql = generate_create_table_sql(table)
+
+        assert "PROJECTION by_author (SELECT * ORDER BY author)" in sql
+
+    def test_generate_clickhouse_materialized_view_sql(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("group_col", "String", False, True, False, None, None),
+            ModelColumn("total", "UInt64", False, False, False, None, None),
+        ]
+
+        table = ModelTable(
+            name="mv_name",
+            columns=columns,
+            clickhouse_options={
+                "clickhouse_mv": True,
+                "clickhouse_mv_query": "SELECT group_col, count() AS total FROM source_table GROUP BY group_col",
+                "clickhouse_mv_engine": "SummingMergeTree",
+                "clickhouse_mv_order_by": ["group_col"],
+            },
+            object_type="materialized_view",
+        )
+
+        sql = generate_create_table_sql(table)
+
+        assert "CREATE MATERIALIZED VIEW IF NOT EXISTS mv_name" in sql
+        assert "ENGINE = SummingMergeTree()" in sql
+        assert "ORDER BY (group_col)" in sql
+        assert "AS SELECT group_col, count() AS total FROM source_table GROUP BY group_col" in sql
+
+    def test_generate_drop_object_sql_for_materialized_view(self):
+        table = ModelTable(
+            name="mv_name",
+            columns=[],
+            object_type="materialized_view",
+        )
+
+        assert generate_drop_object_sql(table) == "DROP VIEW mv_name"
+
 
 class TestColumnExtraction:
     """Tests for column information extraction."""
@@ -412,6 +472,28 @@ class TestColumnExtraction:
         assert table is not None
         assert table.clickhouse_options["clickhouse_engine"] == "SummingMergeTree"
         assert table.clickhouse_options["clickhouse_order_by"] == ["region"]
+
+    def test_extract_table_from_model_sets_materialized_view_object_type(self, monkeypatch):
+        from sqlalchemy import Column, MetaData, String, Table
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        class EventView:
+            __tablename__ = "mv_name"
+            __table_args__ = {
+                "clickhouse_mv": True,
+                "clickhouse_mv_query": "SELECT region FROM source_table",
+            }
+            __table__ = Table(
+                "mv_name",
+                MetaData(),
+                Column("region", String, primary_key=True),
+            )
+
+        table = extract_table_from_model(EventView, db_name="primary")
+
+        assert table is not None
+        assert table.object_type == "materialized_view"
 
     def test_extract_table_from_model_rejects_invalid_clickhouse_primary_key_prefix(self, monkeypatch):
         from sqlalchemy import Column, MetaData, String, Table
