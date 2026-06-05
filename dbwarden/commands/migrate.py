@@ -138,6 +138,8 @@ def migrate_single(
     baseline: bool = False,
     with_backup: bool = False,
     backup_dir: str | None = None,
+    dry_run: bool = False,
+    sandbox: bool = False,
 ) -> None:
     """
     Apply pending migrations to a single database.
@@ -150,6 +152,8 @@ def migrate_single(
         baseline: Mark migrations as applied without executing.
         with_backup: Create a backup before migrating.
         backup_dir: Directory for backup files.
+        dry_run: Display pending migrations without executing them.
+        sandbox: Apply migrations in a temporary sandbox database instead.
     """
     from dbwarden.config import get_database
 
@@ -164,138 +168,187 @@ def migrate_single(
     if db_name:
         console.print(f"\n=== Migrating database: {db_name} ===", style="bold cyan")
 
-    if with_backup:
-        backup_directory = backup_dir or os.path.join(os.getcwd(), "backups")
-        backup_path = create_backup(sqlalchemy_url, backup_directory)
-        logger.log_backup_created(backup_path)
+    sandbox_provider = None
+    if sandbox:
+        from dbwarden.engine.sandbox import create_sandbox_provider
+        from dbwarden.database.connection import sandbox_override as _sandbox_ctx
 
-    migrations_dir = get_migrations_directory(db_name)
+        sandbox_provider = create_sandbox_provider(config.database_type)
+        sandbox_url = sandbox_provider.start()
+        sandbox_db_type = sandbox_provider.get_database_type()
+        console.print(
+            f"Sandbox started: {sandbox_provider.__class__.__name__} ({sandbox_url})",
+            style="yellow",
+        )
+        _sandbox_cm = _sandbox_ctx(sandbox_url, sandbox_db_type)
+        _sandbox_cm.__enter__()
+    else:
+        _sandbox_cm = None
 
-    create_migrations_table_if_not_exists(db_name)
-    create_lock_table_if_not_exists(db_name)
+    try:
+        if with_backup and not sandbox:
+            backup_directory = backup_dir or os.path.join(os.getcwd(), "backups")
+            backup_path = create_backup(sqlalchemy_url, backup_directory)
+            logger.log_backup_created(backup_path)
 
-    applied_versions = set(get_migrated_versions(db_name))
-    applied_checksums = get_applied_checksums(db_name)
+        migrations_dir = get_migrations_directory(db_name)
 
-    if baseline:
-        if not to_version:
-            raise ValueError("--baseline requires --to-version to be specified.")
+        if not dry_run:
+            create_migrations_table_if_not_exists(db_name)
+            create_lock_table_if_not_exists(db_name)
 
-        set_baseline_migration(migrations_dir, to_version, db_name)
-        logger.log_baseline_set(to_version)
-        console.print(f"Baseline set at version: {to_version}", style="green")
-        return
+        applied_versions = set()
+        applied_checksums = set()
+        if not dry_run:
+            applied_versions = set(get_migrated_versions(db_name))
+            applied_checksums = get_applied_checksums(db_name)
 
-    filepaths_by_version = _get_filepaths_by_version(
-        count=count,
-        to_version=to_version,
-        migrations_dir=migrations_dir,
-        applied_versions=applied_versions,
-        db_name=db_name,
-    )
+        if baseline:
+            if not to_version:
+                raise ValueError("--baseline requires --to-version to be specified.")
 
-    runs_always_filepaths = get_runs_always_filepaths(migrations_dir)
-    runs_on_change_filepaths = get_runs_on_change_filepaths(
-        migrations_dir, changed_only=True, db_name=db_name
-    )
+            set_baseline_migration(migrations_dir, to_version, db_name)
+            logger.log_baseline_set(to_version)
+            console.print(f"Baseline set at version: {to_version}", style="green")
+            return
 
-    if (
-        not filepaths_by_version
-        and not runs_always_filepaths
-        and not runs_on_change_filepaths
-    ):
-        console.print("Migrations are up to date.", style="cyan")
-        return
-
-    if filepaths_by_version:
-        logger.log_pending_migrations(list(filepaths_by_version.keys()))
-
-    versioned_count = 0
-
-    from dbwarden.engine.checksum import calculate_checksum
-
-    for version, filepath in filepaths_by_version.items():
-        filename = filepath.split("/")[-1]
-        sql_statements = parse_upgrade_statements(filepath)
-        checksum = calculate_checksum(sql_statements)
-
-        if checksum in applied_checksums:
-            logger.log_migration_skipped(version, filename, checksum)
-            continue
-
-        for sql in sql_statements:
-            logger.log_sql_statement(sql)
-
-        start_time = time.time()
-        logger.log_migration_start(version, filename)
-
-        run_migration(
-            sql_statements=sql_statements,
-            version=version,
-            migration_operation="upgrade",
-            filename=filename,
+        filepaths_by_version = _get_filepaths_by_version(
+            count=count,
+            to_version=to_version,
+            migrations_dir=migrations_dir,
+            applied_versions=applied_versions,
             db_name=db_name,
         )
 
-        duration = time.time() - start_time
-        logger.log_migration_end(version, filename, duration)
-        versioned_count += 1
-        applied_checksums.add(checksum)
+        runs_always_filepaths = get_runs_always_filepaths(migrations_dir)
+        runs_on_change_filepaths = get_runs_on_change_filepaths(
+            migrations_dir, changed_only=True, db_name=db_name
+        )
 
-    existing_runs_always = get_existing_runs_always_filenames(db_name)
-    existing_runs_on_change = get_existing_runs_on_change_filenames_to_checksums(
-        db_name
-    )
+        if (
+            not filepaths_by_version
+            and not runs_always_filepaths
+            and not runs_on_change_filepaths
+        ):
+            console.print("Migrations are up to date.", style="cyan")
+            return
 
-    for filepath in runs_always_filepaths:
-        filename = filepath.split("/")[-1]
-        sql_statements = parse_upgrade_statements(filepath)
+        if filepaths_by_version:
+            logger.log_pending_migrations(list(filepaths_by_version.keys()))
 
-        start_time = time.time()
-        logger.log_migration_start("RA", filename)
+        if dry_run:
+            console.print("[bold yellow]DRY RUN[/bold yellow] - No changes applied\n")
 
-        if filename in existing_runs_always:
+        versioned_count = 0
+
+        from dbwarden.engine.checksum import calculate_checksum
+
+        for version, filepath in filepaths_by_version.items():
+            filename = filepath.split("/")[-1]
+            sql_statements = parse_upgrade_statements(filepath)
+            checksum = calculate_checksum(sql_statements)
+
+            if checksum in applied_checksums:
+                logger.log_migration_skipped(version, filename, checksum)
+                continue
+
+            for sql in sql_statements:
+                logger.log_sql_statement(sql)
+
+            if dry_run:
+                console.print(
+                    f"  [yellow]Would apply[/yellow] version {version}: {filename}"
+                )
+                for sql in sql_statements:
+                    console.print(f"    {sql}")
+                continue
+
+            start_time = time.time()
+            logger.log_migration_start(version, filename)
+
+            run_migration(
+                sql_statements=sql_statements,
+                version=version,
+                migration_operation="upgrade",
+                filename=filename,
+                db_name=db_name,
+            )
+
+            duration = time.time() - start_time
+            logger.log_migration_end(version, filename, duration)
+            versioned_count += 1
+            applied_checksums.add(checksum)
+
+        if dry_run:
+            console.print(
+                f"\n[bold]Dry-run summary:[/bold] "
+                f"{len(filepaths_by_version)} versioned, "
+                f"{len(runs_always_filepaths)} runs-always, "
+                f"{len(runs_on_change_filepaths)} runs-on-change "
+                "migrations would be applied.\n"
+            )
+            return
+
+        existing_runs_always = get_existing_runs_always_filenames(db_name)
+        existing_runs_on_change = get_existing_runs_on_change_filenames_to_checksums(
+            db_name
+        )
+
+        for filepath in runs_always_filepaths:
+            filename = filepath.split("/")[-1]
+            sql_statements = parse_upgrade_statements(filepath)
+
+            start_time = time.time()
+            logger.log_migration_start("RA", filename)
+
+            if filename in existing_runs_always:
+                run_repeatable_migration(
+                    sql_statements=sql_statements,
+                    filename=filename,
+                    migration_type="runs_always",
+                    db_name=db_name,
+                )
+            else:
+                run_migration(
+                    sql_statements=sql_statements,
+                    version=None,
+                    migration_operation="upgrade",
+                    filename=filename,
+                    migration_type="runs_always",
+                    db_name=db_name,
+                )
+
+            duration = time.time() - start_time
+            logger.log_migration_end("RA", filename, duration)
+
+        for filepath in runs_on_change_filepaths:
+            filename = filepath.split("/")[-1]
+            sql_statements = parse_upgrade_statements(filepath)
+
+            start_time = time.time()
+            logger.log_migration_start("ROC", filename)
+
             run_repeatable_migration(
                 sql_statements=sql_statements,
                 filename=filename,
-                migration_type="runs_always",
-                db_name=db_name,
-            )
-        else:
-            run_migration(
-                sql_statements=sql_statements,
-                version=None,
-                migration_operation="upgrade",
-                filename=filename,
-                migration_type="runs_always",
+                migration_type="runs_on_change",
                 db_name=db_name,
             )
 
-        duration = time.time() - start_time
-        logger.log_migration_end("RA", filename, duration)
+            duration = time.time() - start_time
+            logger.log_migration_end("ROC", filename, duration)
 
-    for filepath in runs_on_change_filepaths:
-        filename = filepath.split("/")[-1]
-        sql_statements = parse_upgrade_statements(filepath)
-
-        start_time = time.time()
-        logger.log_migration_start("ROC", filename)
-
-        run_repeatable_migration(
-            sql_statements=sql_statements,
-            filename=filename,
-            migration_type="runs_on_change",
-            db_name=db_name,
-        )
-
-        duration = time.time() - start_time
-        logger.log_migration_end("ROC", filename, duration)
-
-    if versioned_count > 0:
-        console.print(
-            f"Migrations completed successfully: {versioned_count} migrations applied.",
-            style="green",
-        )
+        if versioned_count > 0:
+            console.print(
+                f"Migrations completed successfully: {versioned_count} migrations applied.",
+                style="green",
+            )
+    finally:
+        if sandbox_provider:
+            sandbox_provider.stop()
+            console.print("Sandbox stopped.", style="yellow")
+        if _sandbox_cm is not None:
+            _sandbox_cm.__exit__(None, None, None)
 
 
 def migrate_cmd(
@@ -307,6 +360,8 @@ def migrate_cmd(
     baseline: bool = False,
     with_backup: bool = False,
     backup_dir: str | None = None,
+    dry_run: bool = False,
+    sandbox: bool = False,
 ) -> None:
     """
     Apply pending migrations to the database.
@@ -320,6 +375,8 @@ def migrate_cmd(
         baseline: Mark migrations as applied without executing.
         with_backup: Create a backup before migrating.
         backup_dir: Directory for backup files.
+        dry_run: Display pending migrations without executing them.
+        sandbox: Apply migrations in a temporary sandbox database instead.
     """
     if count is not None and to_version is not None:
         raise ValueError("Cannot specify both 'count' and 'to-version'.")
@@ -343,6 +400,8 @@ def migrate_cmd(
                     baseline=baseline,
                     with_backup=with_backup,
                     backup_dir=backup_dir,
+                    dry_run=dry_run,
+                    sandbox=sandbox,
                 )
             except Exception as e:
                 console.print(f"Error migrating database '{db_name}': {e}", style="bold red")
@@ -356,6 +415,8 @@ def migrate_cmd(
             baseline=baseline,
             with_backup=with_backup,
             backup_dir=backup_dir,
+            dry_run=dry_run,
+            sandbox=sandbox,
         )
 
 
