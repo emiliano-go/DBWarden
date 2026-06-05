@@ -193,12 +193,12 @@ For each database, the health check runs:
 1. Attempt connection using the cached engine (or build one if not yet cached)
 2. Execute a trivial connectivity query (`SELECT 1`)
 3. If connectivity fails → mark `connected=False`, `status="error"`, set `error` field, skip migration check
-4. If connectivity succeeds → query `dbwarden_migrations` table to count applied migrations
+4. If connectivity succeeds → query the configured migration tracking table (default: `_dbwarden_migrations`) to count applied migrations
 5. Compare applied count against discovered migration files to compute `pending_migrations`
-6. Check if `dbwarden_migrations_lock` table has an active lock
+6. Check if `dbwarden_lock` table has an active lock
 7. Return health result
 
-If `dbwarden_migrations` table does not exist → `pending_migrations` is the total migration file count (nothing has been applied yet).
+If the migration tracking table does not exist → `pending_migrations` is the total migration file count (nothing has been applied yet).
 
 ## Use cases
 

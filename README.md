@@ -100,7 +100,9 @@ class User(Base):
 dbwarden make-migrations "create users table"
 ```
 
-DBWarden creates a versioned SQL file with both upgrade and rollback:
+DBWarden creates a versioned SQL file plus a companion `.plan.json` file.
+
+The SQL file contains both upgrade and rollback:
 
 ```sql
 -- upgrade
@@ -114,6 +116,8 @@ CREATE TABLE IF NOT EXISTS users (
 
 DROP TABLE users;
 ```
+
+The plan file contains machine-readable metadata about the generated operations and checksum. Use `dbwarden make-migrations --plan` to print that JSON without writing files.
 
 ### 4. Apply
 

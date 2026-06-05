@@ -17,6 +17,7 @@ def database_config(
     database_url: str,
     default: bool = False,
     migrations_dir: str | None = None,
+    migration_table: str | None = None,
     model_paths: list[str] | None = None,
     dev_database_type: str | None = None,
     dev_database_url: str | None = None,
@@ -40,6 +41,7 @@ def database_config(
 |----------|------|---------|-------------|
 | `default` | `bool` | `False` | if `True`, this database is used when `--database` is omitted |
 | `migrations_dir` | `str | None` | `None` | custom migration directory path (defaults to `migrations/<database_name>`) |
+| `migration_table` | `str | None` | `None` | custom migration tracking table name (defaults to `_dbwarden_migrations`) |
 | `model_paths` | `list[str] | None` | `None` | list of Python import paths containing SQLAlchemy models for this database |
 | `dev_database_type` | `str | None` | `None` | backend type for local development (used with `--dev`) |
 | `dev_database_url` | `str | None` | `None` | connection URL for local development (used with `--dev`) |
@@ -156,6 +158,32 @@ model_paths=["app.models.api.v1", "app.models.api.v2"]
 
 !!! info "Multi-Database"
     See **[Multi-Database Guide](../configuration/multi-database.md)** for organizing models across databases.
+
+### `migration_table`
+
+Name of the table DBWarden uses to record applied migrations and repeatable migration checksums.
+
+- Defaults to `_dbwarden_migrations`
+- Must be a valid SQL identifier
+- Applies per database entry
+- Only affects migration tracking metadata; lock tables are separate
+
+**Example:**
+
+```python
+database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url="postgresql://localhost/myapp",
+    migration_table="custom_migrations",
+)
+```
+
+Use this when:
+
+- integrating with an existing database that already reserves a migrations table name
+- isolating DBWarden metadata under a project-specific convention
 
 ### `dev_database_type` and `dev_database_url`
 

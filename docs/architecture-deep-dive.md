@@ -58,6 +58,7 @@ Rollback uses the same lock discipline, selecting rollback SQL from applied file
 4. compare against known schema state (database + migration history)
 5. generate upgrade and rollback SQL
 6. write migration file
+7. write companion `.plan.json` metadata file
 
 ## Repeatable migration model
 

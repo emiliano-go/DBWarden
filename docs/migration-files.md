@@ -22,6 +22,14 @@ primary__0002_add_users_table.sql
 analytics__0001_create_events.sql
 ```
 
+When a migration is auto-generated with `make-migrations`, DBWarden also writes a companion plan file:
+
+```text
+primary__0001_initial_schema.plan.json
+```
+
+That file captures machine-readable metadata for CI and debugging and is not executed by `migrate`.
+
 ## Required sections
 
 Each migration file must define both:
@@ -55,7 +63,7 @@ DBWarden supports three execution classes:
 
 ## Execution model
 
-At runtime, DBWarden builds a plan from file discovery + migration metadata:
+At runtime, DBWarden builds an execution plan from file discovery + migration metadata:
 
 1. read versioned files and filter already-applied versions
 2. include `RA__` files
