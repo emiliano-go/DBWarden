@@ -112,6 +112,7 @@ class ModelColumn:
         unique: bool,
         default: Optional[str],
         foreign_key: Optional[str],
+        codec: Optional[str] = None,
     ):
         self.name = name
         self.type = type
@@ -120,6 +121,7 @@ class ModelColumn:
         self.unique = unique
         self.default = default
         self.foreign_key = foreign_key
+        self.codec = codec
 
     def to_dict(self) -> dict:
         return {
@@ -130,6 +132,7 @@ class ModelColumn:
             "unique": self.unique,
             "default": self.default,
             "foreign_key": self.foreign_key,
+            "codec": self.codec,
         }
 
 
@@ -140,15 +143,136 @@ class ModelTable:
         self,
         name: str,
         columns: List[ModelColumn],
+        clickhouse_options: Optional[dict] = None,
     ):
         self.name = name
         self.columns = columns
+        self.clickhouse_options = clickhouse_options or {}
 
     def to_dict(self) -> dict:
         return {
             "name": self.name,
             "columns": [col.to_dict() for col in self.columns],
+            "clickhouse_options": self.clickhouse_options,
         }
+
+
+def _extract_table_args_dict(model_class: type) -> dict:
+    table_args = getattr(model_class, "__table_args__", None)
+    if isinstance(table_args, dict):
+        return table_args
+    if isinstance(table_args, tuple) and table_args and isinstance(table_args[-1], dict):
+        return table_args[-1]
+    return {}
+
+
+def _clickhouse_options_for_model(model_class: type) -> dict:
+    table_args = _extract_table_args_dict(model_class)
+    keys = {
+        "clickhouse_engine",
+        "clickhouse_order_by",
+        "clickhouse_primary_key",
+        "clickhouse_partition_by",
+        "clickhouse_sample_by",
+        "clickhouse_ttl",
+    }
+    options = {key: table_args[key] for key in keys if key in table_args}
+    _validate_clickhouse_options(options)
+    return options
+
+
+def _validate_clickhouse_options(options: dict) -> None:
+    order_by = options.get("clickhouse_order_by")
+    primary_key = options.get("clickhouse_primary_key")
+
+    if order_by is not None and not isinstance(order_by, (str, list, tuple)):
+        raise ValueError("clickhouse_order_by must be a string or list/tuple of strings")
+
+    if isinstance(order_by, (list, tuple)):
+        if not order_by:
+            raise ValueError("clickhouse_order_by cannot be empty")
+        if not all(isinstance(item, str) and item.strip() for item in order_by):
+            raise ValueError("clickhouse_order_by entries must be non-empty strings")
+
+    if primary_key is not None and not isinstance(primary_key, (str, list, tuple)):
+        raise ValueError(
+            "clickhouse_primary_key must be a string or list/tuple of strings"
+        )
+
+    if isinstance(primary_key, (list, tuple)):
+        if not primary_key:
+            raise ValueError("clickhouse_primary_key cannot be empty")
+        if not all(isinstance(item, str) and item.strip() for item in primary_key):
+            raise ValueError("clickhouse_primary_key entries must be non-empty strings")
+
+    if isinstance(order_by, (list, tuple)) and primary_key:
+        normalized = [item.strip() for item in order_by]
+        if isinstance(primary_key, str):
+            primary_key_parts = [primary_key]
+        else:
+            primary_key_parts = [item.strip() for item in primary_key]
+
+        if normalized[: len(primary_key_parts)] != primary_key_parts:
+            raise ValueError(
+                "clickhouse_primary_key must be a prefix of clickhouse_order_by"
+            )
+
+    ttl = options.get("clickhouse_ttl")
+    if ttl is not None:
+        if not isinstance(ttl, (list, tuple)):
+            raise ValueError("clickhouse_ttl must be a list/tuple of expressions")
+        if not all(isinstance(item, str) and item.strip() for item in ttl):
+            raise ValueError("clickhouse_ttl entries must be non-empty strings")
+
+
+def _format_clickhouse_expression(value: str | list[str] | tuple[str, ...]) -> str:
+    if isinstance(value, str):
+        return value
+    return "(" + ", ".join(value) + ")"
+
+
+def _format_clickhouse_engine(value: str | tuple | list) -> str:
+    if isinstance(value, str):
+        return f"{value}()"
+    if isinstance(value, (tuple, list)) and value:
+        engine_name = value[0]
+        if not isinstance(engine_name, str) or not engine_name.strip():
+            raise ValueError("clickhouse_engine must start with a non-empty engine name")
+        args = ", ".join(str(item) for item in value[1:])
+        return f"{engine_name}({args})"
+    raise ValueError("clickhouse_engine must be a string or tuple/list")
+
+
+def _render_clickhouse_table_suffix(table: ModelTable) -> str:
+    options = table.clickhouse_options
+    if not options:
+        return " ENGINE = MergeTree()"
+
+    parts: list[str] = []
+    engine = options.get("clickhouse_engine", "MergeTree")
+    parts.append(f"ENGINE = {_format_clickhouse_engine(engine)}")
+
+    order_by = options.get("clickhouse_order_by")
+    if order_by is not None:
+        parts.append(f"ORDER BY {_format_clickhouse_expression(order_by)}")
+
+    primary_key = options.get("clickhouse_primary_key")
+    if primary_key:
+        parts.append(f"PRIMARY KEY {_format_clickhouse_expression(primary_key)}")
+
+    partition_by = options.get("clickhouse_partition_by")
+    if partition_by:
+        parts.append(f"PARTITION BY {partition_by}")
+
+    sample_by = options.get("clickhouse_sample_by")
+    if sample_by:
+        parts.append(f"SAMPLE BY {sample_by}")
+
+    ttl = options.get("clickhouse_ttl")
+    if ttl:
+        parts.append("TTL " + ", ".join(ttl))
+
+    return "\n" + "\n".join(parts)
 
 
 def load_model_from_path(filepath: str) -> Optional[ModuleType]:
@@ -355,7 +479,15 @@ def extract_table_from_model(
             if col:
                 columns.append(col)
 
-        return ModelTable(name=table_name, columns=columns)
+        clickhouse_options = {}
+        if _get_backend_name(db_name) == "clickhouse":
+            clickhouse_options = _clickhouse_options_for_model(model_class)
+
+        return ModelTable(
+            name=table_name,
+            columns=columns,
+            clickhouse_options=clickhouse_options,
+        )
     except Exception:
         return None
 
@@ -374,6 +506,10 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
     try:
         name = column.name
         type_str = str(column.type)
+        if _get_backend_name(db_name) == "clickhouse":
+            clickhouse_type_override = column.info.get("clickhouse_type")
+            if isinstance(clickhouse_type_override, str) and clickhouse_type_override.strip():
+                type_str = clickhouse_type_override.strip()
         nullable = column.nullable
         primary_key = column.primary_key
         unique = column.unique
@@ -453,6 +589,12 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
             else:
                 foreign_key = colspec
 
+        codec = None
+        if _get_backend_name(db_name) == "clickhouse":
+            clickhouse_codec = column.info.get("clickhouse_codec")
+            if isinstance(clickhouse_codec, str) and clickhouse_codec.strip():
+                codec = clickhouse_codec.strip()
+
         return ModelColumn(
             name=name,
             type=type_str,
@@ -461,6 +603,7 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
             unique=unique,
             default=default,
             foreign_key=foreign_key,
+            codec=codec,
         )
     except Exception:
         return None
@@ -557,11 +700,15 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             col_def += f" DEFAULT {col.default}"
         if col.foreign_key:
             col_def += f" REFERENCES {col.foreign_key}"
+        if backend == "clickhouse" and col.codec:
+            col_def += f" CODEC({col.codec})"
         column_defs.append(col_def)
 
     columns_sql = ",\n".join(column_defs)
-
-    return f"CREATE TABLE IF NOT EXISTS {table.name} (\n{columns_sql}\n)"
+    sql = f"CREATE TABLE IF NOT EXISTS {table.name} (\n{columns_sql}\n)"
+    if backend == "clickhouse":
+        sql += _render_clickhouse_table_suffix(table)
+    return sql
 
 
 def generate_drop_table_sql(table_name: str) -> str:
