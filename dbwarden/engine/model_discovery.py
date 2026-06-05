@@ -144,16 +144,19 @@ class ModelTable:
         name: str,
         columns: List[ModelColumn],
         clickhouse_options: Optional[dict] = None,
+        object_type: str = "table",
     ):
         self.name = name
         self.columns = columns
         self.clickhouse_options = clickhouse_options or {}
+        self.object_type = object_type
 
     def to_dict(self) -> dict:
         return {
             "name": self.name,
             "columns": [col.to_dict() for col in self.columns],
             "clickhouse_options": self.clickhouse_options,
+            "object_type": self.object_type,
         }
 
 
@@ -175,6 +178,12 @@ def _clickhouse_options_for_model(model_class: type) -> dict:
         "clickhouse_partition_by",
         "clickhouse_sample_by",
         "clickhouse_ttl",
+        "clickhouse_mv",
+        "clickhouse_mv_query",
+        "clickhouse_mv_engine",
+        "clickhouse_mv_order_by",
+        "clickhouse_mv_populate",
+        "clickhouse_projections",
     }
     options = {key: table_args[key] for key in keys if key in table_args}
     _validate_clickhouse_options(options)
@@ -184,6 +193,8 @@ def _clickhouse_options_for_model(model_class: type) -> dict:
 def _validate_clickhouse_options(options: dict) -> None:
     order_by = options.get("clickhouse_order_by")
     primary_key = options.get("clickhouse_primary_key")
+    mv_enabled = bool(options.get("clickhouse_mv"))
+    projections = options.get("clickhouse_projections")
 
     if order_by is not None and not isinstance(order_by, (str, list, tuple)):
         raise ValueError("clickhouse_order_by must be a string or list/tuple of strings")
@@ -223,6 +234,49 @@ def _validate_clickhouse_options(options: dict) -> None:
             raise ValueError("clickhouse_ttl must be a list/tuple of expressions")
         if not all(isinstance(item, str) and item.strip() for item in ttl):
             raise ValueError("clickhouse_ttl entries must be non-empty strings")
+
+    if mv_enabled and not options.get("clickhouse_mv_query"):
+        raise ValueError("clickhouse_mv_query is required when clickhouse_mv=True")
+
+    if options.get("clickhouse_mv_query") and not isinstance(
+        options.get("clickhouse_mv_query"), str
+    ):
+        raise ValueError("clickhouse_mv_query must be a string")
+
+    if "clickhouse_mv_populate" in options and not isinstance(
+        options.get("clickhouse_mv_populate"), bool
+    ):
+        raise ValueError("clickhouse_mv_populate must be a boolean")
+
+    mv_order_by = options.get("clickhouse_mv_order_by")
+    if mv_order_by is not None and not isinstance(mv_order_by, (str, list, tuple)):
+        raise ValueError("clickhouse_mv_order_by must be a string or list/tuple of strings")
+
+    if projections is not None:
+        if not isinstance(projections, list):
+            raise ValueError("clickhouse_projections must be a list")
+        for projection in projections:
+            if not isinstance(projection, dict):
+                raise ValueError("clickhouse_projections entries must be objects")
+            if not projection.get("name") or not projection.get("query"):
+                raise ValueError("clickhouse_projections entries require name and query")
+
+
+def _object_type_for_clickhouse_options(options: dict) -> str:
+    if options.get("clickhouse_mv"):
+        return "materialized_view"
+    return "table"
+
+
+def _render_clickhouse_projection(projection: dict) -> str:
+    projection_name = projection["name"]
+    projection_query = projection["query"]
+    return f"PROJECTION {projection_name} ({projection_query})"
+
+
+def _render_clickhouse_projections(table: ModelTable) -> list[str]:
+    projections = table.clickhouse_options.get("clickhouse_projections") or []
+    return [_render_clickhouse_projection(projection) for projection in projections]
 
 
 def _format_clickhouse_expression(value: str | list[str] | tuple[str, ...]) -> str:
@@ -480,13 +534,16 @@ def extract_table_from_model(
                 columns.append(col)
 
         clickhouse_options = {}
+        object_type = "table"
         if _get_backend_name(db_name) == "clickhouse":
             clickhouse_options = _clickhouse_options_for_model(model_class)
+            object_type = _object_type_for_clickhouse_options(clickhouse_options)
 
         return ModelTable(
             name=table_name,
             columns=columns,
             clickhouse_options=clickhouse_options,
+            object_type=object_type,
         )
     except Exception:
         return None
@@ -704,17 +761,67 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             col_def += f" CODEC({col.codec})"
         column_defs.append(col_def)
 
-    columns_sql = ",\n".join(column_defs)
-    sql = f"CREATE TABLE IF NOT EXISTS {table.name} (\n{columns_sql}\n)"
     if backend == "clickhouse":
-        sql += _render_clickhouse_table_suffix(table)
+        column_defs.extend(f"    {projection_sql}" for projection_sql in _render_clickhouse_projections(table))
+
+    columns_sql = ",\n".join(column_defs)
+    if backend == "clickhouse" and table.object_type == "materialized_view":
+        sql = _generate_clickhouse_materialized_view_sql(table, columns_sql)
+    else:
+        sql = f"CREATE TABLE IF NOT EXISTS {table.name} (\n{columns_sql}\n)"
+    if backend == "clickhouse":
+        if table.object_type == "table":
+            sql += _render_clickhouse_table_suffix(table)
     return sql
+
+
+def _generate_clickhouse_materialized_view_sql(
+    table: ModelTable,
+    columns_sql: str,
+) -> str:
+    options = table.clickhouse_options
+    parts = [f"CREATE MATERIALIZED VIEW IF NOT EXISTS {table.name} (\n{columns_sql}\n)"]
+    if options.get("clickhouse_mv_populate"):
+        parts[0] += " POPULATE"
+
+    engine = options.get("clickhouse_mv_engine") or options.get("clickhouse_engine") or "MergeTree"
+    parts.append(f"ENGINE = {_format_clickhouse_engine(engine)}")
+
+    order_by = options.get("clickhouse_mv_order_by") or options.get("clickhouse_order_by")
+    if order_by is not None:
+        parts.append(f"ORDER BY {_format_clickhouse_expression(order_by)}")
+
+    primary_key = options.get("clickhouse_primary_key")
+    if primary_key:
+        parts.append(f"PRIMARY KEY {_format_clickhouse_expression(primary_key)}")
+
+    partition_by = options.get("clickhouse_partition_by")
+    if partition_by:
+        parts.append(f"PARTITION BY {partition_by}")
+
+    sample_by = options.get("clickhouse_sample_by")
+    if sample_by:
+        parts.append(f"SAMPLE BY {sample_by}")
+
+    ttl = options.get("clickhouse_ttl")
+    if ttl:
+        parts.append("TTL " + ", ".join(ttl))
+
+    parts.append(f"AS {options['clickhouse_mv_query']}")
+    return "\n".join(parts)
 
 
 def generate_drop_table_sql(table_name: str) -> str:
     """Generate DROP TABLE SQL."""
     _validate_identifier(table_name, "table_name")
     return f"DROP TABLE {table_name}"
+
+
+def generate_drop_object_sql(table: ModelTable) -> str:
+    _validate_identifier(table.name, "table_name")
+    if table.object_type == "materialized_view":
+        return f"DROP VIEW {table.name}"
+    return generate_drop_table_sql(table.name)
 
 
 def extract_tables_from_database(sqlalchemy_url: str) -> dict[str, set[str]]:
