@@ -14,7 +14,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=os.getenv("DATABASE_URL"),
+    database_url_sync=os.getenv("DATABASE_URL"),
     model_paths=["app.models"],
     secure_values=True,
 )
@@ -33,7 +33,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=DATABASE_URL,
+    database_url_sync=DATABASE_URL,
     model_paths=["app.models"],
     secure_values=True,
 )
@@ -48,7 +48,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=os.getenv(
+    database_url_sync=os.getenv(
         "DATABASE_URL",
         "postgresql://localhost/myapp"  # Fallback
     ),
@@ -88,7 +88,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=os.getenv("DATABASE_URL"),
+    database_url_sync=os.getenv("DATABASE_URL"),
     model_paths=["app.models"],
 )
 ```
@@ -196,7 +196,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=get_database_url(),
+    database_url_sync=get_database_url(),
     model_paths=["app.models"],
     secure_values=True,
 )
@@ -225,7 +225,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=database_url,
+    database_url_sync=database_url,
     model_paths=["app.models"],
 )
 ```
@@ -253,7 +253,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type=database_type,
-    database_url=database_url,
+    database_url_sync=database_url,
     model_paths=["app.models"],
     secure_values=(ENVIRONMENT != "dev"),
 )
@@ -281,7 +281,7 @@ def setup_databases():
         database_name="primary",
         default=True,
         database_type="postgresql",
-        database_url=os.getenv("DATABASE_URL"),
+        database_url_sync=os.getenv("DATABASE_URL"),
         model_paths=["app.models"],
         secure_values=True,
     )
@@ -296,7 +296,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=(
+    database_url_sync=(
         "postgresql://user:pass@localhost/myapp"
         "?pool_size=20"
         "&max_overflow=10"
@@ -315,7 +315,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:pass@pgbouncer:6432/myapp",
+    database_url_sync="postgresql://user:pass@pgbouncer:6432/myapp",
     model_paths=["app.models"],
 )
 ```
@@ -329,7 +329,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=(
+    database_url_sync=(
         "postgresql://user:pass@host/myapp"
         "?sslmode=require"
         "&sslrootcert=/path/to/ca.pem"
@@ -358,7 +358,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=database_url,
+    database_url_sync=database_url,
     model_paths=["app.models"],
 )
 ```
@@ -373,7 +373,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=os.getenv("PRIMARY_DATABASE_URL"),
+    database_url_sync=os.getenv("PRIMARY_DATABASE_URL"),
     model_paths=["app.models"],
 )
 
@@ -381,7 +381,7 @@ database_config(
 database_config(
     database_name="replica",
     database_type="postgresql",
-    database_url=os.getenv("REPLICA_DATABASE_URL"),
+    database_url_sync=os.getenv("REPLICA_DATABASE_URL"),
     model_paths=["app.models"],
     overlap_models=True,
 )
@@ -403,7 +403,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=database_url,
+    database_url_sync=database_url,
     model_paths=["app.models"],
 )
 ```
@@ -427,7 +427,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=database_url,
+    database_url_sync=database_url,
     model_paths=["app.models"],
 )
 ```
@@ -446,10 +446,10 @@ GROUP BY application_name;
 
 ```python
 # ❌ Bad
-database_url="postgresql://user:password@localhost/myapp"
+database_url_sync="postgresql://user:password@localhost/myapp"
 
 # ✅ Good
-database_url=os.getenv("DATABASE_URL")
+database_url_sync=os.getenv("DATABASE_URL")
 ```
 
 ### Use Least Privilege
@@ -473,7 +473,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=database_url,
+    database_url_sync=database_url,
     model_paths=["app.models"],
 )
 ```

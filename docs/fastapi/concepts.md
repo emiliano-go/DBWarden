@@ -28,7 +28,7 @@ With DBWarden, you have **one source of truth**:
 ```python
 # dbwarden.py - Single config
 database_config(
-    database_url="postgresql://...",
+    database_url_sync="postgresql://...",
     model_paths=["app.models"],
 )
 
@@ -236,10 +236,11 @@ Your URLs are automatically upgraded:
 
 ```python
 # Your config
-database_url="postgresql://localhost/myapp"
+database_url_sync="postgresql://localhost/myapp"
 
-# DBWarden uses
-database_url="postgresql+asyncpg://localhost/myapp"
+# DBWarden derives an async URL for its internal async engine
+# (uses the configured database_url_async if provided, or upgrades from database_url_sync)
+database_url_async="postgresql+asyncpg://localhost/myapp"
 ```
 
 ## expire_on_commit
@@ -301,7 +302,7 @@ Example:
 
 ```python
 database_config(
-    database_url="postgresql://prod-db/myapp",
+    database_url_sync="postgresql://prod-db/myapp",
     dev_database_url="sqlite:///dev.db",
 )
 

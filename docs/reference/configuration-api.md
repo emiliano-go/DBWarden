@@ -12,9 +12,11 @@ Complete reference for the `database_config()` function.
 
 ```python
 def database_config(
+    *,
     database_name: str,
-    database_type: Literal["sqlite", "postgresql", "mysql", "mariadb", "clickhouse"],
-    database_url: str,
+    database_type: Literal["sqlite", "postgresql", "mysql", "mariadb", "clickhouse"] = "sqlite",
+    database_url_sync: str | None = None,
+    database_url_async: str | None = None,
     default: bool = False,
     migrations_dir: str | None = None,
     migration_table: str | None = None,
@@ -23,8 +25,8 @@ def database_config(
     dev_database_url: str | None = None,
     overlap_models: bool = False,
     secure_values: bool = False,
-) -> None:
-    """Register a database in DBWarden."""
+) -> DatabaseHandle:
+    """Register a database in DBWarden and return a handle with session dependencies."""
 ```
 
 ## Required arguments
@@ -32,13 +34,16 @@ def database_config(
 | Argument | Type | Description |
 |----------|------|-------------|
 | `database_name` | `str` | unique name for this database in your project |
-| `database_type` | `str` | backend type: `sqlite`, `postgresql`, `mysql`, `mariadb`, or `clickhouse` |
-| `database_url` | `str` | connection URL for this database |
+| `database_type` | `str` | backend type: `sqlite`, `postgresql`, `mysql`, `mariadb`, or `clickhouse` (default: `"sqlite"`) |
+
+At least one of `database_url_sync` or `database_url_async` must be provided.
 
 ## Optional arguments
 
 | Argument | Type | Default | Description |
 |----------|------|---------|-------------|
+| `database_url_sync` | `str | None` | `None` | synchronous connection URL (used by migrations, CLI, and sync sessions) |
+| `database_url_async` | `str | None` | `None` | async connection URL (used by async sessions; falls back to `database_url_sync` if omitted) |
 | `default` | `bool` | `False` | if `True`, this database is used when `--database` is omitted |
 | `migrations_dir` | `str | None` | `None` | custom migration directory path (defaults to `migrations/<database_name>`) |
 | `migration_table` | `str | None` | `None` | custom migration tracking table name (defaults to `_dbwarden_migrations`) |
@@ -79,31 +84,37 @@ The database backend technology. Each value determines:
 
 Valid values: `sqlite`, `postgresql`, `mysql`, `mariadb`, `clickhouse`
 
-### `database_url`
+### `database_url_sync` and `database_url_async`
 
-A connection URL string in the format:
+Connection URL strings in the format:
 
 ```
 [dialect+driver://user:password@]host[:port][/database][?options]
 ```
 
+- **`database_url_sync`** — used by CLI commands (`migrate`, `init`, etc.) and any sync session
+- **`database_url_async`** — used by async sessions (FastAPI); falls back to `database_url_sync` if omitted
+
+At least one must be provided. If only `database_url_sync` is given, async sessions will use it (with async driver substitution like `postgresql://...` → `postgresql+asyncpg://...`).
+
 Examples:
 
 ```python
-# PostgreSQL
-database_url = "postgresql://user:password@localhost:5432/mydb"
+# Both sync and async (recommended for FastAPI projects)
+database_url_sync = "postgresql://user:password@localhost:5432/mydb"
+database_url_async = "postgresql+asyncpg://user:password@localhost:5432/mydb"
+
+# Sync only (CLI-only projects)
+database_url_sync = "postgresql://user:password@localhost:5432/mydb"
 
 # SQLite (relative path)
-database_url = "sqlite:///./development.db"
-
-# SQLite (absolute path)
-database_url = "sqlite:////absolute/path/to/database.db"
+database_url_sync = "sqlite:///./development.db"
 
 # MySQL
-database_url = "mysql://user:password@localhost:3306/mydb"
+database_url_sync = "mysql://user:password@localhost:3306/mydb"
 
 # ClickHouse
-database_url = "http://user:password@clickhouse-host:8123/mydb"
+database_url_sync = "http://user:password@clickhouse-host:8123/mydb"
 ```
 
 ### `default`
@@ -175,7 +186,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/myapp",
+    database_url_sync="postgresql://localhost/myapp",
     migration_table="custom_migrations",
 )
 ```
@@ -191,7 +202,7 @@ These define an alternate connection for local development workflows.
 
 When `--dev` is passed to any DBWarden command:
 - `database_type` is swapped to `dev_database_type`
-- `database_url` is swapped to `dev_database_url`
+- `database_url_sync` / `database_url_async` are swapped to `dev_database_url`
 
 **Benefits:**
 - ✅ Use SQLite locally for speed (if production is PostgreSQL)
@@ -206,7 +217,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://prod-host/myapp",
+    database_url_sync="postgresql://prod-host/myapp",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./dev.db",
 )
@@ -252,7 +263,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=DATABASE_URL,
+    database_url_sync=DATABASE_URL,
     secure_values=True,  # ← Enable secure display
 )
 ```
@@ -272,6 +283,49 @@ URL: DATABASE_URL (expression)
 !!! warning "Production Requirement"
     Always set `secure_values=True` in production to prevent credential exposure in logs.
 
+## Return value: `DatabaseHandle`
+
+`database_config()` returns a [`DatabaseHandle`][dbwarden.db_handle.DatabaseHandle] object with two
+properties designed as FastAPI dependency annotations:
+
+| Property | Resolves to (SQL) | Resolves to (ClickHouse) |
+|----------|-------------------|--------------------------|
+| `.async_session` | `Annotated[AsyncSession, Depends(...)]` | `Annotated[AsyncClient, Depends(...)]` |
+| `.sync_session` | `Annotated[Session, Depends(...)]` | `Annotated[Client, Depends(...)]` |
+
+Use them as type hints in FastAPI route parameters. The handle serves as
+a namespace so you never confuse which database a session belongs to:
+
+```python
+# dbwarden.py
+from dbwarden import database_config
+
+primary = database_config(database_name="primary", ...)
+analytics = database_config(database_name="analytics", ...)
+```
+
+```python
+# routes.py
+from ..dbwarden import primary, analytics
+
+@router.get("/users")
+async def get_users(session: primary.async_session):
+    return await session.execute(...)
+
+@router.get("/reports")
+def get_reports(session: analytics.sync_session):
+    return session.execute(...)
+```
+
+!!! tip
+    Use `.async_session` for async route handlers and `.sync_session` for sync
+    handlers. The deprecated `.session` property (aliased to `.async_session`)
+    will be removed in a future version.
+
+!!! info "Not using FastAPI?"
+    `DatabaseHandle` is still useful as a typed container — access
+    `handle._name` and `handle._db_type` for the raw config values.
+
 ## Configuration rules (enforced at load time)
 
 DBWarden validates your config to prevent dangerous misconfigurations:
@@ -280,7 +334,7 @@ DBWarden validates your config to prevent dangerous misconfigurations:
 |------|---------------------------|
 | Exactly one `default=True` | `Exactly one default=True required` |
 | Unique `database_name` across all entries | `Duplicate database_name` |
-| Unique `database_url` across all entries | `Duplicate database_url` |
+| Unique `database_url_sync` across all entries | `Duplicate database_url_sync` |
 | Unique physical target (even across credentials) | `Duplicate database target detected` |
 | Required `model_paths` when multiple databases | `model_paths is required when more than one database is configured` |
 | Explicit `overlap_models` when paths overlap | `model_paths overlap detected` |
@@ -298,6 +352,10 @@ The resolution priority is:
 
 If more than one discovery source is found, DBWarden fails with an ambiguity error.
 
+### Security sandbox
+
+Config files are loaded with path traversal protection that ensures the file is within the project tree. See [Configuration Concepts → Config Loading Security](../configuration/concepts.md#config-loading-security-sandbox).
+
 ## Examples
 
 ### Minimal single-database setup
@@ -310,7 +368,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost:5432/mydb",
+    database_url_sync="postgresql://user:password@localhost:5432/mydb",
 )
 ```
 
@@ -324,7 +382,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost:5432/mydb",
+    database_url_sync="postgresql://user:password@localhost:5432/mydb",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./development.db",
 )
@@ -340,14 +398,14 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost:5432/main",
+    database_url_sync="postgresql://user:password@localhost:5432/main",
     model_paths=["app/models/api"],
 )
 
 database_config(
     database_name="analytics",
     database_type="clickhouse",
-    database_url="http://clickhouse:password@clickhouse-host:8123/analytics",
+    database_url_sync="http://clickhouse:password@clickhouse-host:8123/analytics",
     model_paths=["app/models/analytics"],
 )
 ```
@@ -357,8 +415,9 @@ database_config(
 | Parameter | Required? | Default | Use When |
 |-----------|-----------|---------|----------|
 | `database_name` | ✅ Yes | - | Always |
-| `database_type` | ✅ Yes | - | Always |
-| `database_url` | ✅ Yes | - | Always |
+| `database_type` | ❌ No | `"sqlite"` | Non-SQLite backends |
+| `database_url_sync` | ⚠️ Conditional | `None` | CLI or sync sessions |
+| `database_url_async` | ❌ No | `None` | Async sessions (FastAPI) |
 | `default` | ❌ No | `False` | Mark one database as default |
 | `migrations_dir` | ❌ No | `migrations/<name>` | Custom migration directory |
 | `model_paths` | ⚠️ Conditional | `None` | Multi-database or explicit discovery |

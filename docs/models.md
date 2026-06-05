@@ -11,7 +11,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:pass@localhost:5432/main",
+    database_url_sync="postgresql://user:pass@localhost:5432/main",
     model_paths=["app/models"],
 )
 ```

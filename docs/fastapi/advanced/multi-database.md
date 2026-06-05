@@ -24,7 +24,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost/myapp",
+    database_url_sync="postgresql://user:password@localhost/myapp",
     model_paths=["app.models.primary"],
 )
 
@@ -32,7 +32,7 @@ database_config(
 database_config(
     database_name="analytics",
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost/analytics",
+    database_url_sync="postgresql://user:password@localhost/analytics",
     model_paths=["app.models.analytics"],
 )
 
@@ -40,7 +40,7 @@ database_config(
 database_config(
     database_name="logging",
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost/logs",
+    database_url_sync="postgresql://user:password@localhost/logs",
     model_paths=["app.models.logging"],
 )
 ```

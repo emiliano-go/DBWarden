@@ -22,27 +22,27 @@ postgresql://[user[:password]@][host][:port]/database[?options]
 
 **Local default:**
 ```python
-database_url="postgresql://localhost/myapp"
+database_url_sync="postgresql://localhost/myapp"
 ```
 
 **With credentials:**
 ```python
-database_url="postgresql://user:password@localhost:5432/myapp"
+database_url_sync="postgresql://user:password@localhost:5432/myapp"
 ```
 
 **Remote host:**
 ```python
-database_url="postgresql://user:password@db.example.com:5432/myapp"
+database_url_sync="postgresql://user:password@db.example.com:5432/myapp"
 ```
 
 **With SSL:**
 ```python
-database_url="postgresql://user:password@localhost/myapp?sslmode=require"
+database_url_sync="postgresql://user:password@localhost/myapp?sslmode=require"
 ```
 
 **With connection pool:**
 ```python
-database_url="postgresql://user:password@localhost/myapp?pool_size=20&max_overflow=10"
+database_url_sync="postgresql://user:password@localhost/myapp?pool_size=20&max_overflow=10"
 ```
 
 ### SSL Modes
@@ -58,7 +58,7 @@ database_url="postgresql://user:password@localhost/myapp?pool_size=20&max_overfl
 
 **Example:**
 ```python
-database_url="postgresql://user:pass@host/db?sslmode=verify-full&sslrootcert=/path/to/ca.pem"
+database_url_sync="postgresql://user:pass@host/db?sslmode=verify-full&sslrootcert=/path/to/ca.pem"
 ```
 
 ### Common Options
@@ -76,23 +76,23 @@ database_url="postgresql://user:pass@host/db?sslmode=verify-full&sslrootcert=/pa
 
 **AWS RDS:**
 ```python
-database_url="postgresql://user:pass@mydb.abc123.us-east-1.rds.amazonaws.com:5432/myapp?sslmode=require"
+database_url_sync="postgresql://user:pass@mydb.abc123.us-east-1.rds.amazonaws.com:5432/myapp?sslmode=require"
 ```
 
 **Google Cloud SQL:**
 ```python
-database_url="postgresql://user:pass@/myapp?host=/cloudsql/project:region:instance"
+database_url_sync="postgresql://user:pass@/myapp?host=/cloudsql/project:region:instance"
 ```
 
 **Azure Database:**
 ```python
-database_url="postgresql://user@server:pass@server.postgres.database.azure.com:5432/myapp?sslmode=require"
+database_url_sync="postgresql://user@server:pass@server.postgres.database.azure.com:5432/myapp?sslmode=require"
 ```
 
 **Heroku:**
 ```python
 import os
-database_url=os.getenv("DATABASE_URL")  # Provided by Heroku
+database_url_sync=os.getenv("DATABASE_URL")  # Provided by Heroku
 ```
 
 ## SQLite
@@ -107,18 +107,18 @@ sqlite:///[path]
 
 **Relative path:**
 ```python
-database_url="sqlite:///./app.db"
-database_url="sqlite:///./data/app.db"
+database_url_sync="sqlite:///./app.db"
+database_url_sync="sqlite:///./data/app.db"
 ```
 
 **Absolute path:**
 ```python
-database_url="sqlite:////absolute/path/to/app.db"
+database_url_sync="sqlite:////absolute/path/to/app.db"
 ```
 
 **In-memory (testing only):**
 ```python
-database_url="sqlite:///:memory:"
+database_url_sync="sqlite:///:memory:"
 ```
 
 !!! warning "In-Memory Databases"
@@ -133,7 +133,7 @@ database_url="sqlite:///:memory:"
 
 **Example:**
 ```python
-database_url="sqlite:///./app.db?timeout=20"
+database_url_sync="sqlite:///./app.db?timeout=20"
 ```
 
 ## MySQL / MariaDB
@@ -148,17 +148,17 @@ mysql://[user[:password]@][host][:port]/database[?options]
 
 **Local:**
 ```python
-database_url="mysql://root:password@localhost:3306/myapp"
+database_url_sync="mysql://root:password@localhost:3306/myapp"
 ```
 
 **With charset:**
 ```python
-database_url="mysql://user:pass@localhost/myapp?charset=utf8mb4"
+database_url_sync="mysql://user:pass@localhost/myapp?charset=utf8mb4"
 ```
 
 **With SSL:**
 ```python
-database_url="mysql://user:pass@localhost/myapp?ssl_ca=/path/to/ca.pem"
+database_url_sync="mysql://user:pass@localhost/myapp?ssl_ca=/path/to/ca.pem"
 ```
 
 ### Common Options
@@ -175,7 +175,7 @@ database_url="mysql://user:pass@localhost/myapp?ssl_ca=/path/to/ca.pem"
 MariaDB uses the same URL format as MySQL:
 
 ```python
-database_url="mysql://user:pass@localhost:3306/myapp"
+database_url_sync="mysql://user:pass@localhost:3306/myapp"
 ```
 
 Configure with `database_type="mariadb"`:
@@ -184,7 +184,7 @@ Configure with `database_type="mariadb"`:
 database_config(
     database_name="primary",
     database_type="mariadb",
-    database_url="mysql://localhost/myapp",
+    database_url_sync="mysql://localhost/myapp",
 )
 ```
 
@@ -200,17 +200,17 @@ http://[user[:password]@]host[:port]/database[?options]
 
 **Local:**
 ```python
-database_url="http://default:@localhost:8123/myapp"
+database_url_sync="http://default:@localhost:8123/myapp"
 ```
 
 **With authentication:**
 ```python
-database_url="http://user:password@localhost:8123/myapp"
+database_url_sync="http://user:password@localhost:8123/myapp"
 ```
 
 **With HTTPS:**
 ```python
-database_url="https://user:password@clickhouse.example.com:8443/myapp"
+database_url_sync="https://user:password@clickhouse.example.com:8443/myapp"
 ```
 
 ### Common Options
@@ -224,7 +224,7 @@ database_url="https://user:password@clickhouse.example.com:8443/myapp"
 
 **Example:**
 ```python
-database_url="http://user:pass@localhost:8123/myapp?compression=1&connect_timeout=10"
+database_url_sync="http://user:pass@localhost:8123/myapp?compression=1&connect_timeout=10"
 ```
 
 ## Environment Variables
@@ -238,7 +238,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=os.getenv("DATABASE_URL"),
+    database_url_sync=os.getenv("DATABASE_URL"),
 )
 ```
 
@@ -253,7 +253,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql" if "postgresql" in database_url else "sqlite",
-    database_url=database_url,
+    database_url_sync=database_url,
 )
 ```
 
@@ -270,7 +270,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=DATABASE_URL,
+    database_url_sync=DATABASE_URL,
 )
 ```
 
@@ -283,13 +283,13 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=os.getenv("PRIMARY_DATABASE_URL"),
+    database_url_sync=os.getenv("PRIMARY_DATABASE_URL"),
 )
 
 database_config(
     database_name="analytics",
     database_type="postgresql",
-    database_url=os.getenv("ANALYTICS_DATABASE_URL"),
+    database_url_sync=os.getenv("ANALYTICS_DATABASE_URL"),
 )
 ```
 
@@ -314,7 +314,7 @@ If your password contains special characters, URL-encode them:
 Password: `p@ss:word`
 
 ```python
-database_url="postgresql://user:p%40ss%3Aword@localhost/myapp"
+database_url_sync="postgresql://user:p%40ss%3Aword@localhost/myapp"
 ```
 
 ### Python URL Encoding
@@ -336,7 +336,7 @@ database_url = f"postgresql://{username}:{quote_plus(password)}@{host}/{database
 ### PostgreSQL Pool Options
 
 ```python
-database_url="postgresql://user:pass@localhost/myapp?pool_size=20&max_overflow=10&pool_timeout=30"
+database_url_sync="postgresql://user:pass@localhost/myapp?pool_size=20&max_overflow=10&pool_timeout=30"
 ```
 
 | Option | Description | Default |
@@ -351,7 +351,7 @@ database_url="postgresql://user:pass@localhost/myapp?pool_size=20&max_overflow=1
 Recycle connections after 1 hour:
 
 ```python
-database_url="postgresql://user:pass@localhost/myapp?pool_recycle=3600"
+database_url_sync="postgresql://user:pass@localhost/myapp?pool_recycle=3600"
 ```
 
 ## Testing Connections
@@ -386,37 +386,37 @@ dbwarden check-db
 
 **Wrong:**
 ```python
-database_url="postgresql://user:pass@localhost/myapp"  # Uses default port 5432
+database_url_sync="postgresql://user:pass@localhost/myapp"  # Uses default port 5432
 ```
 
 **If you need a different port:**
 ```python
-database_url="postgresql://user:pass@localhost:5433/myapp"
+database_url_sync="postgresql://user:pass@localhost:5433/myapp"
 ```
 
 ### Missing Slashes
 
 **Wrong:**
 ```python
-database_url="sqlite://./app.db"  # Only 2 slashes
+database_url_sync="sqlite://./app.db"  # Only 2 slashes
 ```
 
 **Correct:**
 ```python
-database_url="sqlite:///./app.db"  # 3 slashes for relative path
-database_url="sqlite:////absolute/path/app.db"  # 4 slashes for absolute path
+database_url_sync="sqlite:///./app.db"  # 3 slashes for relative path
+database_url_sync="sqlite:////absolute/path/app.db"  # 4 slashes for absolute path
 ```
 
 ### Special Characters Not Encoded
 
 **Wrong:**
 ```python
-database_url="postgresql://user:p@ss@localhost/myapp"  # @ not encoded
+database_url_sync="postgresql://user:p@ss@localhost/myapp"  # @ not encoded
 ```
 
 **Correct:**
 ```python
-database_url="postgresql://user:p%40ss@localhost/myapp"  # @ encoded as %40
+database_url_sync="postgresql://user:p%40ss@localhost/myapp"  # @ encoded as %40
 ```
 
 ## Recap

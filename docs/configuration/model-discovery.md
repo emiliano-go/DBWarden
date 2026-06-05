@@ -19,7 +19,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/myapp",
+    database_url_sync="postgresql://localhost/myapp",
     model_paths=["app.models"],  # ← Discover models here
 )
 ```
@@ -61,7 +61,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
-    database_url="sqlite:///./app.db",
+    database_url_sync="sqlite:///./app.db",
     # No model_paths - DBWarden scans entire codebase
 )
 ```
@@ -80,14 +80,14 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/main",
+    database_url_sync="postgresql://localhost/main",
     model_paths=["app.models.primary"],  # ← Required
 )
 
 database_config(
     database_name="analytics",
     database_type="postgresql",
-    database_url="postgresql://localhost/analytics",
+    database_url_sync="postgresql://localhost/analytics",
     model_paths=["app.models.analytics"],  # ← Required
 )
 ```
@@ -470,7 +470,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="...",
+    database_url_sync="...",
     model_paths=model_paths,
 )
 ```

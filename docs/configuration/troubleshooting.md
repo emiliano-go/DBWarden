@@ -48,7 +48,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
-    database_url="sqlite:///./app.db",
+    database_url_sync="sqlite:///./app.db",
 )
 ```
 
@@ -373,7 +373,7 @@ docker ps | grep postgres
 
 ```python
 # Verify host, port, credentials
-database_url="postgresql://user:pass@localhost:5432/myapp"
+database_url_sync="postgresql://user:pass@localhost:5432/myapp"
 ```
 
 3. **Test connection:**

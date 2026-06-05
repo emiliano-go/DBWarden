@@ -21,7 +21,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost:5432/main",
+    database_url_sync="postgresql://user:password@localhost:5432/main",
 )
 ```
 
@@ -31,7 +31,7 @@ MySQL:
 database_config(
     database_name="legacy",
     database_type="mysql",
-    database_url="mysql://user:password@localhost:3306/legacy",
+    database_url_sync="mysql://user:password@localhost:3306/legacy",
 )
 ```
 
@@ -41,7 +41,7 @@ SQLite:
 database_config(
     database_name="dev",
     database_type="sqlite",
-    database_url="sqlite:///./development.db",
+    database_url_sync="sqlite:///./development.db",
 )
 ```
 
@@ -51,7 +51,7 @@ ClickHouse:
 database_config(
     database_name="analytics",
     database_type="clickhouse",
-    database_url="clickhouse://user:password@localhost:8123/analytics",
+    database_url_sync="clickhouse://user:password@localhost:8123/analytics",
 )
 ```
 
@@ -84,7 +84,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost:5432/main",
+    database_url_sync="postgresql://user:password@localhost:5432/main",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./development.db",
 )

@@ -13,7 +13,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/myapp",    # Production
+    database_url_sync="postgresql://localhost/myapp",    # Production
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./dev.db",           # Development
 )
@@ -72,7 +72,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/myapp",
+    database_url_sync="postgresql://localhost/myapp",
     dev_database_type="sqlite",                    # ← Add this
     dev_database_url="sqlite:///./dev.db",         # ← Add this
     model_paths=["app.models"],
@@ -220,7 +220,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/myapp",
+    database_url_sync="postgresql://localhost/myapp",
     dev_database_type="postgresql",                         # Same as prod
     dev_database_url="postgresql://localhost/myapp_dev",    # Different database
 )
@@ -248,7 +248,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type=database_type,
-    database_url=database_url,
+    database_url_sync=database_url,
 )
 ```
 
@@ -272,7 +272,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/main",
+    database_url_sync="postgresql://localhost/main",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./dev_primary.db",
     model_paths=["app.models.primary"],
@@ -282,7 +282,7 @@ database_config(
 database_config(
     database_name="analytics",
     database_type="postgresql",
-    database_url="postgresql://localhost/analytics",
+    database_url_sync="postgresql://localhost/analytics",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./dev_analytics.db",
     model_paths=["app.models.analytics"],
@@ -305,7 +305,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/myapp",
+    database_url_sync="postgresql://localhost/myapp",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./dev.db",
 )
@@ -327,7 +327,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://prod-host/myapp",
+    database_url_sync="postgresql://prod-host/myapp",
     dev_database_type="postgresql",
     dev_database_url="postgresql://localhost/myapp_dev",
 )
@@ -363,7 +363,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type=database_type,
-    database_url=database_url,
+    database_url_sync=database_url,
 )
 ```
 
