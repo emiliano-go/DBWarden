@@ -16,7 +16,7 @@ def config_cmd() -> None:
         marker = " (default)" if name == config.default else ""
         database_url = display_value(
             db,
-            "database_url",
+            "database_url_sync",
             _mask_password(db.sqlalchemy_url),
         )
         console.print(f"  - {name}{marker}", style="cyan")
@@ -25,7 +25,7 @@ def config_cmd() -> None:
             style="white",
         )
         console.print(
-            f"    database_url: {database_url}",
+            f"    database_url_sync: {database_url}",
             style="white",
             markup=False,
             highlight=False,

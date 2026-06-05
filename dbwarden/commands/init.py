@@ -62,7 +62,7 @@ def _ensure_settings_file(settings_path: Path, db_name: str) -> None:
             f'    database_name="{db_name}",\n'
             "    default=True,\n"
             '    database_type="sqlite",\n'
-            '    database_url="sqlite:///./app.db",\n'
+            '    database_url_sync="sqlite:///./app.db",\n'
             f'    migrations_dir="migrations/{db_name}",\n'
             ")\n"
         )
