@@ -91,6 +91,8 @@ def handle_migrate(
     baseline: bool = False,
     with_backup: bool = False,
     backup_dir: str | None = None,
+    dry_run: bool = False,
+    sandbox: bool = False,
 ) -> None:
     """Handle migrate command."""
     migrate_cmd(
@@ -102,6 +104,8 @@ def handle_migrate(
         baseline=baseline,
         with_backup=with_backup,
         backup_dir=backup_dir,
+        dry_run=dry_run,
+        sandbox=sandbox,
     )
 
 
