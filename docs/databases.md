@@ -124,7 +124,10 @@ SQLite:
 ClickHouse:
 
 - Optimized for analytics workloads
-- Use manual SQL for engine/partition/order specifics when needed
+- DBWarden can now render engine and table settings from model metadata
+- Use `__table_args__` for `clickhouse_engine`, `clickhouse_order_by`, `clickhouse_primary_key`, `clickhouse_partition_by`, `clickhouse_sample_by`, and `clickhouse_ttl`
+- Use column `info` for `clickhouse_type` and `clickhouse_codec` hints
+- See [SQLAlchemy Models](models.md) for model examples
 
 ## Recommended Verification Workflow
 
