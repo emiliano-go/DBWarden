@@ -35,6 +35,12 @@ Supported keys:
 - `clickhouse_partition_by`
 - `clickhouse_sample_by`
 - `clickhouse_ttl`
+- `clickhouse_mv`
+- `clickhouse_mv_query`
+- `clickhouse_mv_engine`
+- `clickhouse_mv_order_by`
+- `clickhouse_mv_populate`
+- `clickhouse_projections`
 
 Example:
 
@@ -60,6 +66,48 @@ Notes:
 - tuple/list engine values render positional arguments, for example `("ReplacingMergeTree", "version_column")`
 - `clickhouse_primary_key` may be a string or ordered list/tuple, but it must be a prefix of `clickhouse_order_by`
 - if no ClickHouse engine is configured, DBWarden currently falls back to `ENGINE = MergeTree()`
+
+### Materialized views
+
+Use `clickhouse_mv=True` to render a materialized view instead of a regular table:
+
+```python
+class EventRollup(Base):
+    __tablename__ = "event_rollup_mv"
+    __table_args__ = {
+        "clickhouse_mv": True,
+        "clickhouse_mv_query": "SELECT region, count() AS total FROM events GROUP BY region",
+        "clickhouse_mv_engine": "SummingMergeTree",
+        "clickhouse_mv_order_by": ["region"],
+        "clickhouse_mv_populate": False,
+    }
+```
+
+Notes:
+
+- `clickhouse_mv_query` is required when `clickhouse_mv=True`
+- `clickhouse_mv_populate=True` is supported but should be used cautiously
+- materialized view SQL is rendered as `CREATE MATERIALIZED VIEW ... AS SELECT ...`
+
+### Projections
+
+Attach projections directly to a ClickHouse table:
+
+```python
+__table_args__ = {
+    "clickhouse_order_by": ["author", "created_at"],
+    "clickhouse_projections": [
+        {"name": "by_author", "query": "SELECT * ORDER BY author"},
+        {"name": "daily_stats", "query": "SELECT toDate(created_at) AS day, count() GROUP BY day"},
+    ],
+}
+```
+
+Current behavior:
+
+- projection definitions are rendered into generated ClickHouse DDL
+- safety checks classify added projections as `INFO`
+- removed projections are classified as `WARNING`
 
 ### Column hints
 

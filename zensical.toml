@@ -90,6 +90,9 @@ name = "DBWarden on PyPI"
 "CLI Reference" = "cli-reference.md"
 
 [[project.nav]]
+"Check" = "commands/check.md"
+
+[[project.nav]]
 "Configuration API" = "reference/configuration-api.md"
 
 [project.markdown_extensions.tables]

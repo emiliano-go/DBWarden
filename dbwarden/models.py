@@ -80,3 +80,14 @@ class SchemaDifference:
     table_name: str
     column_name: str | None = None
     sql: str = ""
+
+
+@dataclass
+class SafetyIssue:
+    severity: str
+    change_type: str
+    table_name: str
+    message: str
+    column_name: str | None = None
+    sql: str = ""
+    required_flag: str | None = None
