@@ -167,6 +167,16 @@ dbwarden check-db --database primary --out json
 
 Output formats: `txt`, `json`, `yaml`
 
+### `check`
+
+```bash
+dbwarden check --database primary
+dbwarden check --database primary --force
+dbwarden check --database primary --out json
+```
+
+Output formats: `txt`, `json`
+
 ### `diff`
 
 ```bash
