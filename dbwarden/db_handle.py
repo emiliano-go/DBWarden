@@ -5,16 +5,17 @@ from typing import TYPE_CHECKING, Annotated
 
 if TYPE_CHECKING:
     from clickhouse_connect.driver.asyncclient import AsyncClient
-    from fastapi import Depends
+    from clickhouse_connect.driver.client import Client as SyncClickHouseClient
+    from fastapi.params import Depends
     from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import Session
 
 
 class DatabaseHandle:
     """Handle returned by ``database_config()``.
 
-    The ``.session`` property returns a type annotation FastAPI can
-    consume directly as a route parameter type hint — no ``Annotated``,
-    ``Depends``, or typing imports needed in the route module::
+    The ``.async_session`` and ``.sync_session`` properties return type
+    annotations FastAPI can consume directly as route parameter type hints::
 
         # dbwarden.py
         from dbwarden import database_config
@@ -24,7 +25,11 @@ class DatabaseHandle:
         from ..dbwarden import primary
 
         @router.get("/users")
-        async def users(session: primary.session):
+        async def users(session: primary.async_session):
+            ...
+
+        @router.get("/items")
+        def items(session: primary.sync_session):
             ...
     """
 
@@ -33,17 +38,17 @@ class DatabaseHandle:
         self._db_type = db_type
 
     @functools.cached_property
-    def session(self):
-        """Return ``Annotated[T, Depends(...)]`` for the database type.
+    def async_session(self) -> Annotated[AsyncSession | AsyncClient, Depends]:
+        """FastAPI dependency annotation for async database access.
 
-        * PostgreSQL / SQLite / MySQL / MariaDB  → ``AsyncSession``
-        * ClickHouse                              → ``AsyncClient``
+        Resolves to ``Annotated[AsyncSession, Depends(...)]`` for SQL databases
+        or ``Annotated[AsyncClient, Depends(...)]`` for ClickHouse.
         """
         if self._db_type in ("postgresql", "sqlite", "mysql", "mariadb"):
             from fastapi import Depends
             from sqlalchemy.ext.asyncio import AsyncSession
 
-            from dbwarden.fastapi.async_db import _make_session_dep
+            from dbwarden.fastapi.engines import _make_session_dep
 
             return Annotated[
                 AsyncSession, Depends(_make_session_dep(self._name))
@@ -53,7 +58,7 @@ class DatabaseHandle:
             from fastapi import Depends
             from clickhouse_connect.driver.asyncclient import AsyncClient
 
-            from dbwarden.fastapi.async_db import _make_clickhouse_dep
+            from dbwarden.fastapi.engines import _make_clickhouse_dep
 
             return Annotated[
                 AsyncClient, Depends(_make_clickhouse_dep(self._name))
@@ -63,3 +68,48 @@ class DatabaseHandle:
             f"Unsupported database_type: {self._db_type!r}. "
             f"Expected one of: sqlite, postgresql, mysql, mariadb, clickhouse."
         )
+
+    @functools.cached_property
+    def sync_session(self) -> Annotated[Session | SyncClickHouseClient, Depends]:
+        """FastAPI dependency annotation for synchronous database access.
+
+        Resolves to ``Annotated[Session, Depends(...)]`` for SQL databases
+        or ``Annotated[Client, Depends(...)]`` for ClickHouse.
+        """
+
+        if self._db_type in ("postgresql", "sqlite", "mysql", "mariadb"):
+            from fastapi import Depends
+            from sqlalchemy.orm import Session
+
+            from dbwarden.fastapi.engines import _make_sync_session_dep
+
+            return Annotated[
+                Session, Depends(_make_sync_session_dep(self._name))
+            ]
+
+        if self._db_type == "clickhouse":
+            from fastapi import Depends
+            from clickhouse_connect.driver.client import Client as SyncClickHouseClient
+
+            from dbwarden.fastapi.engines import _make_sync_clickhouse_dep
+
+            return Annotated[
+                SyncClickHouseClient, Depends(_make_sync_clickhouse_dep(self._name))
+            ]
+
+        raise ValueError(
+            f"Unsupported database_type: {self._db_type!r}. "
+            f"Expected one of: sqlite, postgresql, mysql, mariadb, clickhouse."
+        )
+
+    @property
+    def session(self) -> Annotated[AsyncSession | AsyncClient, Depends]:
+        """Deprecated: use ``async_session`` or ``sync_session``."""
+        import warnings
+
+        warnings.warn(
+            "DatabaseHandle.session is deprecated; use .async_session or .sync_session",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.async_session
