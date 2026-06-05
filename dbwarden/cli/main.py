@@ -270,6 +270,12 @@ def migrate(
     backup_dir: str | None = typer.Option(
         None, "--backup-dir", help="Directory for backup files"
     ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show what would be applied without executing"
+    ),
+    sandbox: bool = typer.Option(
+        False, "--sandbox", help="Apply migrations in a temporary sandbox database"
+    ),
 ):
     """Apply pending migrations to the database."""
     validate_directory()
@@ -282,6 +288,8 @@ def migrate(
         baseline=baseline,
         with_backup=with_backup,
         backup_dir=backup_dir,
+        dry_run=dry_run,
+        sandbox=sandbox,
     )
 
 
