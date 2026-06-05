@@ -4,7 +4,7 @@ from sqlalchemy import Result, Row, text
 from sqlalchemy.orm import Session
 
 from dbwarden.database.connection import get_db_connection
-from dbwarden.database.queries import QueryMethod, get_query
+from dbwarden.database.queries import QueryMethod, get_migration_table_name, get_query
 from dbwarden.models import MigrationRecord
 
 
@@ -143,9 +143,10 @@ def get_applied_checksums(db_name: str | None = None) -> set[str]:
         return set()
 
     with get_db_connection(db_name) as connection:
+        migration_table = get_migration_table_name(db_name)
         results = connection.execute(
             text(
-                "SELECT DISTINCT checksum FROM dbwarden_migrations WHERE checksum IS NOT NULL"
+                f"SELECT DISTINCT checksum FROM {migration_table} WHERE checksum IS NOT NULL"
             )
         )
         return {row.checksum for row in results.fetchall()}
@@ -159,18 +160,20 @@ def get_latest_versions(
     """Get recent migration versions."""
     if limit:
         with get_db_connection(db_name) as connection:
+            migration_table = get_migration_table_name(db_name)
             result = connection.execute(
                 text(
-                    f"SELECT version FROM dbwarden_migrations WHERE version IS NOT NULL ORDER BY applied_at DESC LIMIT :limit"
+                    f"SELECT version FROM {migration_table} WHERE version IS NOT NULL ORDER BY applied_at DESC LIMIT :limit"
                 ),
                 parameters={"limit": limit},
             )
             return [row.version for row in result.fetchall()]
     elif starting_version:
         with get_db_connection(db_name) as connection:
+            migration_table = get_migration_table_name(db_name)
             result = connection.execute(
                 text(
-                    "SELECT version FROM dbwarden_migrations WHERE version > :starting_version AND version IS NOT NULL ORDER BY applied_at ASC"
+                    f"SELECT version FROM {migration_table} WHERE version > :starting_version AND version IS NOT NULL ORDER BY applied_at ASC"
                 ),
                 parameters={"starting_version": starting_version},
             )

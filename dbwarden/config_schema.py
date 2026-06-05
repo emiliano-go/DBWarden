@@ -16,6 +16,7 @@ VALID_DATABASE_TYPES = frozenset(
 
 DATABASE_NAME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_]*$")
 MODEL_PATH_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_/]*$")
+IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 MAX_PATH_LENGTH = 200
 MAX_PATH_COUNT = 10
 
@@ -59,6 +60,19 @@ def _validate_database_type(_self, _attribute, value: str) -> None:
         )
 
 
+def _validate_identifier_field(field_name: str, value: str) -> None:
+    if not value or not IDENTIFIER_RE.match(value):
+        raise ValueError(
+            f"Invalid {field_name} '{value}'. Must start with letter/underscore and contain only alphanumeric or underscore."
+        )
+
+
+def _validate_migration_table(_self, _attribute, value: str | None) -> None:
+    if value is None:
+        return
+    _validate_identifier_field("migration_table", value)
+
+
 @define(slots=False)
 class DatabaseEntry:
     database_name: str = field(validator=_validate_database_name)
@@ -67,6 +81,7 @@ class DatabaseEntry:
     secure_values: bool = False
     default: bool = False
     migrations_dir: str | None = None
+    migration_table: str | None = field(default=None, validator=_validate_migration_table)
     model_paths: list[str] | None = None
     dev_database_type: DatabaseType | None = None
     dev_database_url: str | None = None

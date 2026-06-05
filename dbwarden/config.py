@@ -15,6 +15,7 @@ from dbwarden.constants import TOML_FILE
 from dbwarden.exceptions import ConfigurationError
 
 DatabaseType = Literal["sqlite", "postgresql", "mysql", "mariadb", "clickhouse"]
+DEFAULT_MIGRATION_TABLE = "_dbwarden_migrations"
 
 _IGNORE_DIRS = {
     ".git",
@@ -38,6 +39,7 @@ class DatabaseConfig:
     secure_display_values: dict[str, str] = field(default_factory=dict)
     model_paths: list[str] | None = None
     migrations_dir: str = "migrations"
+    migration_table: str = DEFAULT_MIGRATION_TABLE
     postgres_schema: str | None = None
     dev_database_url: str | None = None
     dev_database_type: DatabaseType | None = None
@@ -410,6 +412,7 @@ def _finalize_entries(
             secure_display_values=secure_display_values,
             model_paths=entry.model_paths,
             migrations_dir=migrations_dir,
+            migration_table=entry.migration_table or DEFAULT_MIGRATION_TABLE,
             postgres_schema=None,
             dev_database_url=entry.dev_database_url,
             dev_database_type=entry.dev_database_type,

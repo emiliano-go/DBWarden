@@ -34,6 +34,10 @@ def config_cmd() -> None:
             f"    migrations_dir: {display_value(db, 'migrations_dir', db.migrations_dir)}",
             style="white",
         )
+        console.print(
+            f"    migration_table: {display_value(db, 'migration_table', db.migration_table)}",
+            style="white",
+        )
         if db.model_paths:
             console.print(
                 f"    model_paths: {display_value(db, 'model_paths', db.model_paths)}",
