@@ -134,7 +134,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost:5432/main",
+    database_url_sync="postgresql://user:password@localhost:5432/main",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./development.db",
 )

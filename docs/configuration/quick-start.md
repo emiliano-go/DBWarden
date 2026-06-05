@@ -32,7 +32,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
-    database_url="sqlite:///./app.db",
+    database_url_sync="sqlite:///./app.db",
 )
 ```
 
@@ -40,7 +40,7 @@ That's it! **4 required parameters**:
 - `database_name` - What to call this database
 - `default` - Is this the default?
 - `database_type` - What kind of database?
-- `database_url` - How to connect?
+- `database_url_sync` - How to connect? (sync URL for CLI/migrations)
 
 !!! tip "Use SQLite First"
     Start with SQLite for the simplest setup. Switch to PostgreSQL later.
@@ -74,7 +74,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
-    database_url="sqlite:///./app.db",
+    database_url_sync="sqlite:///./app.db",
     model_paths=["app.models"],  # ← Add this
 )
 ```
@@ -90,7 +90,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost:5432/myapp",
+    database_url_sync="postgresql://user:password@localhost:5432/myapp",
     model_paths=["app.models"],
 )
 ```
@@ -104,7 +104,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost:5432/myapp",
+    database_url_sync="postgresql://user:password@localhost:5432/myapp",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./dev.db",
     model_paths=["app.models"],
@@ -179,7 +179,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
-    database_url="sqlite:///./app.db",
+    database_url_sync="sqlite:///./app.db",
     model_paths=["app.models"],
 )
 ```
@@ -195,7 +195,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=os.getenv("DATABASE_URL"),
+    database_url_sync=os.getenv("DATABASE_URL"),
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./dev.db",
     model_paths=["app.models"],

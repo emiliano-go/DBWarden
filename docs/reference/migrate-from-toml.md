@@ -33,7 +33,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost:5432/main",
+    database_url_sync="postgresql://user:password@localhost:5432/main",
     migrations_dir="migrations/primary",
     model_paths=["app/models/api"],
 )
@@ -45,7 +45,7 @@ database_config(
 |------------|--------------|-------|
 | `default` | `default=True` | Boolean flag per entry instead of top-level |
 | `database.<name>.database_type` | `database_type` | Passed directly to function |
-| `database.<name>.sqlalchemy_url` | `database_url` | Note: renamed for clarity |
+| `database.<name>.sqlalchemy_url` | `database_url_sync` | Note: renamed for clarity |
 | `database.<name>.migrations_dir` | `migrations_dir` | Same concept, different syntax |
 | `database.<name>.model_paths` | `model_paths` | List syntax in Python |
 | `database.<name>.dev_database_type` | `dev_database_type` | Optional dev swap entries |
@@ -95,7 +95,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost:5432/main",
+    database_url_sync="postgresql://user:password@localhost:5432/main",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./development.db",
 )
@@ -143,7 +143,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=DATABASE_URL,
+    database_url_sync=DATABASE_URL,
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./development.db",
 )
@@ -164,7 +164,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost:5432/main",
+    database_url_sync="postgresql://user:password@localhost:5432/main",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./development.db" if ENV == "development" else None,
 )
@@ -188,7 +188,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=f"postgresql://{DB_USER}:{DB_PASS}@localhost:5432/main",
+    database_url_sync=f"postgresql://{DB_USER}:{DB_PASS}@localhost:5432/main",
     secure_values=True,
 )
 ```

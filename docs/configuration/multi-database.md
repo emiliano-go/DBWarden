@@ -24,7 +24,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/main",
+    database_url_sync="postgresql://localhost/main",
     model_paths=["app.models.primary"],
 )
 
@@ -32,7 +32,7 @@ database_config(
 database_config(
     database_name="analytics",
     database_type="postgresql",
-    database_url="postgresql://localhost/analytics",
+    database_url_sync="postgresql://localhost/analytics",
     model_paths=["app.models.analytics"],
 )
 
@@ -40,7 +40,7 @@ database_config(
 database_config(
     database_name="logging",
     database_type="postgresql",
-    database_url="postgresql://localhost/logs",
+    database_url_sync="postgresql://localhost/logs",
     model_paths=["app.models.logging"],
 )
 ```
@@ -206,7 +206,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/main",
+    database_url_sync="postgresql://localhost/main",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./dev_primary.db",
     model_paths=["app.models.primary"],
@@ -215,7 +215,7 @@ database_config(
 database_config(
     database_name="analytics",
     database_type="postgresql",
-    database_url="postgresql://localhost/analytics",
+    database_url_sync="postgresql://localhost/analytics",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./dev_analytics.db",
     model_paths=["app.models.analytics"],
@@ -241,14 +241,14 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://primary-host/myapp",
+    database_url_sync="postgresql://primary-host/myapp",
     model_paths=["app.models"],
 )
 
 database_config(
     database_name="replica",
     database_type="postgresql",
-    database_url="postgresql://replica-host/myapp",
+    database_url_sync="postgresql://replica-host/myapp",
     model_paths=["app.models"],  # Same models
     overlap_models=True,          # Allow overlap
 )
@@ -264,7 +264,7 @@ database_config(
     database_name="transactions",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/transactions",
+    database_url_sync="postgresql://localhost/transactions",
     model_paths=["app.models.transactions"],
 )
 
@@ -272,7 +272,7 @@ database_config(
 database_config(
     database_name="analytics",
     database_type="clickhouse",
-    database_url="http://localhost:8123/analytics",
+    database_url_sync="http://localhost:8123/analytics",
     model_paths=["app.models.analytics"],
 )
 
@@ -280,7 +280,7 @@ database_config(
 database_config(
     database_name="audit",
     database_type="postgresql",
-    database_url="postgresql://localhost/audit",
+    database_url_sync="postgresql://localhost/audit",
     model_paths=["app.models.audit"],
 )
 ```
@@ -295,7 +295,7 @@ for tenant in tenants:
         database_name=tenant,
         default=(tenant == "tenant_a"),
         database_type="postgresql",
-        database_url=f"postgresql://localhost/{tenant}",
+        database_url_sync=f"postgresql://localhost/{tenant}",
         model_paths=["app.models"],  # Same models for all tenants
     )
 ```

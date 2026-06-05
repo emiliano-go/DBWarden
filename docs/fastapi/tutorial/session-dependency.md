@@ -269,7 +269,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:password@localhost/prod",
+    database_url_sync="postgresql://user:password@localhost/prod",
     dev_database_type="sqlite",
     dev_database_url="sqlite:///./dev.db",
     model_paths=["app.models"],
@@ -397,9 +397,9 @@ Uses `postgresql+asyncpg` driver:
 
 ```python
 # Your config can use any of these:
-database_url="postgresql://user:password@localhost/db"
-database_url="postgresql+asyncpg://user:password@localhost/db"
-database_url="postgres://user:password@localhost/db"
+database_url_sync="postgresql://user:password@localhost/db"
+database_url_sync="postgresql+asyncpg://user:password@localhost/db"
+database_url_sync="postgres://user:password@localhost/db"
 ```
 
 DBWarden automatically upgrades to `postgresql+asyncpg://...`
@@ -410,8 +410,8 @@ Uses `sqlite+aiosqlite` driver:
 
 ```python
 # Your config can use any of these:
-database_url="sqlite:///./app.db"
-database_url="sqlite+aiosqlite:///./app.db"
+database_url_sync="sqlite:///./app.db"
+database_url_sync="sqlite+aiosqlite:///./app.db"
 ```
 
 DBWarden automatically upgrades to `sqlite+aiosqlite://...`

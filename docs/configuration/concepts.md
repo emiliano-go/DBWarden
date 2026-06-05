@@ -21,7 +21,7 @@ database_config(
     database_name="primary",  # ← IDE suggests parameter names
     default=True,             # ← IDE knows this is boolean
     database_type="sqlite",   # ← IDE can validate enum values
-    database_url="...",
+    database_url_sync="...",
 )
 ```
 
@@ -44,7 +44,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql" if environment == "production" else "sqlite",
-    database_url=database_url,
+    database_url_sync=database_url,
 )
 ```
 
@@ -64,7 +64,7 @@ for name, url in DATABASES.items():
         database_name=name,
         default=(name == "primary"),
         database_type="postgresql",
-        database_url=url,
+        database_url_sync=url,
         model_paths=[f"app.models.{name}"],
     )
 ```
@@ -125,14 +125,14 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/myapp",
+    database_url_sync="postgresql://localhost/myapp",
 )
 
 database_config(
     database_name="primary",  # ← Duplicate!
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/other",
+    database_url_sync="postgresql://localhost/other",
 )
 ```
 
@@ -143,6 +143,24 @@ Error: Duplicate database_name 'primary'
 ```
 
 Validation happens **before** any commands execute.
+
+### Config Loading Security (Sandbox)
+
+When DBWarden imports your config file, it applies **path-level security**:
+
+- **Path validation** — Config files must be within the project tree. Paths with `..` traversal sequences are rejected.
+- **Model path validation** — Model discovery paths are also checked for path traversal attacks.
+
+This ensures an attacker cannot trick DBWarden into loading config files from outside your project.
+
+For debugging, set the `DBWARDEN_DISABLE_SANDBOX` environment variable to skip all path validation:
+
+```bash
+DBWARDEN_DISABLE_SANDBOX=1 dbwarden status  # Skip sandbox (debug only)
+```
+
+!!! warning "Production"
+    Keep the sandbox enabled in production. Disabling it (`DBWARDEN_DISABLE_SANDBOX=1`) removes path traversal protection.
 
 ## The `default` Database
 
@@ -195,7 +213,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/myapp",
+    database_url_sync="postgresql://localhost/myapp",
     model_paths=["app.models"],  # ← Look here for models
 )
 ```
@@ -222,7 +240,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
-    database_url="sqlite:///./app.db",
+    database_url_sync="sqlite:///./app.db",
     # No model_paths needed
 )
 ```
@@ -235,14 +253,14 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/main",
+    database_url_sync="postgresql://localhost/main",
     model_paths=["app.models.primary"],  # ← Required
 )
 
 database_config(
     database_name="analytics",
     database_type="postgresql",
-    database_url="postgresql://localhost/analytics",
+    database_url_sync="postgresql://localhost/analytics",
     model_paths=["app.models.analytics"],  # ← Required
 )
 ```
@@ -260,7 +278,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",              # Production
-    database_url="postgresql://prod/myapp",
+    database_url_sync="postgresql://prod/myapp",
     dev_database_type="sqlite",              # Development
     dev_database_url="sqlite:///./dev.db",
 )
@@ -324,14 +342,14 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://localhost/main",
+    database_url_sync="postgresql://localhost/main",
     model_paths=["app.models.primary"],
 )
 
 database_config(
     database_name="analytics",
     database_type="postgresql",
-    database_url="postgresql://localhost/analytics",
+    database_url_sync="postgresql://localhost/analytics",
     model_paths=["app.models.analytics"],
 )
 ```
@@ -386,7 +404,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=DATABASE_URL,
+    database_url_sync=DATABASE_URL,
     secure_values=True,  # ← Hide credentials
 )
 ```

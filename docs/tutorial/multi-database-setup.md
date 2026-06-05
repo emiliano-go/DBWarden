@@ -18,14 +18,14 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url="postgresql://user:pass@localhost:5432/main",
+    database_url_sync="postgresql://user:pass@localhost:5432/main",
     model_paths=["app/models/api"],
 )
 
 database_config(
     database_name="analytics",
     database_type="clickhouse",
-    database_url="http://user:pass@localhost:8123/analytics",
+    database_url_sync="http://user:pass@localhost:8123/analytics",
     model_paths=["app/models/analytics"],
 )
 ```

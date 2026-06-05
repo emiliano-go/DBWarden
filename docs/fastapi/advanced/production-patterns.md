@@ -124,7 +124,7 @@ import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
-    database_url: str
+    database_url_sync: str
     environment: str = "production"
     log_level: str = "INFO"
     
@@ -144,7 +144,7 @@ database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
-    database_url=settings.database_url,
+    database_url_sync=settings.database_url_sync,
     model_paths=["app.models"],
 )
 ```
@@ -176,7 +176,7 @@ def get_database_url():
     return secret['DATABASE_URL']
 
 database_config(
-    database_url=get_database_url(),
+    database_url_sync=get_database_url(),
     ...
 )
 ```
@@ -421,16 +421,16 @@ dbwarden migrate --with-backup --backup-dir /backups
 
 ```python
 # ❌ Never commit
-database_url="postgresql://user:password@host/db"
+database_url_sync="postgresql://user:password@host/db"
 
 # ✅ Use environment variables
-database_url=os.getenv("DATABASE_URL")
+database_url_sync=os.getenv("DATABASE_URL")
 ```
 
 ### SSL/TLS
 
 ```python
-database_url="postgresql://user:password@host/db?sslmode=require"
+database_url_sync="postgresql://user:password@host/db?sslmode=require"
 ```
 
 ### Least Privilege
