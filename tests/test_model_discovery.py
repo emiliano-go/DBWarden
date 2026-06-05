@@ -3,10 +3,12 @@ import tempfile
 import os
 from pathlib import Path
 
+import dbwarden.engine.model_discovery as model_discovery
 from dbwarden.engine.model_discovery import (
     load_model_from_path,
     discover_models_in_directory,
     extract_column_info,
+    extract_table_from_model,
     generate_create_table_sql,
     generate_drop_table_sql,
     ModelColumn,
@@ -129,6 +131,21 @@ class TestModelColumn:
         assert col_dict["type"] == "VARCHAR(255)"
         assert col_dict["unique"] == True
 
+    def test_model_column_to_dict_includes_codec(self):
+        col = ModelColumn(
+            name="data",
+            type="String",
+            nullable=False,
+            primary_key=False,
+            unique=False,
+            default=None,
+            foreign_key=None,
+            codec="ZSTD(3)",
+        )
+
+        col_dict = col.to_dict()
+        assert col_dict["codec"] == "ZSTD(3)"
+
 
 class TestModelTable:
     """Tests for ModelTable class."""
@@ -156,6 +173,20 @@ class TestModelTable:
 
         assert table_dict["name"] == "users"
         assert len(table_dict["columns"]) == 1
+
+    def test_model_table_to_dict_includes_clickhouse_options(self):
+        columns = [
+            ModelColumn("id", "UInt64", False, True, False, None, None),
+        ]
+
+        table = ModelTable(
+            name="events",
+            columns=columns,
+            clickhouse_options={"clickhouse_engine": "MergeTree"},
+        )
+
+        table_dict = table.to_dict()
+        assert table_dict["clickhouse_options"]["clickhouse_engine"] == "MergeTree"
 
 
 class TestSQLGeneration:
@@ -193,6 +224,70 @@ class TestSQLGeneration:
         sql = generate_create_table_sql(table)
 
         assert "user_id INTEGER NOT NULL REFERENCES users(id)" in sql
+
+    def test_generate_clickhouse_create_table_sql_with_options(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("region", "String", False, True, False, None, None),
+            ModelColumn("event_time", "DateTime", False, False, False, None, None),
+        ]
+
+        table = ModelTable(
+            name="events",
+            columns=columns,
+            clickhouse_options={
+                "clickhouse_engine": ("ReplacingMergeTree", "version_column"),
+                "clickhouse_order_by": ["region", "event_time"],
+                "clickhouse_primary_key": "region",
+                "clickhouse_partition_by": "toYYYYMM(event_time)",
+                "clickhouse_sample_by": "intHash64(region)",
+                "clickhouse_ttl": ["event_time + INTERVAL 1 MONTH DELETE"],
+            },
+        )
+
+        sql = generate_create_table_sql(table)
+
+        assert "ENGINE = ReplacingMergeTree(version_column)" in sql
+        assert "ORDER BY (region, event_time)" in sql
+        assert "PRIMARY KEY region" in sql
+        assert "PARTITION BY toYYYYMM(event_time)" in sql
+        assert "SAMPLE BY intHash64(region)" in sql
+        assert "TTL event_time + INTERVAL 1 MONTH DELETE" in sql
+
+    def test_generate_clickhouse_create_table_sql_with_composite_primary_key(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("region", "String", False, False, False, None, None),
+            ModelColumn("event_time", "DateTime", False, False, False, None, None),
+        ]
+
+        table = ModelTable(
+            name="events",
+            columns=columns,
+            clickhouse_options={
+                "clickhouse_order_by": ["region", "event_time"],
+                "clickhouse_primary_key": ["region", "event_time"],
+            },
+        )
+
+        sql = generate_create_table_sql(table)
+
+        assert "PRIMARY KEY (region, event_time)" in sql
+
+    def test_generate_clickhouse_create_table_sql_with_codec(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("data", "String", False, False, False, None, None, codec="ZSTD(3)"),
+        ]
+
+        table = ModelTable(name="events", columns=columns)
+        sql = generate_create_table_sql(table)
+
+        assert "data String NOT NULL CODEC(ZSTD(3))" in sql
+        assert "ENGINE = MergeTree()" in sql
 
 
 class TestColumnExtraction:
@@ -257,3 +352,85 @@ class TestColumnExtraction:
 
         assert col is not None
         assert col.type == "TEXT"
+
+    def test_extract_column_uses_clickhouse_type_and_codec_hints(self, monkeypatch):
+        from sqlalchemy import Column, String
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        col_obj = Column(
+            "payload",
+            String,
+            info={
+                "clickhouse_type": "LowCardinality(String)",
+                "clickhouse_codec": "ZSTD(3)",
+            },
+        )
+
+        col = extract_column_info(col_obj)
+
+        assert col is not None
+        assert col.type == "LowCardinality(String)"
+        assert col.codec == "ZSTD(3)"
+
+    def test_extract_column_preserves_clickhouse_user_defined_type(self, monkeypatch):
+        from sqlalchemy import Column
+        from sqlalchemy.types import UserDefinedType
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        class LowCardinalityString(UserDefinedType):
+            def get_col_spec(self, **kw):
+                return "LowCardinality(String)"
+
+        col_obj = Column("payload", LowCardinalityString())
+
+        col = extract_column_info(col_obj)
+
+        assert col is not None
+        assert col.type == "LowCardinality(String)"
+
+    def test_extract_table_from_model_uses_clickhouse_table_args(self, monkeypatch):
+        from sqlalchemy import Column, MetaData, String, Table
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        class Event:
+            __tablename__ = "events"
+            __table_args__ = {
+                "clickhouse_engine": "SummingMergeTree",
+                "clickhouse_order_by": ["region"],
+            }
+            __table__ = Table(
+                "events",
+                MetaData(),
+                Column("region", String, primary_key=True),
+            )
+
+        table = extract_table_from_model(Event, db_name="primary")
+
+        assert table is not None
+        assert table.clickhouse_options["clickhouse_engine"] == "SummingMergeTree"
+        assert table.clickhouse_options["clickhouse_order_by"] == ["region"]
+
+    def test_extract_table_from_model_rejects_invalid_clickhouse_primary_key_prefix(self, monkeypatch):
+        from sqlalchemy import Column, MetaData, String, Table
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        class Event:
+            __tablename__ = "events"
+            __table_args__ = {
+                "clickhouse_order_by": ["region", "event_time"],
+                "clickhouse_primary_key": ["event_time"],
+            }
+            __table__ = Table(
+                "events",
+                MetaData(),
+                Column("region", String),
+                Column("event_time", String),
+            )
+
+        table = extract_table_from_model(Event, db_name="primary")
+
+        assert table is None
