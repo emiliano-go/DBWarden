@@ -47,7 +47,8 @@ def _session_factory(database: str | None = None, dev: bool = False) -> async_se
     with runtime_flags(dev=dev, strict_translation=False):
         config = get_database(database)
     
-    cache_key, async_url = _to_async_url(config.sqlalchemy_url, config.database_type)
+    url = config.sqlalchemy_url_async or config.sqlalchemy_url
+    cache_key, async_url = _to_async_url(url, config.database_type)
     
     # Thread-safe check and create
     with _SESSION_LOCK:
