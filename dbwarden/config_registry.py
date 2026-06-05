@@ -41,6 +41,9 @@ def registered_entries() -> list[DatabaseEntry]:
     return _REGISTRY.entries()
 
 
-def database_config(**kwargs) -> None:
+def database_config(**kwargs) -> "DatabaseHandle":
     entry = structure_database_entry(kwargs)
     _REGISTRY.add(entry)
+    from dbwarden.db_handle import DatabaseHandle
+
+    return DatabaseHandle(entry.database_name, entry.database_type)
