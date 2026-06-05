@@ -90,9 +90,10 @@ dbwarden settings database-clear-dev primary
 ```bash
 dbwarden make-migrations "create users table" --database primary
 dbwarden make-migrations --verbose --database primary
+dbwarden make-migrations --plan --database primary
 ```
 
-Options: `--database`, `--verbose`
+Options: `--database`, `--plan`, `--verbose`
 
 ### `new`
 

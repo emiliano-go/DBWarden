@@ -226,7 +226,7 @@ For **each database**, DBWarden checks:
 3. **Migration lock** - Is a migration currently running?
 
 !!! info "Performance"
-    Health checks are fast - they only run `SELECT 1` and query the `dbwarden_migrations` table. No expensive queries or full schema scans.
+    Health checks are fast - they only run `SELECT 1` and query the configured migration tracking table (default: `_dbwarden_migrations`). No expensive queries or full schema scans.
 
 ## Common Use Cases
 
