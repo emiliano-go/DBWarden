@@ -63,7 +63,8 @@ def _entry_kwargs(entry: DatabaseEntry) -> dict[str, Any]:
     return {
         "database_name": entry.database_name,
         "database_type": entry.database_type,
-        "database_url": entry.database_url,
+        "database_url_sync": entry.database_url_sync,
+        "database_url_async": entry.database_url_async,
         "secure_values": entry.secure_values,
         "default": entry.default,
         "migrations_dir": entry.migrations_dir,
@@ -81,7 +82,8 @@ def _render_entry(entry: DatabaseEntry) -> str:
         "database_name",
         "default",
         "database_type",
-        "database_url",
+        "database_url_sync",
+        "database_url_async",
         "secure_values",
         "migrations_dir",
         "migration_table",
@@ -164,7 +166,7 @@ def handle_settings_show(database: str | None = None, all_databases: bool = Fals
                     str(display_value(db, "database_type", db.database_type))
                 ),
             )
-            _print_field("URL", display_value(db, "database_url", db.sqlalchemy_url))
+            _print_field("URL", display_value(db, "database_url_sync", db.sqlalchemy_url))
             _print_field(
                 "Migrations Directory",
                 display_value(db, "migrations_dir", db.migrations_dir),
@@ -201,7 +203,7 @@ def handle_settings_show(database: str | None = None, all_databases: bool = Fals
         "Type",
         _display_db_type(str(display_value(db, "database_type", db.database_type))),
     )
-    _print_field("URL", display_value(db, "database_url", db.sqlalchemy_url))
+    _print_field("URL", display_value(db, "database_url_sync", db.sqlalchemy_url))
     _print_field(
         "Migrations Directory",
         display_value(db, "migrations_dir", db.migrations_dir),
@@ -263,7 +265,7 @@ def handle_settings_database_add(
         {
             "database_name": name,
             "database_type": database_type,
-            "database_url": url,
+            "database_url_sync": url,
             "migrations_dir": migrations_dir,
             "migration_table": migration_table,
             "model_paths": model_paths,
