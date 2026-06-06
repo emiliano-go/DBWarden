@@ -90,8 +90,7 @@ async def get_dashboard(
     }
 ```
 
-!!! tip "Independent Transactions"
-    Each session has its own transaction. If one fails, others are unaffected.
+Each session has its own transaction. If one fails, others are unaffected.
 
 ## Cross-Database Queries
 

@@ -42,8 +42,7 @@ That's it! **4 required parameters**:
 - `database_type` - What kind of database?
 - `database_url_sync` - How to connect? (sync URL for CLI/migrations)
 
-!!! tip "Use SQLite First"
-    Start with SQLite for the simplest setup. Switch to PostgreSQL later.
+Start with SQLite for the simplest setup. Switch to PostgreSQL later.
 
 ## Step 3: Test the Configuration
 
