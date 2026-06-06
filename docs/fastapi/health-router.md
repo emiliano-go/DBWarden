@@ -1,21 +1,6 @@
 # `DBWardenHealthRouter`
 
-!!! note "Page Moved and Expanded"
-    This page has been moved to a comprehensive tutorial with production examples.
-
-##  New Location
-
-**[ Health Endpoints Tutorial](tutorial/health-endpoints.md)**
-
-The new page includes:
-- Response schema documentation
-- HTTP status code explanations
-- Kubernetes probe examples
-- Monitoring integration (Prometheus, Datadog)
-- Common use cases
-- Troubleshooting guide
-
----
+For a step-by-step tutorial with production examples, see [Health Endpoints Tutorial](tutorial/health-endpoints.md).
 
 For quick reference:
 

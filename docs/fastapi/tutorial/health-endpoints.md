@@ -107,11 +107,10 @@ Response:
 }
 ```
 
-!!! tip "Test with httpie"
-    For prettier output, use [httpie](https://httpie.io/):
-    ```bash
-    http :8000/health/
-    ```
+For prettier output, use [httpie](https://httpie.io/):
+```bash
+http :8000/health/
+```
 
 ## Understanding the Response
 
@@ -175,8 +174,7 @@ DBWarden health endpoints return these HTTP status codes:
 | Database unreachable | **503** | `"error"` |
 | Database name not found | **404** | N/A |
 
-!!! info "Why 200 for Degraded?"
-    Pending migrations are a **state**, not a failure. The app still works, the schema is just outdated. You decide whether to block traffic on degraded state.
+Pending migrations are a state, not a failure. The app still works, the schema is just outdated. You decide whether to block traffic on degraded state.
 
 ### Why These Status Codes Matter
 
@@ -225,8 +223,7 @@ For **each database**, DBWarden checks:
 2. **Migration state** - Are migrations pending?
 3. **Migration lock** - Is a migration currently running?
 
-!!! info "Performance"
-    Health checks are fast - they only run `SELECT 1` and query the configured migration tracking table (default: `_dbwarden_migrations`). No expensive queries or full schema scans.
+Health checks are fast - they only run `SELECT 1` and query the configured migration tracking table (default: `_dbwarden_migrations`). No expensive queries or full schema scans.
 
 ## Common Use Cases
 
@@ -283,8 +280,7 @@ spec:
 
 This checks health every 10 seconds. If degraded or error, traffic stops routing to this pod.
 
-!!! warning "Degraded State"
-    If you use `/health/` for readiness and have pending migrations, your pods will be marked **not ready** and receive no traffic. This might be what you want, or you might want a separate `/ping` endpoint for basic liveness.
+If you use `/health/` for readiness and have pending migrations, your pods will be marked not ready and receive no traffic. This might be what you want, or you might want a separate `/ping` endpoint for basic liveness.
 
 ### Separate Liveness and Readiness
 
@@ -478,8 +474,7 @@ from dbwarden.fastapi import DBWardenHealthRouter
 app.include_router(DBWardenHealthRouter(), prefix="/health")
 ```
 
-!!! info "Shared Logic"
-    Both use the same underlying `check_database_health()` function, so behavior is consistent.
+Both use the same underlying `check_database_health()` function, so behavior is consistent.
 
 ## Common Patterns
 

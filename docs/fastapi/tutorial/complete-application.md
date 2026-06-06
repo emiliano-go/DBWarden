@@ -51,19 +51,19 @@ primary = database_config(
 `primary` is a `DatabaseHandle`. Use `primary.async_session` in your route
 parameters and `primary.sync_session` for synchronous routes.
 
-!!! tip "Environment Variables"
-    In production, use environment variables for sensitive data:
-    ```python
-    import os
-    
-    primary = database_config(
-        database_name="primary",
-        default=True,
-        database_type="postgresql",
-        database_url_sync=os.getenv("DATABASE_URL"),
-        model_paths=["app.models"],
-    )
-    ```
+In production, use environment variables for sensitive data:
+
+```python
+import os
+
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync=os.getenv("DATABASE_URL"),
+    model_paths=["app.models"],
+)
+```
 
 ## Step 2: Define Models
 

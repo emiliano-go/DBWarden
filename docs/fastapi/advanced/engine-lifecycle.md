@@ -69,8 +69,7 @@ custom_engine = create_async_engine(
 )
 ```
 
-!!! info "DBWarden Default"
-    DBWarden uses SQLAlchemy's defaults, which work well for most applications.
+DBWarden uses SQLAlchemy's defaults, which work well for most applications.
 
 ## Engine Disposal
 
@@ -97,8 +96,7 @@ app = FastAPI(lifespan=lifespan)
 
 This closes async and sync session factories, connection pools, and ClickHouse clients for all configured databases.
 
-!!! tip "Kubernetes"
-    In Kubernetes, pods are terminated quickly, so disposal is less critical. The OS cleans up connections. However, calling `dispose_engines()` is still recommended for clean shutdowns.
+In Kubernetes, pods are terminated quickly, so disposal is less critical. The OS cleans up connections. However, calling `dispose_engines()` is still recommended for clean shutdowns.
 
 ## Session Lifecycle
 

@@ -2,11 +2,9 @@
 
 Complete reference for the `database_config()` function.
 
-!!! info "Looking for Tutorials?"
-    This is a reference page. For step-by-step guides, see:
-    - **[Quick Start](../configuration/quick-start.md)** - Your first configuration
-    - **[Concepts](../configuration/concepts.md)** - How it works
-    - **[Production Patterns](../configuration/production-patterns.md)** - Real-world examples
+This is a reference page. For step-by-step guides, see
+[Quick Start](../configuration/quick-start.md), [Concepts](../configuration/concepts.md),
+or [Production Patterns](../configuration/production-patterns.md).
 
 ## Function Signature
 
@@ -71,8 +69,7 @@ database_name="analytics"
 database_name="legacy"
 ```
 
-!!! tip "Naming Convention"
-    Use descriptive names that reflect the database's purpose: `primary`, `analytics`, `audit_logs`, etc.
+Use descriptive names that reflect the database's purpose: `primary`, `analytics`, `audit_logs`, etc.
 
 ### `database_type`
 
@@ -130,8 +127,7 @@ primary = database_config(
 analytics = database_config(database_name="analytics", ...)  # default=False implied
 ```
 
-!!! warning "Required Rule"
-    Exactly one database must have `default=True`. Having zero or multiple defaults will cause a validation error.
+Exactly one database must have `default=True`. Having zero or multiple defaults will cause a validation error.
 
 ### `migrations_dir`
 
@@ -164,11 +160,9 @@ model_paths=["app.models.primary", "app.legacy"]
 model_paths=["app.models.api.v1", "app.models.api.v2"]
 ```
 
-!!! tip "Performance"
-    Specifying `model_paths` makes discovery faster and more predictable, even for single-database projects.
+Specifying `model_paths` makes discovery faster and more predictable, even for single-database projects.
 
-!!! info "Multi-Database"
-    See **[Multi-Database Guide](../configuration/multi-database.md)** for organizing models across databases.
+See [Multi-Database Guide](../configuration/multi-database.md) for organizing models across databases.
 
 ### `migration_table`
 
@@ -229,11 +223,9 @@ dbwarden --dev migrate  # Uses SQLite
 dbwarden migrate        # Uses PostgreSQL
 ```
 
-!!! tip "Recommended Pattern"
-    Use SQLite with `dev_database_url="sqlite:///./dev.db"` for the fastest local iteration loop.
+Use SQLite with `dev_database_url="sqlite:///./dev.db"` for the fastest local iteration loop.
 
-!!! info "Dev Mode Guide"
-    See **[Dev Mode](../configuration/dev-mode.md)** for complete workflow and patterns.
+See [Dev Mode](../configuration/dev-mode.md) for complete workflow and patterns.
 
 ### `overlap_models`
 
@@ -280,8 +272,7 @@ $ dbwarden database
 URL: DATABASE_URL (expression)
 ```
 
-!!! warning "Production Requirement"
-    Always set `secure_values=True` in production to prevent credential exposure in logs.
+Always set `secure_values=True` in production to prevent credential exposure in logs.
 
 ## Return value: `DatabaseHandle`
 
@@ -317,14 +308,12 @@ def get_reports(session: analytics.sync_session):
     return session.execute(...)
 ```
 
-!!! tip
-    Use `.async_session` for async route handlers and `.sync_session` for sync
-    handlers. The deprecated `.session` property (aliased to `.async_session`)
-    will be removed in a future version.
+Use `.async_session` for async route handlers and `.sync_session` for sync
+handlers. The deprecated `.session` property (aliased to `.async_session`)
+will be removed in a future version.
 
-!!! info "Not using FastAPI?"
-    `DatabaseHandle` is still useful as a typed container  access
-    `handle._name` and `handle._db_type` for the raw config values.
+`DatabaseHandle` is still useful as a typed container even without FastAPI. Access
+`handle._name` and `handle._db_type` for the raw config values.
 
 ## Configuration rules (enforced at load time)
 

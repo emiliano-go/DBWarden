@@ -106,8 +106,7 @@ RuntimeError: Startup check failed: primary: could not connect to server
 
 The app **exits immediately**. No requests are served.
 
-!!! tip "Fail Fast = Good"
-    Failing fast on startup is better than serving broken requests. Kubernetes will restart your pod automatically.
+Failing fast on startup is better than serving broken requests. Kubernetes will restart your pod automatically.
 
 ## Check Mode vs Migrate Mode
 
@@ -155,8 +154,7 @@ async with migration_context(mode="migrate"):
 - Single-instance apps
 - When you want auto-migration
 
-!!! warning "Production Risk"
-    Migrate mode is **blocked in production** by default. Set `allow_in_production=True` to override (not recommended for most apps).
+Migrate mode is blocked in production by default. Set `allow_in_production=True` to override (not recommended for most apps).
 
 ## Complete Function Signature
 
@@ -231,8 +229,7 @@ async with migration_context(mode="check", all_databases=True):
 
 If you have multiple databases and want to validate all of them on startup, use this.
 
-!!! tip "Multi-Database Apps"
-    For apps with multiple databases, always use `all_databases=True` in production to ensure all databases are healthy.
+For apps with multiple databases, always use `all_databases=True` in production to ensure all databases are healthy.
 
 ### `dev`
 
@@ -281,8 +278,7 @@ async with migration_context(
     yield
 ```
 
-!!! warning "Migrate Mode Only"
-    This parameter only applies when `mode="migrate"`. Ignored in check mode.
+This parameter only applies when `mode="migrate"`. Ignored in check mode.
 
 ### `backup_dir`
 
@@ -331,12 +327,7 @@ async with migration_context(
 
 By default, `mode="migrate"` is **blocked** when `ENVIRONMENT` is `prod` or `production`. This prevents accidental schema changes in production.
 
-!!! danger "Production Risk"
-    Only enable this if you understand the risks:
-    - No rollback on migration failure
-    - Downtime during migration
-    - Potential data loss
-    - Race conditions with multiple pods
+Only enable this if you understand the risks: no rollback on migration failure, downtime during migration, potential data loss, and race conditions with multiple pods.
 
 **Better approach:** Run migrations in a separate job before deployment.
 
@@ -367,8 +358,7 @@ When `fail_fast=False`:
 - App starts even with database issues
 - First requests may fail
 
-!!! tip "Keep Fail Fast Enabled"
-    `fail_fast=True` is the right default for production. If you can't start, you shouldn't serve traffic.
+`fail_fast=True` is the right default for production. If you can't start, you shouldn't serve traffic.
 
 ### `only_dev`
 
@@ -395,8 +385,7 @@ This skips checks unless `ENVIRONMENT` is one of:
 - You have separate health checks in production
 - You want faster production startup
 
-!!! warning "Production Safety"
-    If you use `only_dev=True`, make sure you have other mechanisms to validate database health in production (like health endpoints or separate migration jobs).
+If you use `only_dev=True`, make sure you have other mechanisms to validate database health in production (like health endpoints or separate migration jobs).
 
 ## Common Patterns
 
@@ -564,8 +553,7 @@ def migrate_on_startup(
     """Run migration workflow at startup."""
 ```
 
-!!! info "Why Use Helpers?"
-    Use these when you need more control or want to access the health results. For most cases, `migration_context` is simpler.
+Use these when you need more control or want to access the health results. For most cases, `migration_context` is simpler.
 
 ## Error Handling
 

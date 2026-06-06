@@ -201,8 +201,7 @@ async def transfer_funds(
         raise
 ```
 
-!!! warning "Limitations"
-    Two-phase commit is complex and not fully supported by SQLAlchemy. Consider using saga pattern or event sourcing for distributed transactions.
+Two-phase commit is complex and not fully supported by SQLAlchemy. Consider using saga pattern or event sourcing for distributed transactions.
 
 ## Optimistic Locking
 

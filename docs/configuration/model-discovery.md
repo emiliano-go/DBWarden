@@ -68,8 +68,7 @@ primary = database_config(
 
 DBWarden will scan your entire codebase for models.
 
-!!! tip "Single Database Recommendation"
-    Even for single-database projects, specifying `model_paths` makes discovery faster and more predictable.
+Even for single-database projects, specifying `model_paths` makes discovery faster and more predictable.
 
 ### Multiple Databases (Required)
 
@@ -287,8 +286,7 @@ analytics = database_config(
 )
 ```
 
-!!! warning "Overlap Implications"
-    Both databases will include the same tables. Make sure this is intentional.
+Both databases will include the same tables. Make sure this is intentional.
 
 ## Troubleshooting
 

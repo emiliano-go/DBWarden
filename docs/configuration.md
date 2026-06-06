@@ -1,59 +1,14 @@
 # Configuration
 
-!!! note "Documentation Reorganized"
-    The configuration documentation has been reorganized into a comprehensive guide. This page now redirects to the new structure.
+DBWarden uses Python configuration through `database_config()` calls.
+Each call registers a database and returns a `DatabaseHandle` whose
+`.async_session` and `.sync_session` properties are FastAPI dependency
+annotations.
 
-##  New Documentation Structure
-
-The configuration documentation is now organized into:
-
-- **[Getting Started](configuration/index.md)** - Landing page with overview
-- **[Quick Start](configuration/quick-start.md)** - Your first configuration in 2 minutes
-- **[Concepts](configuration/concepts.md)** - How configuration works
-- **[Connection URLs](configuration/connection-urls.md)** - Database URL formats
-- **[Model Discovery](configuration/model-discovery.md)** - How `model_paths` works
-- **[Dev Mode](configuration/dev-mode.md)** - Local development patterns
-- **[Multi-Database](configuration/multi-database.md)** - Multiple databases
-- **[Production Patterns](configuration/production-patterns.md)** - Real-world examples
-- **[Troubleshooting](configuration/troubleshooting.md)** - Common issues
-- **[API Reference](reference/configuration-api.md)** - Complete function signature
-
-##  Quick Links
-
-### New to DBWarden Configuration?
-Start here: **[Quick Start](configuration/quick-start.md)**
-
-### Looking for Specific Information?
-
-| Need | Go To |
-|------|-------|
-| First configuration | **[Quick Start](configuration/quick-start.md)** |
-| Understand how it works | **[Concepts](configuration/concepts.md)** |
-| Database URL formats | **[Connection URLs](configuration/connection-urls.md)** |
-| Model discovery | **[Model Discovery](configuration/model-discovery.md)** |
-| Dev mode setup | **[Dev Mode](configuration/dev-mode.md)** |
-| Multiple databases | **[Multi-Database](configuration/multi-database.md)** |
-| Production examples | **[Production Patterns](configuration/production-patterns.md)** |
-| Fix configuration errors | **[Troubleshooting](configuration/troubleshooting.md)** |
-| Complete parameter list | **[API Reference](reference/configuration-api.md)** |
-
----
-
-**[ Go to Configuration Home](configuration/index.md)**
-
----
-
-## Quick Reference (Legacy)
-
-DBWarden uses Python configuration through `database_config(...)` calls.
-
-For complete documentation, see the [Configuration Guide](configuration/index.md).
-
-## Single database example
+## Single database
 
 ```python
 from dbwarden import database_config
-
 
 primary = database_config(
     database_name="primary",
@@ -64,11 +19,10 @@ primary = database_config(
 )
 ```
 
-## Multi-database example
+## Multiple databases
 
 ```python
 from dbwarden import database_config
-
 
 primary = database_config(
     database_name="primary",
@@ -86,7 +40,7 @@ analytics = database_config(
 )
 ```
 
-## Dev database example
+## Dev database
 
 ```python
 primary = database_config(
@@ -99,33 +53,34 @@ primary = database_config(
 )
 ```
 
-Use with:
+Use with the `--dev` flag:
 
 ```bash
 dbwarden --dev migrate --database primary
 ```
 
-## Source resolution
+## Config source resolution
 
-DBWarden resolves config source in this order:
+DBWarden resolves the config source in this order:
 
-1. discovered `dbwarden.py`
-2. full scan for files containing `database_config(...)`
+1. discovered `dbwarden.py` in the project root
+2. full scan for files containing `database_config(...)` calls
 3. `DBWARDEN_CONFIG_MODULE` environment variable
 
-If more than one discovered source exists, DBWarden fails fast with an ambiguity error.
+If more than one source is found, DBWarden fails with an ambiguity error.
 
 ## Validation rules
 
-- exactly one `default=True`
+- exactly one database must have `default=True`
 - duplicate database names are rejected
-- duplicate URL/target collisions are rejected
-- if more than one database is configured, `model_paths` is required on each
-- overlapping `model_paths` require explicit `overlap_models=True`
+- duplicate URL or target collisions are rejected
+- `model_paths` is required when more than one database is configured
+- overlapping `model_paths` requires explicit `overlap_models=True`
 
 ## Secure display mode
 
-Set `secure_values=True` when you want display commands to show variable expressions instead of resolved values for non-literal arguments.
+Set `secure_values=True` to show variable expressions instead of resolved
+values in CLI display commands:
 
 ```python
 DATABASE_URL = "postgresql://..."
@@ -141,37 +96,15 @@ primary = database_config(
 
 Reference: [Configuration API](reference/configuration-api.md)
 
-## Next Steps in Your Workflow
+## Guides
 
-Now that your configuration is set up, here's the recommended learning path:
-
-### Generate your first migration
-
-Now that DBWarden knows about your database, the next step is creating your first migration:
-
-- [Your First Migration](tutorial/your-first-migration.md)
-
-### Apply and manage migrations
-
-Once migrations exist, learn how to run them safely:
-
-- [Applying Migrations](tutorial/applying-migrations.md)
-- [Rolling Back](tutorial/rolling-back.md)
-- [Checking Status](tutorial/checking-status.md)
-
-### Optimize your development loop
-
-Use dev mode for fast local iterations:
-
-- [Dev Mode](tutorial/dev-mode.md)
-
-### Scale to multiple databases
-
-If your project uses more than one database:
-
-- [Multi-Database Setup](tutorial/multi-database-setup.md)
-
-## Navigation
-
-- Previous: [First Steps](getting-started/first-steps.md)
-- Next: [Your First Migration](tutorial/your-first-migration.md)
+- [Configuration overview](configuration/index.md) - landing page with links to all configuration topics
+- [Quick start](configuration/quick-start.md)
+- [Concepts](configuration/concepts.md)
+- [Connection URLs](configuration/connection-urls.md)
+- [Model discovery](configuration/model-discovery.md)
+- [Dev mode](configuration/dev-mode.md)
+- [Multi-database](configuration/multi-database.md)
+- [Production patterns](configuration/production-patterns.md)
+- [Troubleshooting](configuration/troubleshooting.md)
+- [API reference](reference/configuration-api.md)

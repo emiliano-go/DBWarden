@@ -1,22 +1,6 @@
 # Complete Application Example
 
-!!! note "Page Moved and Expanded"
-    This page has been moved and significantly enhanced with more examples.
-
-##  New Location
-
-**[ Complete Application Tutorial](tutorial/complete-application.md)**
-
-The new page includes:
-- Full project structure
-- Complete CRUD operations
-- Pydantic schemas
-- Error handling patterns
-- Testing examples
-- Docker and Kubernetes deployment
-- CI/CD pipeline example
-
----
+For a step-by-step tutorial with full project structure and deployment, see [Complete Application Tutorial](tutorial/complete-application.md).
 
 For quick reference:
 
