@@ -418,18 +418,18 @@ analytics = database_config(
 ## Related Documentation
 
 **Getting Started:**
-- **[Quick Start](../configuration/quick-start.md)** - Your first configuration
-- **[Concepts](../configuration/concepts.md)** - How configuration works
+- [Quick Start](../configuration/quick-start.md) - Your first configuration
+- [Concepts](../configuration/concepts.md) - How configuration works
 
 **Guides:**
-- **[Connection URLs](../configuration/connection-urls.md)** - Database URL formats
-- **[Model Discovery](../configuration/model-discovery.md)** - How `model_paths` works
-- **[Dev Mode](../configuration/dev-mode.md)** - Local development
-- **[Multi-Database](../configuration/multi-database.md)** - Multiple databases
-- **[Production Patterns](../configuration/production-patterns.md)** - Real-world examples
+- [Connection URLs](../configuration/connection-urls.md) - Database URL formats
+- [Model Discovery](../configuration/model-discovery.md) - How `model_paths` works
+- [Dev Mode](../configuration/dev-mode.md) - Local development
+- [Multi-Database](../configuration/multi-database.md) - Multiple databases
+- [Production Patterns](../configuration/production-patterns.md) - Real-world examples
 
 **Help:**
-- **[Troubleshooting](../configuration/troubleshooting.md)** - Common issues
+- [Troubleshooting](../configuration/troubleshooting.md) - Common issues
 
 ## Navigation
 
