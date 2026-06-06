@@ -76,34 +76,29 @@ custom_engine = create_async_engine(
 
 Engines should be disposed when your app shuts down.
 
-### Manual Disposal
+### Using `dispose_engines`
 
-Currently, DBWarden doesn't provide a built-in disposal function. You can add one:
+DBWarden provides a built-in `dispose_engines()` function that closes all cached engines and clients:
 
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import migration_context, get_session
+from dbwarden.fastapi import dispose_engines
 
-# Keep reference to engines
-_engines = []
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    async with migration_context(mode="check"):
-        yield
-    
-    # Shutdown - dispose engines
-    for engine in _engines:
-        await engine.dispose()
+    yield
+    dispose_engines()
 
 
 app = FastAPI(lifespan=lifespan)
 ```
 
+This closes async and sync session factories, connection pools, and ClickHouse clients for all configured databases.
+
 !!! tip "Kubernetes"
-    In Kubernetes, pods are terminated quickly, so manual disposal is less critical. The OS cleans up connections.
+    In Kubernetes, pods are terminated quickly, so disposal is less critical. The OS cleans up connections. However, calling `dispose_engines()` is still recommended for clean shutdowns.
 
 ## Session Lifecycle
 

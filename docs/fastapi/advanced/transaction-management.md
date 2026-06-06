@@ -9,7 +9,7 @@ By default, DBWarden sessions handle transactions automatically:
 ```python
 @app.post("/users")
 async def create_user(user_data: UserCreate, session: SessionDep):
-    user = User(**user_data.dict())
+    user = User(**user_data.model_dump())
     session.add(user)
     await session.commit()  # Explicit commit
     return user
@@ -37,7 +37,7 @@ For writes, explicitly commit:
 ```python
 @app.post("/users")
 async def create_user(user_data: UserCreate, session: SessionDep):
-    user = User(**user_data.dict())
+    user = User(**user_data.model_dump())
     session.add(user)
     await session.commit()  # ← Explicit commit
     await session.refresh(user)  # Get DB-generated values
@@ -53,7 +53,7 @@ If an exception occurs, the session rolls back automatically:
 ```python
 @app.post("/users")
 async def create_user(user_data: UserCreate, session: SessionDep):
-    user = User(**user_data.dict())
+    user = User(**user_data.model_dump())
     session.add(user)
     
     if not validate_email(user.email):
@@ -71,7 +71,7 @@ For explicit control:
 ```python
 @app.post("/users")
 async def create_user(user_data: UserCreate, session: SessionDep):
-    user = User(**user_data.dict())
+    user = User(**user_data.model_dump())
     session.add(user)
     
     try:
@@ -98,7 +98,7 @@ async def batch_create(users: list[UserCreate], session: SessionDep):
     for user_data in users:
         savepoint = await session.begin_nested()  # Create savepoint
         try:
-            user = User(**user_data.dict())
+            user = User(**user_data.model_dump())
             session.add(user)
             await session.flush()
             created.append(user)
