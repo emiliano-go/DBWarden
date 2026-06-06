@@ -26,14 +26,16 @@ async def get_db():
 With DBWarden, you have **one source of truth**:
 
 ```python
-# dbwarden.py - Single config
-database_config(
+# dbwarden.py - Single config returns a DatabaseHandle
+primary = database_config(
     database_url_sync="postgresql://...",
     model_paths=["app.models"],
 )
 
-# app/main.py - Automatic
-SessionDep = Annotated[AsyncSession, Depends(get_session())]
+# app/main.py - Use .async_session directly as a parameter annotation
+@app.get("/users")
+async def list_users(session: primary.async_session):
+    ...
 ```
 
 DBWarden handles:
@@ -68,16 +70,16 @@ async def list_users(db: AsyncSession = Depends(get_db)):
 ### With DBWarden
 
 ```python
-# One-time setup
-SessionDep = Annotated[AsyncSession, Depends(get_session())]
+# One-time setup — database_config() returns a DatabaseHandle
+primary = database_config(database_name="primary", ...)
 
-# Every route
+# Every route — use .async_session directly
 @app.get("/users")
-async def list_users(session: SessionDep):
+async def list_users(session: primary.async_session):
     ...
 ```
 
-DBWarden's `get_session()` returns a **dependency function** that FastAPI calls automatically on each request.
+The `DatabaseHandle` `.async_session` property is a FastAPI dependency annotation — ready to use in route parameters without `Annotated`, `Depends`, or type aliases.
 
 ## Engine Caching
 
@@ -98,10 +100,10 @@ Engines should be **created once and reused**:
 
 ```python
 # ✅ Good: One engine for app lifetime
-engine = create_async_engine(...)  # Created once
+primary = database_config(database_name="primary", ...)  # Engine cached
 
 @app.get("/users")
-async def list_users(session: SessionDep):
+async def list_users(session: primary.async_session):
     # Reuses cached engine
     ...
 ```
@@ -110,14 +112,14 @@ DBWarden caches engines automatically:
 
 ```
 First request:
-1. get_session() called
+1. primary.async_session resolves
 2. Engine created
 3. Engine cached
 4. Session created from engine
 5. Session yielded to route
 
 Subsequent requests:
-1. get_session() called
+1. primary.async_session resolves
 2. Engine retrieved from cache  ← Fast!
 3. Session created from engine
 4. Session yielded to route
@@ -301,16 +303,14 @@ DBWarden resolves configuration in this order:
 Example:
 
 ```python
-database_config(
+primary = database_config(
     database_url_sync="postgresql://prod-db/myapp",
     dev_database_url="sqlite:///dev.db",
 )
 
-# In development
-get_session(dev=True)  # Uses sqlite:///dev.db
-
-# In production
-get_session()  # Uses postgresql://prod-db/myapp
+# In production: uses postgresql://prod-db/myapp
+# In development (ENVIRONMENT=development): uses sqlite:///dev.db
+# primary.async_session automatically picks the right URL
 ```
 
 ## When to Use DBWarden

@@ -16,11 +16,11 @@ Common scenarios:
 Configure multiple databases:
 
 ```python
-# dbwarden.py
+# config.py
 from dbwarden import database_config
 
 # Primary database
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -29,7 +29,7 @@ database_config(
 )
 
 # Analytics database
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="postgresql",
     database_url_sync="postgresql://user:password@localhost/analytics",
@@ -37,7 +37,7 @@ database_config(
 )
 
 # Logging database
-database_config(
+logging = database_config(
     database_name="logging",
     database_type="postgresql",
     database_url_sync="postgresql://user:password@localhost/logs",
@@ -45,58 +45,43 @@ database_config(
 )
 ```
 
-Create session dependencies:
+Each handle's `.async_session` is a FastAPI dependency annotation — use it directly in routes:
 
 ```python
-# app/dependencies.py
-from typing import Annotated
-from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from dbwarden.fastapi import get_session
+from config import primary, analytics, logging
 
-# Primary database
-PrimarySessionDep = Annotated[AsyncSession, Depends(get_session())]
 
-# Analytics database
-AnalyticsSessionDep = Annotated[AsyncSession, Depends(get_session("analytics"))]
-
-# Logging database
-LoggingSessionDep = Annotated[AsyncSession, Depends(get_session("logging"))]
-```
-
-Use in routes:
-
-```python
 @app.get("/users")
-async def list_users(session: PrimarySessionDep):
+async def list_users(session: primary.async_session):
     result = await session.execute(select(User))
     return result.scalars().all()
 
+
 @app.get("/analytics/events")
-async def list_events(session: AnalyticsSessionDep):
+async def list_events(session: analytics.async_session):
     result = await session.execute(select(Event))
     return result.scalars().all()
 ```
 
 ## Query Multiple Databases
 
-You can use multiple session dependencies in the same route:
+You can use multiple handles in the same route:
 
 ```python
 @app.get("/dashboard")
 async def get_dashboard(
-    primary_session: PrimarySessionDep,
-    analytics_session: AnalyticsSessionDep,
-    logging_session: LoggingSessionDep,
+    users_session: primary.async_session,
+    events_session: analytics.async_session,
+    logs_session: logging.async_session,
 ):
     # Query primary database
-    users = await primary_session.execute(select(User))
+    users = await users_session.execute(select(User))
     
     # Query analytics database
-    events = await analytics_session.execute(select(Event))
+    events = await events_session.execute(select(Event))
     
     # Query logging database
-    logs = await logging_session.execute(select(AuditLog))
+    logs = await logs_session.execute(select(AuditLog))
     
     return {
         "users": users.scalars().all(),
@@ -115,10 +100,10 @@ SQLAlchemy doesn't support joining across different databases. Instead:
 ### Pattern 1: Query Then Combine
 
 ```python
-@app.get("/report")
-async def get_report(
-    primary_session: PrimarySessionDep,
-    analytics_session: AnalyticsSessionDep,
+@app.get("/dashboard")
+async def get_dashboard(
+    primary_session: primary.async_session,
+    analytics_session: analytics.async_session,
 ):
     # Get user IDs from primary
     user_result = await primary_session.execute(select(User.id))
@@ -156,8 +141,8 @@ class Event(Base):
 ```python
 @app.get("/enriched-events")
 async def get_enriched_events(
-    primary_session: PrimarySessionDep,
-    analytics_session: AnalyticsSessionDep,
+    primary_session: primary.async_session,
+    analytics_session: analytics.async_session,
 ):
     # Get all users
     users_result = await primary_session.execute(select(User))
@@ -267,18 +252,18 @@ dbwarden migrate --all
 ### Pattern 1: Primary + Read Replica
 
 ```python
-# app/dependencies.py
-WriteSessionDep = Annotated[AsyncSession, Depends(get_session("primary"))]
-ReadSessionDep = Annotated[AsyncSession, Depends(get_session("replica"))]
+# config.py
+primary = database_config(database_name="primary", ...)
+replica = database_config(database_name="replica", ...)
 
 # Routes
 @app.post("/users")
-async def create_user(session: WriteSessionDep):
+async def create_user(session: primary.async_session):
     # Write to primary
     ...
 
 @app.get("/users")
-async def list_users(session: ReadSessionDep):
+async def list_users(session: replica.async_session):
     # Read from replica
     ...
 ```
@@ -302,8 +287,8 @@ async def get_data(tenant_id: str):
 @app.post("/users")
 async def create_user(
     user_data: UserCreate,
-    primary_session: PrimarySessionDep,
-    logging_session: LoggingSessionDep,
+    primary_session: primary.async_session,
+    logging_session: logging.async_session,
 ):
     # Create user in primary
     user = User(**user_data.model_dump())

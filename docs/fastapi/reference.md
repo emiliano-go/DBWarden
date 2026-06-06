@@ -2,6 +2,12 @@
 
 Complete API documentation for DBWarden's FastAPI integration.
 
+!!! tip "Recommended: Use DatabaseHandle"
+    For most applications, use the `DatabaseHandle` pattern instead of
+    `get_session()`. Call `database_config()` and use `.async_session`
+    directly in route parameters — no `Annotated`, `Depends`, or type
+    aliases needed. See [Session Dependency](tutorial/session-dependency.md).
+
 ## `get_session`
 
 Returns a FastAPI dependency that yields an `AsyncSession`.
@@ -604,9 +610,25 @@ async def lifespan(app: FastAPI):
 
 ## Type Aliases
 
-### `SessionDep`
+### `DatabaseHandle` Pattern (Recommended)
 
-Recommended type alias for session dependencies:
+Use `.async_session` and `.sync_session` directly — no type aliases needed:
+
+```python
+from dbwarden import database_config
+
+primary = database_config(database_name="primary", ...)
+
+
+@app.get("/users")
+async def list_users(session: primary.async_session):
+    result = await session.execute(select(User))
+    return result.scalars().all()
+```
+
+### `SessionDep` (Alternative)
+
+If you prefer the `Annotated` pattern, use `get_session()`:
 
 ```python
 from typing import Annotated
@@ -615,15 +637,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from dbwarden.fastapi import get_session
 
 SessionDep = Annotated[AsyncSession, Depends(get_session())]
-```
-
-Use in routes:
-
-```python
-@app.get("/users")
-async def list_users(session: SessionDep):
-    result = await session.execute(select(User))
-    return result.scalars().all()
 ```
 
 ---

@@ -4,9 +4,9 @@ Learn how DBWarden manages database engines and connections.
 
 ## How Engines Are Created
 
-When you first use `get_session()`:
+When you first use a session annotation like `primary.async_session`:
 
-1. **First request arrives** with `SessionDep` dependency
+1. **First request arrives** with a session parameter annotation
 2. **DBWarden checks engine cache** - Is there an engine for this database?
 3. **If not cached:**
    - Reads database config from DBWarden registry
@@ -125,7 +125,7 @@ async_sessionmaker(
 **Without it:**
 ```python
 @app.post("/users")
-async def create_user(session: SessionDep):
+async def create_user(session: primary.async_session):
     user = User(email="test@example.com")
     session.add(user)
     await session.commit()
@@ -137,7 +137,7 @@ async def create_user(session: SessionDep):
 **With it:**
 ```python
 @app.post("/users")
-async def create_user(session: SessionDep):
+async def create_user(session: primary.async_session):
     user = User(email="test@example.com")
     session.add(user)
     await session.commit()
@@ -188,7 +188,7 @@ Make sure sessions close:
 ```python
 # ✅ Correct - session closes automatically
 @app.get("/users")
-async def list_users(session: SessionDep):
+async def list_users(session: primary.async_session):
     result = await session.execute(select(User))
     return result.scalars().all()
     # Session closes here
@@ -197,7 +197,7 @@ async def list_users(session: SessionDep):
 _sessions = []
 
 @app.get("/users")
-async def list_users(session: SessionDep):
+async def list_users(session: primary.async_session):
     _sessions.append(session)  # Leak!
     ...
 ```

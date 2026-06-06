@@ -2,13 +2,17 @@
 
 Learn how to manage database transactions in FastAPI with DBWarden.
 
+In these examples, `primary` is a `DatabaseHandle` created with
+`database_config()`. Use `primary.async_session` as the route parameter
+annotation to get a request-scoped session. See [Session Dependency](../tutorial/session-dependency.md).
+
 ## Automatic Transactions
 
 By default, DBWarden sessions handle transactions automatically:
 
 ```python
 @app.post("/users")
-async def create_user(user_data: UserCreate, session: SessionDep):
+async def create_user(user_data: UserCreate, session: primary.async_session):
     user = User(**user_data.model_dump())
     session.add(user)
     await session.commit()  # Explicit commit
@@ -24,7 +28,7 @@ For simple operations, SQLAlchemy flushes changes automatically:
 
 ```python
 @app.get("/users/{user_id}")
-async def get_user(user_id: int, session: SessionDep):
+async def get_user(user_id: int, session: primary.async_session):
     result = await session.execute(select(User).where(User.id == user_id))
     return result.scalar_one_or_none()
     # No commit needed for reads
@@ -36,7 +40,7 @@ For writes, explicitly commit:
 
 ```python
 @app.post("/users")
-async def create_user(user_data: UserCreate, session: SessionDep):
+async def create_user(user_data: UserCreate, session: primary.async_session):
     user = User(**user_data.model_dump())
     session.add(user)
     await session.commit()  # ← Explicit commit
@@ -52,7 +56,7 @@ If an exception occurs, the session rolls back automatically:
 
 ```python
 @app.post("/users")
-async def create_user(user_data: UserCreate, session: SessionDep):
+async def create_user(user_data: UserCreate, session: primary.async_session):
     user = User(**user_data.model_dump())
     session.add(user)
     
@@ -70,7 +74,7 @@ For explicit control:
 
 ```python
 @app.post("/users")
-async def create_user(user_data: UserCreate, session: SessionDep):
+async def create_user(user_data: UserCreate, session: primary.async_session):
     user = User(**user_data.model_dump())
     session.add(user)
     
@@ -91,7 +95,7 @@ Use savepoints for partial rollbacks:
 from sqlalchemy.exc import IntegrityError
 
 @app.post("/batch")
-async def batch_create(users: list[UserCreate], session: SessionDep):
+async def batch_create(users: list[UserCreate], session: primary.async_session):
     created = []
     failed = []
     
@@ -117,7 +121,7 @@ Group related operations:
 
 ```python
 @app.post("/orders")
-async def create_order(order_data: OrderCreate, session: SessionDep):
+async def create_order(order_data: OrderCreate, session: primary.async_session):
     # All operations in one transaction
     
     # 1. Create order
@@ -173,8 +177,8 @@ For multi-database transactions (advanced):
 ```python
 @app.post("/transfer")
 async def transfer_funds(
-    primary_session: PrimarySessionDep,
-    analytics_session: AnalyticsSessionDep,
+    primary_session: primary.async_session,
+    analytics_session: analytics.async_session,
 ):
     try:
         # Phase 1: Prepare both transactions
@@ -215,7 +219,7 @@ class User(Base):
 async def update_user(
     user_id: int,
     user_data: UserUpdate,
-    session: SessionDep,
+    session: primary.async_session,
 ):
     user = await session.get(User, user_id)
     
@@ -238,7 +242,7 @@ Lock rows explicitly:
 from sqlalchemy import select
 
 @app.post("/reserve")
-async def reserve_item(item_id: int, session: SessionDep):
+async def reserve_item(item_id: int, session: primary.async_session):
     # Lock the row for update
     result = await session.execute(
         select(Item)
@@ -264,7 +268,7 @@ Make operations idempotent:
 async def create_order(
     order_data: OrderCreate,
     idempotency_key: str,
-    session: SessionDep,
+    session: primary.async_session,
 ):
     # Check if order already exists
     existing = await session.execute(
