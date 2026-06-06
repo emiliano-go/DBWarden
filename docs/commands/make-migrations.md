@@ -75,7 +75,7 @@ When no description is provided, DBWarden automatically generates a descriptive 
 ### Name Rules
 
 - Snake case throughout
-- Operation words pluralized for multiple targets (e.g., `add_column` → `add_columns`)
+- Operation words pluralized for multiple targets (e.g., `add_column`  `add_columns`)
 - Mixed operations use `alter`
 - Max 72 characters (table/target names truncated as needed)
 

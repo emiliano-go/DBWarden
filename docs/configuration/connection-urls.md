@@ -181,7 +181,7 @@ database_url_sync="mysql://user:pass@localhost:3306/myapp"
 Configure with `database_type="mariadb"`:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     database_type="mariadb",
     database_url_sync="mysql://localhost/myapp",
@@ -234,7 +234,7 @@ database_url_sync="http://user:pass@localhost:8123/myapp?compression=1&connect_t
 ```python
 import os
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -249,7 +249,7 @@ import os
 
 database_url = os.getenv("DATABASE_URL", "sqlite:///./dev.db")
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql" if "postgresql" in database_url else "sqlite",
@@ -266,7 +266,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable is required")
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -279,14 +279,14 @@ database_config(
 ```python
 import os
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
     database_url_sync=os.getenv("PRIMARY_DATABASE_URL"),
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="postgresql",
     database_url_sync=os.getenv("ANALYTICS_DATABASE_URL"),
@@ -423,13 +423,13 @@ database_url_sync="postgresql://user:p%40ss@localhost/myapp"  # @ encoded as %40
 
 You learned:
 
-✅ URL format for PostgreSQL, SQLite, MySQL, ClickHouse  
-✅ SSL configuration options  
-✅ Connection pool parameters  
-✅ Cloud provider URL patterns  
-✅ Environment variable patterns  
-✅ URL encoding for special characters  
-✅ Common mistakes and how to avoid them  
+ URL format for PostgreSQL, SQLite, MySQL, ClickHouse  
+ SSL configuration options  
+ Connection pool parameters  
+ Cloud provider URL patterns  
+ Environment variable patterns  
+ URL encoding for special characters  
+ Common mistakes and how to avoid them  
 
 ## What's Next?
 

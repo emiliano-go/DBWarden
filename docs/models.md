@@ -7,7 +7,7 @@ Use `model_paths` in your `database_config(...)` entries to control discovery.
 Example:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",

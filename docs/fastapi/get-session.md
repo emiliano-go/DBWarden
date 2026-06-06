@@ -3,9 +3,9 @@
 !!! note "Page Moved"
     This page has been moved and significantly expanded with better examples and explanations.
 
-## 📍 New Location
+##  New Location
 
-**[→ Session Dependency Tutorial](tutorial/session-dependency.md)**
+**[ Session Dependency Tutorial](tutorial/session-dependency.md)**
 
 The new page includes:
 - Progressive examples from simple to advanced
@@ -21,7 +21,7 @@ For quick reference, here's the basic usage:
 
 ## Quick Reference
 
-`get_session` provides a FastAPI-native `AsyncSession` dependency that sources its connection from the DBWarden config registry. You never need to manually build an engine, session factory, or connection string in your FastAPI app — `get_session` owns that entirely.
+`get_session` provides a FastAPI-native `AsyncSession` dependency that sources its connection from the DBWarden config registry. You never need to manually build an engine, session factory, or connection string in your FastAPI app  `get_session` owns that entirely.
 
 ## Install dependency group
 
@@ -99,7 +99,7 @@ session_dep = get_session()
 analytics_dep = get_session("analytics")
 ```
 
-Both forms return a callable that FastAPI's `Depends()` can consume directly. The return type is always `AsyncSession` — DBWarden is async-native for FastAPI.
+Both forms return a callable that FastAPI's `Depends()` can consume directly. The return type is always `AsyncSession`  DBWarden is async-native for FastAPI.
 
 ## Engine and session lifecycle
 
@@ -111,7 +111,7 @@ Both forms return a callable that FastAPI's `Depends()` can consume directly. Th
 
 **Session factory:**
 - One `async_sessionmaker` per unique async URL, cached per process
-- Sessions use `expire_on_commit=False` by default — this is the correct default for FastAPI response models, where you need to access attributes after `commit()`
+- Sessions use `expire_on_commit=False` by default  this is the correct default for FastAPI response models, where you need to access attributes after `commit()`
 
 **Session scope:**
 - One session per request
@@ -176,15 +176,15 @@ Unsupported database types raise a clear `ValueError` with instructions.
 
 ## Error handling
 
-- **Connection errors**: SQLAlchemy `OperationalError` propagates naturally — let FastAPI's exception handling catch it
+- **Connection errors**: SQLAlchemy `OperationalError` propagates naturally  let FastAPI's exception handling catch it
 - **Route exceptions**: Session is automatically rolled back, then exception re-raises
 - **Database not found**: If you pass a database name that doesn't exist in config, `get_database()` raises an error at engine creation time
 
 ## Notes
 
-- Session factories are cached per resolved async URL — multiple calls to `get_session()` reuse the same factory
+- Session factories are cached per resolved async URL  multiple calls to `get_session()` reuse the same factory
 - The `expire_on_commit=False` setting means you can safely access model attributes after committing, which is essential for FastAPI response models
-- Never call `session.commit()` or `session.rollback()` manually in your route unless you have a specific reason — let the dependency handle lifecycle
+- Never call `session.commit()` or `session.rollback()` manually in your route unless you have a specific reason  let the dependency handle lifecycle
 
 ## Navigation
 

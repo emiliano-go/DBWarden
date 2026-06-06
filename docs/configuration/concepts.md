@@ -17,10 +17,10 @@ Configuration tells DBWarden:
 Your IDE can help you:
 
 ```python
-database_config(
-    database_name="primary",  # ← IDE suggests parameter names
-    default=True,             # ← IDE knows this is boolean
-    database_type="sqlite",   # ← IDE can validate enum values
+primary = database_config(
+    database_name="primary",  #  IDE suggests parameter names
+    default=True,             #  IDE knows this is boolean
+    database_type="sqlite",   #  IDE can validate enum values
     database_url_sync="...",
 )
 ```
@@ -40,7 +40,7 @@ if environment == "production":
 else:
     database_url = "sqlite:///./dev.db"
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql" if environment == "production" else "sqlite",
@@ -60,7 +60,7 @@ DATABASES = {
 }
 
 for name, url in DATABASES.items():
-    database_config(
+    db = database_config(
         database_name=name,
         default=(name == "primary"),
         database_type="postgresql",
@@ -77,13 +77,13 @@ DBWarden searches for configuration in this order:
 
 ```
 1. dbwarden.py in current directory
-     ↓ not found
+      not found
 2. dbwarden.py in parent directories
-     ↓ not found
+      not found
 3. Full scan for files with database_config()
-     ↓ not found
+      not found
 4. DBWARDEN_CONFIG_MODULE environment variable
-     ↓ not found
+      not found
 Error: No configuration found
 ```
 
@@ -92,9 +92,9 @@ Error: No configuration found
 Configuration loads when you run **any** DBWarden command:
 
 ```bash
-dbwarden migrate    # ← Config loads here
-dbwarden status     # ← Config loads here
-dbwarden history    # ← Config loads here
+dbwarden migrate    #  Config loads here
+dbwarden status     #  Config loads here
+dbwarden history    #  Config loads here
 ```
 
 **Load process:**
@@ -121,15 +121,15 @@ DBWarden validates configuration at load time:
 
 ```python
 # dbwarden.py
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
     database_url_sync="postgresql://localhost/myapp",
 )
 
-database_config(
-    database_name="primary",  # ← Duplicate!
+primary = database_config(
+    database_name="primary",  #  Duplicate!
     default=True,
     database_type="postgresql",
     database_url_sync="postgresql://localhost/other",
@@ -148,8 +148,8 @@ Validation happens **before** any commands execute.
 
 When DBWarden imports your config file, it applies **path-level security**:
 
-- **Path validation** — Config files must be within the project tree. Paths with `..` traversal sequences are rejected.
-- **Model path validation** — Model discovery paths are also checked for path traversal attacks.
+- **Path validation**  Config files must be within the project tree. Paths with `..` traversal sequences are rejected.
+- **Model path validation**  Model discovery paths are also checked for path traversal attacks.
 
 This ensures an attacker cannot trick DBWarden into loading config files from outside your project.
 
@@ -181,13 +181,13 @@ Without `default=True`, DBWarden wouldn't know which database to use for the sec
 ### Only One Default
 
 ```python
-# ✅ Good
-database_config(database_name="primary", default=True, ...)
-database_config(database_name="analytics", default=False, ...)  # or omit default
+#  Good
+analytics = database_config(
+analytics = database_config(database_name="analytics", default=False, ...)  # or omit default
 
-# ❌ Bad - two defaults
-database_config(database_name="primary", default=True, ...)
-database_config(database_name="analytics", default=True, ...)  # Error!
+#  Bad - two defaults
+analytics = database_config(
+analytics = database_config(database_name="analytics", default=True, ...)  # Error!
 ```
 
 ### Default Affects CLI Behavior
@@ -209,12 +209,12 @@ dbwarden migrate --database analytics  # Targets analytics, not primary
 `model_paths` tells DBWarden where your SQLAlchemy models live:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
     database_url_sync="postgresql://localhost/myapp",
-    model_paths=["app.models"],  # ← Look here for models
+    model_paths=["app.models"],  #  Look here for models
 )
 ```
 
@@ -222,11 +222,11 @@ database_config(
 
 ```
 1. Import each module in model_paths
-     ↓
+     
 2. Find all classes inheriting from DeclarativeBase
-     ↓
+     
 3. Extract table metadata (__tablename__, columns, etc.)
-     ↓
+     
 4. Build internal representation for migration generation
 ```
 
@@ -236,7 +236,7 @@ database_config(
 
 ```python
 # This works
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
@@ -249,19 +249,19 @@ database_config(
 
 ```python
 # This is required
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
     database_url_sync="postgresql://localhost/main",
-    model_paths=["app.models.primary"],  # ← Required
+    model_paths=["app.models.primary"],  #  Required
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="postgresql",
     database_url_sync="postgresql://localhost/analytics",
-    model_paths=["app.models.analytics"],  # ← Required
+    model_paths=["app.models.analytics"],  #  Required
 )
 ```
 
@@ -274,7 +274,7 @@ database_config(
 Dev mode lets you use a different database for local development:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",              # Production
@@ -295,14 +295,14 @@ dbwarden migrate        # Uses PostgreSQL
 
 ```
 Command: dbwarden --dev migrate
-    ↓
+    
 Check for --dev flag
-    ↓
-Swap database_type → dev_database_type
-Swap database_url → dev_database_url
-    ↓
+    
+Swap database_type  dev_database_type
+Swap database_url  dev_database_url
+    
 Connect to dev database
-    ↓
+    
 Execute command
 ```
 
@@ -338,7 +338,7 @@ Common scenarios:
 Each `database_config()` call registers an independent database:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -346,7 +346,7 @@ database_config(
     model_paths=["app.models.primary"],
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="postgresql",
     database_url_sync="postgresql://localhost/analytics",
@@ -366,25 +366,25 @@ They're completely independent:
 app/
   models/
     primary/
-      user.py         # ← Goes to primary database
+      user.py         #  Goes to primary database
       order.py
     analytics/
-      event.py        # ← Goes to analytics database
+      event.py        #  Goes to analytics database
       metric.py
 ```
 
 Configuration:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
-    model_paths=["app.models.primary"],  # ← Only primary models
+    model_paths=["app.models.primary"],  #  Only primary models
     ...
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
-    model_paths=["app.models.analytics"],  # ← Only analytics models
+    model_paths=["app.models.analytics"],  #  Only analytics models
     ...
 )
 ```
@@ -400,12 +400,12 @@ import os
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
     database_url_sync=DATABASE_URL,
-    secure_values=True,  # ← Hide credentials
+    secure_values=True,  #  Hide credentials
 )
 ```
 
@@ -450,14 +450,14 @@ When commands run:
 
 You learned:
 
-✅ Why Python configuration is powerful  
-✅ How configuration discovery works  
-✅ When validation runs  
-✅ Why `default=True` is required  
-✅ How model discovery works  
-✅ What dev mode does  
-✅ How multi-database configuration works  
-✅ When to use `secure_values`  
+ Why Python configuration is powerful  
+ How configuration discovery works  
+ When validation runs  
+ Why `default=True` is required  
+ How model discovery works  
+ What dev mode does  
+ How multi-database configuration works  
+ When to use `secure_values`  
 
 ## What's Next?
 

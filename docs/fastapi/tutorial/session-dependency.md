@@ -4,7 +4,7 @@ Learn how to get database sessions in your FastAPI routes using `DatabaseHandle`
 
 ## The Handle Pattern
 
-`database_config()` returns a `DatabaseHandle`. Its `.async_session` (and `.sync_session`) properties are FastAPI dependency annotations — use them **directly** in route parameters:
+`database_config()` returns a `DatabaseHandle`. Its `.async_session` (and `.sync_session`) properties are FastAPI dependency annotations  use them **directly** in route parameters:
 
 ```python
 from dbwarden import database_config
@@ -117,7 +117,7 @@ When the first request comes in:
 
 ```
 1. primary.async_session resolves
-2. Cached engine is reused — no new engine created
+2. Cached engine is reused  no new engine created
 3. A fresh session opens for this request
 4. Your route runs
 5. Session closes automatically
@@ -216,8 +216,8 @@ primary = database_config(
 )
 ```
 
-- `ENVIRONMENT=development` or `local` or `test` → uses `dev_database_url`
-- Otherwise → uses `database_url_sync`
+- `ENVIRONMENT=development` or `local` or `test`  uses `dev_database_url`
+- Otherwise  uses `database_url_sync`
 
 No code changes needed between environments.
 
@@ -228,9 +228,9 @@ No code changes needed between environments.
 Each request gets its own session:
 
 ```
-Request A ──→ Session A (independent)
-Request B ──→ Session B (independent)
-Request C ──→ Session C (independent)
+Request A ── Session A (independent)
+Request B ── Session B (independent)
+Request C ── Session C (independent)
 ```
 
 ### Automatic Cleanup
@@ -248,7 +248,7 @@ DBWarden sessions use `expire_on_commit=False` so that Pydantic response models 
 This happens if you try to use the session outside a request handler:
 
 ```python
-# Wrong — used outside a request
+# Wrong  used outside a request
 session = primary.async_session
 ```
 
@@ -313,8 +313,8 @@ For most cases, the `DatabaseHandle` pattern (`.async_session` / `.sync_session`
 You learned:
 
 The `DatabaseHandle` pattern:
-- `primary.async_session` — async session for route parameters
-- `primary.sync_session` — sync session for synchronous routes
+- `primary.async_session`  async session for route parameters
+- `primary.sync_session`  sync session for synchronous routes
 - No `Annotated`, `Depends`, or type aliases needed
 - One handle per database, use the right handle in each route
 - Automatic engine caching and session lifecycle

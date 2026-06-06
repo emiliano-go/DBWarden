@@ -6,9 +6,9 @@ Learn how to validate your database before your FastAPI app accepts traffic.
 
 Startup checks run when your app boots, **before** it starts accepting requests. They verify:
 
-- ✅ Database connectivity
-- ✅ Migration state
-- ✅ Schema integrity
+-  Database connectivity
+-  Migration state
+-  Schema integrity
 
 If checks fail, your app won't start. This prevents serving traffic with a broken or outdated database.
 
@@ -123,11 +123,11 @@ async with migration_context(mode="check"):
 ```
 
 **What it does:**
-- ✅ Checks database connectivity
-- ✅ Verifies migration state
-- ✅ Reports pending migrations
-- ❌ Does **not** apply migrations
-- ❌ Does **not** modify schema
+-  Checks database connectivity
+-  Verifies migration state
+-  Reports pending migrations
+-  Does **not** apply migrations
+-  Does **not** modify schema
 
 **Use for:**
 - Production deployments
@@ -144,10 +144,10 @@ async with migration_context(mode="migrate"):
 ```
 
 **What it does:**
-- ✅ Checks database connectivity
-- ✅ Applies pending migrations
-- ✅ Updates schema
-- ⚠️ Modifies your database
+-  Checks database connectivity
+-  Applies pending migrations
+-  Updates schema
+-  Modifies your database
 
 **Use for:**
 - Local development
@@ -324,7 +324,7 @@ Allow migrate mode in production:
 ```python
 async with migration_context(
     mode="migrate",
-    allow_in_production=True  # ⚠️ Use with caution
+    allow_in_production=True  #  Use with caution
 ):
     yield
 ```
@@ -417,10 +417,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 ```
 
-- ✅ Validates all databases
-- ✅ Fails fast on issues
-- ✅ No schema changes
-- ✅ Safe for multiple pods
+-  Validates all databases
+-  Fails fast on issues
+-  No schema changes
+-  Safe for multiple pods
 
 ### Pattern 2: Development - Auto Migrate
 
@@ -440,10 +440,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 ```
 
-- ✅ Auto-applies migrations locally
-- ✅ Creates backups
-- ✅ Skipped in production
-- ✅ Detailed logging
+-  Auto-applies migrations locally
+-  Creates backups
+-  Skipped in production
+-  Detailed logging
 
 ### Pattern 3: Hybrid - Dev Migrates, Prod Checks
 
@@ -466,9 +466,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 ```
 
-- ✅ Migrates automatically in dev
-- ✅ Only checks in production
-- ✅ One configuration for all environments
+-  Migrates automatically in dev
+-  Only checks in production
+-  One configuration for all environments
 
 ### Pattern 4: No Checks (CI/CD Handles It)
 
@@ -628,15 +628,15 @@ The app exits even if some databases are healthy. Fix all databases before start
 
 | | **Check Mode** | **Migrate Mode** |
 |---|---|---|
-| **Reads schema** | ✅ | ✅ |
-| **Checks connectivity** | ✅ | ✅ |
-| **Reports pending migrations** | ✅ | ✅ |
-| **Applies migrations** | ❌ | ✅ |
-| **Modifies database** | ❌ | ✅ |
-| **Production safe (multi-pod)** | ✅ | ⚠️ Risky |
-| **Can rollback** | N/A | ❌ |
-| **Requires lock** | ❌ | ✅ |
-| **Fast** | ✅ (< 100ms) | ⚠️ Depends on migrations |
+| **Reads schema** |  |  |
+| **Checks connectivity** |  |  |
+| **Reports pending migrations** |  |  |
+| **Applies migrations** |  |  |
+| **Modifies database** |  |  |
+| **Production safe (multi-pod)** |  |  Risky |
+| **Can rollback** | N/A |  |
+| **Requires lock** |  |  |
+| **Fast** |  (< 100ms) |  Depends on migrations |
 
 ## Environment Detection
 
@@ -669,8 +669,8 @@ export ENVIRONMENT=production
 
 Some parameters behave differently based on environment:
 
-**`only_dev=True`** → Skipped in production
-**`allow_in_production=False`** → Migrate mode blocked in production
+**`only_dev=True`**  Skipped in production
+**`allow_in_production=False`**  Migrate mode blocked in production
 
 ## Troubleshooting
 
@@ -691,10 +691,10 @@ async def lifespan(app: FastAPI):
 Make sure you're passing `lifespan` to `FastAPI`:
 
 ```python
-# ✅ Correct
+#  Correct
 app = FastAPI(lifespan=lifespan)
 
-# ❌ Wrong - lifespan not used
+#  Wrong - lifespan not used
 app = FastAPI()
 ```
 
@@ -727,11 +727,11 @@ async with migration_context(mode="check", verbose=True):
 If you see "blocked in production" errors:
 
 ```python
-# ❌ This is blocked
+#  This is blocked
 async with migration_context(mode="migrate"):
     yield
 
-# ✅ Solutions:
+#  Solutions:
 
 # 1. Use check mode
 async with migration_context(mode="check"):
@@ -750,15 +750,15 @@ async with migration_context(mode="migrate", allow_in_production=True):
 
 You learned:
 
-✅ Startup checks validate database before serving traffic  
-✅ Use `migration_context` in FastAPI lifespan  
-✅ Check mode for production (safe, read-only)  
-✅ Migrate mode for development (auto-applies migrations)  
-✅ All parameters and when to use them  
-✅ Common patterns for different environments  
-✅ Direct helper functions for more control  
-✅ Environment detection and production safety  
-✅ Troubleshooting common issues  
+ Startup checks validate database before serving traffic  
+ Use `migration_context` in FastAPI lifespan  
+ Check mode for production (safe, read-only)  
+ Migrate mode for development (auto-applies migrations)  
+ All parameters and when to use them  
+ Common patterns for different environments  
+ Direct helper functions for more control  
+ Environment detection and production safety  
+ Troubleshooting common issues  
 
 ## What's Next?
 

@@ -15,12 +15,12 @@ Model discovery is the process where DBWarden:
 ### Basic Usage
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
     database_url_sync="postgresql://localhost/myapp",
-    model_paths=["app.models"],  # ← Discover models here
+    model_paths=["app.models"],  #  Discover models here
 )
 ```
 
@@ -40,12 +40,12 @@ from sqlalchemy import String, Integer
 class Base(DeclarativeBase):
     pass
 
-class User(Base):  # ← Discovered
+class User(Base):  #  Discovered
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(String(255))
 
-class Order(Base):  # ← Discovered
+class Order(Base):  #  Discovered
     __tablename__ = "orders"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 ```
@@ -57,7 +57,7 @@ class Order(Base):  # ← Discovered
 For single-database projects, `model_paths` is optional:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
@@ -76,19 +76,19 @@ DBWarden will scan your entire codebase for models.
 For multi-database projects, `model_paths` is **required** for each database:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
     database_url_sync="postgresql://localhost/main",
-    model_paths=["app.models.primary"],  # ← Required
+    model_paths=["app.models.primary"],  #  Required
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="postgresql",
     database_url_sync="postgresql://localhost/analytics",
-    model_paths=["app.models.analytics"],  # ← Required
+    model_paths=["app.models.analytics"],  #  Required
 )
 ```
 
@@ -118,12 +118,12 @@ For each imported module, DBWarden recursively imports submodules:
 ```
 app/
   models/
-    __init__.py       # ← Imported
-    user.py           # ← Imported
-    order.py          # ← Imported
+    __init__.py       #  Imported
+    user.py           #  Imported
+    order.py          #  Imported
     admin/
-      __init__.py     # ← Imported
-      admin_user.py   # ← Imported
+      __init__.py     #  Imported
+      admin_user.py   #  Imported
 ```
 
 ### Step 3: Find Model Classes
@@ -257,13 +257,13 @@ model_paths=["app.models", "app.legacy.models"]
 By default, model paths cannot overlap between databases:
 
 ```python
-# ❌ Error: overlap detected
-database_config(
+#  Error: overlap detected
+primary = database_config(
     database_name="primary",
     model_paths=["app.models"],
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     model_paths=["app.models"],  # Same path!
 )
@@ -274,16 +274,16 @@ database_config(
 If models genuinely belong to multiple databases:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     model_paths=["app.shared"],
-    overlap_models=True,  # ← Allow overlap
+    overlap_models=True,  #  Allow overlap
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     model_paths=["app.shared"],
-    overlap_models=True,  # ← Allow overlap
+    overlap_models=True,  #  Allow overlap
 )
 ```
 
@@ -302,13 +302,13 @@ database_config(
 
 ```python
 # app/models/__init__.py
-# ❌ Wrong - models not imported
+#  Wrong - models not imported
 from sqlalchemy.orm import DeclarativeBase
 
 class Base(DeclarativeBase):
     pass
 
-# ✅ Correct - import models
+#  Correct - import models
 from app.models.user import User
 from app.models.order import Order
 ```
@@ -316,10 +316,10 @@ from app.models.order import Order
 2. **Wrong module path**
 
 ```python
-# ❌ Wrong
+#  Wrong
 model_paths=["models"]  # Not on PYTHONPATH
 
-# ✅ Correct
+#  Correct
 model_paths=["app.models"]
 ```
 
@@ -327,10 +327,10 @@ model_paths=["app.models"]
 
 ```python
 # app/models/user.py
-from app.models.order import Order  # ← Circular import
+from app.models.order import Order  #  Circular import
 
 # app/models/order.py
-from app.models.user import User  # ← Circular import
+from app.models.user import User  #  Circular import
 ```
 
 **Solution:** Use forward references:
@@ -351,15 +351,15 @@ if TYPE_CHECKING:
 **Solution:** Add `model_paths` to each database:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
-    model_paths=["app.models.primary"],  # ← Add this
+    model_paths=["app.models.primary"],  #  Add this
     ...
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
-    model_paths=["app.models.analytics"],  # ← Add this
+    model_paths=["app.models.analytics"],  #  Add this
     ...
 )
 ```
@@ -373,13 +373,13 @@ database_config(
 **Solution 1:** Use separate paths:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     model_paths=["app.models.primary"],  # Different path
     ...
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     model_paths=["app.models.analytics"],  # Different path
     ...
@@ -389,17 +389,17 @@ database_config(
 **Solution 2:** Allow overlap (if intentional):
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     model_paths=["app.shared"],
-    overlap_models=True,  # ← Allow overlap
+    overlap_models=True,  #  Allow overlap
     ...
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     model_paths=["app.shared"],
-    overlap_models=True,  # ← Allow overlap
+    overlap_models=True,  #  Allow overlap
     ...
 )
 ```
@@ -439,14 +439,14 @@ model_paths=["app.models"]  # Only scans models
 Models should be pure:
 
 ```python
-# ❌ Bad - side effects on import
+#  Bad - side effects on import
 class User(Base):
     __tablename__ = "users"
     ...
 
 print("User model loaded!")  # Side effect
 
-# ✅ Good - no side effects
+#  Good - no side effects
 class User(Base):
     __tablename__ = "users"
     ...
@@ -466,7 +466,7 @@ if environment == "production":
 else:
     model_paths = ["app.models.dev"]
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -479,13 +479,13 @@ database_config(
 
 You learned:
 
-✅ What model discovery is and how it works  
-✅ When `model_paths` is required vs optional  
-✅ Discovery algorithm (import → find → extract)  
-✅ Common module path patterns  
-✅ How to handle model path overlap  
-✅ Troubleshooting discovery issues  
-✅ Performance considerations  
+ What model discovery is and how it works  
+ When `model_paths` is required vs optional  
+ Discovery algorithm (import  find  extract)  
+ Common module path patterns  
+ How to handle model path overlap  
+ Troubleshooting discovery issues  
+ Performance considerations  
 
 ## What's Next?
 

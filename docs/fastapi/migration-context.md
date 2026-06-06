@@ -3,9 +3,9 @@
 !!! note "Page Moved and Expanded"
     This page has been moved to a comprehensive tutorial with detailed examples.
 
-## 📍 New Location
+##  New Location
 
-**[→ Startup Checks Tutorial](tutorial/startup-checks.md)**
+**[ Startup Checks Tutorial](tutorial/startup-checks.md)**
 
 The new page includes:
 - All parameters documented with examples
