@@ -83,6 +83,16 @@ class SchemaDifference:
 
 
 @dataclass
+class SeedRecord:
+    version: str
+    description: str
+    filename: str
+    seed_type: str
+    applied_at: datetime
+    checksum: str | None = None
+
+
+@dataclass
 class SafetyIssue:
     severity: str
     change_type: str
