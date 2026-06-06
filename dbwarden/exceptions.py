@@ -44,3 +44,15 @@ class NoMigrationsError(DBWardenError):
     """Raised when no migrations are found."""
 
     pass
+
+
+class SeedError(DBWardenError):
+    """Raised when there is a seed-related error."""
+
+    pass
+
+
+class NoSeedsError(DBWardenError):
+    """Raised when no seeds are found."""
+
+    pass

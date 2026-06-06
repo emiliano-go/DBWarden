@@ -3,6 +3,7 @@ from enum import Enum
 from sqlalchemy.engine import make_url
 
 from dbwarden.config import DEFAULT_MIGRATION_TABLE, get_database
+from dbwarden.constants import SEEDS_TABLE
 
 
 class QueryMethod(Enum):
@@ -27,6 +28,12 @@ class QueryMethod(Enum):
     GET_RUNS_ALWAYS_FILENAMES = "get_runs_always_filenames"
     UPSERT_REPEATABLE_MIGRATION = "upsert_repeatable_migration"
     DELETE_REPEATABLE_BY_FILENAME = "delete_repeatable_by_filename"
+    CREATE_SEEDS_TABLE = "create_seeds_table"
+    INSERT_SEED = "insert_seed"
+    CHECK_SEED_EXISTS = "check_seed_exists"
+    GET_ALL_SEEDS = "get_all_seeds"
+    GET_APPLIED_SEED_VERSIONS = "get_applied_seed_versions"
+    DELETE_SEED = "delete_seed"
 
 
 SQLITE_QUERIES = {
@@ -108,6 +115,32 @@ SQLITE_QUERIES = {
     QueryMethod.DELETE_REPEATABLE_BY_FILENAME: """
         DELETE FROM {migration_table}
         WHERE filename = :filename AND migration_type IN ('runs_always', 'runs_on_change')
+    """,
+    QueryMethod.CREATE_SEEDS_TABLE: """
+        CREATE TABLE IF NOT EXISTS {seed_table} (
+            version VARCHAR(255),
+            description VARCHAR(500),
+            filename VARCHAR(500) UNIQUE,
+            seed_type VARCHAR(10),
+            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            checksum VARCHAR(128)
+        )
+    """,
+    QueryMethod.INSERT_SEED: """
+        INSERT INTO {seed_table} (version, description, filename, seed_type, checksum)
+        VALUES (:version, :description, :filename, :seed_type, :checksum)
+    """,
+    QueryMethod.CHECK_SEED_EXISTS: """
+        SELECT COUNT(*) FROM {seed_table} WHERE version = :version
+    """,
+    QueryMethod.GET_ALL_SEEDS: """
+        SELECT * FROM {seed_table} ORDER BY applied_at ASC
+    """,
+    QueryMethod.GET_APPLIED_SEED_VERSIONS: """
+        SELECT version FROM {seed_table} ORDER BY applied_at ASC
+    """,
+    QueryMethod.DELETE_SEED: """
+        DELETE FROM {seed_table} WHERE version = :version
     """,
 }
 
@@ -200,6 +233,35 @@ POSTGRES_QUERIES = {
     QueryMethod.DELETE_REPEATABLE_BY_FILENAME: SQLITE_QUERIES[
         QueryMethod.DELETE_REPEATABLE_BY_FILENAME
     ],
+    QueryMethod.CREATE_SEEDS_TABLE: """
+        CREATE TABLE IF NOT EXISTS {seed_table} (
+            version VARCHAR(255) UNIQUE,
+            description VARCHAR(500),
+            filename VARCHAR(500) UNIQUE,
+            seed_type VARCHAR(10),
+            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            checksum VARCHAR(128)
+        )
+    """,
+    QueryMethod.INSERT_SEED: """
+        INSERT INTO {seed_table} (version, description, filename, seed_type, checksum)
+        VALUES (:version, :description, :filename, :seed_type, :checksum)
+        ON CONFLICT (version) DO UPDATE SET
+            checksum = EXCLUDED.checksum,
+            applied_at = CURRENT_TIMESTAMP
+    """,
+    QueryMethod.CHECK_SEED_EXISTS: SQLITE_QUERIES[
+        QueryMethod.CHECK_SEED_EXISTS
+    ],
+    QueryMethod.GET_ALL_SEEDS: SQLITE_QUERIES[
+        QueryMethod.GET_ALL_SEEDS
+    ],
+    QueryMethod.GET_APPLIED_SEED_VERSIONS: SQLITE_QUERIES[
+        QueryMethod.GET_APPLIED_SEED_VERSIONS
+    ],
+    QueryMethod.DELETE_SEED: SQLITE_QUERIES[
+        QueryMethod.DELETE_SEED
+    ],
 }
 
 
@@ -286,6 +348,35 @@ MYSQL_QUERIES = {
     """,
     QueryMethod.DELETE_REPEATABLE_BY_FILENAME: SQLITE_QUERIES[
         QueryMethod.DELETE_REPEATABLE_BY_FILENAME
+    ],
+    QueryMethod.CREATE_SEEDS_TABLE: """
+        CREATE TABLE IF NOT EXISTS {seed_table} (
+            version VARCHAR(255),
+            description VARCHAR(500),
+            filename VARCHAR(500) UNIQUE,
+            seed_type VARCHAR(10),
+            applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            checksum VARCHAR(128)
+        )
+    """,
+    QueryMethod.INSERT_SEED: """
+        INSERT INTO {seed_table} (version, description, filename, seed_type, checksum)
+        VALUES (:version, :description, :filename, :seed_type, :checksum)
+        ON DUPLICATE KEY UPDATE
+            checksum = VALUES(checksum),
+            applied_at = CURRENT_TIMESTAMP
+    """,
+    QueryMethod.CHECK_SEED_EXISTS: SQLITE_QUERIES[
+        QueryMethod.CHECK_SEED_EXISTS
+    ],
+    QueryMethod.GET_ALL_SEEDS: SQLITE_QUERIES[
+        QueryMethod.GET_ALL_SEEDS
+    ],
+    QueryMethod.GET_APPLIED_SEED_VERSIONS: SQLITE_QUERIES[
+        QueryMethod.GET_APPLIED_SEED_VERSIONS
+    ],
+    QueryMethod.DELETE_SEED: SQLITE_QUERIES[
+        QueryMethod.DELETE_SEED
     ],
 }
 
@@ -379,6 +470,36 @@ CLICKHOUSE_QUERIES = {
     QueryMethod.DELETE_REPEATABLE_BY_FILENAME: """
         ALTER TABLE {migration_table} DELETE WHERE filename = :filename AND migration_type IN ('runs_always', 'runs_on_change')
     """,
+    QueryMethod.CREATE_SEEDS_TABLE: """
+        CREATE TABLE IF NOT EXISTS {seed_table} (
+            version String,
+            description String,
+            filename String,
+            seed_type String,
+            applied_at DateTime DEFAULT now(),
+            checksum String
+        ) ENGINE = MergeTree()
+        ORDER BY version
+    """,
+    QueryMethod.INSERT_SEED: """
+        INSERT INTO {seed_table} (version, description, filename, seed_type, checksum)
+        VALUES (:version, :description, :filename, :seed_type, :checksum)
+    """,
+    QueryMethod.CHECK_SEED_EXISTS: """
+        SELECT count() FROM {seed_table} WHERE version = :version
+    """,
+    QueryMethod.GET_ALL_SEEDS: """
+        SELECT version, description, filename, seed_type, applied_at, checksum
+        FROM {seed_table}
+        ORDER BY applied_at ASC
+    """,
+    QueryMethod.GET_APPLIED_SEED_VERSIONS: """
+        SELECT version FROM {seed_table}
+        ORDER BY applied_at ASC
+    """,
+    QueryMethod.DELETE_SEED: """
+        ALTER TABLE {seed_table} DELETE WHERE version = :version
+    """,
 }
 
 
@@ -414,3 +535,11 @@ def get_query(method: QueryMethod, db_name: str | None = None, **kwargs) -> str:
     if not query:
         return ""
     return query.format(migration_table=get_migration_table_name(db_name), **kwargs)
+
+
+def get_seed_query(method: QueryMethod, db_name: str | None = None, **kwargs) -> str:
+    """Get a seed SQL query by method for current backend."""
+    query = _get_queries_for_backend(db_name).get(method, "")
+    if not query:
+        return ""
+    return query.format(seed_table=SEEDS_TABLE, **kwargs)

@@ -2,6 +2,8 @@ from importlib.metadata import version
 from typing import Final
 
 MIGRATIONS_DIR: Final[str] = "migrations"
+SEEDS_DIR: Final[str] = "seeds"
+SEEDS_TABLE: Final[str] = "_dbwarden_seeds"
 TOML_FILE: Final[str] = "warden.toml"
 RUNS_ALWAYS_FILE_PREFIX: Final[str] = "RA__"
 RUNS_ON_CHANGE_FILE_PREFIX: Final[str] = "ROC__"

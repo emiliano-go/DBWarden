@@ -6,6 +6,12 @@ from dbwarden.commands.init import init_cmd
 from dbwarden.commands.make_migrations import make_migrations_cmd, new_migration_cmd
 from dbwarden.commands.migrate import migrate_cmd
 from dbwarden.commands.rollback import rollback_cmd
+from dbwarden.commands.seeds import (
+    seed_apply_cmd,
+    seed_create_cmd,
+    seed_list_cmd,
+    seed_rollback_cmd,
+)
 from dbwarden.commands.status import status_cmd
 from dbwarden.commands.settings import (
     handle_settings_database_add,
@@ -224,3 +230,59 @@ def handle_settings_database_set_dev_command(
 
 def handle_settings_database_clear_dev_command(name: str) -> None:
     handle_settings_database_clear_dev(name)
+
+
+def handle_seed_create(
+    description: str,
+    seed_type: str = "sql",
+    database: str | None = None,
+    verbose: bool = False,
+) -> None:
+    seed_create_cmd(
+        description=description,
+        seed_type=seed_type,
+        database=database,
+        verbose=verbose,
+    )
+
+
+def handle_seed_apply(
+    version: str | None = None,
+    dry_run: bool = False,
+    database: str | None = None,
+    all_databases: bool = False,
+    verbose: bool = False,
+) -> None:
+    seed_apply_cmd(
+        version=version,
+        dry_run=dry_run,
+        database=database,
+        all_databases=all_databases,
+        verbose=verbose,
+    )
+
+
+def handle_seed_list(
+    database: str | None = None,
+    all_databases: bool = False,
+    verbose: bool = False,
+) -> None:
+    seed_list_cmd(
+        database=database,
+        all_databases=all_databases,
+        verbose=verbose,
+    )
+
+
+def handle_seed_rollback(
+    count: int | None = None,
+    to_version: str | None = None,
+    database: str | None = None,
+    verbose: bool = False,
+) -> None:
+    seed_rollback_cmd(
+        count=count,
+        to_version=to_version,
+        database=database,
+        verbose=verbose,
+    )
