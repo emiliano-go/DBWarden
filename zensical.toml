@@ -86,15 +86,6 @@ name = "DBWarden on PyPI"
 [[project.nav]]
 "Architecture" = "architecture-deep-dive.md"
 
-[[project.nav]]
-"CLI Reference" = "cli-reference.md"
-
-[[project.nav]]
-"Check" = "commands/check.md"
-
-[[project.nav]]
-"Configuration API" = "reference/configuration-api.md"
-
 [project.markdown_extensions.tables]
 
 [project.markdown_extensions.admonition]
