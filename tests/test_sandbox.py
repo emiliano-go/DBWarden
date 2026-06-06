@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from dbwarden.config import set_dev_mode
 from dbwarden.engine.sandbox import SQLiteSandboxProvider, create_sandbox_provider
 
 
@@ -60,6 +61,7 @@ def _write_migration(directory: str, name: str, content: str) -> None:
 
 class TestDryRun:
     def test_dry_run_prints_pending_and_skips_execution(self):
+        set_dev_mode(False)
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
@@ -68,7 +70,7 @@ class TestDryRun:
                 Path("dbwarden.py").write_text(
                     "from dbwarden import database_config\n\n"
                     "database_config(database_name='primary', default=True, "
-                    "database_type='sqlite', database_url='sqlite:///" + db_path + "')\n",
+                    "database_type='sqlite', database_url_sync='sqlite:///" + db_path + "')\n",
                     encoding="utf-8",
                 )
                 migrations_dir = Path("migrations/primary")
@@ -102,6 +104,7 @@ class TestDryRun:
                 os.chdir(old_cwd)
 
     def test_dry_run_no_pending_migrations(self):
+        set_dev_mode(False)
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
@@ -110,7 +113,7 @@ class TestDryRun:
                 Path("dbwarden.py").write_text(
                     "from dbwarden import database_config\n\n"
                     "database_config(database_name='primary', default=True, "
-                    "database_type='sqlite', database_url='sqlite:///" + db_path + "')\n",
+                    "database_type='sqlite', database_url_sync='sqlite:///" + db_path + "')\n",
                     encoding="utf-8",
                 )
                 migrations_dir = Path("migrations/primary")
@@ -133,6 +136,7 @@ class TestDryRun:
 
 class TestSandbox:
     def test_sandbox_applies_migrations_and_cleans_up(self):
+        set_dev_mode(False)
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
@@ -141,7 +145,7 @@ class TestSandbox:
                 Path("dbwarden.py").write_text(
                     "from dbwarden import database_config\n\n"
                     "database_config(database_name='primary', default=True, "
-                    "database_type='sqlite', database_url='sqlite:///" + db_path + "')\n",
+                    "database_type='sqlite', database_url_sync='sqlite:///" + db_path + "')\n",
                     encoding="utf-8",
                 )
                 migrations_dir = Path("migrations/primary")
@@ -174,6 +178,7 @@ class TestSandbox:
                 os.chdir(old_cwd)
 
     def test_sandbox_reports_no_pending(self):
+        set_dev_mode(False)
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
@@ -182,7 +187,7 @@ class TestSandbox:
                 Path("dbwarden.py").write_text(
                     "from dbwarden import database_config\n\n"
                     "database_config(database_name='primary', default=True, "
-                    "database_type='sqlite', database_url='sqlite:///" + db_path + "')\n",
+                    "database_type='sqlite', database_url_sync='sqlite:///" + db_path + "')\n",
                     encoding="utf-8",
                 )
                 migrations_dir = Path("migrations/primary")
@@ -205,6 +210,7 @@ class TestSandbox:
                 os.chdir(old_cwd)
 
     def test_sandbox_isolates_from_real_db(self):
+        set_dev_mode(False)
         with tempfile.TemporaryDirectory() as tmpdir:
             old_cwd = os.getcwd()
             os.chdir(tmpdir)
@@ -213,7 +219,7 @@ class TestSandbox:
                 Path("dbwarden.py").write_text(
                     "from dbwarden import database_config\n\n"
                     "database_config(database_name='primary', default=True, "
-                    "database_type='sqlite', database_url='sqlite:///" + db_path + "')\n",
+                    "database_type='sqlite', database_url_sync='sqlite:///" + db_path + "')\n",
                     encoding="utf-8",
                 )
                 migrations_dir = Path("migrations/primary")
