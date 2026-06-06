@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from dbwarden.commands.make_migrations import build_migration_plan, generate_migration_sql, make_migrations_cmd
+from dbwarden.config import set_dev_mode
 from dbwarden.engine.model_discovery import ModelColumn, ModelTable
 from dbwarden.engine.migration_name import Change
 
@@ -105,6 +106,7 @@ def test_build_migration_plan_includes_operations_and_checksum():
 
 
 def test_make_migrations_writes_plan_file_next_to_sql():
+    set_dev_mode(False)
     with tempfile.TemporaryDirectory() as tmpdir:
         old_cwd = os.getcwd()
         os.chdir(tmpdir)
