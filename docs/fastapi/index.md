@@ -58,7 +58,7 @@ Understanding the concepts behind DBWarden's FastAPI integration:
 
 ## Key Features
 
-### 🚀 Session Dependency
+### Dependency Injection
 
 Get SQLAlchemy `AsyncSession` in your routes with proper lifecycle management:
 
@@ -76,12 +76,12 @@ async def list_users(session: SessionDep):
     return result.scalars().all()
 ```
 
-- ✅ Automatic engine creation and caching
-- ✅ Request-scoped sessions
-- ✅ Automatic cleanup and error handling
-- ✅ Multi-database support
+- Automatic engine creation and caching
+- Request-scoped sessions
+- Automatic cleanup and error handling
+- Multi-database support
 
-### 🏥 Health Endpoints
+### Health Endpoints
 
 Production-ready health checks out of the box:
 
@@ -91,12 +91,70 @@ from dbwarden.fastapi import DBWardenHealthRouter
 app.include_router(DBWardenHealthRouter(), prefix="/health")
 ```
 
-- ✅ Database connectivity checks
-- ✅ Migration state monitoring
-- ✅ Kubernetes liveness/readiness probes
-- ✅ Per-database health status
+- Database connectivity checks
+- Migration state monitoring
+- Kubernetes liveness/readiness probes
+- Per-database health status
 
-### 🔧 Startup Validation
+### Migration Status and Execution
+
+Monitor and trigger migrations at runtime:
+
+```python
+from dbwarden.fastapi import DBWardenRouter
+
+app.include_router(DBWardenRouter(), prefix="/db")
+
+# GET /db/status - migration and seed status
+# POST /db/migrate - trigger migrations
+```
+
+- Per-database migration and seed status
+- Runtime migration triggering
+- Dry-run support
+- Optional API key authentication
+
+### Prometheus Metrics
+
+Expose migration metrics for monitoring:
+
+```python
+from dbwarden.fastapi import MetricsRouter, MetricsMiddleware
+
+app.add_middleware(MetricsMiddleware)
+app.include_router(MetricsRouter(), prefix="/metrics")
+```
+
+- Migration counters and duration histograms
+- Schema and seed version gauges
+- Pending migration tracking
+- Request-scoped gauge refresh
+
+### Distributed Migration Locking
+
+Coordinate migrations across multiple application instances with Redis:
+
+```python
+from dbwarden.fastapi import migration_lock, sync_migration_lock
+```
+
+- Prevents concurrent migrations across pods
+- Async and sync variants available
+- Configurable key and TTL
+
+### Engine Lifecycle Management
+
+Properly dispose engines on shutdown:
+
+```python
+from dbwarden.fastapi import dispose_engines
+```
+
+- Closes all cached engines and clients
+- Clean shutdown for async and sync session factories
+- ClickHouse client cleanup
+
+### Startup Validation
 
 Ensure your database is ready before accepting traffic:
 
@@ -112,10 +170,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 ```
 
-- ✅ Connectivity validation
-- ✅ Migration state checks
-- ✅ Optional auto-migration on startup
-- ✅ Dev/prod environment awareness
+- Connectivity validation
+- Migration state checks
+- Optional auto-migration on startup
+- Dev/prod environment awareness
 
 ## Why Use DBWarden with FastAPI?
 

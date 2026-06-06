@@ -324,6 +324,284 @@ app.include_router(DBWardenHealthRouter(), prefix="/health")
 
 ---
 
+## `DBWardenRouter`
+
+Creates a FastAPI `APIRouter` with migration status and execution endpoints.
+
+### Signature
+
+```python
+def DBWardenRouter(
+    auth_mode: str = "open",
+    api_key: str | None = None,
+) -> APIRouter
+```
+
+### Parameters
+
+**`auth_mode`** : `str`, optional
+- `"open"` - No authentication required
+- `"authenticated"` - Require `X-API-Key` header
+- Default: `"open"`
+
+**`api_key`** : `str | None`, optional
+- API key for authenticated mode
+- If `None`, reads from `DBWARDEN_MIGRATE_AUTH` env var
+- Default: `None`
+
+### Returns
+
+**`APIRouter`**
+- Router with status and migrate endpoints
+
+### Endpoints
+
+**`GET /status`** - Returns per-database migration and seed status for all configured databases.
+
+**`POST /migrate`** - Triggers migration execution. Accepts JSON body:
+
+```json
+{
+  "database": "primary",
+  "count": null,
+  "to_version": null,
+  "dry_run": false
+}
+```
+
+### Examples
+
+```python
+from dbwarden.fastapi import DBWardenRouter
+
+app = FastAPI()
+app.include_router(DBWardenRouter(), prefix="/db")
+
+# Now available:
+# GET /db/status
+# POST /db/migrate
+```
+
+With authentication:
+
+```python
+app.include_router(
+    DBWardenRouter(auth_mode="authenticated", api_key="my-secret-key"),
+    prefix="/db",
+)
+```
+
+### Response Schema (GET /status)
+
+```python
+{
+  "databases": {
+    "primary": {
+      "database": "primary",
+      "status": "ok" | "degraded" | "error",
+      "connected": bool,
+      "pending_migrations": int,
+      "applied_migrations": int,
+      "pending_seeds": int,
+      "applied_seeds": int,
+      "lock_active": bool,
+      "error": str | None
+    }
+  }
+}
+```
+
+### Response Schema (POST /migrate)
+
+```python
+{
+  "success": bool,
+  "message": str,
+  "database": str | None
+}
+```
+
+### HTTP Status Codes
+
+| Scenario | Status Code |
+|----------|-------------|
+| Status retrieved successfully | 200 |
+| Migrate completed | 200 |
+| Migrate dry-run | 200 |
+| Auth failure | 403 |
+| Migration error | 500 |
+
+---
+
+## `MetricsRouter`
+
+Creates a FastAPI `APIRouter` with a Prometheus metrics endpoint.
+
+### Signature
+
+```python
+def MetricsRouter() -> APIRouter
+```
+
+### Returns
+
+**`APIRouter`**
+- Router with metrics endpoint
+
+### Endpoints
+
+**`GET /metrics`** - Returns Prometheus text-format metrics.
+
+Only active when `prometheus_client` is installed and `DBWARDEN_METRICS=true` is set. Returns 404 when disabled.
+
+### Examples
+
+```python
+from dbwarden.fastapi import MetricsRouter
+
+app = FastAPI()
+app.include_router(MetricsRouter(), prefix="/metrics")
+
+# Now available:
+# GET /metrics
+```
+
+### Response format
+
+```
+# HELP dbwarden_pending_migrations Number of pending migrations
+# TYPE dbwarden_pending_migrations gauge
+dbwarden_pending_migrations{database="primary"} 0
+# HELP dbwarden_schema_version Current schema version
+# TYPE dbwarden_schema_version gauge
+dbwarden_schema_version{database="primary"} 5.0
+```
+
+---
+
+## `MetricsMiddleware`
+
+ASGI middleware that refreshes pending-migration gauges on each HTTP request.
+
+### Signature
+
+```python
+class MetricsMiddleware
+```
+
+### Usage
+
+```python
+from dbwarden.fastapi import MetricsMiddleware, MetricsRouter
+
+app = FastAPI()
+app.add_middleware(MetricsMiddleware)
+app.include_router(MetricsRouter(), prefix="/metrics")
+```
+
+The middleware also records HTTP request duration via the migration duration histogram.
+
+---
+
+## `dispose_engines`
+
+Close all cached database engines and clients. Should be called during FastAPI shutdown.
+
+### Signature
+
+```python
+def dispose_engines() -> None
+```
+
+### Examples
+
+```python
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from dbwarden.fastapi import dispose_engines
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+    dispose_engines()
+```
+
+This closes async and sync session factories, connection pools, and ClickHouse clients for all configured databases.
+
+---
+
+## `migration_lock` and `sync_migration_lock`
+
+Redis-backed distributed migration lock context managers for coordinating migrations across multiple application instances.
+
+### Async signature
+
+```python
+async def migration_lock(
+    redis_client: Any,
+    key: str = "dbwarden_migrate",
+    ttl: int = 60,
+) -> AsyncGenerator[None, None]
+```
+
+### Sync signature
+
+```python
+def sync_migration_lock(
+    redis_client: Any,
+    key: str = "dbwarden_migrate",
+    ttl: int = 60,
+) -> Generator[None, None]
+```
+
+### Parameters
+
+**`redis_client`** : `Any`
+- Redis client instance (any library with `setnx`, `expire`, `delete` methods)
+
+**`key`** : `str`, optional
+- Redis key for the lock
+- Default: `"dbwarden_migrate"`
+
+**`ttl`** : `int`, optional
+- Lock TTL in seconds (auto-expiry)
+- Default: `60`
+
+### Raises
+
+- **`LockError`**: If the lock is already held by another process
+
+### Examples
+
+```python
+import redis.asyncio as aioredis
+from contextlib import asynccontextmanager
+from dbwarden.fastapi import migration_context, migration_lock
+
+redis_client = aioredis.from_url("redis://localhost:6379")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with migration_lock(redis_client):
+        async with migration_context(mode="migrate"):
+            yield
+```
+
+```python
+import redis
+from dbwarden.fastapi import migration_context, sync_migration_lock
+
+redis_client = redis.from_url("redis://localhost:6379")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    with sync_migration_lock(redis_client):
+        async with migration_context(mode="migrate"):
+            yield
+```
+
+---
+
 ## Type Aliases
 
 ### `SessionDep`

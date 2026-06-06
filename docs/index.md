@@ -23,6 +23,13 @@ It is built for teams that want migration changes to stay explicit, reviewable, 
 - Dev mode (`--dev`) with optional SQLite translation workflow
 - Locking and checksum integrity checks
 - Status/history visibility for release and incident workflows
+- Seed data management with SQL and Python seed files
+- Prometheus metrics and structured JSON logging
+- FastAPI integration: session dependencies, health endpoints, migration/status routes, metrics endpoint
+- Distributed migration locking via Redis
+- Sandbox mode for safe migration testing
+- Dry-run mode to preview changes without applying
+- Sync and async URL split for CLI and FastAPI sessions
 
 ## Requirements
 

@@ -281,7 +281,7 @@ async def create_user(user_data: UserCreate, session: SessionDep):
         username=user_data.username
     )
     
-    user = User(**user_data.dict())
+    user = User(**user_data.model_dump())
     session.add(user)
     await session.commit()
     
