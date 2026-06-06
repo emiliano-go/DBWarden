@@ -106,6 +106,6 @@ With one `database_config(...)` definition and one migration command loop, you g
 ## Where to Go Next
 
 - Start here: [Getting Started](getting-started/introduction.md)
-- Learn the workflow: [Tutorial - User Guide](tutorial/your-first-migration.md)
+- Learn the workflow: [User Guide](tutorial/your-first-migration.md)
 - Go deeper: [Advanced User Guide](migration-files.md)
 - Lookup details: [Reference](cli-reference.md)
