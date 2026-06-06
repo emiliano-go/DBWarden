@@ -20,4 +20,4 @@ dbwarden init --database primary
 - safe to run multiple times
 - first command to run in a new project
 
-See also: [Configuration](../configuration.md)
+See also: [Configuration](../configuration/index.md)

@@ -18,7 +18,7 @@ primary = database_config(
 
 Related docs:
 
-- [Configuration](configuration.md)
+- [Configuration](configuration/index.md)
 - [Your First Migration](tutorial/your-first-migration.md)
 
 ## ClickHouse Model Metadata
