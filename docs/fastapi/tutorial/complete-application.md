@@ -18,11 +18,10 @@ This example shows:
 
 ```
 my_app/
-├── dbwarden.py          # Database configuration
+├── config.py            # Database configuration + handles
 ├── app/
 │   ├── __init__.py
 │   ├── main.py          # FastAPI app
-│   ├── dependencies.py  # Shared dependencies
 │   ├── models.py        # SQLAlchemy models
 │   └── routes/
 │       ├── __init__.py
@@ -32,13 +31,13 @@ my_app/
 
 ## Step 1: Database Configuration
 
-Create `dbwarden.py` in your project root:
+Create `config.py` in your project root:
 
 ```python
-# dbwarden.py
+# config.py
 from dbwarden import database_config
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -49,12 +48,15 @@ database_config(
 )
 ```
 
+`primary` is a `DatabaseHandle`. Use `primary.async_session` in your route
+parameters and `primary.sync_session` for synchronous routes.
+
 !!! tip "Environment Variables"
     In production, use environment variables for sensitive data:
     ```python
     import os
     
-    database_config(
+    primary = database_config(
         database_name="primary",
         default=True,
         database_type="postgresql",
@@ -96,20 +98,16 @@ class User(Base):
 
 ## Step 3: Shared Dependencies
 
-Create `app/dependencies.py`:
+The `DatabaseHandle` from `config.py` is already a shared dependency —
+import `primary` wherever you need a session:
 
 ```python
-# app/dependencies.py
-from typing import Annotated
-from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from dbwarden.fastapi import get_session
-
-# Database session dependency
-SessionDep = Annotated[AsyncSession, Depends(get_session())]
+# app/routes/users.py
+from config import primary
 ```
 
-This creates a reusable type alias for database sessions.
+Use `primary.async_session` directly as a route parameter annotation.
+No separate `dependencies.py` module is needed.
 
 ## Step 4: Pydantic Schemas
 
@@ -158,7 +156,7 @@ from fastapi import APIRouter, HTTPException
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.dependencies import SessionDep
+from config import primary
 from app.models import User
 from app.schemas import UserCreate, UserResponse, UserUpdate
 
@@ -167,7 +165,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("/", response_model=list[UserResponse])
 async def list_users(
-    session: SessionDep,
+    session: primary.async_session,
     skip: int = 0,
     limit: int = 100,
     active_only: bool = False,
@@ -183,7 +181,7 @@ async def list_users(
 
 
 @router.get("/{user_id}", response_model=UserResponse)
-async def get_user(user_id: int, session: SessionDep):
+async def get_user(user_id: int, session: primary.async_session):
     """Get a single user by ID."""
     result = await session.execute(
         select(User).where(User.id == user_id)
@@ -197,7 +195,7 @@ async def get_user(user_id: int, session: SessionDep):
 
 
 @router.post("/", response_model=UserResponse, status_code=201)
-async def create_user(user_data: UserCreate, session: SessionDep):
+async def create_user(user_data: UserCreate, session: primary.async_session):
     """Create a new user."""
     user = User(**user_data.model_dump())
     session.add(user)
@@ -219,7 +217,7 @@ async def create_user(user_data: UserCreate, session: SessionDep):
 async def update_user(
     user_id: int,
     user_data: UserUpdate,
-    session: SessionDep,
+    session: primary.async_session,
 ):
     """Update a user."""
     result = await session.execute(
@@ -249,7 +247,7 @@ async def update_user(
 
 
 @router.delete("/{user_id}", status_code=204)
-async def delete_user(user_id: int, session: SessionDep):
+async def delete_user(user_id: int, session: primary.async_session):
     """Delete a user."""
     result = await session.execute(
         select(User).where(User.id == user_id)
@@ -431,7 +429,7 @@ curl http://localhost:8000/health/
 
 ```python
 @router.post("/", response_model=UserResponse)
-async def create_user(user_data: UserCreate, session: SessionDep):
+async def create_user(user_data: UserCreate, session: primary.async_session):
     # Session automatically provided
     user = User(**user_data.model_dump())
     session.add(user)

@@ -4,46 +4,27 @@ Learn how to test FastAPI applications that use DBWarden.
 
 ## Quick Example
 
-Override the session dependency in tests:
+The simplest way to test with DBWarden is to configure the test database via
+environment variables. No dependency overrides needed:
 
 ```python
+import os
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+
+# Point DBWarden at an in-memory SQLite database for tests
+os.environ["ENVIRONMENT"] = "test"
+os.environ["DEV_DATABASE_URL"] = "sqlite:///:memory:"
 
 from app.main import app
-from app.dependencies import SessionDep
 from app.models import Base
-
-# Test database
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def override_get_session():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[SessionDep] = override_get_session
 
 
 @pytest.fixture
 def client():
-    Base.metadata.create_all(bind=engine)
+    from dbwarden.commands.migrate import migrate_single
+    migrate_single(database="primary")
     yield TestClient(app)
-    Base.metadata.drop_all(bind=engine)
 
 
 def test_create_user(client):
@@ -51,13 +32,17 @@ def test_create_user(client):
         "/api/v1/users/",
         json={
             "email": "test@example.com",
-            "username": "testuser"
-        }
+            "username": "testuser",
+        },
     )
     assert response.status_code == 201
     data = response.json()
     assert data["email"] == "test@example.com"
 ```
+
+When `ENVIRONMENT=test` is set and `dev_database_url` is configured in your
+`database_config()`, DBWarden automatically uses the test URL. No manual
+engine creation, session factories, or dependency overrides needed.
 
 ## Test Database Setup
 
@@ -128,10 +113,45 @@ def test_db():
 
 ## Override Session Dependency
 
-### Method 1: Direct Override
+### Method 1: Environment Variables (Recommended)
+
+Configure a `dev_database_url` in your config, then set `ENVIRONMENT=test`:
 
 ```python
-from app.dependencies import get_session
+# config.py
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://localhost/prod",
+    dev_database_url="sqlite:///./test.db",
+    model_paths=["app.models"],
+)
+```
+
+```python
+# conftest.py
+import os
+import pytest
+
+os.environ["ENVIRONMENT"] = "test"
+
+@pytest.fixture(autouse=True)
+def setup_test_db():
+    from dbwarden.commands.migrate import migrate_single
+    migrate_single(database="primary", verbose=False)
+    yield
+```
+
+This works with the `DatabaseHandle` pattern without any dependency overrides.
+
+### Method 2: `get_session()` Override
+
+For apps that use the `Annotated[AsyncSession, Depends(get_session())]` pattern:
+
+```python
+from app.dependencies import SessionDep
+from app.dependencies import get_session  # The function, not a call
 
 def override_get_session():
     try:
@@ -141,6 +161,51 @@ def override_get_session():
         db.close()
 
 app.dependency_overrides[get_session] = override_get_session
+```
+
+### Method 3: Fixture-Based Override
+
+```python
+import pytest
+
+@pytest.fixture
+def client(test_db):
+    def override():
+        try:
+            yield test_db
+        finally:
+            test_db.rollback()
+    
+    app.dependency_overrides[get_session] = override
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+```
+
+### Method 4: Async Override
+
+For async tests using `get_session()`:
+
+```python
+import pytest
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+
+@pytest.fixture
+async def async_client():
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    
+    async def override():
+        async with AsyncSession(engine) as session:
+            yield session
+    
+    app.dependency_overrides[get_session] = override
+    
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        yield client
+    
+    app.dependency_overrides.clear()
 ```
 
 ### Method 2: Fixture-Based
@@ -284,27 +349,26 @@ def sample_users(test_db):
 
 ## Testing Multi-Database
 
+Use environment variables to configure test databases per handle:
+
 ```python
-@pytest.fixture
-def primary_db():
-    engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(bind=engine)
-    Session = sessionmaker(bind=engine)
-    return Session()
+import os
+import pytest
+from fastapi.testclient import TestClient
+
+os.environ["PRIMARY_DB_URL"] = "sqlite:///./test_primary.db"
+os.environ["ANALYTICS_DB_URL"] = "sqlite:///./test_analytics.db"
+os.environ["ENVIRONMENT"] = "test"
+
+from app.main import app  # config loads after env vars are set
+
 
 @pytest.fixture
-def analytics_db():
-    engine = create_engine("sqlite:///:memory:")
-    AnalyticsBase.metadata.create_all(bind=engine)
-    Session = sessionmaker(bind=engine)
-    return Session()
-
-@pytest.fixture
-def client(primary_db, analytics_db):
-    app.dependency_overrides[get_session()] = lambda: primary_db
-    app.dependency_overrides[get_session("analytics")] = lambda: analytics_db
+def client():
+    from dbwarden.commands.migrate import migrate_single
+    migrate_single(database="primary")
+    migrate_single(database="analytics")
     yield TestClient(app)
-    app.dependency_overrides.clear()
 ```
 
 ## Testing Error Cases

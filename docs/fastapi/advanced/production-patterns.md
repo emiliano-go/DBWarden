@@ -274,7 +274,7 @@ import structlog
 logger = structlog.get_logger()
 
 @app.post("/users")
-async def create_user(user_data: UserCreate, session: SessionDep):
+async def create_user(user_data: UserCreate, session: primary.async_session):
     logger.info(
         "creating_user",
         email=user_data.email,
@@ -327,7 +327,7 @@ create_async_engine(
 ```python
 # Eager load relationships
 @app.get("/users/{user_id}/posts")
-async def get_user_posts(user_id: int, session: SessionDep):
+async def get_user_posts(user_id: int, session: primary.async_session):
     result = await session.execute(
         select(User)
         .options(selectinload(User.posts))  # Eager load

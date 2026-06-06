@@ -63,19 +63,18 @@ Understanding the concepts behind DBWarden's FastAPI integration:
 Get SQLAlchemy `AsyncSession` in your routes with proper lifecycle management:
 
 ```python
-from typing import Annotated
-from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from dbwarden.fastapi import get_session
+from dbwarden import database_config
 
-SessionDep = Annotated[AsyncSession, Depends(get_session())]
+primary = database_config(database_name="primary", ...)
+
 
 @app.get("/users")
-async def list_users(session: SessionDep):
+async def list_users(session: primary.async_session):
     result = await session.execute(select(User))
     return result.scalars().all()
 ```
 
+- No `Annotated`, `Depends`, or type aliases needed
 - Automatic engine creation and caching
 - Request-scoped sessions
 - Automatic cleanup and error handling

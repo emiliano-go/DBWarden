@@ -13,119 +13,59 @@ You should have:
 
 - **Python 3.10+** installed
 - **FastAPI** and **uvicorn** installed
-- **DBWarden configured** (see [Configuration](../../configuration.md))
+- **DBWarden installed** with the FastAPI extra
 
-If you haven't configured DBWarden yet, create a `dbwarden.py` file:
+```bash
+pip install "dbwarden[fastapi]"
+```
+
+## Create Your First App
+
+Create a single file `main.py`:
 
 ```python
-from dbwarden import database_config
+from contextlib import asynccontextmanager
 
-database_config(
+from fastapi import FastAPI
+from sqlalchemy import text
+
+from dbwarden import database_config
+from dbwarden.fastapi import migration_context
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with migration_context(mode="check"):
+        yield
+
+
+app = FastAPI(lifespan=lifespan)
+
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
     database_url_sync="sqlite:///./app.db",
     model_paths=["app.models"],
 )
-```
 
-## Install
-
-Install DBWarden with the FastAPI extra:
-
-```bash
-pip install "dbwarden[fastapi]"
-```
-
-This installs DBWarden along with FastAPI-specific dependencies.
-
-## Create Your First App
-
-### Step 1: Import
-
-Create a file `main.py`:
-
-```python
-from fastapi import FastAPI
-from dbwarden.fastapi import migration_context
-from contextlib import asynccontextmanager
-```
-
-### Step 2: Add Lifespan
-
-Add a lifespan function to check migrations on startup:
-
-```python
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with migration_context(mode="check"):
-        yield
-```
-
-This runs a migration check when your app starts. If migrations are pending or the database is unreachable, the app won't start.
-
-### Step 3: Create the App
-
-```python
-app = FastAPI(lifespan=lifespan)
-```
-
-### Step 4: Add a Route
-
-Let's add a simple route that uses the database:
-
-```python
-from typing import Annotated
-from fastapi import Depends
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-from dbwarden.fastapi import get_session
-
-# Create a type alias for cleaner code
-SessionDep = Annotated[AsyncSession, Depends(get_session())]
 
 @app.get("/")
-async def root(session: SessionDep):
-    # Execute a simple query
-    result = await session.execute(text("SELECT 'Hello from DBWarden!' as message"))
+async def root(session: primary.async_session):
+    result = await session.execute(
+        text("SELECT 'Hello from DBWarden!' as message")
+    )
     row = result.first()
     return {"message": row.message}
 ```
 
-### Complete File
+That's it! **15 lines** of meaningful code including imports.
 
-Here's the complete `main.py`:
-
-```python
-from contextlib import asynccontextmanager
-from typing import Annotated
-
-from fastapi import Depends, FastAPI
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from dbwarden.fastapi import get_session, migration_context
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with migration_context(mode="check"):
-        yield
-
-
-app = FastAPI(lifespan=lifespan)
-
-SessionDep = Annotated[AsyncSession, Depends(get_session())]
-
-
-@app.get("/")
-async def root(session: SessionDep):
-    result = await session.execute(text("SELECT 'Hello from DBWarden!' as message"))
-    row = result.first()
-    return {"message": row.message}
-```
-
-That's it! **Less than 25 lines** including imports.
+Key details:
+- `database_config()` returns a `DatabaseHandle`
+- The handle's `.async_session` is a FastAPI dependency annotation — use it **directly** in route parameters
+- No need for `Annotated`, `Depends`, session type aliases, or manual engine creation
+- `migration_context(mode="check")` validates the database on startup
 
 ## Run It
 
@@ -203,13 +143,12 @@ Now visit <http://127.0.0.1:8000/health/> to see your database health status:
 
 ```python
 from contextlib import asynccontextmanager
-from typing import Annotated
 
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from dbwarden.fastapi import DBWardenHealthRouter, get_session, migration_context
+from dbwarden import database_config
+from dbwarden.fastapi import DBWardenHealthRouter, migration_context
 
 
 @asynccontextmanager
@@ -221,12 +160,20 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 app.include_router(DBWardenHealthRouter(), prefix="/health")
 
-SessionDep = Annotated[AsyncSession, Depends(get_session())]
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="sqlite",
+    database_url_sync="sqlite:///./app.db",
+    model_paths=["app.models"],
+)
 
 
 @app.get("/")
-async def root(session: SessionDep):
-    result = await session.execute(text("SELECT 'Hello from DBWarden!' as message"))
+async def root(session: primary.async_session):
+    result = await session.execute(
+        text("SELECT 'Hello from DBWarden!' as message")
+    )
     row = result.first()
     return {"message": row.message}
 ```
@@ -242,18 +189,18 @@ Let's break down what each piece does:
 - Verifies migration state
 - Fails fast if there are issues
 
-### `get_session()`
+### `database_config()` handle (e.g., `primary`)
 
-- Returns a FastAPI dependency
-- Creates database sessions automatically
-- One session per request
-- Automatically closes sessions after the request
+- Returns a `DatabaseHandle` with `.async_session` and `.sync_session` properties
+- Each property is a FastAPI dependency annotation — usable directly in route parameters
+- Create one handle per database, pass the right one to each route
 
-### `SessionDep` Type Alias
+### `primary.async_session`
 
-- Makes your code cleaner
-- Type hints for better IDE support
-- Reusable across all your routes
+- A FastAPI dependency annotation — no `Annotated`, `Depends`, or type aliases needed
+- Creates a new `AsyncSession` per request automatically
+- Closes the session when the request finishes
+- For sync routes, use `primary.sync_session` instead
 
 ### `DBWardenHealthRouter()`
 
@@ -268,7 +215,7 @@ You learned how to:
 
 ✅ Install DBWarden with FastAPI support  
 ✅ Create a lifespan function for startup checks  
-✅ Use `SessionDep` to get database sessions in routes  
+✅ Use `primary.async_session` to get database sessions in routes  
 ✅ Add health endpoints for monitoring  
 ✅ Run and test your application
 
@@ -276,7 +223,7 @@ You learned how to:
 
 Now that you have a working app, learn more about each component:
 
-- **[Session Dependency](session-dependency.md)** - Deep dive into `get_session()`
+- **[Session Dependency](session-dependency.md)** - Deep dive into session handling
 - **[Startup Checks](startup-checks.md)** - All about `migration_context()`
 - **[Health Endpoints](health-endpoints.md)** - Complete health monitoring guide
 
