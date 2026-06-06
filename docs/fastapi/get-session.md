@@ -1,21 +1,6 @@
 # `get_session`
 
-!!! note "Page Moved"
-    This page has been moved and significantly expanded with better examples and explanations.
-
-##  New Location
-
-**[ Session Dependency Tutorial](tutorial/session-dependency.md)**
-
-The new page includes:
-- Progressive examples from simple to advanced
-- Recommended patterns with type aliases
-- Complete lifecycle explanations
-- Multi-database usage
-- Testing patterns
-- Troubleshooting guide
-
----
+For a step-by-step tutorial with expanded examples, see [Session Dependency Tutorial](tutorial/session-dependency.md).
 
 For quick reference, here's the basic usage:
 

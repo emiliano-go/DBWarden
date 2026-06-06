@@ -92,8 +92,7 @@ spec:
               key: url
 ```
 
-!!! warning "Race Condition"
-    Multiple pods may try to migrate simultaneously. DBWarden's migration locking helps, but prefer Pattern 1 for large deployments.
+Multiple pods may try to migrate simultaneously. DBWarden's migration locking helps, but prefer Pattern 1 for large deployments.
 
 ### Pattern 3: Auto-Migrate on Startup (Not Recommended)
 

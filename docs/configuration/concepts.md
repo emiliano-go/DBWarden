@@ -159,8 +159,7 @@ For debugging, set the `DBWARDEN_DISABLE_SANDBOX` environment variable to skip a
 DBWARDEN_DISABLE_SANDBOX=1 dbwarden status  # Skip sandbox (debug only)
 ```
 
-!!! warning "Production"
-    Keep the sandbox enabled in production. Disabling it (`DBWARDEN_DISABLE_SANDBOX=1`) removes path traversal protection.
+Keep the sandbox enabled in production. Disabling it (`DBWARDEN_DISABLE_SANDBOX=1`) removes path traversal protection.
 
 ## The `default` Database
 

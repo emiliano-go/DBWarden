@@ -2,11 +2,10 @@
 
 Complete API documentation for DBWarden's FastAPI integration.
 
-!!! tip "Recommended: Use DatabaseHandle"
-    For most applications, use the `DatabaseHandle` pattern instead of
-    `get_session()`. Call `database_config()` and use `.async_session`
-    directly in route parameters  no `Annotated`, `Depends`, or type
-    aliases needed. See [Session Dependency](tutorial/session-dependency.md).
+For most applications, use the `DatabaseHandle` pattern instead of
+`get_session()`. Call `database_config()` and use `.async_session`
+directly in route parameters  no `Annotated`, `Depends`, or type
+aliases needed. See [Session Dependency](tutorial/session-dependency.md).
 
 ## `get_session`
 

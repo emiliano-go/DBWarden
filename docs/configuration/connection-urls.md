@@ -121,8 +121,7 @@ database_url_sync="sqlite:////absolute/path/to/app.db"
 database_url_sync="sqlite:///:memory:"
 ```
 
-!!! warning "In-Memory Databases"
-    In-memory databases are lost when the connection closes. Only use for testing.
+In-memory databases are lost when the connection closes. Only use for testing.
 
 ### Common Options
 
