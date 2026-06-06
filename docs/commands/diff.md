@@ -21,4 +21,4 @@ dbwarden diff migrations --database primary
 - intended for schema comparison workflows
 - model path configuration affects model-based diffs
 
-See also: [Configuration](../configuration.md)
+See also: [Configuration](../configuration/index.md)

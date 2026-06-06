@@ -54,5 +54,5 @@ dbwarden migrate --database primary
 
 ## Navigation
 
-- Previous: [Configuration](../configuration.md)
+- Previous: [Configuration](../configuration/index.md)
 - Next: [Applying Migrations](applying-migrations.md)
