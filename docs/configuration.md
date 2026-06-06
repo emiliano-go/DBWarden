@@ -3,7 +3,7 @@
 !!! note "Documentation Reorganized"
     The configuration documentation has been reorganized into a comprehensive guide. This page now redirects to the new structure.
 
-## 📚 New Documentation Structure
+##  New Documentation Structure
 
 The configuration documentation is now organized into:
 
@@ -18,7 +18,7 @@ The configuration documentation is now organized into:
 - **[Troubleshooting](configuration/troubleshooting.md)** - Common issues
 - **[API Reference](reference/configuration-api.md)** - Complete function signature
 
-## 🚀 Quick Links
+##  Quick Links
 
 ### New to DBWarden Configuration?
 Start here: **[Quick Start](configuration/quick-start.md)**
@@ -39,7 +39,7 @@ Start here: **[Quick Start](configuration/quick-start.md)**
 
 ---
 
-**[→ Go to Configuration Home](configuration/index.md)**
+**[ Go to Configuration Home](configuration/index.md)**
 
 ---
 
@@ -55,7 +55,7 @@ For complete documentation, see the [Configuration Guide](configuration/index.md
 from dbwarden import database_config
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -70,7 +70,7 @@ database_config(
 from dbwarden import database_config
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -78,7 +78,7 @@ database_config(
     model_paths=["app/models/api"],
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="clickhouse",
     database_url_sync="clickhouse://user:password@localhost:8123/analytics",
@@ -89,7 +89,7 @@ database_config(
 ## Dev database example
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -130,7 +130,7 @@ Set `secure_values=True` when you want display commands to show variable express
 ```python
 DATABASE_URL = "postgresql://..."
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",

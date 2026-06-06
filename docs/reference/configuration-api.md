@@ -92,10 +92,10 @@ Connection URL strings in the format:
 [dialect+driver://user:password@]host[:port][/database][?options]
 ```
 
-- **`database_url_sync`** — used by CLI commands (`migrate`, `init`, etc.) and any sync session
-- **`database_url_async`** — used by async sessions (FastAPI); falls back to `database_url_sync` if omitted
+- **`database_url_sync`**  used by CLI commands (`migrate`, `init`, etc.) and any sync session
+- **`database_url_async`**  used by async sessions (FastAPI); falls back to `database_url_sync` if omitted
 
-At least one must be provided. If only `database_url_sync` is given, async sessions will use it (with async driver substitution like `postgresql://...` → `postgresql+asyncpg://...`).
+At least one must be provided. If only `database_url_sync` is given, async sessions will use it (with async driver substitution like `postgresql://...`  `postgresql+asyncpg://...`).
 
 Examples:
 
@@ -126,8 +126,8 @@ When `True`, this database is selected when `--database` / `-d` is not specified
 **Example:**
 ```python
 # Primary is default
-database_config(database_name="primary", default=True, ...)
-database_config(database_name="analytics", ...)  # default=False implied
+primary = database_config(
+analytics = database_config(database_name="analytics", ...)  # default=False implied
 ```
 
 !!! warning "Required Rule"
@@ -182,7 +182,7 @@ Name of the table DBWarden uses to record applied migrations and repeatable migr
 **Example:**
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -205,15 +205,15 @@ When `--dev` is passed to any DBWarden command:
 - `database_url_sync` / `database_url_async` are swapped to `dev_database_url`
 
 **Benefits:**
-- ✅ Use SQLite locally for speed (if production is PostgreSQL)
-- ✅ Target a separate development database instance
-- ✅ Test migrations safely before running against production
-- ✅ Each developer has isolated database
-- ✅ Easy to reset (just delete the file)
+-  Use SQLite locally for speed (if production is PostgreSQL)
+-  Target a separate development database instance
+-  Test migrations safely before running against production
+-  Each developer has isolated database
+-  Easy to reset (just delete the file)
 
 **Example:**
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -259,12 +259,12 @@ import os
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
     database_url_sync=DATABASE_URL,
-    secure_values=True,  # ← Enable secure display
+    secure_values=True,  #  Enable secure display
 )
 ```
 
@@ -323,7 +323,7 @@ def get_reports(session: analytics.sync_session):
     will be removed in a future version.
 
 !!! info "Not using FastAPI?"
-    `DatabaseHandle` is still useful as a typed container — access
+    `DatabaseHandle` is still useful as a typed container  access
     `handle._name` and `handle._db_type` for the raw config values.
 
 ## Configuration rules (enforced at load time)
@@ -354,7 +354,7 @@ If more than one discovery source is found, DBWarden fails with an ambiguity err
 
 ### Security sandbox
 
-Config files are loaded with path traversal protection that ensures the file is within the project tree. See [Configuration Concepts → Config Loading Security](../configuration/concepts.md#config-loading-security-sandbox).
+Config files are loaded with path traversal protection that ensures the file is within the project tree. See [Configuration Concepts  Config Loading Security](../configuration/concepts.md#config-loading-security-sandbox).
 
 ## Examples
 
@@ -364,7 +364,7 @@ Config files are loaded with path traversal protection that ensures the file is 
 from dbwarden import database_config
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -378,7 +378,7 @@ database_config(
 from dbwarden import database_config
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -394,7 +394,7 @@ database_config(
 from dbwarden import database_config
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -402,7 +402,7 @@ database_config(
     model_paths=["app/models/api"],
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="clickhouse",
     database_url_sync="http://clickhouse:password@clickhouse-host:8123/analytics",
@@ -414,17 +414,17 @@ database_config(
 
 | Parameter | Required? | Default | Use When |
 |-----------|-----------|---------|----------|
-| `database_name` | ✅ Yes | - | Always |
-| `database_type` | ❌ No | `"sqlite"` | Non-SQLite backends |
-| `database_url_sync` | ⚠️ Conditional | `None` | CLI or sync sessions |
-| `database_url_async` | ❌ No | `None` | Async sessions (FastAPI) |
-| `default` | ❌ No | `False` | Mark one database as default |
-| `migrations_dir` | ❌ No | `migrations/<name>` | Custom migration directory |
-| `model_paths` | ⚠️ Conditional | `None` | Multi-database or explicit discovery |
-| `dev_database_type` | ❌ No | `None` | Local development |
-| `dev_database_url` | ❌ No | `None` | Local development |
-| `overlap_models` | ❌ No | `False` | Shared models (read replicas) |
-| `secure_values` | ❌ No | `False` | Hide credentials in output |
+| `database_name` |  Yes | - | Always |
+| `database_type` |  No | `"sqlite"` | Non-SQLite backends |
+| `database_url_sync` |  Conditional | `None` | CLI or sync sessions |
+| `database_url_async` |  No | `None` | Async sessions (FastAPI) |
+| `default` |  No | `False` | Mark one database as default |
+| `migrations_dir` |  No | `migrations/<name>` | Custom migration directory |
+| `model_paths` |  Conditional | `None` | Multi-database or explicit discovery |
+| `dev_database_type` |  No | `None` | Local development |
+| `dev_database_url` |  No | `None` | Local development |
+| `overlap_models` |  No | `False` | Shared models (read replicas) |
+| `secure_values` |  No | `False` | Hide credentials in output |
 
 ## Related Documentation
 

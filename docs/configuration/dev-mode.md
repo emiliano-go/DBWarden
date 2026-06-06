@@ -9,7 +9,7 @@ Dev mode lets you configure **two database URLs**:
 - **Dev URL** - Used when you pass `--dev` flag
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -68,13 +68,13 @@ Easy to share between developers:
 # dbwarden.py
 from dbwarden import database_config
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
     database_url_sync="postgresql://localhost/myapp",
-    dev_database_type="sqlite",                    # ← Add this
-    dev_database_url="sqlite:///./dev.db",         # ← Add this
+    dev_database_type="sqlite",                    #  Add this
+    dev_database_url="sqlite:///./dev.db",         #  Add this
     model_paths=["app.models"],
 )
 ```
@@ -177,20 +177,20 @@ Dev mode is **never used** in CI/CD or production.
 ### What Works
 
 Most features work in SQLite:
-- ✅ Tables, columns, indexes
-- ✅ Primary keys, foreign keys
-- ✅ Unique constraints
-- ✅ Basic data types
-- ✅ Transactions
+-  Tables, columns, indexes
+-  Primary keys, foreign keys
+-  Unique constraints
+-  Basic data types
+-  Transactions
 
 ### What Doesn't Work
 
 Some PostgreSQL features aren't available in SQLite:
-- ❌ Advanced types (JSONB, arrays, enums)
-- ❌ Partial indexes
-- ❌ Generated columns (in older SQLite)
-- ❌ Multiple schemas
-- ❌ Concurrent writes
+-  Advanced types (JSONB, arrays, enums)
+-  Partial indexes
+-  Generated columns (in older SQLite)
+-  Multiple schemas
+-  Concurrent writes
 
 ### Translation
 
@@ -199,13 +199,13 @@ DBWarden **doesn't translate** SQL between databases. Your migrations should wor
 **Approach 1:** Write portable SQL
 
 ```sql
--- ✅ Works on both
+--  Works on both
 CREATE TABLE users (
     id INTEGER PRIMARY KEY,
     email VARCHAR(255) NOT NULL
 );
 
--- ❌ PostgreSQL-specific
+--  PostgreSQL-specific
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) NOT NULL,
@@ -216,7 +216,7 @@ CREATE TABLE users (
 **Approach 2:** Use PostgreSQL for dev too
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -244,7 +244,7 @@ else:
     database_url = os.getenv("DATABASE_URL")
     database_type = "postgresql"
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type=database_type,
@@ -268,7 +268,7 @@ If you have multiple databases, configure dev mode for each:
 
 ```python
 # Primary database
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -279,7 +279,7 @@ database_config(
 )
 
 # Analytics database
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="postgresql",
     database_url_sync="postgresql://localhost/analytics",
@@ -301,7 +301,7 @@ dbwarden --dev status --all
 ### Pattern 1: SQLite for Dev, PostgreSQL for Prod (Recommended)
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -323,7 +323,7 @@ database_config(
 ### Pattern 2: PostgreSQL for Both
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -359,7 +359,7 @@ else:
     database_url = "sqlite:///./dev.db"
     database_type = "sqlite"
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type=database_type,
@@ -418,7 +418,7 @@ dev_database_url="postgresql://localhost/myapp_dev"
 
 ```python
 dev_database_type="sqlite"
-dev_database_url="sqlite:///./dev.db"  # ← Add this
+dev_database_url="sqlite:///./dev.db"  #  Add this
 ```
 
 ### Dev database not updating
@@ -428,21 +428,21 @@ dev_database_url="sqlite:///./dev.db"  # ← Add this
 **Solution:** Use `--dev`:
 
 ```bash
-dbwarden --dev migrate  # ← Add --dev
+dbwarden --dev migrate  #  Add --dev
 ```
 
 ## Recap
 
 You learned:
 
-✅ What dev mode is and why it's useful  
-✅ How to configure dev and production URLs  
-✅ Daily development workflow with `--dev`  
-✅ SQLite limitations and workarounds  
-✅ Environment-based configuration  
-✅ Common patterns and best practices  
-✅ Testing strategies  
-✅ Troubleshooting dev mode issues  
+ What dev mode is and why it's useful  
+ How to configure dev and production URLs  
+ Daily development workflow with `--dev`  
+ SQLite limitations and workarounds  
+ Environment-based configuration  
+ Common patterns and best practices  
+ Testing strategies  
+ Troubleshooting dev mode issues  
 
 ## What's Next?
 

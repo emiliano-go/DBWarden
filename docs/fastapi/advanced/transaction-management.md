@@ -43,7 +43,7 @@ For writes, explicitly commit:
 async def create_user(user_data: UserCreate, session: primary.async_session):
     user = User(**user_data.model_dump())
     session.add(user)
-    await session.commit()  # ← Explicit commit
+    await session.commit()  #  Explicit commit
     await session.refresh(user)  # Get DB-generated values
     return user
 ```
@@ -288,14 +288,14 @@ async def create_order(
 
 ## Recap
 
-✅ Sessions handle transactions automatically  
-✅ Commit explicitly for writes  
-✅ Rollback automatically on errors  
-✅ Use savepoints for partial rollbacks  
-✅ Group related operations in one transaction  
-✅ Use optimistic locking to prevent lost updates  
-✅ Use pessimistic locking for critical sections  
-✅ Make operations idempotent with idempotency keys  
+ Sessions handle transactions automatically  
+ Commit explicitly for writes  
+ Rollback automatically on errors  
+ Use savepoints for partial rollbacks  
+ Group related operations in one transaction  
+ Use optimistic locking to prevent lost updates  
+ Use pessimistic locking for critical sections  
+ Make operations idempotent with idempotency keys  
 
 ## What's Next?
 

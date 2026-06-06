@@ -109,7 +109,7 @@ After init, configure your first database by editing `dbwarden.py` (or your exis
 from dbwarden import database_config
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",

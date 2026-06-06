@@ -105,7 +105,7 @@ This closes async and sync session factories, connection pools, and ClickHouse c
 Each request gets its own session:
 
 ```
-Request → get_session() → Session created → Route runs → Session closed
+Request  get_session()  Session created  Route runs  Session closed
 ```
 
 ### Session Settings
@@ -130,7 +130,7 @@ async def create_user(session: primary.async_session):
     session.add(user)
     await session.commit()
     
-    # ❌ Error: Instance is not bound to a Session
+    #  Error: Instance is not bound to a Session
     return user
 ```
 
@@ -142,7 +142,7 @@ async def create_user(session: primary.async_session):
     session.add(user)
     await session.commit()
     
-    # ✅ Works: Object still accessible
+    #  Works: Object still accessible
     return user
 ```
 
@@ -186,14 +186,14 @@ logging.getLogger('sqlalchemy.pool').setLevel(logging.DEBUG)
 Make sure sessions close:
 
 ```python
-# ✅ Correct - session closes automatically
+#  Correct - session closes automatically
 @app.get("/users")
 async def list_users(session: primary.async_session):
     result = await session.execute(select(User))
     return result.scalars().all()
     # Session closes here
 
-# ❌ Wrong - keeping session reference
+#  Wrong - keeping session reference
 _sessions = []
 
 @app.get("/users")
@@ -285,13 +285,13 @@ create_async_engine(
 
 ## Recap
 
-✅ Engines are created once and cached per database  
-✅ Each engine manages a connection pool  
-✅ Default pool size is 5 + 10 overflow  
-✅ Sessions are request-scoped and auto-closed  
-✅ `expire_on_commit=False` for FastAPI compatibility  
-✅ Monitor pool usage to diagnose connection issues  
-✅ Recycle connections to prevent staleness  
+ Engines are created once and cached per database  
+ Each engine manages a connection pool  
+ Default pool size is 5 + 10 overflow  
+ Sessions are request-scoped and auto-closed  
+ `expire_on_commit=False` for FastAPI compatibility  
+ Monitor pool usage to diagnose connection issues  
+ Recycle connections to prevent staleness  
 
 ## What's Next?
 

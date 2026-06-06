@@ -98,7 +98,7 @@ class User(Base):
 
 ## Step 3: Shared Dependencies
 
-The `DatabaseHandle` from `config.py` is already a shared dependency —
+The `DatabaseHandle` from `config.py` is already a shared dependency 
 import `primary` wherever you need a session:
 
 ```python
@@ -675,16 +675,16 @@ pytest tests/
 
 This complete application demonstrates:
 
-✅ Database configuration with DBWarden  
-✅ SQLAlchemy models with Mapped columns  
-✅ Pydantic schemas for validation  
-✅ Session dependencies with type aliases  
-✅ Full CRUD operations  
-✅ Error handling and transactions  
-✅ Startup migration checks  
-✅ Health endpoints  
-✅ Production deployment (Docker, Kubernetes)  
-✅ Testing setup  
+ Database configuration with DBWarden  
+ SQLAlchemy models with Mapped columns  
+ Pydantic schemas for validation  
+ Session dependencies with type aliases  
+ Full CRUD operations  
+ Error handling and transactions  
+ Startup migration checks  
+ Health endpoints  
+ Production deployment (Docker, Kubernetes)  
+ Testing setup  
 
 ## What's Next?
 

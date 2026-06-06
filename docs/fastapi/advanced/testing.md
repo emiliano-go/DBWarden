@@ -470,13 +470,13 @@ def test_user_with_external_service(client):
 
 ## Recap
 
-✅ Use in-memory SQLite for fast tests  
-✅ Override session dependencies with test databases  
-✅ Use fixtures for common test data  
-✅ Test all CRUD operations  
-✅ Test error cases (404, validation, duplicates)  
-✅ Use pytest-asyncio for async tests  
-✅ Mock external services  
+ Use in-memory SQLite for fast tests  
+ Override session dependencies with test databases  
+ Use fixtures for common test data  
+ Test all CRUD operations  
+ Test error cases (404, validation, duplicates)  
+ Use pytest-asyncio for async tests  
+ Mock external services  
 
 ## What's Next?
 

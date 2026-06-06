@@ -130,7 +130,7 @@ For fast local testing and predictable developer workflows, use SQLite as your d
 from dbwarden import database_config
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",

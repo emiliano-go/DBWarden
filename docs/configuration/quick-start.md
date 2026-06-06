@@ -28,7 +28,7 @@ Open `dbwarden.py` and add:
 ```python
 from dbwarden import database_config
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
@@ -70,12 +70,12 @@ primary (default)
 If you have SQLAlchemy models, tell DBWarden where they are:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
     database_url_sync="sqlite:///./app.db",
-    model_paths=["app.models"],  # ← Add this
+    model_paths=["app.models"],  #  Add this
 )
 ```
 
@@ -86,7 +86,7 @@ DBWarden will discover models from `app.models` and its submodules.
 When you're ready for PostgreSQL:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -100,7 +100,7 @@ database_config(
 Keep SQLite for local dev, use PostgreSQL in production:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -175,7 +175,7 @@ model_paths=["app.models"]
 # dbwarden.py
 from dbwarden import database_config
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
@@ -191,7 +191,7 @@ database_config(
 import os
 from dbwarden import database_config
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -207,13 +207,13 @@ database_config(
 
 You learned how to:
 
-✅ Initialize a DBWarden project  
-✅ Create your first `database_config()`  
-✅ Verify configuration with `dbwarden database`  
-✅ Add model discovery  
-✅ Upgrade from SQLite to PostgreSQL  
-✅ Add dev mode for local development  
-✅ Use environment variables for credentials  
+ Initialize a DBWarden project  
+ Create your first `database_config()`  
+ Verify configuration with `dbwarden database`  
+ Add model discovery  
+ Upgrade from SQLite to PostgreSQL  
+ Add dev mode for local development  
+ Use environment variables for credentials  
 
 ## What's Next?
 

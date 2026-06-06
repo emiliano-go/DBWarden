@@ -3,9 +3,9 @@
 !!! note "Page Moved and Expanded"
     This page has been moved to a comprehensive tutorial with production examples.
 
-## 📍 New Location
+##  New Location
 
-**[→ Health Endpoints Tutorial](tutorial/health-endpoints.md)**
+**[ Health Endpoints Tutorial](tutorial/health-endpoints.md)**
 
 The new page includes:
 - Response schema documentation
@@ -37,7 +37,7 @@ This registers the following endpoints under the given prefix:
 
 | Method | Path | Description |
 |----------|------|-------------|
-| `GET` | `/health/` | Overall health — all databases, connectivity + migration state |
+| `GET` | `/health/` | Overall health  all databases, connectivity + migration state |
 | `GET` | `/health/{database_name}` | Health for a single named database |
 
 ## Authentication
@@ -113,9 +113,9 @@ class HealthResponse(BaseModel):
 ```
 
 **Overall status rules:**
-- `"ok"` → all databases connected and zero pending migrations
-- `"degraded"` → all databases connected but one or more has pending migrations
-- `"error"` → one or more databases cannot be connected to
+- `"ok"`  all databases connected and zero pending migrations
+- `"degraded"`  all databases connected but one or more has pending migrations
+- `"error"`  one or more databases cannot be connected to
 
 **Example response:**
 
@@ -178,13 +178,13 @@ If the database name is not in config:
 | Scenario | Status code | Explanation |
 |----------|-------------|-------------|
 | All databases healthy | `200` | All connected, zero pending migrations |
-| Degraded (pending migrations) | `200` | Degraded is a *state*, not a failure — caller decides how to handle |
-| Any database unreachable | `503` | Service unavailable — infrastructure should restart or alert |
+| Degraded (pending migrations) | `200` | Degraded is a *state*, not a failure  caller decides how to handle |
+| Any database unreachable | `503` | Service unavailable  infrastructure should restart or alert |
 | Database name not found | `404` | Only for per-database route |
 
 The distinction between `200` and `503` is intentional:
-- **Kubernetes liveness probes** care about connectivity (`503` → restart)
-- **Kubernetes readiness probes** care about migration state — the caller decides whether pending migrations should block traffic, DBWarden just reports the state
+- **Kubernetes liveness probes** care about connectivity (`503`  restart)
+- **Kubernetes readiness probes** care about migration state  the caller decides whether pending migrations should block traffic, DBWarden just reports the state
 
 ## Health check implementation
 
@@ -192,13 +192,13 @@ For each database, the health check runs:
 
 1. Attempt connection using the cached engine (or build one if not yet cached)
 2. Execute a trivial connectivity query (`SELECT 1`)
-3. If connectivity fails → mark `connected=False`, `status="error"`, set `error` field, skip migration check
-4. If connectivity succeeds → query the configured migration tracking table (default: `_dbwarden_migrations`) to count applied migrations
+3. If connectivity fails  mark `connected=False`, `status="error"`, set `error` field, skip migration check
+4. If connectivity succeeds  query the configured migration tracking table (default: `_dbwarden_migrations`) to count applied migrations
 5. Compare applied count against discovered migration files to compute `pending_migrations`
 6. Check if `dbwarden_lock` table has an active lock
 7. Return health result
 
-If the migration tracking table does not exist → `pending_migrations` is the total migration file count (nothing has been applied yet).
+If the migration tracking table does not exist  `pending_migrations` is the total migration file count (nothing has been applied yet).
 
 ## Use cases
 

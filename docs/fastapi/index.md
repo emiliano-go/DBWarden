@@ -2,7 +2,7 @@
 
 DBWarden provides first-class FastAPI integration for database sessions, health checks, and migration management.
 
-**One configuration source** for both migrations and runtime → no more split configs.
+**One configuration source** for both migrations and runtime  no more split configs.
 
 ## Quick Start
 
