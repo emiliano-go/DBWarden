@@ -2,7 +2,7 @@
 
 DBWarden uses Python-based configuration with `database_config()` to define your databases.
 
-**One configuration source** for migrations, CLI tools, and runtime → no split configs.
+**One configuration source** for migrations, CLI tools, and runtime  no split configs.
 
 ## Quick Start
 
@@ -12,7 +12,7 @@ The simplest configuration possible:
 # dbwarden.py
 from dbwarden import database_config
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
@@ -57,12 +57,12 @@ Deploy with confidence:
 
 ## Key Features
 
-### 🚀 Simple Configuration
+###  Simple Configuration
 
 Define once, use everywhere:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -71,12 +71,12 @@ database_config(
 )
 ```
 
-### 🔧 Dev Mode
+###  Dev Mode
 
 Use SQLite locally, PostgreSQL in production:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -93,13 +93,13 @@ dbwarden --dev migrate
 dbwarden --dev status
 ```
 
-### 🗄️ Multi-Database
+###  Multi-Database
 
 Configure as many databases as you need:
 
 ```python
 # Primary database
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -108,7 +108,7 @@ database_config(
 )
 
 # Analytics database
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="clickhouse",
     database_url_sync="http://localhost:8123/analytics",
@@ -116,14 +116,14 @@ database_config(
 )
 ```
 
-### 🔒 Security First
+###  Security First
 
 Keep credentials out of code:
 
 ```python
 import os
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -132,15 +132,15 @@ database_config(
 )
 ```
 
-### ✅ Validation
+###  Validation
 
 DBWarden validates your configuration:
 
-- ✅ Exactly one `default=True`
-- ✅ Unique database names
-- ✅ No duplicate URLs
-- ✅ Required `model_paths` for multi-database
-- ✅ Consistent dev mode configuration
+-  Exactly one `default=True`
+-  Unique database names
+-  No duplicate URLs
+-  Required `model_paths` for multi-database
+-  Consistent dev mode configuration
 
 ## Configuration Loading
 
@@ -159,7 +159,7 @@ Place `dbwarden.py` in your project root for best results.
 ```python
 from dbwarden import database_config
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -172,7 +172,7 @@ database_config(
 ```python
 from dbwarden import database_config
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -189,7 +189,7 @@ database_config(
 from dbwarden import database_config
 
 # Primary
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -198,7 +198,7 @@ database_config(
 )
 
 # Analytics
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="postgresql",
     database_url_sync="postgresql://localhost/analytics",
@@ -212,7 +212,7 @@ database_config(
 import os
 from dbwarden import database_config
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -225,18 +225,18 @@ database_config(
 ## Why Python Configuration?
 
 **vs TOML/YAML/INI:**
-- ✅ Type checking with your IDE
-- ✅ Dynamic configuration (loops, conditionals)
-- ✅ Environment variable integration
-- ✅ No schema mismatches
-- ✅ Can compute values
+-  Type checking with your IDE
+-  Dynamic configuration (loops, conditionals)
+-  Environment variable integration
+-  No schema mismatches
+-  Can compute values
 
 **vs Environment Variables Only:**
-- ✅ Version controlled
-- ✅ Self-documenting
-- ✅ Validation at load time
-- ✅ Multiple databases easy
-- ✅ Can reference code structures
+-  Version controlled
+-  Self-documenting
+-  Validation at load time
+-  Multiple databases easy
+-  Can reference code structures
 
 ## What's Next?
 

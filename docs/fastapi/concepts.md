@@ -39,11 +39,11 @@ async def list_users(session: primary.async_session):
 ```
 
 DBWarden handles:
-- ✅ Engine creation
-- ✅ Session factories
-- ✅ Connection pooling
-- ✅ Startup checks
-- ✅ Health endpoints
+-  Engine creation
+-  Session factories
+-  Connection pooling
+-  Startup checks
+-  Health endpoints
 
 ## Dependency Injection
 
@@ -70,16 +70,16 @@ async def list_users(db: AsyncSession = Depends(get_db)):
 ### With DBWarden
 
 ```python
-# One-time setup — database_config() returns a DatabaseHandle
+# One-time setup  database_config() returns a DatabaseHandle
 primary = database_config(database_name="primary", ...)
 
-# Every route — use .async_session directly
+# Every route  use .async_session directly
 @app.get("/users")
 async def list_users(session: primary.async_session):
     ...
 ```
 
-The `DatabaseHandle` `.async_session` property is a FastAPI dependency annotation — ready to use in route parameters without `Annotated`, `Depends`, or type aliases.
+The `DatabaseHandle` `.async_session` property is a FastAPI dependency annotation  ready to use in route parameters without `Annotated`, `Depends`, or type aliases.
 
 ## Engine Caching
 
@@ -88,7 +88,7 @@ The `DatabaseHandle` `.async_session` property is a FastAPI dependency annotatio
 Creating database engines is expensive:
 
 ```python
-# ❌ Bad: New engine per request
+#  Bad: New engine per request
 @app.get("/users")
 async def list_users():
     engine = create_async_engine(...)  # Expensive!
@@ -99,7 +99,7 @@ async def list_users():
 Engines should be **created once and reused**:
 
 ```python
-# ✅ Good: One engine for app lifetime
+#  Good: One engine for app lifetime
 primary = database_config(database_name="primary", ...)  # Engine cached
 
 @app.get("/users")
@@ -120,7 +120,7 @@ First request:
 
 Subsequent requests:
 1. primary.async_session resolves
-2. Engine retrieved from cache  ← Fast!
+2. Engine retrieved from cache   Fast!
 3. Session created from engine
 4. Session yielded to route
 ```
@@ -138,25 +138,25 @@ Request 3: Session C
 ```
 
 Sessions are **never shared** between requests, ensuring:
-- ✅ Transaction isolation
-- ✅ No race conditions
-- ✅ Predictable behavior
+-  Transaction isolation
+-  No race conditions
+-  Predictable behavior
 
 ### Session Lifecycle
 
 ```
 Request arrives
-    ↓
+    
 FastAPI calls get_session dependency
-    ↓
+    
 New session created
-    ↓
+    
 Session yielded to route
-    ↓
+    
 Route executes with session
-    ↓
+    
 Session automatically closed
-    ↓
+    
 Response returned
 ```
 
@@ -256,7 +256,7 @@ user = User(email="test@example.com")
 session.add(user)
 await session.commit()
 
-# ❌ Error: Instance is not bound to a Session
+#  Error: Instance is not bound to a Session
 return user
 ```
 
@@ -269,7 +269,7 @@ user = User(email="test@example.com")
 session.add(user)
 await session.commit()
 
-# ✅ Works: Object still accessible
+#  Works: Object still accessible
 return user
 ```
 
@@ -281,11 +281,11 @@ FastAPI serializes response objects **after** the route returns:
 
 ```
 Route returns user
-    ↓
+    
 Session closes
-    ↓
-FastAPI serializes user to JSON  ← Needs to access user.email!
-    ↓
+    
+FastAPI serializes user to JSON   Needs to access user.email!
+    
 Response sent
 ```
 
@@ -316,16 +316,16 @@ primary = database_config(
 ## When to Use DBWarden
 
 **Use DBWarden when:**
-- ✅ You want migrations and runtime to share config
-- ✅ You need startup validation
-- ✅ You want built-in health endpoints
-- ✅ You're building a new FastAPI app
-- ✅ You use SQLAlchemy for models
+-  You want migrations and runtime to share config
+-  You need startup validation
+-  You want built-in health endpoints
+-  You're building a new FastAPI app
+-  You use SQLAlchemy for models
 
 **Don't use DBWarden when:**
-- ❌ You don't use SQLAlchemy
-- ❌ You already have working migration infrastructure
-- ❌ You use an ORM other than SQLAlchemy (e.g., Tortoise, SQLModel standalone)
+-  You don't use SQLAlchemy
+-  You already have working migration infrastructure
+-  You use an ORM other than SQLAlchemy (e.g., Tortoise, SQLModel standalone)
 
 ## Comparison to Alternatives
 
@@ -356,14 +356,14 @@ Django's ORM is integrated with Django's migration system. DBWarden is for FastA
 
 ## Recap
 
-✅ DBWarden provides one configuration source for migrations and runtime  
-✅ Uses dependency injection for clean, reusable code  
-✅ Caches engines for performance  
-✅ Sessions are request-scoped and automatically managed  
-✅ Health endpoints integrate with Kubernetes probes  
-✅ Async-native for high concurrency  
-✅ `expire_on_commit=False` for FastAPI compatibility  
-✅ Configuration resolves from explicit → environment → defaults  
+ DBWarden provides one configuration source for migrations and runtime  
+ Uses dependency injection for clean, reusable code  
+ Caches engines for performance  
+ Sessions are request-scoped and automatically managed  
+ Health endpoints integrate with Kubernetes probes  
+ Async-native for high concurrency  
+ `expire_on_commit=False` for FastAPI compatibility  
+ Configuration resolves from explicit  environment  defaults  
 
 ## What's Next?
 

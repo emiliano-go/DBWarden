@@ -10,7 +10,7 @@ Real-world configuration patterns for production deployments.
 import os
 from dbwarden import database_config
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -29,7 +29,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable is required")
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -44,7 +44,7 @@ database_config(
 ```python
 import os
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -84,7 +84,7 @@ services:
 # dbwarden.py
 import os
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -192,7 +192,7 @@ def get_database_url():
         f"@{secret['host']}:{secret['port']}/{secret['dbname']}"
     )
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -221,7 +221,7 @@ database_url = (
     f"@{os.getenv('DB_HOST')}:5432/{os.getenv('DB_NAME')}"
 )
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -249,7 +249,7 @@ else:
     database_url = "sqlite:///./dev.db"
     database_type = "sqlite"
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type=database_type,
@@ -277,7 +277,7 @@ import os
 from dbwarden import database_config
 
 def setup_databases():
-    database_config(
+    primary = database_config(
         database_name="primary",
         default=True,
         database_type="postgresql",
@@ -292,7 +292,7 @@ def setup_databases():
 ### PostgreSQL with Pooling
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -311,7 +311,7 @@ database_config(
 
 ```python
 # Connection through PgBouncer
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -325,7 +325,7 @@ database_config(
 ### PostgreSQL with SSL
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -354,7 +354,7 @@ if ca_cert:
 
 database_url = f"postgresql://user:pass@host/myapp{ssl_params}"
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -369,7 +369,7 @@ database_config(
 
 ```python
 # Primary (writes)
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -378,7 +378,7 @@ database_config(
 )
 
 # Replica (reads)
-database_config(
+replica = database_config(
     database_name="replica",
     database_type="postgresql",
     database_url_sync=os.getenv("REPLICA_DATABASE_URL"),
@@ -399,7 +399,7 @@ replica_url = os.getenv("REPLICA_DATABASE_URL")
 # Application logic handles failover
 database_url = primary_url  # Start with primary
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -423,7 +423,7 @@ database_url = (
     f"?application_name={app_name}-{hostname}"
 )
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -445,10 +445,10 @@ GROUP BY application_name;
 ### Never Commit Credentials
 
 ```python
-# ❌ Bad
+#  Bad
 database_url_sync="postgresql://user:password@localhost/myapp"
 
-# ✅ Good
+#  Good
 database_url_sync=os.getenv("DATABASE_URL")
 ```
 
@@ -469,7 +469,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO myapp_use
 # Use short-lived tokens
 database_url = get_temporary_database_credentials()
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -522,14 +522,14 @@ migrate:
 
 ## Recap
 
-✅ Use environment variables for credentials  
-✅ Configure SSL/TLS for production  
-✅ Implement connection pooling  
-✅ Use init containers for Kubernetes migrations  
-✅ Store secrets in AWS Secrets Manager / K8s Secrets  
-✅ Monitor connections with application names  
-✅ Follow security best practices  
-✅ Integrate with CI/CD pipelines  
+ Use environment variables for credentials  
+ Configure SSL/TLS for production  
+ Implement connection pooling  
+ Use init containers for Kubernetes migrations  
+ Store secrets in AWS Secrets Manager / K8s Secrets  
+ Monitor connections with application names  
+ Follow security best practices  
+ Integrate with CI/CD pipelines  
 
 ## What's Next?
 

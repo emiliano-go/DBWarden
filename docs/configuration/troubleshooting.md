@@ -44,7 +44,7 @@ dbwarden migrate
 # dbwarden.py
 from dbwarden import database_config
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="sqlite",
@@ -56,16 +56,16 @@ database_config(
 
 ```python
 # dbwarden.py
-from app.models import Base  # ← Import fails
+from app.models import Base  #  Import fails
 ```
 
 **Solution:** Fix imports or use lazy loading:
 
 ```python
 # Don't import models in config file
-database_config(
+primary = database_config(
     database_name="primary",
-    model_paths=["app.models"],  # ← Use model_paths instead
+    model_paths=["app.models"],  #  Use model_paths instead
     ...
 )
 ```
@@ -83,33 +83,33 @@ ConfigurationError: Exactly one default=True required
 **Cause 1: No default database**
 
 ```python
-# ❌ Wrong
-database_config(database_name="primary", default=False, ...)
-database_config(database_name="analytics", default=False, ...)
+#  Wrong
+analytics = database_config(
+analytics = database_config(database_name="analytics", default=False, ...)
 ```
 
 **Solution:** Set one database as default:
 
 ```python
-# ✅ Correct
-database_config(database_name="primary", default=True, ...)
-database_config(database_name="analytics", default=False, ...)
+#  Correct
+analytics = database_config(
+analytics = database_config(database_name="analytics", default=False, ...)
 ```
 
 **Cause 2: Multiple defaults**
 
 ```python
-# ❌ Wrong
-database_config(database_name="primary", default=True, ...)
-database_config(database_name="analytics", default=True, ...)
+#  Wrong
+analytics = database_config(
+analytics = database_config(database_name="analytics", default=True, ...)
 ```
 
 **Solution:** Only one default:
 
 ```python
-# ✅ Correct
-database_config(database_name="primary", default=True, ...)
-database_config(database_name="analytics", ...)  # default=False implied
+#  Correct
+analytics = database_config(
+analytics = database_config(database_name="analytics", ...)  # default=False implied
 ```
 
 ## "Duplicate database_name"
@@ -125,8 +125,8 @@ ConfigurationError: Duplicate database_name 'primary'
 Same `database_name` used twice:
 
 ```python
-database_config(database_name="primary", ...)
-database_config(database_name="primary", ...)  # ← Duplicate
+primary = database_config(
+primary = database_config(database_name="primary", ...)  #  Duplicate
 ```
 
 ### Solution
@@ -134,8 +134,8 @@ database_config(database_name="primary", ...)  # ← Duplicate
 Use unique names:
 
 ```python
-database_config(database_name="primary", ...)
-database_config(database_name="analytics", ...)  # ← Different name
+analytics = database_config(
+analytics = database_config(database_name="analytics", ...)  #  Different name
 ```
 
 ## "No SQLAlchemy models found"
@@ -151,14 +151,14 @@ Warning: No SQLAlchemy models found
 **Cause 1: Wrong `model_paths`**
 
 ```python
-# ❌ Wrong
+#  Wrong
 model_paths=["models"]  # Not on PYTHONPATH
 ```
 
 **Solution:** Use correct Python path:
 
 ```python
-# ✅ Correct
+#  Correct
 model_paths=["app.models"]
 ```
 
@@ -166,7 +166,7 @@ model_paths=["app.models"]
 
 ```python
 # app/models/__init__.py
-# ❌ Wrong - models not imported
+#  Wrong - models not imported
 from sqlalchemy.orm import DeclarativeBase
 
 class Base(DeclarativeBase):
@@ -177,7 +177,7 @@ class Base(DeclarativeBase):
 
 ```python
 # app/models/__init__.py
-# ✅ Correct
+#  Correct
 from sqlalchemy.orm import DeclarativeBase
 from app.models.user import User
 from app.models.order import Order
@@ -191,9 +191,9 @@ class Base(DeclarativeBase):
 **Solution:** Add `model_paths`:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
-    model_paths=["app.models"],  # ← Add this
+    model_paths=["app.models"],  #  Add this
     ...
 )
 ```
@@ -202,10 +202,10 @@ database_config(
 
 ```python
 # app/models/user.py
-from app.models.order import Order  # ← Circular
+from app.models.order import Order  #  Circular
 
 # app/models/order.py
-from app.models.user import User  # ← Circular
+from app.models.user import User  #  Circular
 ```
 
 **Solution:** Use TYPE_CHECKING:
@@ -230,9 +230,9 @@ ConfigurationError: model_paths is required when more than one database is confi
 Multiple databases without `model_paths`:
 
 ```python
-# ❌ Wrong
-database_config(database_name="primary", ...)
-database_config(database_name="analytics", ...)  # No model_paths
+#  Wrong
+analytics = database_config(
+analytics = database_config(database_name="analytics", ...)  # No model_paths
 ```
 
 ### Solution
@@ -240,13 +240,13 @@ database_config(database_name="analytics", ...)  # No model_paths
 Add `model_paths` to all databases:
 
 ```python
-# ✅ Correct
-database_config(
+#  Correct
+primary = database_config(
     database_name="primary",
     model_paths=["app.models.primary"],
     ...
 )
-database_config(
+analytics = database_config(
     database_name="analytics",
     model_paths=["app.models.analytics"],
     ...
@@ -266,15 +266,15 @@ ConfigurationError: model_paths overlap detected between 'primary' and 'analytic
 Same model paths for different databases:
 
 ```python
-# ❌ Wrong
-database_config(
+#  Wrong
+primary = database_config(
     database_name="primary",
     model_paths=["app.models"],
     ...
 )
-database_config(
+analytics = database_config(
     database_name="analytics",
-    model_paths=["app.models"],  # ← Same path
+    model_paths=["app.models"],  #  Same path
     ...
 )
 ```
@@ -284,13 +284,13 @@ database_config(
 **Solution 1: Use separate paths**
 
 ```python
-# ✅ Correct
-database_config(
+#  Correct
+primary = database_config(
     database_name="primary",
     model_paths=["app.models.primary"],
     ...
 )
-database_config(
+analytics = database_config(
     database_name="analytics",
     model_paths=["app.models.analytics"],
     ...
@@ -300,14 +300,14 @@ database_config(
 **Solution 2: Allow overlap (if intentional)**
 
 ```python
-# ✅ Correct for read replicas
-database_config(
+#  Correct for read replicas
+primary = database_config(
     database_name="primary",
     model_paths=["app.models"],
     overlap_models=True,
     ...
 )
-database_config(
+replica = database_config(
     database_name="replica",
     model_paths=["app.models"],
     overlap_models=True,
@@ -328,8 +328,8 @@ ConfigurationError: dev_database_url is required when dev_database_type is set
 Set `dev_database_type` without `dev_database_url`:
 
 ```python
-# ❌ Wrong
-database_config(
+#  Wrong
+primary = database_config(
     database_name="primary",
     dev_database_type="sqlite",
     # Missing dev_database_url
@@ -342,11 +342,11 @@ database_config(
 Add both dev parameters:
 
 ```python
-# ✅ Correct
-database_config(
+#  Correct
+primary = database_config(
     database_name="primary",
     dev_database_type="sqlite",
-    dev_database_url="sqlite:///./dev.db",  # ← Add this
+    dev_database_url="sqlite:///./dev.db",  #  Add this
     ...
 )
 ```
@@ -463,11 +463,11 @@ python -c "import app.models"
 **Solution:** Specify `model_paths`:
 
 ```python
-# ❌ Slow - scans everything
-database_config(database_name="primary", ...)
+#  Slow - scans everything
+primary = database_config(
 
-# ✅ Fast - targeted scan
-database_config(
+#  Fast - targeted scan
+primary = database_config(
     database_name="primary",
     model_paths=["app.models"],
     ...
@@ -481,14 +481,14 @@ database_config(
 **Solution:** Avoid imports in `dbwarden.py`:
 
 ```python
-# ❌ Slow
+#  Slow
 from app.models import Base
 from app.services import setup
 
-# ✅ Fast
+#  Fast
 from dbwarden import database_config
 
-database_config(...)
+db = database_config(
 ```
 
 ## Debugging Tips
@@ -525,12 +525,12 @@ dbwarden check-db --database primary
 
 ## Recap
 
-✅ Most issues are configuration or import errors  
-✅ Use `dbwarden database` to inspect configuration  
-✅ Use `dbwarden check-db` to test connections  
-✅ Specify `model_paths` for faster loading  
-✅ Check Python imports with `python -c`  
-✅ Use `--verbose` for detailed output  
+ Most issues are configuration or import errors  
+ Use `dbwarden database` to inspect configuration  
+ Use `dbwarden check-db` to test connections  
+ Specify `model_paths` for faster loading  
+ Check Python imports with `python -c`  
+ Use `--verbose` for detailed output  
 
 ## What's Next?
 

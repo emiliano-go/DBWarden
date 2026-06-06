@@ -29,7 +29,7 @@ model_paths = ["app/models/api"]
 from dbwarden import database_config
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -91,7 +91,7 @@ For each database in your TOML config, create a corresponding `database_config(.
 from dbwarden import database_config
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -139,7 +139,7 @@ import os
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -160,7 +160,7 @@ import os
 ENV = os.getenv("ENVIRONMENT", "development")
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -184,7 +184,7 @@ DB_USER = os.getenv("DB_USER")
 DB_PASS = os.getenv("DB_PASS")
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -213,9 +213,9 @@ Python loads all `database_config(...)` calls, so ensure each call has a unique 
 
 Some TOML features don't map 1:1 to Python:
 
-- Inline tables → use separate key-value dictionary in Python (more verbose but explicit)
-- Multiline strings → use triple-quoted strings in Python
-- Arrays of tables → use separate `model_paths=[...]` list entries
+- Inline tables  use separate key-value dictionary in Python (more verbose but explicit)
+- Multiline strings  use triple-quoted strings in Python
+- Arrays of tables  use separate `model_paths=[...]` list entries
 
 If you used advanced TOML features, manually translate those to equivalent Python constructs.
 

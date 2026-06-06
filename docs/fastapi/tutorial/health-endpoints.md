@@ -138,18 +138,18 @@ Let's break down what each field means:
 ### Status Values
 
 **`"ok"`** - Everything is healthy
-- ✅ Database is connected
-- ✅ Zero pending migrations
-- ✅ No migration lock
+-  Database is connected
+-  Zero pending migrations
+-  No migration lock
 
 **`"degraded"`** - Functional but needs attention
-- ✅ Database is connected
-- ⚠️ Has pending migrations
-- ℹ️ App works but schema is outdated
+-  Database is connected
+-  Has pending migrations
+- ℹ App works but schema is outdated
 
 **`"error"`** - Not functional
-- ❌ Cannot connect to database
-- ❌ Health check failed
+-  Cannot connect to database
+-  Health check failed
 
 ### Overall Status Logic
 
@@ -199,7 +199,7 @@ DBWarden health endpoints return these HTTP status codes:
 Here's what happens when you hit `/health/`:
 
 ```
-1. Request arrives → /health/
+1. Request arrives  /health/
 2. For each database in config:
    a. Get or create engine
    b. Attempt connection
@@ -465,7 +465,7 @@ from dbwarden.fastapi import migration_context
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with migration_context(mode="check", fail_fast=True):
-        # ❌ If this fails, app won't start
+        #  If this fails, app won't start
         yield
 ```
 
@@ -474,7 +474,7 @@ async def lifespan(app: FastAPI):
 ```python
 from dbwarden.fastapi import DBWardenHealthRouter
 
-# ✅ Always available - returns status code based on health
+#  Always available - returns status code based on health
 app.include_router(DBWardenHealthRouter(), prefix="/health")
 ```
 
@@ -587,8 +587,8 @@ Check your DBWarden config - the database name must be defined:
 
 ```python
 # dbwarden.py
-database_config(
-    database_name="analytics",  # ← Must match route parameter
+analytics = database_config(
+    database_name="analytics",  #  Must match route parameter
     ...
 )
 ```
@@ -614,13 +614,13 @@ async def ping():
 
 You learned:
 
-✅ Add health endpoints with `DBWardenHealthRouter()`  
-✅ Health endpoints return database connectivity and migration state  
-✅ Status codes: 200 (healthy/degraded), 503 (error), 404 (not found)  
-✅ Use for Kubernetes liveness/readiness probes  
-✅ Feed metrics to Prometheus, Datadog, etc.  
-✅ Health endpoints vs startup checks - different purposes  
-✅ Troubleshoot common issues (503, degraded, 404)  
+ Add health endpoints with `DBWardenHealthRouter()`  
+ Health endpoints return database connectivity and migration state  
+ Status codes: 200 (healthy/degraded), 503 (error), 404 (not found)  
+ Use for Kubernetes liveness/readiness probes  
+ Feed metrics to Prometheus, Datadog, etc.  
+ Health endpoints vs startup checks - different purposes  
+ Troubleshoot common issues (503, degraded, 404)  
 
 ## What's Next?
 

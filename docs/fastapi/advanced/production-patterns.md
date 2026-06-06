@@ -104,7 +104,7 @@ Only for simple, single-instance deployments:
 async def lifespan(app: FastAPI):
     async with migration_context(
         mode="migrate",
-        allow_in_production=True,  # ⚠️ Risky
+        allow_in_production=True,  #  Risky
     ):
         yield
 ```
@@ -140,7 +140,7 @@ Use in DBWarden config:
 # dbwarden.py
 from config import settings
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -175,7 +175,7 @@ def get_database_url():
     secret = json.loads(response['SecretString'])
     return secret['DATABASE_URL']
 
-database_config(
+db = database_config(
     database_url_sync=get_database_url(),
     ...
 )
@@ -378,13 +378,13 @@ spec:
 
 **Bad:**
 ```python
-# ❌ Breaking change
+#  Breaking change
 op.drop_column('users', 'old_field')
 ```
 
 **Good:**
 ```python
-# ✅ Backward compatible
+#  Backward compatible
 # Step 1: Add new field
 op.add_column('users', sa.Column('new_field', sa.String()))
 
@@ -420,10 +420,10 @@ dbwarden migrate --with-backup --backup-dir /backups
 ### Connection String Security
 
 ```python
-# ❌ Never commit
+#  Never commit
 database_url_sync="postgresql://user:password@host/db"
 
-# ✅ Use environment variables
+#  Use environment variables
 database_url_sync=os.getenv("DATABASE_URL")
 ```
 
@@ -483,16 +483,16 @@ jobs:
 
 ## Recap
 
-✅ Run migrations before code deployment  
-✅ Use init containers or separate jobs for migrations  
-✅ Store secrets securely (Kubernetes Secrets, AWS Secrets Manager)  
-✅ Configure liveness and readiness probes  
-✅ Monitor with Prometheus, structured logging, tracing  
-✅ Optimize connection pooling for high traffic  
-✅ Use rolling updates for zero-downtime  
-✅ Write backward-compatible migrations  
-✅ Automate backups and test rollback procedures  
-✅ Secure connections with SSL and least-privilege users  
+ Run migrations before code deployment  
+ Use init containers or separate jobs for migrations  
+ Store secrets securely (Kubernetes Secrets, AWS Secrets Manager)  
+ Configure liveness and readiness probes  
+ Monitor with Prometheus, structured logging, tracing  
+ Optimize connection pooling for high traffic  
+ Use rolling updates for zero-downtime  
+ Write backward-compatible migrations  
+ Automate backups and test rollback procedures  
+ Secure connections with SSL and least-privilege users  
 
 ## What's Next?
 

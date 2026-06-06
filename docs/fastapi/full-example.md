@@ -3,9 +3,9 @@
 !!! note "Page Moved and Expanded"
     This page has been moved and significantly enhanced with more examples.
 
-## 📍 New Location
+##  New Location
 
-**[→ Complete Application Tutorial](tutorial/complete-application.md)**
+**[ Complete Application Tutorial](tutorial/complete-application.md)**
 
 The new page includes:
 - Full project structure
@@ -30,7 +30,7 @@ This is a complete FastAPI app integrating all DBWarden FastAPI helpers.
 from dbwarden import database_config
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",

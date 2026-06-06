@@ -20,7 +20,7 @@ Configure each database with `database_config()`:
 from dbwarden import database_config
 
 # Primary database
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -29,7 +29,7 @@ database_config(
 )
 
 # Analytics database
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="postgresql",
     database_url_sync="postgresql://localhost/analytics",
@@ -37,7 +37,7 @@ database_config(
 )
 
 # Logging database
-database_config(
+logging = database_config(
     database_name="logging",
     database_type="postgresql",
     database_url_sync="postgresql://localhost/logs",
@@ -68,19 +68,19 @@ app/
 Configuration:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     model_paths=["app.models.primary"],
     ...
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     model_paths=["app.models.analytics"],
     ...
 )
 
-database_config(
+logging = database_config(
     database_name="logging",
     model_paths=["app.models.logging"],
     ...
@@ -171,7 +171,7 @@ migrations/
 Configure custom directories:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     migrations_dir="migrations/primary",  # Custom path
     ...
@@ -202,7 +202,7 @@ Migrations are **completely independent** - you can migrate one database without
 Configure dev mode for each database:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -212,7 +212,7 @@ database_config(
     model_paths=["app.models.primary"],
 )
 
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="postgresql",
     database_url_sync="postgresql://localhost/analytics",
@@ -237,7 +237,7 @@ dbwarden --dev migrate --database analytics
 ### Pattern 1: Read/Write Split
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -245,7 +245,7 @@ database_config(
     model_paths=["app.models"],
 )
 
-database_config(
+replica = database_config(
     database_name="replica",
     database_type="postgresql",
     database_url_sync="postgresql://replica-host/myapp",
@@ -260,7 +260,7 @@ database_config(
 
 ```python
 # Transactions
-database_config(
+transactions = database_config(
     database_name="transactions",
     default=True,
     database_type="postgresql",
@@ -269,7 +269,7 @@ database_config(
 )
 
 # Analytics
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="clickhouse",
     database_url_sync="http://localhost:8123/analytics",
@@ -277,7 +277,7 @@ database_config(
 )
 
 # Audit logs
-database_config(
+audit = database_config(
     database_name="audit",
     database_type="postgresql",
     database_url_sync="postgresql://localhost/audit",
@@ -291,7 +291,7 @@ database_config(
 tenants = ["tenant_a", "tenant_b", "tenant_c"]
 
 for tenant in tenants:
-    database_config(
+    db = database_config(
         database_name=tenant,
         default=(tenant == "tenant_a"),
         database_type="postgresql",
@@ -307,17 +307,17 @@ for tenant in tenants:
 When you have multiple databases, each **must** specify `model_paths`:
 
 ```python
-# ❌ Error: model_paths required
-database_config(database_name="primary", ...)
-database_config(database_name="analytics", ...)  # Missing model_paths
+#  Error: model_paths required
+analytics = database_config(
+analytics = database_config(database_name="analytics", ...)  # Missing model_paths
 
-# ✅ Correct
-database_config(
+#  Correct
+primary = database_config(
     database_name="primary",
     model_paths=["app.models.primary"],
     ...
 )
-database_config(
+analytics = database_config(
     database_name="analytics",
     model_paths=["app.models.analytics"],
     ...
@@ -329,13 +329,13 @@ database_config(
 Model paths cannot overlap:
 
 ```python
-# ❌ Error: overlap detected
-database_config(
+#  Error: overlap detected
+primary = database_config(
     database_name="primary",
     model_paths=["app.models"],
     ...
 )
-database_config(
+analytics = database_config(
     database_name="analytics",
     model_paths=["app.models"],  # Same path
     ...
@@ -347,16 +347,16 @@ database_config(
 For read replicas or shared models:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     model_paths=["app.models"],
-    overlap_models=True,  # ← Allow overlap
+    overlap_models=True,  #  Allow overlap
     ...
 )
-database_config(
+replica = database_config(
     database_name="replica",
     model_paths=["app.models"],
-    overlap_models=True,  # ← Allow overlap
+    overlap_models=True,  #  Allow overlap
     ...
 )
 ```
@@ -368,9 +368,9 @@ database_config(
 **Solution:** Add `model_paths` to all databases:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
-    model_paths=["app.models.primary"],  # ← Add this
+    model_paths=["app.models.primary"],  #  Add this
     ...
 )
 ```
@@ -402,13 +402,13 @@ dbwarden migrate --database analytics  # Specify database
 
 ## Recap
 
-✅ Configure multiple databases with separate `database_config()` calls  
-✅ Organize models in separate modules  
-✅ Each database has independent migration history  
-✅ Target specific database with `--database` flag  
-✅ Target all databases with `--all` flag  
-✅ Configure dev mode per database  
-✅ `model_paths` required for multi-database  
+ Configure multiple databases with separate `database_config()` calls  
+ Organize models in separate modules  
+ Each database has independent migration history  
+ Target specific database with `--database` flag  
+ Target all databases with `--all` flag  
+ Configure dev mode per database  
+ `model_paths` required for multi-database  
 
 ## What's Next?
 

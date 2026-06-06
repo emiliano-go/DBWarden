@@ -17,7 +17,7 @@ DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
 PostgreSQL:
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
@@ -28,7 +28,7 @@ database_config(
 MySQL:
 
 ```python
-database_config(
+legacy = database_config(
     database_name="legacy",
     database_type="mysql",
     database_url_sync="mysql://user:password@localhost:3306/legacy",
@@ -38,7 +38,7 @@ database_config(
 SQLite:
 
 ```python
-database_config(
+dev = database_config(
     database_name="dev",
     database_type="sqlite",
     database_url_sync="sqlite:///./development.db",
@@ -48,7 +48,7 @@ database_config(
 ClickHouse:
 
 ```python
-database_config(
+analytics = database_config(
     database_name="analytics",
     database_type="clickhouse",
     database_url_sync="clickhouse://user:password@localhost:8123/analytics",
@@ -80,7 +80,7 @@ Recommended pattern:
 - Run local commands with `--dev`
 
 ```python
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",

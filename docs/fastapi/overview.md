@@ -3,7 +3,7 @@
 !!! note "Documentation Reorganized"
     The FastAPI documentation has been reorganized for better clarity. This page now redirects to the new structure.
 
-## 📚 New Documentation Structure
+##  New Documentation Structure
 
 The FastAPI documentation is now organized into:
 
@@ -13,7 +13,7 @@ The FastAPI documentation is now organized into:
 - **[Concepts](concepts.md)** - How it works
 - **[Reference](reference.md)** - Complete API docs
 
-## 🚀 Quick Links
+##  Quick Links
 
 ### New to DBWarden + FastAPI?
 Start here: **[First Steps](tutorial/first-steps.md)**
@@ -38,4 +38,4 @@ Start here: **[First Steps](tutorial/first-steps.md)**
 
 ---
 
-**[→ Go to FastAPI Integration Home](index.md)**
+**[ Go to FastAPI Integration Home](index.md)**

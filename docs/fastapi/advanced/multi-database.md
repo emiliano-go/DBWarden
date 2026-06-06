@@ -45,7 +45,7 @@ logging = database_config(
 )
 ```
 
-Each handle's `.async_session` is a FastAPI dependency annotation — use it directly in routes:
+Each handle's `.async_session` is a FastAPI dependency annotation  use it directly in routes:
 
 ```python
 from config import primary, analytics, logging
@@ -176,7 +176,7 @@ from dbwarden.fastapi import migration_context
 async def lifespan(app: FastAPI):
     async with migration_context(
         mode="check",
-        all_databases=True,  # ← Check all databases
+        all_databases=True,  #  Check all databases
         fail_fast=True,
     ):
         yield
@@ -305,13 +305,13 @@ async def create_user(
 
 ## Recap
 
-✅ Configure multiple databases with `database_config()`  
-✅ Create separate session dependencies for each database  
-✅ Use multiple sessions in the same route  
-✅ Each session has independent transactions  
-✅ Check all databases on startup with `all_databases=True`  
-✅ Health endpoints report all databases automatically  
-✅ Each database has its own migration history  
+ Configure multiple databases with `database_config()`  
+ Create separate session dependencies for each database  
+ Use multiple sessions in the same route  
+ Each session has independent transactions  
+ Check all databases on startup with `all_databases=True`  
+ Health endpoints report all databases automatically  
+ Each database has its own migration history  
 
 ## What's Next?
 

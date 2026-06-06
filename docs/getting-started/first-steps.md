@@ -23,7 +23,7 @@ Why it matters: DBWarden expects a project-local migration layout and config sou
 from dbwarden import database_config
 
 
-database_config(
+primary = database_config(
     database_name="primary",
     default=True,
     database_type="postgresql",
