@@ -15,6 +15,14 @@ from dbwarden.engine.version import (
     resolve_migration_order,
 )
 from dbwarden.logging import get_logger
+from dbwarden.metrics import (
+    increment_migration_errors,
+    increment_migrations_total,
+    metrics_enabled,
+    observe_migration_duration,
+    set_pending_migrations,
+    set_schema_version,
+)
 from dbwarden.output import console
 from dbwarden.repositories import (
     create_migrations_table_if_not_exists,
@@ -236,10 +244,16 @@ def migrate_single(
         if filepaths_by_version:
             logger.log_pending_migrations(list(filepaths_by_version.keys()))
 
+        if metrics_enabled() and not dry_run:
+            set_pending_migrations(
+                actual_db_name, len(filepaths_by_version)
+            )
+
         if dry_run:
             console.print("[bold yellow]DRY RUN[/bold yellow] - No changes applied\n")
 
         versioned_count = 0
+        latest_version = "0"
 
         from dbwarden.engine.checksum import calculate_checksum
 
@@ -278,6 +292,9 @@ def migrate_single(
             logger.log_migration_end(version, filename, duration)
             versioned_count += 1
             applied_checksums.add(checksum)
+            latest_version = version
+            increment_migrations_total(actual_db_name, version, success=True)
+            observe_migration_duration(actual_db_name, version, duration)
 
         if dry_run:
             console.print(
@@ -343,6 +360,14 @@ def migrate_single(
                 f"Migrations completed successfully: {versioned_count} migrations applied.",
                 style="green",
             )
+            if metrics_enabled():
+                set_schema_version(actual_db_name, latest_version)
+                set_pending_migrations(actual_db_name, 0)
+
+    except Exception:
+        if metrics_enabled():
+            increment_migration_errors(actual_db_name)
+        raise
     finally:
         if sandbox_provider:
             sandbox_provider.stop()

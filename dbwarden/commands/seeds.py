@@ -18,6 +18,7 @@ from dbwarden.engine.seeds import (
 )
 from dbwarden.exceptions import DirectoryNotFoundError, NoSeedsError
 from dbwarden.logging import get_logger
+from dbwarden.metrics import metrics_enabled, set_seed_version
 from dbwarden.output import console
 
 
@@ -133,6 +134,9 @@ def _apply_seeds_single(
 
     if not dry_run:
         console.print(f"Seeds applied successfully: {len(pending)} seed(s).", style="green")
+        if metrics_enabled():
+            latest = max(pending.keys())
+            set_seed_version(db_name, latest)
     else:
         console.print(f"Dry-run: {len(pending)} seed(s) would be applied.", style="yellow")
 

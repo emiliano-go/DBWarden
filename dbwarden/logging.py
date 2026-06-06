@@ -1,7 +1,9 @@
+import json
 import logging
+import os
 import re
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 from dbwarden.constants import LOG_FORMAT
 
@@ -181,6 +183,38 @@ class ColoredFormatter(logging.Formatter):
         return super().format(record)
 
 
+class JSONFormatter(logging.Formatter):
+    """Formats log records as newline-delimited JSON objects.
+
+    Activated when the ``DBWARDEN_LOG_JSON`` environment variable is set.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload: dict[str, Any] = {
+            "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%fZ"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if hasattr(record, "db_name") and record.db_name:
+            payload["db_name"] = record.db_name
+        if hasattr(record, "db_type") and record.db_type:
+            payload["db_type"] = record.db_type
+        if record.exc_info and isinstance(record.exc_info, tuple) and record.exc_info[0]:
+            payload["exception"] = self.formatException(record.exc_info)
+        if record.exc_text:
+            payload["exception"] = record.exc_text
+        return json.dumps(payload, default=str)
+
+
+def _use_json_logging() -> bool:
+    return os.environ.get("DBWARDEN_LOG_JSON", "false").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
+
+
 class DBWardenLogger:
     """
     Structured logging for DBWarden operations.
@@ -221,8 +255,11 @@ class DBWardenLogger:
         handler = logging.StreamHandler(sys.stdout)
         handler.setLevel(logging.DEBUG if self.verbose else logging.INFO)
 
-        colored_formatter = ColoredFormatter(LOG_FORMAT)
-        handler.setFormatter(colored_formatter)
+        if _use_json_logging():
+            formatter: logging.Formatter = JSONFormatter()
+        else:
+            formatter = ColoredFormatter(LOG_FORMAT)
+        handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
     def set_verbose(self, verbose: bool) -> None:
