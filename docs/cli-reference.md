@@ -11,9 +11,10 @@ dbwarden [GLOBAL_OPTIONS] COMMAND [ARGS] [COMMAND_OPTIONS]
 ## Global options
 
 | Option | Description |
-|---|---|
+|---|---|---|
 | `--dev` | Use `dev_database_url` and `dev_database_type` for selected database |
 | `--strict-translation` | Fail on unsupported/lossy dev SQLite translation |
+| `--verbose` | Enable detailed logging output |
 | `--help` | Show help |
 
 ## Setup and configuration
@@ -131,6 +132,8 @@ Options:
 - `--to-version`, `--count`
 - `--baseline`
 - `--with-backup`, `--backup-dir`
+- `--dry-run` (show what would be applied without executing)
+- `--sandbox` (apply in a temporary sandbox database)
 - `--verbose`
 
 ### `rollback`
@@ -139,6 +142,47 @@ Options:
 dbwarden rollback --database primary
 dbwarden rollback --database primary --count 2
 dbwarden rollback --database primary --to-version 0007
+```
+
+Options: `--database`, `--count`, `--to-version`, `--verbose`
+
+## Seed management
+
+### `seed create`
+
+```bash
+dbwarden seed create "seed initial data" --database primary
+dbwarden seed create "populate lookup tables" --database primary --seed-type python
+```
+
+Options: `--database`, `--seed-type` (`sql` or `python`, default `sql`), `--verbose`
+
+### `seed apply`
+
+```bash
+dbwarden seed apply --database primary
+dbwarden seed apply --database primary --version 0003
+dbwarden seed apply --database primary --dry-run
+dbwarden seed apply --all
+```
+
+Options: `--database`, `--all`, `--version`, `--dry-run`, `--verbose`
+
+### `seed list`
+
+```bash
+dbwarden seed list --database primary
+dbwarden seed list --all
+```
+
+Options: `--database`, `--all`, `--verbose`
+
+### `seed rollback`
+
+```bash
+dbwarden seed rollback --database primary
+dbwarden seed rollback --database primary --count 2
+dbwarden seed rollback --database primary --to-version 0003
 ```
 
 Options: `--database`, `--count`, `--to-version`, `--verbose`

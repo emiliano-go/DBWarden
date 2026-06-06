@@ -306,7 +306,7 @@ async def create_user(
     logging_session: LoggingSessionDep,
 ):
     # Create user in primary
-    user = User(**user_data.dict())
+    user = User(**user_data.model_dump())
     primary_session.add(user)
     await primary_session.commit()
     

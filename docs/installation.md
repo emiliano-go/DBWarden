@@ -36,6 +36,20 @@ Or with poetry:
 poetry add --group dev dbwarden
 ```
 
+### Optional dependency groups
+
+| Group | Command | Provides |
+|-------|---------|----------|
+| `fastapi` | `pip install "dbwarden[fastapi]"` | FastAPI session dependencies, health router, migration router, metrics router, Redis lock |
+| `metrics` | `pip install "dbwarden[metrics]"` | Prometheus metrics endpoint (`prometheus-client`) |
+| `sandbox` | `pip install "dbwarden[sandbox]"` | Sandbox migration testing via testcontainers |
+
+Combine groups as needed:
+
+```bash
+pip install "dbwarden[fastapi,metrics,sandbox]"
+```
+
 ## Database drivers
 
 DBWarden uses SQLAlchemy under the hood. Your project already has a database driver, but you can ensure specific drivers:
