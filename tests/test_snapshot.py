@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from dbwarden.engine.snapshot import (
+    _apply_rename_intents,
     compute_checksum,
     detect_renames,
     diff_models_against_snapshot,
@@ -538,3 +539,86 @@ class TestExtractFullSchemaSnapshot:
         assert has_fk, "Foreign key constraint should be extracted"
 
         os.unlink(db_path)
+
+
+class TestApplyRenameIntents:
+    def test_keeps_confirmed_auto_rename(self):
+        ops = [
+            {"type": "rename_column", "table": "users", "old_name": "name", "new_name": "full_name"},
+            {"type": "add_column", "table": "users", "column": "email"},
+        ]
+        rollback = [
+            {"type": "rename_column", "table": "users", "old_name": "full_name", "new_name": "name"},
+            {"type": "drop_column", "table": "users", "column": "email"},
+        ]
+        confirmed = {("users", "name", "full_name")}
+        result_up, result_rb = _apply_rename_intents(ops, rollback, confirmed)
+        assert len(result_up) == 2
+        assert result_up[0]["type"] == "rename_column"
+        assert result_up[0].get("resolved_from") is None
+
+    def test_removes_non_confirmed_auto_rename(self):
+        ops = [
+            {"type": "rename_column", "table": "users", "old_name": "name", "new_name": "full_name"},
+        ]
+        rollback = [
+            {"type": "rename_column", "table": "users", "old_name": "full_name", "new_name": "name"},
+        ]
+        result_up, result_rb = _apply_rename_intents(ops, rollback, set())
+        assert len(result_up) == 1
+        assert result_up[0]["type"] == "drop_column"
+        assert result_up[0]["column"] == "name"
+
+    def test_converts_drop_add_to_rename_from_confirmed(self):
+        ops = [
+            {"type": "drop_column", "table": "users", "column": "name"},
+            {"type": "add_column", "table": "users", "column": "full_name"},
+        ]
+        rollback = [
+            {"type": "add_column", "table": "users", "column": "name", "definition": {}},
+            {"type": "drop_column", "table": "users", "column": "full_name"},
+        ]
+        confirmed = {("users", "name", "full_name")}
+        result_up, result_rb = _apply_rename_intents(ops, rollback, confirmed)
+        assert len(result_up) == 1
+        assert result_up[0]["type"] == "rename_column"
+        assert result_up[0]["old_name"] == "name"
+        assert result_up[0]["new_name"] == "full_name"
+
+    def test_sets_resolved_from_from_map(self):
+        ops = [
+            {"type": "rename_column", "table": "users", "old_name": "name", "new_name": "full_name"},
+        ]
+        rollback = [
+            {"type": "rename_column", "table": "users", "old_name": "full_name", "new_name": "name"},
+        ]
+        confirmed = {("users", "name", "full_name")}
+        origin = {("users", "name", "full_name"): "rename_flag"}
+        result_up, _ = _apply_rename_intents(ops, rollback, confirmed, origin)
+        assert result_up[0]["resolved_from"] == "rename_flag"
+
+    def test_sets_resolved_from_on_converted_rename(self):
+        ops = [
+            {"type": "drop_column", "table": "users", "column": "name"},
+            {"type": "add_column", "table": "users", "column": "full_name"},
+        ]
+        rollback = [
+            {"type": "add_column", "table": "users", "column": "name", "definition": {}},
+            {"type": "drop_column", "table": "users", "column": "full_name"},
+        ]
+        confirmed = {("users", "name", "full_name")}
+        origin = {("users", "name", "full_name"): "rename_flag"}
+        result_up, _ = _apply_rename_intents(ops, rollback, confirmed, origin)
+        assert result_up[0]["type"] == "rename_column"
+        assert result_up[0]["resolved_from"] == "rename_flag"
+
+    def test_no_renames_unchanged(self):
+        ops = [
+            {"type": "add_column", "table": "users", "column": "email"},
+        ]
+        rollback = [
+            {"type": "drop_column", "table": "users", "column": "email"},
+        ]
+        result_up, result_rb = _apply_rename_intents(ops, rollback, set())
+        assert result_up == ops
+        assert result_rb == rollback

@@ -77,6 +77,7 @@ def handle_make_migrations(
     verbose: bool,
     database: str | None = None,
     output_plan: bool = False,
+    rename_flags: list[str] | None = None,
 ) -> None:
     """Handle make-migrations command."""
     make_migrations_cmd(
@@ -84,6 +85,7 @@ def handle_make_migrations(
         verbose=verbose,
         database=database,
         output_plan=output_plan,
+        rename_flags=rename_flags,
     )
 
 

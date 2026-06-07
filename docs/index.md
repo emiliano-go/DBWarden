@@ -30,6 +30,7 @@ It is built for teams that want migration changes to stay explicit, reviewable, 
 - Sandbox mode for safe migration testing
 - Dry-run mode to preview changes without applying
 - Sync and async URL split for CLI and FastAPI sessions
+- Schema snapshots for offline migration generation and intelligent column rename detection
 
 ## Requirements
 

@@ -281,6 +281,11 @@ def make_migrations(
     database: str | None = typer.Option(
         None, "--database", "-d", help="Target database name"
     ),
+    rename: list[str] = typer.Option(
+        [],
+        "--rename",
+        help="Explicitly rename column (format: table.old_name:new_name). Can be repeated.",
+    ),
 ):
     """Auto-generate SQL migration from SQLAlchemy models."""
     validate_directory()
@@ -289,6 +294,7 @@ def make_migrations(
         verbose=verbose,
         database=database,
         output_plan=plan,
+        rename_flags=rename,
     )
 
 
