@@ -57,34 +57,91 @@ name = "DBWarden on PyPI"
 "Home" = "index.md"
 
 [[project.nav]]
-"Getting Started" = "getting-started/introduction.md"
+"Getting Started" = [
+  {Introduction = "getting-started/introduction.md"},
+  {Installation = "installation.md"},
+  {"First Steps" = "getting-started/first-steps.md"}
+]
 
 [[project.nav]]
-"Configuration" = "configuration/index.md"
+"Configuration" = [
+  {Overview = "configuration/index.md"},
+  {"Quick Start" = "configuration/quick-start.md"},
+  {Concepts = "configuration/concepts.md"},
+  {"Connection URLs" = "configuration/connection-urls.md"},
+  {"Model Discovery" = "configuration/model-discovery.md"},
+  {"Multi-Database" = "configuration/multi-database.md"},
+  {"Dev Mode" = "configuration/dev-mode.md"},
+  {"Credentials and Secrets" = "configuration/credentials.md"},
+  {"Production Patterns" = "configuration/production-patterns.md"},
+  {Troubleshooting = "configuration/troubleshooting.md"}
+]
 
 [[project.nav]]
-"User Guide" = "tutorial/your-first-migration.md"
+"User Guide" = [
+  {"Your First Migration" = "tutorial/your-first-migration.md"},
+  {"Checking Status" = "tutorial/checking-status.md"},
+  {"Applying Migrations" = "tutorial/applying-migrations.md"},
+  {"Rolling Back" = "tutorial/rolling-back.md"},
+  {"Dev Mode" = "tutorial/dev-mode.md"},
+  {"Multi-Database Setup" = "tutorial/multi-database-setup.md"}
+]
 
 [[project.nav]]
-"FastAPI Integration" = "fastapi/index.md"
+"Concepts" = [
+  {"Migration Files" = "migration-files.md"},
+  {"SQLAlchemy Models" = "models.md"},
+  {Seeds = "seeds.md"},
+  {"SQL Translation" = "sql-translation.md"},
+  {Observability = "observability.md"},
+  {"Supported Databases" = "databases.md"},
+  {Architecture = "architecture-deep-dive.md"}
+]
 
 [[project.nav]]
-"Advanced User Guide" = "migration-files.md"
+"Advanced" = [
+  {"Migration Locking" = "advanced/migration-locking.md"},
+  {"Checksum Integrity" = "advanced/checksum-integrity.md"},
+  {"Safe Deployment" = "advanced/safe-deployment.md"},
+  {"Squashing Migrations" = "advanced/squashing-migrations.md"},
+  {"CI/CD Patterns" = "advanced/ci-cd-patterns.md"}
+]
 
 [[project.nav]]
-"Reference" = "cli-reference.md"
+"FastAPI Integration" = [
+  {Overview = "fastapi/index.md"},
+  {Concepts = "fastapi/concepts.md"},
+  {"Tutorial" = [{"First Steps" = "fastapi/tutorial/first-steps.md"}, {"Session Dependency" = "fastapi/tutorial/session-dependency.md"}, {"Startup Checks" = "fastapi/tutorial/startup-checks.md"}, {"Health Endpoints" = "fastapi/tutorial/health-endpoints.md"}, {"Complete Application" = "fastapi/tutorial/complete-application.md"}]},
+  {"Advanced" = [{"Engine Lifecycle" = "fastapi/advanced/engine-lifecycle.md"}, {"Transaction Management" = "fastapi/advanced/transaction-management.md"}, {Testing = "fastapi/advanced/testing.md"}, {"Multi-Database" = "fastapi/advanced/multi-database.md"}, {"Production Patterns" = "fastapi/advanced/production-patterns.md"}]},
+  {Reference = "fastapi/reference.md"}
+]
 
 [[project.nav]]
-"Installation" = "installation.md"
+"CLI Commands" = [
+  {Overview = "cli-reference.md"},
+  {init = "commands/init.md"},
+  {"make-migrations" = "commands/make-migrations.md"},
+  {migrate = "commands/migrate.md"},
+  {rollback = "commands/rollback.md"},
+  {status = "commands/status.md"},
+  {check = "commands/check.md"},
+  {"check-db" = "commands/check-db.md"},
+  {diff = "commands/diff.md"},
+  {history = "commands/history.md"},
+  {squash = "commands/squash.md"},
+  {new = "commands/new.md"},
+  {lock = "commands/lock.md"},
+  {seed = "commands/seed.md"},
+  {settings = "commands/settings.md"},
+  {database = "commands/database.md"},
+  {version = "commands/version.md"}
+]
 
 [[project.nav]]
-"Supported Databases" = "databases.md"
-
-[[project.nav]]
-"SQLAlchemy Models" = "models.md"
-
-[[project.nav]]
-"Architecture" = "architecture-deep-dive.md"
+"Reference" = [
+  {"Configuration API" = "reference/configuration-api.md"},
+  {"Migrate from TOML" = "reference/migrate-from-toml.md"}
+]
 
 [project.markdown_extensions.tables]
 
