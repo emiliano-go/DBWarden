@@ -93,6 +93,10 @@ Snapshots also enable `make-migrations` to detect when a column's **type**, **nu
 
 These operations are emitted only when a snapshot exists. Without a snapshot (the live-DB fallback path), only new and dropped columns are detected.
 
+### Foreign key and index change detection
+
+Snapshots also store the database's foreign keys (in `constraints`) and indexes (in `indexes`). The diff engine compares these against the model's declared FK relationships (parsed from `ModelColumn.foreign_key`) and indexes (extracted from `__table__.indexes`). Comparisons are content-based (columns, referenced table, referenced columns for FKs; columns + unique flag for indexes), so constraint/index name changes are not treated as drop+add.
+
 ### Audit trail
 
 Every schema snapshot is an immutable record of the database schema at a specific migration version. You can inspect any historical snapshot to see exactly what the schema looked like.
@@ -156,3 +160,29 @@ Column types in the snapshot are normalized to a canonical set so that equivalen
 | (unknown) | Stored as-is with `"raw": true` |
 
 This normalization is what powers the rename detection — two columns with the same normalized type are candidates for rename, even if their raw SQL type strings differ.
+
+## Edge Cases and Restrictions
+
+### Rename detection
+- **Ambiguous renames**: When multiple columns of the same type are dropped and added, all possible pairs are treated as renames (not just one). This maximizes detection but may produce false positives that must be confirmed interactively or via `--rename`.
+- **Type change prevents rename**: If a dropped column and an added column have different normalized types, they are never auto-detected as renames. Use `--rename` to force the rename anyway.
+- **Same name**: If a column with the same name exists in both the snapshot and the model, no rename is detected even if its type changes (that is handled by type-change detection).
+
+### Table rename detection
+- **Column-overlap heuristic**: The ratio is `matching_columns / max(len(snapshot_cols), len(model_cols))`. The 0.6 threshold is intentionally conservative.
+- **Empty tables**: Either table having zero columns results in a ratio of `0.0` (no candidate).
+- **Table rename + column diff interaction**: Confirmed table renames are applied to the snapshot before column diffs are computed. This ensures column renames and other column-level changes reference the new table name.
+
+### Foreign key and index detection
+- **Silent skip on missing ref**: If an FK references a table that does not exist in the snapshot, the FK is silently skipped (no error, no SQL emitted). This prevents broken SQL but can be surprising. Ensure the referenced table exists in the snapshot first.
+- **Content-based comparison**: FKs are compared by `(columns, referenced_table, referenced_columns)`. Indexes are compared by `(frozenset(columns), unique)`. Renaming a constraint or index does not produce a drop+add.
+- **ClickHouse**: FK and index operations emit comment-only placeholders (not supported by ClickHouse).
+- **SQLite FKs**: A comment is emitted suggesting table recreation (not directly alterable).
+
+### Column-level change detection
+- **Snapshot required**: Column-level diff (type, nullability, default) only works when a snapshot exists. Without a snapshot, only new and dropped columns are detected.
+- **Backend limits**: Type changes emit different SQL per backend. SQLite and ClickHouse emit comment-only placeholders for type and nullable changes. Default changes work uniformly across all backends.
+
+### Integrity
+- **Tampered snapshots**: If the checksum does not match, `read_snapshot()` returns `None`, and `make-migrations` falls back to the live database. A warning is logged.
+- **Checksum-excluded fields**: The `checksum` field itself is excluded from the hash computation, so checksum updates do not cascade.
