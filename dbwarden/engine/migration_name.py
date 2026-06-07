@@ -121,6 +121,7 @@ def _pluralize(operation: str) -> str:
     singular_to_plural = {
         "add_column": "add_columns",
         "drop_column": "drop_columns",
+        "rename_column": "rename_columns",
         "create_table": "create_tables",
         "drop_table": "drop_tables",
         "add_index": "add_indexes",
@@ -138,8 +139,8 @@ def _truncate(name: str) -> str:
         return name
 
     parts = name.split("_")
-    op_words = {"add", "drop", "alter", "create", "adds", "drops", "alters", "creates", 
-               "add_columns", "drop_columns", "create_tables", "drop_tables",
+    op_words = {"add", "drop", "alter", "create", "rename", "adds", "drops", "alters", "creates", "renames",
+               "add_columns", "drop_columns", "rename_columns", "create_tables", "drop_tables",
                "add_indexes", "drop_indexes", "add_foreign_keys", "drop_foreign_keys",
                "add_constraints", "drop_constraints"}
     

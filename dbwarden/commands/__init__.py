@@ -1,11 +1,15 @@
 from dbwarden.commands.check import check_cmd
 from dbwarden.commands.check_db import check_db_cmd
+from dbwarden.commands.downgrade import downgrade_cmd
 from dbwarden.commands.extra import diff_cmd, lock_status_cmd, squash_cmd, unlock_cmd
+from dbwarden.commands.generate_models import generate_models_cmd
 from dbwarden.commands.history import history_cmd
 from dbwarden.commands.init import init_cmd
 from dbwarden.commands.make_migrations import make_migrations_cmd, new_migration_cmd
+from dbwarden.commands.make_rollback import make_rollback_cmd
 from dbwarden.commands.migrate import migrate_cmd
 from dbwarden.commands.rollback import rollback_cmd
+from dbwarden.commands.snapshot import snapshot_cmd
 from dbwarden.commands.seeds import (
     seed_apply_cmd,
     seed_create_cmd,
@@ -236,6 +240,49 @@ def handle_settings_database_set_dev_command(
 
 def handle_settings_database_clear_dev_command(name: str) -> None:
     handle_settings_database_clear_dev(name)
+
+
+def handle_downgrade(
+    to_version: str,
+    verbose: bool = False,
+    database: str | None = None,
+) -> None:
+    downgrade_cmd(to_version=to_version, verbose=verbose, database=database)
+
+
+def handle_make_rollback(
+    migration_file: str,
+) -> None:
+    make_rollback_cmd(migration_file=migration_file)
+
+
+def handle_snapshot(
+    table_name: str,
+    database: str | None = None,
+) -> None:
+    snapshot_cmd(table_name=table_name, database=database)
+
+
+def handle_generate_models(
+    output: str = "models",
+    tables: str | None = None,
+    exclude_tables: str | None = None,
+    clickhouse_engines: bool = False,
+    relationships: bool = False,
+    dialect: str | None = None,
+    single_file: bool = False,
+    database: str | None = None,
+) -> None:
+    generate_models_cmd(
+        output=output,
+        tables=tables,
+        exclude_tables=exclude_tables,
+        clickhouse_engines=clickhouse_engines,
+        relationships=relationships,
+        dialect=dialect,
+        single_file=single_file,
+        database=database,
+    )
 
 
 def handle_seed_create(
