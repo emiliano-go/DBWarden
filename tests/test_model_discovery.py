@@ -349,6 +349,85 @@ class TestSQLGeneration:
 
         assert generate_drop_object_sql(table) == "DROP VIEW mv_name"
 
+    def test_generate_replicated_clickhouse_engine_with_zookeeper(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("id", "UInt64", False, True, False, None, None),
+            ModelColumn("data", "String", False, False, False, None, None),
+        ]
+
+        table = ModelTable(
+            name="replicated_table",
+            columns=columns,
+            clickhouse_options={
+                "clickhouse_engine": "ReplicatedMergeTree",
+                "clickhouse_zookeeper_path": "'/clickhouse/tables/shard1'",
+                "clickhouse_replica_name": "'{replica}'",
+                "clickhouse_order_by": ["id"],
+            },
+        )
+
+        sql = generate_create_table_sql(table)
+
+        assert "ENGINE = ReplicatedMergeTree('/clickhouse/tables/shard1', '{replica}')" in sql
+
+    def test_generate_replicated_clickhouse_engine_with_zookeeper_tuple(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        table = ModelTable(
+            name="replicated_table",
+            columns=[ModelColumn("id", "UInt64", False, True, False, None, None)],
+            clickhouse_options={
+                "clickhouse_engine": ("ReplicatedReplacingMergeTree", "ver_col"),
+                "clickhouse_zookeeper_path": "'/zk/path'",
+                "clickhouse_replica_name": "'{replica}'",
+                "clickhouse_order_by": ["id"],
+            },
+        )
+
+        sql = generate_create_table_sql(table)
+
+        assert "ENGINE = ReplicatedReplacingMergeTree('/zk/path', '{replica}', ver_col)" in sql
+
+    def test_generate_dictionary_sql(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("code", "String", False, True, False, None, None),
+            ModelColumn("name", "String", False, False, False, None, None),
+        ]
+
+        table = ModelTable(
+            name="country_codes",
+            columns=columns,
+            clickhouse_options={
+                "clickhouse_dictionary": True,
+                "clickhouse_dict_layout": "FLAT()",
+                "clickhouse_dict_source": "CLICKHOUSE(HOST 'localhost' TABLE 'source')",
+                "clickhouse_dict_lifetime": "MIN 0 MAX 3600",
+                "clickhouse_dict_primary_key": "code",
+            },
+            object_type="dictionary",
+        )
+
+        sql = generate_create_table_sql(table)
+
+        assert "CREATE DICTIONARY IF NOT EXISTS country_codes" in sql
+        assert "PRIMARY KEY code" in sql
+        assert "SOURCE(CLICKHOUSE(HOST 'localhost' TABLE 'source'))" in sql
+        assert "LIFETIME(MIN 0 MAX 3600)" in sql
+        assert "LAYOUT(FLAT())" in sql
+
+    def test_generate_drop_dictionary_sql(self):
+        table = ModelTable(
+            name="country_codes",
+            columns=[],
+            object_type="dictionary",
+        )
+
+        assert generate_drop_object_sql(table) == "DROP DICTIONARY country_codes"
+
 
 class TestColumnExtraction:
     """Tests for column information extraction."""

@@ -127,6 +127,8 @@ ClickHouse:
 - DBWarden can now render engine and table settings from model metadata
 - Use `__table_args__` for `clickhouse_engine`, `clickhouse_order_by`, `clickhouse_primary_key`, `clickhouse_partition_by`, `clickhouse_sample_by`, and `clickhouse_ttl`
 - Use column `info` for `clickhouse_type` and `clickhouse_codec` hints
+- **Replicated engines**: use `clickhouse_zookeeper_path` and `clickhouse_replica_name` with `clickhouse_engine` for Replicated\* engine tables
+- **Dictionaries**: use `clickhouse_dictionary=True` with `clickhouse_dict_layout`, `clickhouse_dict_source`, and `clickhouse_dict_lifetime` to define external dictionaries
 - See [SQLAlchemy Models](models.md) for model examples
 
 ## Recommended Verification Workflow

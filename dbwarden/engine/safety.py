@@ -69,10 +69,17 @@ def _extract_clickhouse_schema_snapshot(database: str | None = None) -> dict[str
                 parameters={"table_name": table_name},
             ).fetchall()
             create_query = getattr(row, "create_table_query", "") or ""
+            engine = getattr(row, "engine", "") or ""
+
+            if engine.upper() == "DICTIONARY":
+                object_type = "dictionary"
+            elif create_query.upper().startswith("CREATE MATERIALIZED VIEW"):
+                object_type = "materialized_view"
+            else:
+                object_type = "table"
+
             snapshot[table_name] = {
-                "object_type": "materialized_view"
-                if create_query.upper().startswith("CREATE MATERIALIZED VIEW")
-                else "table",
+                "object_type": object_type,
                 "columns": {
                     col.name: {
                         "type": col.type,
@@ -82,7 +89,7 @@ def _extract_clickhouse_schema_snapshot(database: str | None = None) -> dict[str
                     for col in columns
                 },
                 "clickhouse_options": {
-                    "clickhouse_engine": getattr(row, "engine", None),
+                    "clickhouse_engine": engine if engine.upper() != "DICTIONARY" else None,
                     "clickhouse_order_by": _parse_tuple_expression(getattr(row, "sorting_key", None)),
                     "clickhouse_primary_key": _parse_tuple_expression(getattr(row, "primary_key", None)),
                     "clickhouse_partition_by": _clean_expression(getattr(row, "partition_key", None)),
@@ -90,6 +97,8 @@ def _extract_clickhouse_schema_snapshot(database: str | None = None) -> dict[str
                     "clickhouse_ttl": _parse_ttl_expressions(create_query),
                     "clickhouse_projections": _parse_projection_names(create_query),
                     "clickhouse_mv_query": _parse_mv_query(create_query),
+                    "clickhouse_zookeeper_path": _parse_zookeeper_path(create_query, engine),
+                    "clickhouse_replica_name": _parse_replica_name(create_query, engine),
                 },
             }
     return snapshot
@@ -139,6 +148,24 @@ def _parse_mv_query(create_query: str) -> str | None:
     return mv_match.group(0)[3:].strip()
 
 
+def _parse_zookeeper_path(create_query: str, engine: str) -> str | None:
+    if "Replicated" not in engine:
+        return None
+    match = re.search(r"\bReplicated\w+\s*\(([^,]+),", create_query)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def _parse_replica_name(create_query: str, engine: str) -> str | None:
+    if "Replicated" not in engine:
+        return None
+    match = re.search(r"\bReplicated\w+\s*\([^,]+,\s*([^)]+)", create_query)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
 def analyze_schema(
     model_tables: list[ModelTable],
     schema_snapshot: dict[str, dict[str, Any]],
@@ -150,12 +177,13 @@ def analyze_schema(
 
     for table_name in sorted(model_names - snapshot_names):
         table = model_by_name[table_name]
+        object_label = table.object_type.replace("_", " ")
         issues.append(
             SafetyIssue(
                 severity="INFO",
                 change_type="create_table",
                 table_name=table_name,
-                message=f"Create {table.object_type.replace('_', ' ')} '{table_name}'",
+                message=f"Create {object_label} '{table_name}'",
             )
         )
 
@@ -257,6 +285,11 @@ def _analyze_clickhouse_options(table_snapshot: dict[str, Any], model_table: Mod
         "clickhouse_engine": ("WARNING", "--force", "Change engine for '{table}'"),
         "clickhouse_mv_query": ("WARNING", "--force", "Change materialized view query for '{table}'"),
         "clickhouse_mv_populate": ("WARNING", "--force", "Enable POPULATE for materialized view '{table}'"),
+        "clickhouse_zookeeper_path": ("WARNING", "--force", "Change ZooKeeper path for '{table}'"),
+        "clickhouse_replica_name": ("WARNING", "--force", "Change replica name for '{table}'"),
+        "clickhouse_dict_source": ("WARNING", "--force", "Change dictionary source for '{table}'"),
+        "clickhouse_dict_layout": ("WARNING", "--force", "Change dictionary layout for '{table}'"),
+        "clickhouse_dict_lifetime": ("WARNING", "--force", "Change dictionary lifetime for '{table}'"),
     }
 
     for key, (severity, required_flag, template) in option_rules.items():
