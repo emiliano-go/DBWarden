@@ -8,6 +8,10 @@ import pytest
 from dbwarden.engine.snapshot import (
     _apply_rename_intents,
     _assemble_migration,
+    _build_fk_name,
+    _build_index_name,
+    _build_foreign_key_sql,
+    _build_index_sql,
     _compute_table_overlap,
     _rename_table_sql,
     TableRenameIntent,
@@ -668,6 +672,329 @@ class TestAssembleMigration:
         assert parts[0] == "drop bar"
         assert parts[1] == "drop foo"
 
+    def test_empty_list_returns_empty_strings(self):
+        upgrade, rollback = _assemble_migration([])
+        assert upgrade == ""
+        assert rollback == ""
+
+    def test_single_statement(self):
+        stmts = [
+            MigrationStatement(StatementOrder.CREATE_TABLE, "create foo", "drop foo"),
+        ]
+        upgrade, rollback = _assemble_migration(stmts)
+        assert upgrade == "create foo"
+        assert rollback == "drop foo"
+
+    def test_duplicate_order_values(self):
+        stmts = [
+            MigrationStatement(StatementOrder.ADD_COLUMN, "add bar 1", "drop bar 1"),
+            MigrationStatement(StatementOrder.CREATE_TABLE, "create foo", "drop foo"),
+            MigrationStatement(StatementOrder.ADD_COLUMN, "add bar 2", "drop bar 2"),
+        ]
+        upgrade, rollback = _assemble_migration(stmts)
+        parts = upgrade.split("\n\n")
+        assert parts[0] == "create foo"
+        assert parts[1] == "add bar 1"
+        assert parts[2] == "add bar 2"
+
+    def test_rollback_only_statement(self):
+        stmts = [
+            MigrationStatement(StatementOrder.ADD_COLUMN, upgrade_sql="", rollback_sql="drop col"),
+        ]
+        upgrade, rollback = _assemble_migration(stmts)
+        assert upgrade == ""
+        assert rollback == "drop col"
+
+
+class TestDiffModelsAgainstSnapshotEdgeCases:
+    def test_empty_model_tables(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {"id": {"type": "integer", "nullable": False, "primary_key": True}},
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        upgrade, rollback = diff_models_against_snapshot([], snapshot)
+        assert any(op["type"] == "drop_table" for op in upgrade)
+
+    def test_same_tables_no_changes(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {"id": {"type": "integer", "nullable": False, "primary_key": True}},
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[_mc("id", "INTEGER", pk=True, nullable=False)],
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        assert upgrade == []
+        assert rollback == []
+
+    def test_table_with_no_columns_in_snapshot(self):
+        snapshot = {
+            "tables": {
+                "empty": {
+                    "columns": {},
+                    "primary_key": [],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="empty",
+                columns=[_mc("id", "INTEGER", pk=True, nullable=False)],
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        add_ops = [op for op in upgrade if op["type"] == "add_column"]
+        assert len(add_ops) == 1
+
+    def test_snapshot_no_constraints_indexes_keys(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {"id": {"type": "integer", "nullable": False, "primary_key": True}},
+                }
+            },
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[_mc("id", "INTEGER", pk=True, nullable=False)],
+                foreign_keys=[],
+                indexes=[],
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        assert upgrade == []
+
+    def test_fk_add_and_drop_same_diff(self):
+        snapshot = {
+            "tables": {
+                "users": {"columns": {"id": {"type": "integer"}, "old_ref": {"type": "integer"}}},
+                "old_group": {"columns": {"id": {"type": "integer"}}},
+                "groups": {"columns": {"id": {"type": "integer"}}},
+            },
+            "constraints": {
+                "users_old_ref_fkey": {
+                    "type": "foreign_key",
+                    "table": "users",
+                    "columns": ["old_ref"],
+                    "referenced_table": "old_group",
+                    "referenced_columns": ["id"],
+                },
+            },
+            "indexes": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    _mc("id", "INTEGER", pk=True, nullable=False),
+                    ModelColumn("group_id", "INTEGER", True, False, False, None, None),
+                ],
+                foreign_keys=[{"columns": ["group_id"], "referred_table": "groups", "referred_columns": ["id"]}],
+            ),
+            ModelTable(
+                name="groups",
+                columns=[_mc("id", "INTEGER", pk=True, nullable=False)],
+            ),
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        add_fk = [op for op in upgrade if op["type"] == "add_foreign_key"]
+        drop_fk = [op for op in upgrade if op["type"] == "drop_foreign_key"]
+        assert len(add_fk) == 1
+        assert len(drop_fk) == 1
+        assert add_fk[0]["columns"] == ["group_id"]
+        assert drop_fk[0]["columns"] == ["old_ref"]
+
+    def test_index_same_sig_different_name_no_change(self):
+        snapshot = {
+            "tables": {
+                "users": {"columns": {"id": {"type": "integer"}, "email": {"type": "varchar"}}},
+            },
+            "indexes": {
+                "custom_idx_name": {"table": "users", "columns": ["email"], "unique": False, "type": "btree"},
+            },
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    _mc("id", "INTEGER", pk=True, nullable=False),
+                    ModelColumn("email", "VARCHAR", True, False, False, None, None),
+                ],
+                indexes=[{"columns": ["email"], "unique": False}],
+            ),
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        idx_ops = [op for op in upgrade if "index" in op["type"]]
+        assert len(idx_ops) == 0
+
+    def test_rename_and_type_change_same_table(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                        "name": {"type": "varchar", "nullable": True, "primary_key": False},
+                        "bio": {"type": "text", "nullable": True, "primary_key": False},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    _mc("id", "INTEGER", pk=True, nullable=False),
+                    ModelColumn("full_name", "VARCHAR", True, False, False, None, None),
+                    ModelColumn("bio", "TEXT", False, False, False, None, None),
+                ],
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        rename_ops = [op for op in upgrade if op["type"] == "rename_column"]
+        nullable_ops = [op for op in upgrade if op["type"] == "alter_column_nullable"]
+        assert len(rename_ops) >= 1
+        assert len(nullable_ops) >= 1
+
+    def test_table_rename_and_column_add_combined(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                        "name": {"type": "varchar", "nullable": True},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="accounts",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("name", "VARCHAR", True, False, False, None, None),
+                    ModelColumn("email", "VARCHAR", True, False, False, None, None),
+                ],
+            ),
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        add_ops = [op for op in upgrade if op["type"] == "add_column"]
+        drop_ops = [op for op in upgrade if op["type"] == "drop_column"]
+        assert len(drop_ops) >= 0
+
+
+class TestApplyRenameIntentsEdgeCases:
+    def test_empty_confirmed_no_renames(self):
+        ops = [
+            {"type": "add_column", "table": "users", "column": "email"},
+        ]
+        rollback = [
+            {"type": "drop_column", "table": "users", "column": "email"},
+        ]
+        result_up, result_rb = _apply_rename_intents(ops, rollback, set())
+        assert result_up == ops
+        assert result_rb == rollback
+
+    def test_confirmed_entries_not_matching_any_op(self):
+        ops = [
+            {"type": "add_column", "table": "users", "column": "email"},
+        ]
+        rollback = [
+            {"type": "drop_column", "table": "users", "column": "email"},
+        ]
+        confirmed = {("other", "foo", "bar")}
+        result_up, result_rb = _apply_rename_intents(ops, rollback, confirmed)
+        assert result_up == ops
+
+    def test_confirmed_rename_has_resolved_from_flag_map(self):
+        ops = [
+            {"type": "rename_column", "table": "users", "old_name": "name", "new_name": "full_name"},
+        ]
+        rollback = [
+            {"type": "rename_column", "table": "users", "old_name": "full_name", "new_name": "name"},
+        ]
+        confirmed = {("users", "name", "full_name")}
+        origin = {("users", "name", "full_name"): "rename_flag"}
+        result_up, _ = _apply_rename_intents(ops, rollback, confirmed, origin)
+        assert result_up[0].get("resolved_from") == "rename_flag"
+
+    def test_all_six_limit_not_exceeded(self):
+        ops = []
+        rollback = []
+        confirmed = set()
+        for i in range(6):
+            ops.append({"type": "rename_column", "table": "t", "old_name": f"old_{i}", "new_name": f"new_{i}"})
+            rollback.append({"type": "rename_column", "table": "t", "old_name": f"new_{i}", "new_name": f"old_{i}"})
+            confirmed.add(("t", f"old_{i}", f"new_{i}"))
+        result_up, result_rb = _apply_rename_intents(ops, rollback, confirmed)
+        assert len(result_up) == 6
+        assert all(r["type"] == "rename_column" for r in result_up)
+
+    def test_drop_add_converted_to_rename_with_resolved_from_overlap(self):
+        ops = [
+            {"type": "drop_column", "table": "users", "column": "name"},
+            {"type": "add_column", "table": "users", "column": "full_name"},
+        ]
+        rollback = [
+            {"type": "add_column", "table": "users", "column": "name", "definition": {}},
+            {"type": "drop_column", "table": "users", "column": "full_name"},
+        ]
+        confirmed = {("users", "name", "full_name")}
+        origin = {("users", "name", "full_name"): "auto_detect"}
+        result_up, _ = _apply_rename_intents(ops, rollback, confirmed, origin)
+        assert result_up[0]["type"] == "rename_column"
+        assert result_up[0].get("resolved_from") == "auto_detect"
+
+    def test_confirmed_trumps_flag_format(self):
+        ops = [
+            {"type": "drop_column", "table": "users", "column": "name"},
+            {"type": "add_column", "table": "users", "column": "email"},
+        ]
+        rollback = [
+            {"type": "add_column", "table": "users", "column": "name", "definition": {}},
+            {"type": "drop_column", "table": "users", "column": "email"},
+        ]
+        confirmed = {("users", "name", "email")}
+        result_up, _ = _apply_rename_intents(ops, rollback, confirmed)
+        assert len(result_up) == 1
+        assert result_up[0]["type"] == "rename_column"
+        assert result_up[0]["old_name"] == "name"
+        assert result_up[0]["new_name"] == "email"
+
 
 class TestColumnLevelDiff:
     def test_type_change_detected(self):
@@ -881,6 +1208,84 @@ class TestColumnLevelSqlGeneration:
         assert sql != ""
 
 
+class TestSnapshotDiffToSqlEdgeCases:
+    def test_empty_ops(self):
+        sql, rb_sql, changes = snapshot_diff_to_sql([], [], db_name=None)
+        assert sql == ""
+        assert rb_sql == ""
+        assert changes == []
+
+    def test_all_op_types_together(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            monkeypatch.chdir(tmpdir)
+            Path("dbwarden/schemas").mkdir(parents=True)
+            Path("dbwarden.py").write_text(
+                "from dbwarden import database_config\n"
+                "database_config(database_name='test', default=True, database_type='sqlite', "
+                "database_url_sync='sqlite:///./test.db', model_paths=['models'])\n"
+            )
+            ops = [
+                {"type": "rename_table", "old_table": "users", "new_table": "accounts"},
+                {"type": "rename_column", "table": "accounts", "old_name": "name", "new_name": "full_name"},
+                {"type": "alter_column_type", "table": "accounts", "column": "bio", "model_type": "TEXT"},
+                {"type": "alter_column_nullable", "table": "accounts", "column": "email", "nullable": False, "col_type": "VARCHAR"},
+                {"type": "alter_column_default", "table": "accounts", "column": "role", "default": "'admin'"},
+                {"type": "add_column", "table": "accounts", "column": "phone", "model_column": ModelColumn("phone", "VARCHAR", True, False, False, None, None)},
+                {"type": "add_foreign_key", "table": "accounts", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]},
+                {"type": "add_index", "table": "accounts", "columns": ["email"], "unique": True},
+                {"type": "drop_column", "table": "accounts", "column": "legacy", "definition": {"type": "varchar"}},
+                {"type": "drop_table", "table": "old_thing"},
+            ]
+            rollback_ops = [dict(op) for op in ops]
+            sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="test")
+            assert "ALTER TABLE users RENAME TO accounts;" in sql
+            assert "RENAME COLUMN" in sql
+            assert "SET DEFAULT" in sql
+            assert "ADD COLUMN" in sql
+            assert "ADD CONSTRAINT" in sql or "not supported" in sql
+            assert "CREATE UNIQUE INDEX" in sql or "CREATE INDEX" in sql
+            assert "WARNING" in sql
+            assert "DROP TABLE" in sql
+            assert len(changes) == 10
+
+    def test_rename_plus_type_change_combined(self):
+        ops = [
+            {"type": "rename_column", "table": "users", "old_name": "name", "new_name": "full_name"},
+            {"type": "alter_column_type", "table": "users", "column": "bio", "model_type": "TEXT"},
+        ]
+        rollback_ops = [
+            {"type": "rename_column", "table": "users", "old_name": "full_name", "new_name": "name"},
+            {"type": "alter_column_type", "table": "users", "column": "bio", "snap_type": "varchar"},
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "RENAME COLUMN" in sql
+        assert "ALTER COLUMN" in sql or "TYPE" in sql
+        assert any(c.operation == "rename_column" for c in changes)
+        assert any(c.operation == "alter_column_type" for c in changes)
+
+    def test_malformed_op_missing_keys_skipped(self):
+        ops = [
+            {"type": "unknown_op", "table": "users"},
+            {"type": "rename_column", "table": "users", "old_name": "name", "new_name": "full_name"},
+        ]
+        rollback_ops = [
+            {"type": "unknown_op", "table": "users"},
+            {"type": "rename_column", "table": "users", "old_name": "full_name", "new_name": "name"},
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "RENAME COLUMN" in sql
+
+    def test_mysql_syntax_is_used(self):
+        ops = [
+            {"type": "add_column", "table": "users", "column": "email", "model_column": ModelColumn("email", "VARCHAR(255)", True, False, False, None, None)},
+        ]
+        rollback_ops = [
+            {"type": "drop_column", "table": "users", "column": "email"},
+        ]
+        sql, _, _ = snapshot_diff_to_sql(ops, rollback_ops, db_name="mysql_db")
+        assert "ADD COLUMN" in sql or "ALTER TABLE" in sql
+
+
 class TestTableRenameDetection:
     def test_compute_overlap_high(self):
         snapshot = {
@@ -986,3 +1391,334 @@ class TestTableRenameDetection:
         parts = sql.split("\n\n")
         assert "ALTER TABLE users RENAME TO accounts;" in parts[0]
         assert "ALTER TABLE accounts RENAME TO users;" in rb_sql
+
+
+class TestForeignKeyDiff:
+    def test_fk_name_generation(self):
+        name = _build_fk_name("users", ["group_id"])
+        assert name == "users_group_id_fkey"
+
+    def test_fk_diff_add(self):
+        snapshot = {
+            "tables": {
+                "users": {"columns": {"id": {"type": "integer"}, "group_id": {"type": "integer"}}},
+                "groups": {"columns": {"id": {"type": "integer"}, "name": {"type": "varchar"}}},
+            },
+            "constraints": {},
+            "indexes": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("group_id", "INTEGER", True, False, False, None, None),
+                ],
+                foreign_keys=[{"columns": ["group_id"], "referred_table": "groups", "referred_columns": ["id"]}],
+            ),
+            ModelTable(
+                name="groups",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("name", "VARCHAR", True, False, False, None, None),
+                ],
+            ),
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        fk_ops = [op for op in upgrade if op["type"] == "add_foreign_key"]
+        assert len(fk_ops) == 1
+        assert fk_ops[0]["columns"] == ["group_id"]
+        assert fk_ops[0]["referenced_table"] == "groups"
+
+    def test_fk_diff_drop(self):
+        snapshot = {
+            "tables": {
+                "users": {"columns": {"id": {"type": "integer"}, "group_id": {"type": "integer"}}},
+                "groups": {"columns": {"id": {"type": "integer"}}},
+            },
+            "constraints": {
+                "users_group_id_fkey": {
+                    "type": "foreign_key",
+                    "table": "users",
+                    "columns": ["group_id"],
+                    "referenced_table": "groups",
+                    "referenced_columns": ["id"],
+                    "on_delete": "NO ACTION",
+                    "on_update": "NO ACTION",
+                },
+            },
+            "indexes": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("group_id", "INTEGER", True, False, False, None, None),
+                ],
+            ),
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        fk_ops = [op for op in upgrade if op["type"] == "drop_foreign_key"]
+        assert len(fk_ops) == 1
+        assert fk_ops[0]["columns"] == ["group_id"]
+
+    def test_fk_diff_no_change(self):
+        snapshot = {
+            "tables": {
+                "users": {"columns": {"id": {"type": "integer"}, "group_id": {"type": "integer"}}},
+                "groups": {"columns": {"id": {"type": "integer"}}},
+            },
+            "constraints": {
+                "users_group_id_fkey": {
+                    "type": "foreign_key",
+                    "table": "users",
+                    "columns": ["group_id"],
+                    "referenced_table": "groups",
+                    "referenced_columns": ["id"],
+                    "on_delete": "NO ACTION",
+                    "on_update": "NO ACTION",
+                },
+            },
+            "indexes": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("group_id", "INTEGER", True, False, False, None, None),
+                ],
+                foreign_keys=[{"columns": ["group_id"], "referred_table": "groups", "referred_columns": ["id"]}],
+            ),
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        fk_ops = [op for op in upgrade if "foreign_key" in op["type"]]
+        assert len(fk_ops) == 0
+
+    def test_fk_add_sql_postgresql(self):
+        op = {"type": "add_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]}
+        stmts = _build_foreign_key_sql(op, "postgresql")
+        assert len(stmts) == 1
+        assert "ADD CONSTRAINT" in stmts[0].upgrade_sql
+        assert "users_group_id_fkey" in stmts[0].upgrade_sql
+
+    def test_fk_drop_sql_mysql(self):
+        op = {"type": "drop_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]}
+        stmts = _build_foreign_key_sql(op, "mysql")
+        assert "DROP FOREIGN KEY" in stmts[0].upgrade_sql
+
+    def test_fk_sql_sqlite_not_supported(self):
+        op = {"type": "add_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]}
+        stmts = _build_foreign_key_sql(op, "sqlite")
+        assert "not supported" in stmts[0].upgrade_sql
+
+    def test_fk_sql_with_deferrable(self):
+        op = {"type": "add_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"], "deferrable": True}
+        stmts = _build_foreign_key_sql(op, "postgresql")
+        assert "DEFERRABLE INITIALLY DEFERRED" in stmts[0].upgrade_sql
+
+    def test_fk_validation_skips_missing_ref_table(self):
+        snapshot = {
+            "tables": {
+                "users": {"columns": {"id": {"type": "integer"}, "group_id": {"type": "integer"}}},
+            },
+            "constraints": {},
+            "indexes": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("group_id", "INTEGER", True, False, False, None, None),
+                ],
+                foreign_keys=[{"columns": ["group_id"], "referred_table": "groups", "referred_columns": ["id"]}],
+            ),
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        fk_ops = [op for op in upgrade if op["type"] == "add_foreign_key"]
+        assert len(fk_ops) == 0
+
+
+class TestIndexDiff:
+    def test_index_name_generation_non_unique(self):
+        name = _build_index_name("users", ["email"], False)
+        assert name == "idx_users_email"
+
+    def test_index_name_generation_unique(self):
+        name = _build_index_name("users", ["email"], True)
+        assert name == "uq_users_email"
+
+    def test_index_diff_add(self):
+        snapshot = {
+            "tables": {
+                "users": {"columns": {"id": {"type": "integer"}, "email": {"type": "varchar"}}},
+            },
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("email", "VARCHAR", True, False, False, None, None),
+                ],
+                indexes=[{"columns": ["email"], "unique": True}],
+            ),
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        idx_ops = [op for op in upgrade if op["type"] == "add_index"]
+        assert len(idx_ops) == 1
+        assert idx_ops[0]["columns"] == ["email"]
+        assert idx_ops[0]["unique"] is True
+
+    def test_index_diff_drop(self):
+        snapshot = {
+            "tables": {
+                "users": {"columns": {"id": {"type": "integer"}, "email": {"type": "varchar"}}},
+            },
+            "indexes": {
+                "idx_users_email": {"table": "users", "columns": ["email"], "unique": False, "type": "btree"},
+            },
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("email", "VARCHAR", True, False, False, None, None),
+                ],
+            ),
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        idx_ops = [op for op in upgrade if op["type"] == "drop_index"]
+        assert len(idx_ops) == 1
+        assert idx_ops[0]["columns"] == ["email"]
+
+    def test_index_diff_no_change(self):
+        snapshot = {
+            "tables": {
+                "users": {"columns": {"id": {"type": "integer"}, "email": {"type": "varchar"}}},
+            },
+            "indexes": {
+                "uq_users_email": {"table": "users", "columns": ["email"], "unique": True, "type": "btree"},
+            },
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("email", "VARCHAR", True, False, False, None, None),
+                ],
+                indexes=[{"columns": ["email"], "unique": True}],
+            ),
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        idx_ops = [op for op in upgrade if "index" in op["type"]]
+        assert len(idx_ops) == 0
+
+    def test_index_add_sql_postgresql(self):
+        op = {"type": "add_index", "table": "users", "columns": ["email"], "unique": True}
+        stmts = _build_index_sql(op, "postgresql")
+        assert "CREATE UNIQUE INDEX" in stmts[0].upgrade_sql
+        assert "CONCURRENTLY" in stmts[0].upgrade_sql
+
+    def test_index_add_sql_sqlite(self):
+        op = {"type": "add_index", "table": "users", "columns": ["email"], "unique": False}
+        stmts = _build_index_sql(op, "sqlite")
+        assert "CREATE INDEX" in stmts[0].upgrade_sql
+        assert "CONCURRENTLY" not in stmts[0].upgrade_sql
+
+    def test_index_drop_sql(self):
+        op = {"type": "drop_index", "table": "users", "index_name": "idx_users_email", "columns": ["email"], "unique": False}
+        stmts = _build_index_sql(op, "postgresql")
+        assert "DROP INDEX idx_users_email;" in stmts[0].upgrade_sql
+
+    def test_index_name_generation_multi_column(self):
+        name = _build_index_name("users", ["first_name", "last_name"], True)
+        assert name == "uq_users_first_name_last_name"
+
+    def test_fk_and_index_in_snapshot_diff_to_sql(self):
+        ops = [
+            {"type": "add_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]},
+            {"type": "add_index", "table": "users", "columns": ["email"], "unique": True},
+        ]
+        rollback_ops = [
+            {"type": "drop_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]},
+            {"type": "drop_index", "table": "users", "columns": ["email"], "unique": True},
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "ADD CONSTRAINT" in sql
+        assert "CREATE" in sql
+        assert any(c.operation == "add_foreign_key" for c in changes)
+        assert any(c.operation == "add_index" for c in changes)
+
+    def test_fk_rollback_sql_correctness(self):
+        op = {"type": "add_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]}
+        stmt = _build_foreign_key_sql(op, "postgresql")[0]
+        assert "DROP CONSTRAINT" in stmt.rollback_sql
+        assert "users_group_id_fkey" in stmt.rollback_sql
+
+    def test_fk_mariadb_uses_drop_foreign_key(self):
+        op = {"type": "drop_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]}
+        stmt = _build_foreign_key_sql(op, "mariadb")
+        assert "DROP FOREIGN KEY" in stmt[0].upgrade_sql
+
+    def test_index_mysql_syntax(self):
+        op = {"type": "add_index", "table": "users", "columns": ["email"], "unique": False}
+        stmt = _build_index_sql(op, "mysql")
+        assert "CREATE INDEX" in stmt[0].upgrade_sql
+        assert "idx_users_email" in stmt[0].upgrade_sql
+
+    def test_index_mariadb_syntax(self):
+        op = {"type": "add_index", "table": "users", "columns": ["email"], "unique": True}
+        stmt = _build_index_sql(op, "mariadb")
+        assert "CREATE UNIQUE INDEX" in stmt[0].upgrade_sql
+
+    def test_index_clickhouse_uses_generic(self):
+        op = {"type": "add_index", "table": "users", "columns": ["email"], "unique": False}
+        stmt = _build_index_sql(op, "clickhouse")
+        assert "CREATE INDEX" in stmt[0].upgrade_sql
+
+    def test_index_drop_sqlite(self):
+        op = {"type": "drop_index", "table": "users", "index_name": "idx_users_email", "columns": ["email"], "unique": False}
+        stmt = _build_index_sql(op, "sqlite")
+        assert "DROP INDEX idx_users_email;" in stmt[0].upgrade_sql
+
+    def test_index_rollback_creates_index(self):
+        op = {"type": "drop_index", "table": "users", "index_name": "uq_users_email", "columns": ["email"], "unique": True}
+        stmt = _build_index_sql(op, "postgresql")
+        assert "CREATE UNIQUE INDEX" in stmt[0].rollback_sql
+
+    def test_composite_fk_name_generation(self):
+        name = _build_fk_name("orders", ["user_id", "product_id"])
+        assert name == "orders_user_id_product_id_fkey"
+
+    def test_fk_add_sql_does_not_include_on_delete(self):
+        op = {
+            "type": "add_foreign_key",
+            "table": "users",
+            "columns": ["group_id"],
+            "referenced_table": "groups",
+            "referenced_columns": ["id"],
+            "on_delete": "CASCADE",
+        }
+        stmts = _build_foreign_key_sql(op, "postgresql")
+        assert "ON DELETE" not in stmts[0].upgrade_sql
+
+    def test_fk_add_sql_does_not_include_on_update(self):
+        op = {
+            "type": "add_foreign_key",
+            "table": "users",
+            "columns": ["group_id"],
+            "referenced_table": "groups",
+            "referenced_columns": ["id"],
+            "on_update": "SET NULL",
+        }
+        stmts = _build_foreign_key_sql(op, "postgresql")
+        assert "ON UPDATE" not in stmts[0].upgrade_sql

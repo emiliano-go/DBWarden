@@ -3,7 +3,7 @@ import re
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import List, Optional, Type
+from typing import Any, List, Optional, Type
 
 from sqlalchemy import (
     Column,
@@ -145,11 +145,15 @@ class ModelTable:
         columns: List[ModelColumn],
         clickhouse_options: Optional[dict] = None,
         object_type: str = "table",
+        foreign_keys: Optional[list[dict]] = None,
+        indexes: Optional[list[dict]] = None,
     ):
         self.name = name
         self.columns = columns
         self.clickhouse_options = clickhouse_options or {}
         self.object_type = object_type
+        self.foreign_keys = foreign_keys or []
+        self.indexes = indexes or []
 
     def to_dict(self) -> dict:
         return {
@@ -157,6 +161,8 @@ class ModelTable:
             "columns": [col.to_dict() for col in self.columns],
             "clickhouse_options": self.clickhouse_options,
             "object_type": self.object_type,
+            "foreign_keys": self.foreign_keys,
+            "indexes": self.indexes,
         }
 
 
@@ -580,6 +586,30 @@ def extract_table_from_model(
             if col:
                 columns.append(col)
 
+        # Extract FK info from parsed column.foreign_key strings
+        foreign_keys: list[dict[str, Any]] = []
+        for col in columns:
+            if col.foreign_key:
+                # Format: "referred_table(referred_column)"
+                fk = col.foreign_key
+                if "(" in fk and fk.endswith(")"):
+                    ref_table, ref_col = fk[:-1].split("(", 1)
+                else:
+                    ref_table, ref_col = fk, "id"
+                foreign_keys.append({
+                    "columns": [col.name],
+                    "referred_table": ref_table,
+                    "referred_columns": [ref_col],
+                })
+
+        # Extract indexes from SQLAlchemy model
+        indexes: list[dict[str, Any]] = []
+        for idx in model_class.__table__.indexes:
+            indexes.append({
+                "columns": list(idx.columns.keys()),
+                "unique": bool(idx.unique),
+            })
+
         clickhouse_options = {}
         object_type = "table"
         if _get_backend_name(db_name) == "clickhouse":
@@ -591,6 +621,8 @@ def extract_table_from_model(
             columns=columns,
             clickhouse_options=clickhouse_options,
             object_type=object_type,
+            foreign_keys=foreign_keys,
+            indexes=indexes,
         )
     except Exception:
         return None

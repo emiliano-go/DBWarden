@@ -106,30 +106,47 @@ Details: [SQL Translation](sql-translation.md)
 
 ## Backend-Specific Notes
 
-PostgreSQL:
+Each backend has deep-dive documentation:
 
-- Strong support for JSONB, UUID, rich DDL
+| Backend | Guide |
+|---------|-------|
+| PostgreSQL | [SQL Databases](databases/sql-databases.md) |
+| MySQL / MariaDB | [SQL Databases](databases/sql-databases.md) |
+| SQLite | [SQL Databases](databases/sql-databases.md) |
+| ClickHouse | [ClickHouse](databases/clickhouse.md) |
+
+### PostgreSQL
+
+- Transactional DDL — entire migration file succeeds or rolls back atomically
+- Column rename: uses `ALTER TABLE ... RENAME COLUMN ... TO ...`
+- Index creation: uses `CREATE INDEX CONCURRENTLY` for non-blocking behavior
+- Deferrable FK constraints: `DEFERRABLE INITIALLY DEFERRED`
+- Best suited for production workloads with JSONB, UUID, full-text search
 - Prefer production runs on actual PostgreSQL instance
 
-MySQL/MariaDB:
+### MySQL / MariaDB
 
-- Similar behavior; MariaDB configured separately via `database_type`
+- **DDL is NOT transactional** — each statement auto-commits; partial failure possible
+- MariaDB configured as `database_type="mariadb"` (separate from MySQL)
+- FK drop uses `DROP FOREIGN KEY` (not `DROP CONSTRAINT`)
+- Column type/nullable changes use `MODIFY COLUMN` (requires full column definition)
 - Validate engine-specific syntax in manual migrations
 
-SQLite:
+### SQLite
 
-- Great for local tests and dev loops
-- Different type affinity and DDL limitations vs server databases
+- Great for local tests and dev loops via `--dev` mode
+- Limited DDL: no `ALTER COLUMN TYPE`, no `SET/DROP NOT NULL`, no FK alterations
+- `--safe-type-change` emits a comment (not supported)
+- Type affinity differs from server databases
+- See [SQL Translation](sql-translation.md) for dev-mode type mapping
 
-ClickHouse:
+### ClickHouse
 
-- Optimized for analytics workloads
-- DBWarden can now render engine and table settings from model metadata
-- Use `__table_args__` for `clickhouse_engine`, `clickhouse_order_by`, `clickhouse_primary_key`, `clickhouse_partition_by`, `clickhouse_sample_by`, and `clickhouse_ttl`
-- Use column `info` for `clickhouse_type` and `clickhouse_codec` hints
-- **Replicated engines**: use `clickhouse_zookeeper_path` and `clickhouse_replica_name` with `clickhouse_engine` for Replicated\* engine tables
-- **Dictionaries**: use `clickhouse_dictionary=True` with `clickhouse_dict_layout`, `clickhouse_dict_source`, and `clickhouse_dict_lifetime` to define external dictionaries
-- See [SQLAlchemy Models](models.md) for model examples
+- HTTP-based wire protocol; DBWarden uses ClickHouse client, not SQLAlchemy session
+- Several DDL operations emit comment placeholders only: table rename, column type change, nullable change, FK, indexes, safe type change
+- Full engine metadata support via `__table_args__` (`clickhouse_engine`, `clickhouse_order_by`, etc.)
+- Supports materialized views, projections, dictionaries, replicated engines
+- See [ClickHouse Deep Dive](databases/clickhouse.md) for full details
 
 ## Recommended Verification Workflow
 

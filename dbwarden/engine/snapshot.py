@@ -773,6 +773,127 @@ def diff_models_against_snapshot(
                 "column": col_name,
             })
 
+    # --- FK diff ---
+    snapshot_constraints = snapshot.get("constraints", {})
+    for table in model_tables:
+        model_fks = table.foreign_keys or []
+        model_fk_sigs: set[tuple[frozenset[str], str, frozenset[str]]] = {
+            (frozenset(fk["columns"]), fk["referred_table"], frozenset(fk["referred_columns"]))
+            for fk in model_fks
+        }
+
+        # Snapshot FKs for this table
+        snap_fks = [
+            c for c in snapshot_constraints.values()
+            if c.get("type") == "foreign_key" and c.get("table") == table.name
+        ]
+        snap_fk_sigs: set[tuple[frozenset[str], str, frozenset[str]]] = {
+            (frozenset(fk["columns"]), fk["referenced_table"], frozenset(fk["referenced_columns"]))
+            for fk in snap_fks
+        }
+
+        # FKs to drop (in snapshot but not in model)
+        for fk in snap_fks:
+            sig = (frozenset(fk["columns"]), fk["referenced_table"], frozenset(fk["referenced_columns"]))
+            if sig not in model_fk_sigs:
+                upgrade_ops.append({
+                    "type": "drop_foreign_key",
+                    "table": table.name,
+                    "columns": fk["columns"],
+                    "referenced_table": fk["referenced_table"],
+                    "referenced_columns": fk["referenced_columns"],
+                })
+                rollback_ops.append({
+                    "type": "add_foreign_key",
+                    "table": table.name,
+                    "columns": fk["columns"],
+                    "referenced_table": fk["referenced_table"],
+                    "referenced_columns": fk["referenced_columns"],
+                    "on_delete": fk.get("on_delete", "NO ACTION"),
+                    "on_update": fk.get("on_update", "NO ACTION"),
+                })
+
+        # FKs to add (in model but not in snapshot)
+        for fk in model_fks:
+            sig = (frozenset(fk["columns"]), fk["referred_table"], frozenset(fk["referred_columns"]))
+            if sig not in snap_fk_sigs:
+                # Validate referred table/columns exist in snapshot
+                snap_tbl = snapshot.get("tables", {}).get(fk["referred_table"])
+                if snap_tbl is None:
+                    continue
+                snap_ref_cols = snap_tbl.get("columns", {})
+                ref_cols = fk["referred_columns"]
+                if not all(c in snap_ref_cols for c in ref_cols):
+                    continue
+                upgrade_ops.append({
+                    "type": "add_foreign_key",
+                    "table": table.name,
+                    "columns": fk["columns"],
+                    "referenced_table": fk["referred_table"],
+                    "referenced_columns": fk["referred_columns"],
+                })
+                rollback_ops.append({
+                    "type": "drop_foreign_key",
+                    "table": table.name,
+                    "columns": fk["columns"],
+                    "referenced_table": fk["referred_table"],
+                    "referenced_columns": fk["referred_columns"],
+                })
+
+    # --- Index diff ---
+    snapshot_indexes = snapshot.get("indexes", {})
+    for table in model_tables:
+        model_idxs = table.indexes or []
+        model_idx_sigs: set[tuple[frozenset[str], bool]] = {
+            (frozenset(idx["columns"]), idx.get("unique", False))
+            for idx in model_idxs
+        }
+
+        # Snapshot indexes for this table
+        snap_idxs = [
+            (name, idx) for name, idx in snapshot_indexes.items()
+            if idx.get("table") == table.name
+        ]
+        snap_idx_sigs: set[tuple[frozenset[str], bool]] = {
+            (frozenset(idx["columns"]), idx.get("unique", False))
+            for _, idx in snap_idxs
+        }
+
+        # Indexes to drop (in snapshot but not in model)
+        for name, idx in snap_idxs:
+            sig = (frozenset(idx["columns"]), idx.get("unique", False))
+            if sig not in model_idx_sigs:
+                upgrade_ops.append({
+                    "type": "drop_index",
+                    "table": table.name,
+                    "index_name": name,
+                    "columns": idx["columns"],
+                    "unique": idx.get("unique", False),
+                })
+                rollback_ops.append({
+                    "type": "add_index",
+                    "table": table.name,
+                    "columns": idx["columns"],
+                    "unique": idx.get("unique", False),
+                })
+
+        # Indexes to add (in model but not in snapshot)
+        for idx in model_idxs:
+            sig = (frozenset(idx["columns"]), idx.get("unique", False))
+            if sig not in snap_idx_sigs:
+                upgrade_ops.append({
+                    "type": "add_index",
+                    "table": table.name,
+                    "columns": idx["columns"],
+                    "unique": idx.get("unique", False),
+                })
+                rollback_ops.append({
+                    "type": "drop_index",
+                    "table": table.name,
+                    "columns": idx["columns"],
+                    "unique": idx.get("unique", False),
+                })
+
     return upgrade_ops, rollback_ops
 
 
@@ -973,9 +1094,146 @@ def snapshot_diff_to_sql(
                 rollback_sql=def_rb,
             ))
             changes.append(Change(operation="alter_column_default", table=op["table"], target=op["column"]))
+        elif op["type"] in ("add_foreign_key", "drop_foreign_key"):
+            stmts = _build_foreign_key_sql(op, backend)
+            for s in stmts:
+                statements.append(s)
+            if op["type"] == "add_foreign_key":
+                changes.append(Change(
+                    operation="add_foreign_key", table=op["table"],
+                    target=f"{op['referenced_table']}({','.join(op['referenced_columns'])})",
+                ))
+            else:
+                changes.append(Change(
+                    operation="drop_foreign_key", table=op["table"],
+                ))
+        elif op["type"] in ("add_index", "drop_index"):
+            stmts = _build_index_sql(op, backend)
+            for s in stmts:
+                statements.append(s)
+            if op["type"] == "add_index":
+                target = ",".join(op["columns"])
+                changes.append(Change(
+                    operation="add_index", table=op["table"], target=target,
+                ))
+            else:
+                changes.append(Change(
+                    operation="drop_index", table=op["table"],
+                ))
 
     upgrade_sql, rollback_sql = _assemble_migration(statements)
     return upgrade_sql, rollback_sql, changes
+
+
+def _build_fk_name(table: str, columns: list[str]) -> str:
+    return f"{table}_{'_'.join(columns)}_fkey"
+
+
+def _build_foreign_key_sql(op: dict[str, Any], backend: str) -> list[MigrationStatement]:
+    table = op["table"]
+    columns = op.get("columns", [])
+    ref_table = op.get("referenced_table", "")
+    ref_columns = op.get("referenced_columns", [])
+    fk_name = _build_fk_name(table, columns)
+
+    if op["type"] == "add_foreign_key":
+        cols = ", ".join(columns)
+        ref_cols = ", ".join(ref_columns)
+        if backend == "sqlite":
+            return [
+                MigrationStatement(
+                    order=StatementOrder.ALTER_FOREIGN_KEY,
+                    upgrade_sql=(
+                        f"-- SQLite: ADD CONSTRAINT {fk_name} FOREIGN KEY ({cols}) "
+                        f"REFERENCES {ref_table}({ref_cols}) (not supported)\n"
+                        f"-- Recreate the table with the constraint included."
+                    ),
+                    rollback_sql=f"-- (inverse requires manual migration)",
+                ),
+            ]
+        upgrade = (
+            f"ALTER TABLE {table} ADD CONSTRAINT {fk_name} "
+            f"FOREIGN KEY ({cols}) REFERENCES {ref_table}({ref_cols})"
+        )
+        if backend == "postgresql" and op.get("deferrable"):
+            upgrade += " DEFERRABLE INITIALLY DEFERRED"
+        upgrade += ";"
+        rollback = f"ALTER TABLE {table} DROP CONSTRAINT {fk_name};"
+        return [
+            MigrationStatement(
+                order=StatementOrder.ALTER_FOREIGN_KEY,
+                upgrade_sql=upgrade,
+                rollback_sql=rollback,
+            ),
+        ]
+    else:  # drop_foreign_key
+        if backend in ("mysql", "mariadb"):
+            upgrade = f"ALTER TABLE {table} DROP FOREIGN KEY {fk_name};"
+            rollback = f"-- ALTER TABLE {table} ADD CONSTRAINT {fk_name} FOREIGN KEY ..."
+        elif backend == "sqlite":
+            return [
+                MigrationStatement(
+                    order=StatementOrder.ALTER_FOREIGN_KEY,
+                    upgrade_sql=(
+                        f"-- SQLite: DROP CONSTRAINT {fk_name} (not supported)\n"
+                        f"-- Recreate the table without the constraint."
+                    ),
+                    rollback_sql="-- (inverse requires manual migration)",
+                ),
+            ]
+        else:
+            upgrade = f"ALTER TABLE {table} DROP CONSTRAINT {fk_name};"
+            rollback = f"-- ALTER TABLE {table} ADD CONSTRAINT {fk_name} FOREIGN KEY ..."
+        return [
+            MigrationStatement(
+                order=StatementOrder.ALTER_FOREIGN_KEY,
+                upgrade_sql=upgrade,
+                rollback_sql=rollback,
+            ),
+        ]
+
+
+def _build_index_name(table: str, columns: list[str], unique: bool) -> str:
+    prefix = "uq" if unique else "idx"
+    cols = "_".join(columns)
+    return f"{prefix}_{table}_{cols}"
+
+
+def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatement]:
+    table = op["table"]
+    columns = op.get("columns", [])
+    unique = op.get("unique", False)
+    idx_name = op.get("index_name") or _build_index_name(table, columns, unique)
+
+    if op["type"] == "add_index":
+        unique_clause = "UNIQUE " if unique else ""
+        cols = ", ".join(columns)
+        if backend == "sqlite":
+            upgrade = f"CREATE {unique_clause}INDEX {idx_name} ON {table} ({cols});"
+        elif backend == "postgresql":
+            upgrade = f"CREATE {unique_clause}INDEX CONCURRENTLY {idx_name} ON {table} ({cols});"
+        else:
+            upgrade = f"CREATE {unique_clause}INDEX {idx_name} ON {table} ({cols});"
+        rollback = f"DROP INDEX {idx_name};"
+        return [
+            MigrationStatement(
+                order=StatementOrder.ALTER_INDEX,
+                upgrade_sql=upgrade,
+                rollback_sql=rollback,
+            ),
+        ]
+    else:  # drop_index
+        upgrade = f"DROP INDEX {idx_name};"
+        unique_clause = "UNIQUE " if unique else ""
+        cols = ", ".join(columns)
+        rollback = f"CREATE {unique_clause}INDEX {idx_name} ON {table} ({cols});"
+        return [
+            MigrationStatement(
+                order=StatementOrder.ALTER_INDEX,
+                upgrade_sql=upgrade,
+                rollback_sql=rollback,
+            ),
+        ]
 
 
 def _build_safe_type_change_sql(
