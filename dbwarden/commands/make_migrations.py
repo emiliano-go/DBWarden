@@ -5,7 +5,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from dbwarden.config import get_database, get_multi_db_config
 from dbwarden.engine.checksum import calculate_checksum
@@ -65,6 +65,127 @@ def _format_rename_warning(intents: list[tuple[str, str, str, str]]) -> str:
         )
     lines.append("These will be emitted as DROP + ADD instead of RENAME.")
     return "\n".join(lines)
+
+
+def _parse_rename_table_flags(raw_flags: list[str]) -> list[dict[str, str]]:
+    intents: list[dict[str, str]] = []
+    for flag in raw_flags:
+        if ":" not in flag:
+            raise ValueError(
+                f"Invalid --rename-table format: '{flag}'. "
+                f"Expected: old_table:new_table"
+            )
+        old_table, new_table = flag.split(":", 1)
+        old_table = old_table.strip()
+        new_table = new_table.strip()
+        if not old_table or not new_table:
+            raise ValueError(
+                f"Invalid --rename-table format: '{flag}'. "
+                f"Expected: old_table:new_table"
+            )
+        intents.append({"old_table": old_table, "new_table": new_table})
+    return intents
+
+
+def _validate_table_rename_intents(
+    intents: list[dict[str, str]],
+    snapshot: dict[str, Any],
+    model_table_names: set[str],
+) -> None:
+    snapshot_tables = set(snapshot.get("tables", {}).keys())
+    for intent in intents:
+        if intent["old_table"] not in snapshot_tables:
+            raise ValueError(
+                f"--rename-table: table '{intent['old_table']}' does not exist "
+                f"in latest snapshot."
+            )
+        if intent["new_table"] in snapshot_tables:
+            raise ValueError(
+                f"--rename-table: table '{intent['new_table']}' already exists "
+                f"in latest snapshot."
+            )
+        if intent["old_table"] in model_table_names:
+            raise ValueError(
+                f"--rename-table: '{intent['old_table']}' still present in models. "
+                f"Remove it before declaring a rename."
+            )
+        if intent["new_table"] not in model_table_names:
+            raise ValueError(
+                f"--rename-table: '{intent['new_table']}' not found in models. "
+                f"Add it before declaring a rename."
+            )
+
+
+def _format_table_rename_warning(candidates: list[tuple[str, str, float]]) -> str:
+    lines = [
+        "Warning: table rename candidates detected but running non-interactive. "
+        "Emitting drop+add."
+    ]
+    for old, new, ratio in candidates:
+        lines.append(f"  {old} \u2192 {new}  ({int(ratio * 100):d}% columns match)")
+    lines.append("Rerun with --rename-table old:new to resolve.")
+    return "\n".join(lines)
+
+
+def _prompt_table_rename_confirmations(
+    candidates: list[tuple[str, str, float]],
+) -> list[dict[str, str]]:
+    confirmed: list[dict[str, str]] = []
+    if not candidates:
+        return confirmed
+    if len(candidates) == 1:
+        old, new, ratio = candidates[0]
+        answer = input(
+            f"Possible table rename detected:\n"
+            f"  {old} \u2192 {new}  ({int(ratio * 100):d}% columns match)\n\n"
+            f"Treat as rename? [Y/n]: "
+        ).strip().lower()
+        if answer in ("", "y", "yes"):
+            confirmed.append({"old_table": old, "new_table": new})
+    else:
+        print("Possible table renames detected:")
+        for i, (old, new, ratio) in enumerate(candidates, 1):
+            print(f"  [{i}] {old} \u2192 {new}     ({int(ratio * 100):d}% columns match)")
+        print()
+        print("Treat as renames? (default: all yes)")
+        print("  - Press Enter to rename all")
+        answer = input('  - Type numbers to drop+add instead (e.g. "1" or "1 2"): ').strip()
+        if not answer:
+            for old, new, _ in candidates:
+                confirmed.append({"old_table": old, "new_table": new})
+        else:
+            decline_indices: set[int] = set()
+            for part in answer.split():
+                if part.isdigit():
+                    decline_indices.add(int(part) - 1)
+            for i, (old, new, _) in enumerate(candidates):
+                if i not in decline_indices:
+                    confirmed.append({"old_table": old, "new_table": new})
+    return confirmed
+
+
+def _detect_table_rename_candidates(
+    snapshot: dict[str, Any],
+    model_tables: list,
+    confirmed_table_intents: set[tuple[str, str]],
+) -> list[tuple[str, str, float]]:
+    from dbwarden.engine.snapshot import _compute_table_overlap, RENAME_TABLE_OVERLAP_THRESHOLD
+
+    snapshot_tables = set(snapshot.get("tables", {}).keys())
+    model_table_names = {t.name for t in model_tables}
+
+    dropped_tables = snapshot_tables - model_table_names
+    added_tables = model_table_names - snapshot_tables
+
+    candidates: list[tuple[str, str, float]] = []
+    for dropped in dropped_tables:
+        for added in added_tables:
+            if (dropped, added) in confirmed_table_intents:
+                continue
+            overlap = _compute_table_overlap(dropped, added, snapshot, model_tables)
+            if overlap >= RENAME_TABLE_OVERLAP_THRESHOLD:
+                candidates.append((dropped, added, overlap))
+    return candidates
 
 
 def _prompt_rename_confirmations(
@@ -133,6 +254,8 @@ def make_migrations_cmd(
     database: str | None = None,
     output_plan: bool = False,
     rename_flags: list[str] | None = None,
+    safe_type_change: bool = False,
+    rename_table_flags: list[str] | None = None,
 ) -> None:
     """
     Auto-generate SQL migration from SQLAlchemy models.
@@ -143,6 +266,8 @@ def make_migrations_cmd(
         database: Target database name.
         output_plan: Print the migration plan JSON without writing files.
         rename_flags: List of user-supplied --rename flag strings.
+        safe_type_change: Use multi-step safe type change strategy.
+        rename_table_flags: List of user-supplied --rename-table flag strings.
     """
     logger = get_logger()
 
@@ -175,6 +300,7 @@ def make_migrations_cmd(
 
     logger.info(f"Found {len(tables)} tables in models")
 
+    # --- Column rename flags ---
     rename_intents: list[RenameIntent] = []
     if rename_flags:
         rename_intents = _parse_rename_flags(rename_flags)
@@ -187,20 +313,79 @@ def make_migrations_cmd(
         confirmed_renames.add(key)
         resolved_from_map[key] = "rename_flag"
 
+    # --- Table rename flags ---
+    confirmed_table_intents: set[tuple[str, str]] = set()
+    table_resolved_from_map: dict[tuple[str, str], str] = {}
+
+    if rename_table_flags:
+        table_intents = _parse_rename_table_flags(rename_table_flags)
+        for intent in table_intents:
+            key = (intent["old_table"], intent["new_table"])
+            confirmed_table_intents.add(key)
+            table_resolved_from_map[key] = "rename_flag"
+
     try:
         from dbwarden.engine.snapshot import (
             find_latest_snapshot,
             diff_models_against_snapshot,
+            _compute_table_overlap,
+            RENAME_TABLE_OVERLAP_THRESHOLD,
         )
         snapshot = find_latest_snapshot(database)
     except Exception:
         snapshot = None
+
+    # Apply table renames to snapshot before column rename detection
+    if snapshot is not None and confirmed_table_intents:
+        snapshot_tables = dict(snapshot.get("tables", {}))
+        for old_table, new_table in confirmed_table_intents:
+            if old_table in snapshot_tables:
+                snapshot_tables[new_table] = snapshot_tables.pop(old_table)
+        snapshot["tables"] = snapshot_tables
 
     if snapshot is not None:
         model_by_name = {t.name: t for t in tables}
         snapshot_tables = snapshot.get("tables", {})
         auto_detected_renames: list[tuple[str, str, str]] = []
 
+        # --- Table rename auto-detection ---
+        model_table_names = {t.name for t in tables}
+        snap_table_names = set(snapshot_tables.keys())
+        dropped_tables_list = snap_table_names - model_table_names
+        added_tables_list = model_table_names - snap_table_names
+
+        table_candidates: list[tuple[str, str, float]] = []
+        for dropped in dropped_tables_list:
+            for added in added_tables_list:
+                if (dropped, added) in confirmed_table_intents:
+                    continue
+                overlap = _compute_table_overlap(dropped, added, snapshot, tables)
+                if overlap >= RENAME_TABLE_OVERLAP_THRESHOLD:
+                    table_candidates.append((dropped, added, overlap))
+
+        if table_candidates:
+            if sys.stdin.isatty():
+                prompted_tables = _prompt_table_rename_confirmations(table_candidates)
+                for intent in prompted_tables:
+                    key = (intent["old_table"], intent["new_table"])
+                    confirmed_table_intents.add(key)
+                    table_resolved_from_map[key] = "prompt"
+            else:
+                logger.warning(_format_table_rename_warning(table_candidates))
+                console.print(
+                    _format_table_rename_warning(table_candidates),
+                    style="yellow",
+                )
+
+        # Apply any newly confirmed table renames to snapshot
+        if confirmed_table_intents:
+            snapshot_tables = dict(snapshot.get("tables", {}))
+            for old_table, new_table in confirmed_table_intents:
+                if old_table in snapshot_tables:
+                    snapshot_tables[new_table] = snapshot_tables.pop(old_table)
+            snapshot["tables"] = snapshot_tables
+
+        # --- Column rename auto-detection ---
         for table in tables:
             if table.name not in snapshot_tables:
                 continue
@@ -246,6 +431,9 @@ def make_migrations_cmd(
         tables, migrations_dir, database, db_name,
         confirmed_renames=confirmed_renames,
         resolved_from_map=resolved_from_map,
+        safe_type_change=safe_type_change,
+        confirmed_table_intents=confirmed_table_intents,
+        table_resolved_from_map=table_resolved_from_map,
     )
 
     safe_desc = _resolve_migration_description(description, changes)
@@ -327,6 +515,28 @@ def build_migration_plan(
     }
 
 
+def _build_table_rename_ops(
+    confirmed_table_intents: set[tuple[str, str]],
+    table_resolved_from_map: dict[tuple[str, str], str] | None = None,
+) -> dict[str, list[dict[str, Any]]]:
+    upgrade: list[dict[str, Any]] = []
+    rollback: list[dict[str, Any]] = []
+    for old_table, new_table in confirmed_table_intents:
+        origin = (table_resolved_from_map or {}).get((old_table, new_table))
+        upgrade.append({
+            "type": "rename_table",
+            "old_table": old_table,
+            "new_table": new_table,
+            "resolved_from": origin,
+        })
+        rollback.append({
+            "type": "rename_table",
+            "old_table": new_table,
+            "new_table": old_table,
+        })
+    return {"upgrade": upgrade, "rollback": rollback}
+
+
 def _build_plan_operation(change: Change) -> dict[str, str]:
     operation: dict[str, str] = {
         "type": change.operation,
@@ -336,10 +546,12 @@ def _build_plan_operation(change: Change) -> dict[str, str]:
     if change.resolved_from:
         operation["resolved_from"] = change.resolved_from
     if change.target:
-        if change.operation == "rename_column":
+        if change.operation in ("rename_column", "rename_table"):
             operation["new_name"] = change.target
         else:
             operation["column"] = change.target
+    if change.operation == "rename_table":
+        operation["old_table"] = change.table
     return operation
 
 
@@ -350,6 +562,9 @@ def generate_migration_sql(
     db_name: str | None = None,
     confirmed_renames: set[tuple[str, str, str]] | None = None,
     resolved_from_map: dict[tuple[str, str, str], str] | None = None,
+    safe_type_change: bool = False,
+    confirmed_table_intents: set[tuple[str, str]] | None = None,
+    table_resolved_from_map: dict[tuple[str, str], str] | None = None,
 ) -> tuple[str, str, list[Change]]:
     """
     Generate upgrade and rollback SQL from table definitions.
@@ -357,9 +572,11 @@ def generate_migration_sql(
     Compares model tables with the actual database schema to generate:
     - CREATE TABLE for new tables
     - ALTER TABLE ADD COLUMN for new columns in existing tables
+    - ALTER COLUMN TYPE / SET NOT NULL / DROP DEFAULT for column-level changes
 
-    When a schema snapshot exists, it uses the snapshot for rename detection.
-    Otherwise falls back to diffing against the live database.
+    When a schema snapshot exists, it uses the snapshot for rename detection
+    and column-level change detection.
+    Otherwise falls back to diffing against the live database (no column-level changes).
 
     Args:
         tables: List of ModelTable objects.
@@ -368,6 +585,9 @@ def generate_migration_sql(
         db_name: Database name for filename generation.
         confirmed_renames: Set of (table, old_name, new_name) tuples confirmed by user.
         resolved_from_map: Optional mapping from rename key to origin string.
+        safe_type_change: Use multi-step safe type change strategy.
+        confirmed_table_intents: Set of (old_table, new_table) tuples confirmed by user.
+        table_resolved_from_map: Optional mapping from table rename key to origin string.
 
     Returns:
         Tuple of (upgrade_sql, rollback_sql, changes).
@@ -377,6 +597,7 @@ def generate_migration_sql(
     changes: list[Change] = []
     snapshot: Any = None
     confirmed_renames = confirmed_renames or set()
+    confirmed_table_intents = confirmed_table_intents or set()
 
     try:
         from dbwarden.engine.snapshot import (
@@ -384,6 +605,10 @@ def generate_migration_sql(
             diff_models_against_snapshot,
             snapshot_diff_to_sql,
             _apply_rename_intents,
+            _rename_table_sql,
+            TableRenameIntent,
+            StatementOrder,
+            MigrationStatement,
         )
 
         snapshot = find_latest_snapshot(database)
@@ -399,13 +624,21 @@ def generate_migration_sql(
                 upgrade_ops, rollback_ops = _apply_rename_intents(
                     upgrade_ops, rollback_ops, confirmed_renames, resolved_from_map
                 )
+
+            # Prepend table rename ops to the diff output
+            table_rename_ops = _build_table_rename_ops(confirmed_table_intents, table_resolved_from_map)
+            upgrade_ops = table_rename_ops["upgrade"] + upgrade_ops
+            rollback_ops = table_rename_ops["rollback"] + rollback_ops
+
             upgrade_sql, rollback_sql, changes = snapshot_diff_to_sql(
-                upgrade_ops, rollback_ops, database=database, db_name=db_name
+                upgrade_ops, rollback_ops, database=database, db_name=db_name,
+                safe_type_change=safe_type_change,
             )
         except Exception:
             snapshot = None
 
     if snapshot is None:
+        table_rename_ops = _build_table_rename_ops(confirmed_table_intents, table_resolved_from_map)
         try:
             config = get_database(database)
             existing_tables = extract_tables_from_database(config.sqlalchemy_url)
@@ -474,6 +707,18 @@ def generate_migration_sql(
 
         upgrade_sql = "\n\n".join(upgrade_parts)
         rollback_sql = "\n\n".join(rollback_parts)
+
+        # Prepend table rename ops in live-DB fallback path
+        if table_rename_ops["upgrade"]:
+            from dbwarden.engine.snapshot import snapshot_diff_to_sql
+            rename_upgrade, rename_rollback, rename_changes = snapshot_diff_to_sql(
+                table_rename_ops["upgrade"], table_rename_ops["rollback"],
+                database=database, db_name=db_name,
+            )
+            if rename_upgrade.strip():
+                upgrade_sql = rename_upgrade + "\n\n" + upgrade_sql
+                rollback_sql = rename_rollback + "\n\n" + rollback_sql
+                changes = rename_changes + changes
 
     if migrations_dir:
         existing_statements = get_pending_migration_statements(migrations_dir)

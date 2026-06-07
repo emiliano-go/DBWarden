@@ -7,6 +7,12 @@ import pytest
 
 from dbwarden.engine.snapshot import (
     _apply_rename_intents,
+    _assemble_migration,
+    _compute_table_overlap,
+    _rename_table_sql,
+    TableRenameIntent,
+    MigrationStatement,
+    StatementOrder,
     compute_checksum,
     detect_renames,
     diff_models_against_snapshot,
@@ -622,3 +628,361 @@ class TestApplyRenameIntents:
         result_up, result_rb = _apply_rename_intents(ops, rollback, set())
         assert result_up == ops
         assert result_rb == rollback
+
+
+class TestStatementOrder:
+    def test_rename_table_is_first(self):
+        assert StatementOrder.RENAME_TABLE == 0
+        assert StatementOrder.RENAME_TABLE < StatementOrder.RENAME_COLUMN
+        assert StatementOrder.RENAME_COLUMN < StatementOrder.ALTER_COLUMN_TYPE
+        assert StatementOrder.ALTER_COLUMN_TYPE < StatementOrder.ALTER_COLUMN_NULLABLE
+        assert StatementOrder.ALTER_COLUMN_NULLABLE < StatementOrder.ALTER_COLUMN_DEFAULT
+        assert StatementOrder.ALTER_COLUMN_DEFAULT < StatementOrder.CREATE_TABLE
+        assert StatementOrder.CREATE_TABLE < StatementOrder.ADD_COLUMN
+        assert StatementOrder.ADD_COLUMN < StatementOrder.ALTER_FOREIGN_KEY
+        assert StatementOrder.ALTER_FOREIGN_KEY < StatementOrder.ALTER_INDEX
+        assert StatementOrder.ALTER_INDEX < StatementOrder.DROP_COLUMN
+        assert StatementOrder.DROP_COLUMN < StatementOrder.DROP_TABLE
+
+
+class TestAssembleMigration:
+    def test_sorts_by_order(self):
+        stmts = [
+            MigrationStatement(StatementOrder.ADD_COLUMN, "add bar", "drop bar"),
+            MigrationStatement(StatementOrder.CREATE_TABLE, "create foo", "drop foo"),
+            MigrationStatement(StatementOrder.RENAME_COLUMN, "rename x y", "rename y x"),
+        ]
+        upgrade, rollback = _assemble_migration(stmts)
+        parts = upgrade.split("\n\n")
+        assert parts[0] == "rename x y"
+        assert parts[1] == "create foo"
+        assert parts[2] == "add bar"
+
+    def test_rollback_is_reversed(self):
+        stmts = [
+            MigrationStatement(StatementOrder.ADD_COLUMN, "add bar", "drop bar"),
+            MigrationStatement(StatementOrder.CREATE_TABLE, "create foo", "drop foo"),
+        ]
+        _, rollback = _assemble_migration(stmts)
+        parts = rollback.split("\n\n")
+        assert parts[0] == "drop bar"
+        assert parts[1] == "drop foo"
+
+
+class TestColumnLevelDiff:
+    def test_type_change_detected(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                        "name": {"type": "varchar", "nullable": True, "primary_key": False},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    _mc("id", "INTEGER", pk=True, nullable=False),
+                    _mc("name", "TEXT"),
+                ],
+            )
+        ]
+        upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
+        type_changes = [op for op in upgrade if op["type"] == "alter_column_type"]
+        assert len(type_changes) == 1
+        assert type_changes[0]["column"] == "name"
+        assert type_changes[0]["model_type"] == "TEXT"
+
+    def test_no_type_change_same_type(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[_mc("id", "INTEGER", pk=True, nullable=False)],
+            )
+        ]
+        upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
+        type_changes = [op for op in upgrade if op["type"] == "alter_column_type"]
+        assert len(type_changes) == 0
+
+    def test_nullable_change_detected(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                        "email": {"type": "varchar", "nullable": True, "primary_key": False},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    _mc("id", "INTEGER", pk=True, nullable=False),
+                    ModelColumn("email", "VARCHAR(255)", False, False, False, None, None),
+                ],
+            )
+        ]
+        upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
+        nullable_changes = [op for op in upgrade if op["type"] == "alter_column_nullable"]
+        assert len(nullable_changes) == 1
+        assert nullable_changes[0]["column"] == "email"
+        assert nullable_changes[0]["nullable"] is False
+
+    def test_default_change_detected(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                        "name": {"type": "varchar", "nullable": True, "primary_key": False, "default": "foo"},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    _mc("id", "INTEGER", pk=True, nullable=False),
+                    ModelColumn("name", "VARCHAR(255)", True, False, False, "bar", None),
+                ],
+            )
+        ]
+        upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
+        default_changes = [op for op in upgrade if op["type"] == "alter_column_default"]
+        assert len(default_changes) == 1
+        assert default_changes[0]["column"] == "name"
+        assert default_changes[0]["default"] == "bar"
+
+    def test_all_column_changes_in_one_table(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "name": {"type": "varchar", "nullable": True, "primary_key": False, "default": None},
+                    },
+                    "primary_key": [],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("name", "TEXT", False, False, False, "hello", None),
+                ],
+            )
+        ]
+        upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
+        types = {op["type"] for op in upgrade}
+        assert "alter_column_type" in types
+        assert "alter_column_nullable" in types
+        assert "alter_column_default" in types
+
+
+class TestColumnLevelSqlGeneration:
+    def test_alter_type_generates_sql(self):
+        ops = [
+            {"type": "alter_column_type", "table": "users", "column": "name", "model_type": "TEXT"},
+        ]
+        rollback_ops = [
+            {"type": "alter_column_type", "table": "users", "column": "name", "snap_type": "varchar"},
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="test")
+        assert "ALTER COLUMN name" in sql or "name TYPE" in sql or "SQLite does not support" in sql
+
+    def test_alter_nullable_set_not_null(self):
+        ops = [
+            {"type": "alter_column_nullable", "table": "users", "column": "email", "nullable": False, "col_type": "VARCHAR"},
+        ]
+        rollback_ops = [
+            {"type": "alter_column_nullable", "table": "users", "column": "email", "nullable": True, "col_type": "VARCHAR"},
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="test")
+        assert "NOT NULL" in sql or "not supported" in sql
+
+    def test_alter_default_set(self):
+        ops = [
+            {"type": "alter_column_default", "table": "users", "column": "name", "default": "'hello'"},
+        ]
+        rollback_ops = [
+            {"type": "alter_column_default", "table": "users", "column": "name", "default": None},
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="test")
+        assert "SET DEFAULT" in sql
+
+    def test_alter_default_drop(self):
+        ops = [
+            {"type": "alter_column_default", "table": "users", "column": "name", "default": None},
+        ]
+        rollback_ops = [
+            {"type": "alter_column_default", "table": "users", "column": "name", "default": "'old'"},
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="test")
+        assert "DROP DEFAULT" in sql
+
+    def test_drop_column_warning(self):
+        ops = [
+            {"type": "drop_column", "table": "users", "column": "legacy", "definition": {"type": "varchar"}},
+        ]
+        rollback_ops = [
+            {"type": "add_column", "table": "users", "column": "legacy", "definition": {"type": "varchar"}},
+        ]
+        sql, _, _ = snapshot_diff_to_sql(ops, rollback_ops, db_name="test")
+        assert "WARNING" in sql
+        assert "DROP COLUMN" in sql
+
+    def test_safe_type_change_enters_multi_step_mode(self):
+        ops = [
+            {"type": "alter_column_type", "table": "users", "column": "name", "model_type": "TEXT"},
+        ]
+        rollback_ops = [
+            {"type": "alter_column_type", "table": "users", "column": "name", "snap_type": "varchar"},
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None, safe_type_change=True)
+        assert sql != ""
+
+
+class TestTableRenameDetection:
+    def test_compute_overlap_high(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False},
+                        "name": {"type": "varchar", "nullable": True},
+                        "email": {"type": "varchar", "nullable": True},
+                    }
+                }
+            }
+        }
+        model_tables = [
+            ModelTable(
+                name="accounts",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("name", "VARCHAR", True, False, False, None, None),
+                    ModelColumn("email", "VARCHAR", True, False, False, None, None),
+                ],
+            )
+        ]
+        ratio = _compute_table_overlap("users", "accounts", snapshot, model_tables)
+        assert ratio >= 0.6
+
+    def test_compute_overlap_low(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False},
+                        "legacy": {"type": "varchar", "nullable": True},
+                    }
+                }
+            }
+        }
+        model_tables = [
+            ModelTable(
+                name="accounts",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("name", "VARCHAR", True, False, False, None, None),
+                    ModelColumn("email", "VARCHAR", True, False, False, None, None),
+                ],
+            )
+        ]
+        ratio = _compute_table_overlap("users", "accounts", snapshot, model_tables)
+        assert ratio < 0.6
+
+    def test_compute_overlap_empty_tables(self):
+        snapshot = {
+            "tables": {
+                "empty_snap": {"columns": {}},
+            }
+        }
+        model_tables = [
+            ModelTable(name="empty_model", columns=[]),
+        ]
+        ratio = _compute_table_overlap("empty_snap", "empty_model", snapshot, model_tables)
+        assert ratio == 0.0
+
+    def test_rename_table_sql_generates_statement(self):
+        intent = TableRenameIntent(old_table="users", new_table="accounts")
+        stmt = _rename_table_sql(intent, "postgresql")
+        assert stmt.order == StatementOrder.RENAME_TABLE
+        assert "ALTER TABLE users RENAME TO accounts;" in stmt.upgrade_sql
+        assert "ALTER TABLE accounts RENAME TO users;" in stmt.rollback_sql
+
+    def test_rename_table_sql_clickhouse_comment(self):
+        intent = TableRenameIntent(old_table="users", new_table="accounts")
+        stmt = _rename_table_sql(intent, "clickhouse")
+        assert "ClickHouse does not support" in stmt.upgrade_sql
+
+    def test_rename_table_sql_sqlite(self):
+        intent = TableRenameIntent(old_table="users", new_table="accounts")
+        stmt = _rename_table_sql(intent, "sqlite")
+        assert stmt.order == StatementOrder.RENAME_TABLE
+        assert "ALTER TABLE users RENAME TO accounts;" in stmt.upgrade_sql
+
+    def test_rename_table_op_in_snapshot_diff_to_sql(self):
+        ops = [
+            {"type": "rename_table", "old_table": "users", "new_table": "accounts"},
+        ]
+        rollback_ops = [
+            {"type": "rename_table", "old_table": "accounts", "new_table": "users"},
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "ALTER TABLE users RENAME TO accounts;" in sql
+        assert "ALTER TABLE accounts RENAME TO users;" in rb_sql
+        assert any(c.operation == "rename_table" for c in changes)
+
+    def test_rename_table_ordering_first(self):
+        ops = [
+            {"type": "add_column", "table": "accounts", "column": "email", "model_column": ModelColumn("email", "VARCHAR", True, False, False, None, None)},
+            {"type": "rename_table", "old_table": "users", "new_table": "accounts"},
+        ]
+        rollback_ops = [
+            {"type": "drop_column", "table": "accounts", "column": "email"},
+            {"type": "rename_table", "old_table": "accounts", "new_table": "users"},
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        parts = sql.split("\n\n")
+        assert "ALTER TABLE users RENAME TO accounts;" in parts[0]
+        assert "ALTER TABLE accounts RENAME TO users;" in rb_sql

@@ -58,9 +58,17 @@ Rollback uses the same lock discipline, selecting rollback SQL from applied file
 4. load latest schema snapshot (`dbwarden/schemas/*.schema.json`) if one exists
 5. if snapshot exists: **snapshot-diff path**
    - diff model tables against snapshot tables
+   - auto-detect table renames from dropped↔added table pairs (column overlap ≥ 0.6)
+   - apply user `--rename-table` flags and/or interactive prompts to confirm table renames
+   - emit `ALTER TABLE ... RENAME TO` (confirmed) or `DROP TABLE` + `CREATE TABLE` (not confirmed)
+   - apply confirmed table renames to snapshot before column processing
    - auto-detect column renames from dropped↔added pairs of the same type
    - apply user `--rename` flags and/or interactive prompts to confirm renames
+   - detect column-level changes: type, nullability, default (same-name columns)
    - emit `RENAME COLUMN` (confirmed) or `DROP` + `ADD` (not confirmed)
+   - emit `ALTER COLUMN TYPE` / `SET NOT NULL` / `DROP NOT NULL` / `SET DEFAULT` / `DROP DEFAULT`
+   - optionally use multi-step safe type change (`--safe-type-change`)
+   - order all operations by `StatementOrder` (RENAME_TABLE first) and assemble upgrade/rollback
    - generate upgrade and rollback SQL from the ops
 6. if no snapshot: **live-DB fallback path**
    - extract known columns from database + existing migration files

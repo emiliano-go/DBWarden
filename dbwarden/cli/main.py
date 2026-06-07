@@ -286,6 +286,16 @@ def make_migrations(
         "--rename",
         help="Explicitly rename column (format: table.old_name:new_name). Can be repeated.",
     ),
+    safe_type_change: bool = typer.Option(
+        False,
+        "--safe-type-change",
+        help="Use multi-step safe type change (add temp column, backfill, swap, drop old)",
+    ),
+    rename_table: list[str] = typer.Option(
+        [],
+        "--rename-table",
+        help="Declare a table rename as old_table:new_table. Repeatable.",
+    ),
 ):
     """Auto-generate SQL migration from SQLAlchemy models."""
     validate_directory()
@@ -295,6 +305,8 @@ def make_migrations(
         database=database,
         output_plan=plan,
         rename_flags=rename,
+        safe_type_change=safe_type_change,
+        rename_table_flags=rename_table,
     )
 
 
