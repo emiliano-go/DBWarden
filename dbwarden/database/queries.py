@@ -2,8 +2,7 @@ from enum import Enum
 
 from sqlalchemy.engine import make_url
 
-from dbwarden.config import DEFAULT_MIGRATION_TABLE, get_database
-from dbwarden.constants import SEEDS_TABLE
+from dbwarden.config import DEFAULT_MIGRATION_TABLE, DEFAULT_SEEDS_TABLE, get_database
 
 
 class QueryMethod(Enum):
@@ -537,9 +536,16 @@ def get_query(method: QueryMethod, db_name: str | None = None, **kwargs) -> str:
     return query.format(migration_table=get_migration_table_name(db_name), **kwargs)
 
 
+def get_seed_table_name(db_name: str | None = None) -> str:
+    try:
+        return get_database(db_name).seed_table
+    except Exception:
+        return DEFAULT_SEEDS_TABLE
+
+
 def get_seed_query(method: QueryMethod, db_name: str | None = None, **kwargs) -> str:
     """Get a seed SQL query by method for current backend."""
     query = _get_queries_for_backend(db_name).get(method, "")
     if not query:
         return ""
-    return query.format(seed_table=SEEDS_TABLE, **kwargs)
+    return query.format(seed_table=get_seed_table_name(db_name), **kwargs)

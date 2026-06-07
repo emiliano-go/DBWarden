@@ -16,6 +16,7 @@ from dbwarden.exceptions import ConfigurationError
 
 DatabaseType = Literal["sqlite", "postgresql", "mysql", "mariadb", "clickhouse"]
 DEFAULT_MIGRATION_TABLE = "_dbwarden_migrations"
+DEFAULT_SEEDS_TABLE = "_dbwarden_seeds"
 
 _IGNORE_DIRS = {
     ".git",
@@ -41,6 +42,7 @@ class DatabaseConfig:
     model_paths: list[str] | None = None
     migrations_dir: str = "migrations"
     migration_table: str = DEFAULT_MIGRATION_TABLE
+    seed_table: str = DEFAULT_SEEDS_TABLE
     postgres_schema: str | None = None
     dev_database_url: str | None = None
     dev_database_type: DatabaseType | None = None
@@ -443,6 +445,7 @@ def _finalize_entries(
             model_paths=entry.model_paths,
             migrations_dir=migrations_dir,
             migration_table=entry.migration_table or DEFAULT_MIGRATION_TABLE,
+            seed_table=entry.seed_table or DEFAULT_SEEDS_TABLE,
             postgres_schema=None,
             dev_database_url=entry.dev_database_url,
             dev_database_type=entry.dev_database_type,

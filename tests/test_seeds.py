@@ -266,3 +266,33 @@ def test_seed_create_creates_directory_and_file():
             assert "my_seed" in files[0].name
         finally:
             os.chdir(old_cwd)
+
+
+def test_seeds_table_configurable():
+    """Seed tracking table name is configurable via seed_table param."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        old_cwd = os.getcwd()
+        os.chdir(tmpdir)
+        try:
+            _reset_dev_mode()
+            db_path = f"sqlite:///./{Path(tmpdir).name}_seeds.db"
+            Path(tmpdir, "dbwarden.py").write_text(
+                "from dbwarden import database_config\n\n"
+                f"database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='{db_path}', seed_table='custom_seeds')\n",
+                encoding="utf-8",
+            )
+            from dbwarden.database.queries import get_seed_table_name
+
+            table_name = get_seed_table_name(db_name=None)
+            assert table_name == "custom_seeds"
+
+            create_seeds_table_if_not_exists(db_name=None)
+            assert seeds_table_exists(db_name=None)
+
+            record_applied_seed("0001", "test", "V0001__test.sql", "sql", "abc", db_name=None)
+            assert seed_is_applied("0001", db_name=None)
+            records = get_all_seed_records(db_name=None)
+            assert len(records) == 1
+            assert records[0].version == "0001"
+        finally:
+            os.chdir(old_cwd)

@@ -15,7 +15,6 @@ def create_seeds_table_if_not_exists(db_name: str | None = None) -> None:
 
 
 def seeds_table_exists(db_name: str | None = None) -> bool:
-    from dbwarden.constants import SEEDS_TABLE
     with get_db_connection(db_name) as connection:
         try:
             connection.execute(

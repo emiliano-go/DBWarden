@@ -18,6 +18,7 @@ def database_config(
     default: bool = False,
     migrations_dir: str | None = None,
     migration_table: str | None = None,
+    seed_table: str | None = None,
     model_paths: list[str] | None = None,
     dev_database_type: str | None = None,
     dev_database_url: str | None = None,
@@ -45,6 +46,7 @@ At least one of `database_url_sync` or `database_url_async` must be provided.
 | `default` | `bool` | `False` | if `True`, this database is used when `--database` is omitted |
 | `migrations_dir` | `str | None` | `None` | custom migration directory path (defaults to `migrations/<database_name>`) |
 | `migration_table` | `str | None` | `None` | custom migration tracking table name (defaults to `_dbwarden_migrations`) |
+| `seed_table` | `str | None` | `None` | custom seed tracking table name (defaults to `_dbwarden_seeds`) |
 | `model_paths` | `list[str] | None` | `None` | list of Python import paths containing SQLAlchemy models for this database |
 | `dev_database_type` | `str | None` | `None` | backend type for local development (used with `--dev`) |
 | `dev_database_url` | `str | None` | `None` | connection URL for local development (used with `--dev`) |
@@ -189,6 +191,28 @@ Use this when:
 
 - integrating with an existing database that already reserves a migrations table name
 - isolating DBWarden metadata under a project-specific convention
+
+### `seed_table`
+
+Name of the table DBWarden uses to record applied seeds.
+
+- Defaults to `_dbwarden_seeds`
+- Must be a valid SQL identifier
+- Applies per database entry
+
+**Example:**
+
+```python
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://localhost/myapp",
+    seed_table="custom_seeds",
+)
+```
+
+Use this when integrating with an existing database that already reserves the seed table name.
 
 ### `dev_database_type` and `dev_database_url`
 
@@ -409,6 +433,7 @@ analytics = database_config(
 | `database_url_async` |  No | `None` | Async sessions (FastAPI) |
 | `default` |  No | `False` | Mark one database as default |
 | `migrations_dir` |  No | `migrations/<name>` | Custom migration directory |
+| `seed_table` |  No | `_dbwarden_seeds` | Custom seed tracking table |
 | `model_paths` |  Conditional | `None` | Multi-database or explicit discovery |
 | `dev_database_type` |  No | `None` | Local development |
 | `dev_database_url` |  No | `None` | Local development |

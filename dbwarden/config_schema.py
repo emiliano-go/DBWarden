@@ -73,6 +73,12 @@ def _validate_migration_table(_self, _attribute, value: str | None) -> None:
     _validate_identifier_field("migration_table", value)
 
 
+def _validate_seed_table(_self, _attribute, value: str | None) -> None:
+    if value is None:
+        return
+    _validate_identifier_field("seed_table", value)
+
+
 @define(slots=False)
 class DatabaseEntry:
     database_name: str = field(validator=_validate_database_name)
@@ -93,6 +99,7 @@ class DatabaseEntry:
     dev_database_type: DatabaseType | None = None
     dev_database_url: str | None = None
     overlap_models: bool = False
+    seed_table: str | None = field(default=None, validator=_validate_seed_table)
 
 
 @define(slots=False)

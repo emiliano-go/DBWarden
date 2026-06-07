@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 
 from sqlalchemy import text
+from sqlalchemy.orm import Session as SASession
 
 from dbwarden.engine.checksum import calculate_checksum
 from dbwarden.logging import get_logger
@@ -187,7 +188,7 @@ def apply_single_seed(
                 connection.execute(text(statement))
         elif seed_type == "python":
             seed_fn = load_python_seed(filepath)
-            session = connection  # reuse connection as session-compatible context
+            session = SASession(bind=connection)
             seed_fn(connection, session)
         else:
             raise ValueError(f"Unsupported seed_type: {seed_type}")
