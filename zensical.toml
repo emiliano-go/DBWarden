@@ -95,6 +95,8 @@ name = "DBWarden on PyPI"
   {"SQL Translation" = "sql-translation.md"},
   {Observability = "observability.md"},
   {"Supported Databases" = "databases.md"},
+  {"PostgreSQL / MySQL / SQLite" = "databases/sql-databases.md"},
+  {ClickHouse = "databases/clickhouse.md"},
   {Architecture = "architecture-deep-dive.md"}
 ]
 
@@ -122,7 +124,12 @@ name = "DBWarden on PyPI"
   {init = "commands/init.md"},
   {"make-migrations" = "commands/make-migrations.md"},
   {migrate = "commands/migrate.md"},
+  {downgrade = "commands/downgrade.md"},
   {rollback = "commands/rollback.md"},
+  {"make-rollback" = "commands/make-rollback.md"},
+  {"generate-models" = "commands/generate-models.md"},
+  {snapshot = "commands/snapshot.md"},
+  {"schema-snapshots" = "commands/schema-snapshots.md"},
   {status = "commands/status.md"},
   {check = "commands/check.md"},
   {"check-db" = "commands/check-db.md"},

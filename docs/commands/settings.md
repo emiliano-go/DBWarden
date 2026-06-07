@@ -60,12 +60,15 @@ dbwarden settings database-add analytics \
 ### Options
 
 - `--type` — database type (`postgresql`, `sqlite`, `clickhouse`, etc.)
-- `--url` — sync connection URL
+- `--url` / `--database-url-sync` — sync connection URL
+- `--url-async` / `--database-url-async` — async connection URL (required for FastAPI async session support)
 - `--migrations-dir` — custom migrations directory (default: `migrations/<name>`)
+- `--migration-table` — custom migration tracking table name (default: `_dbwarden_migrations`)
 - `--model-path` — model discovery path, repeatable for multiple paths
 - `--dev-type` — database type for dev mode
 - `--dev-url` — connection URL for dev mode
 - `--overlap-models` — allow models shared with another database
+- `--seed-table` — custom seed tracking table name (default: `_dbwarden_seeds`)
 - `--default` — make this the default database
 
 ---

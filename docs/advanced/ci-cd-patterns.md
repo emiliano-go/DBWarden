@@ -136,9 +136,29 @@ deploy:
 
 `resource_group` serializes the migrate job across concurrent pipelines.
 
+## Sandbox testing in PR pipelines
+
+Instead of running against a shared staging database, use `--sandbox`
+to apply migrations to a temporary in-memory SQLite database or a
+Docker-backed instance. This isolates PR checks from each other:
+
+```yaml
+sandbox-check:
+  runs-on: ubuntu-latest
+  if: github.event_name == 'pull_request'
+  steps:
+    - uses: actions/checkout@v4
+    - run: pip install -e ".[migrations,testcontainers]"
+    - name: Apply migrations to sandbox
+      run: dbwarden migrate --sandbox --database primary
+```
+
+The sandbox starts a fresh database, applies all pending migrations,
+reports results, and tears down. It never touches the real database.
+
 ## Dry-run check in PR pipelines
 
-Run a non-destructive check on pull requests without applying migrations:
+Use `--dry-run` to preview SQL without any database access:
 
 ```yaml
 migration-check:
@@ -153,7 +173,39 @@ migration-check:
         DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
 ```
 
-This surfaces "pending migrations exist" warnings in PR checks without modifying the database.
+This surfaces "pending migrations exist" warnings in PR checks without
+modifying the database.
+
+For a deeper check that validates the SQL actually runs, chain
+`--dry-run` before `--sandbox`:
+
+```yaml
+- name: Preview SQL
+  run: dbwarden migrate --dry-run --database primary
+
+- name: Validate in sandbox
+  run: dbwarden migrate --sandbox --database primary
+```
+
+## Plan output in deploy pipelines
+
+The `make-migrations --plan` flag prints the generated migration plan
+as JSON without writing files. Use it in deploy pipelines to capture
+what would be generated as a deploy artifact:
+
+```yaml
+- name: Generate migration plan
+  run: dbwarden make-migrations --database primary --plan > plan.json
+
+- name: Upload plan artifact
+  uses: actions/upload-artifact@v4
+  with:
+    name: migration-plan-${{ github.sha }}
+    path: plan.json
+```
+
+The plan JSON includes detected changes, operation counts, and
+auto-generated migration names.
 
 ## Exit codes
 

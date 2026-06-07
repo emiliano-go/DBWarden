@@ -85,6 +85,33 @@ dbwarden new "fix index on users" --database primary
 
 Never. A checksum mismatch means recorded history diverges from what is on disk. Even if the change appears harmless, proceeding without resolving the mismatch means your migration history is untrustworthy.
 
+## Schema snapshot checksums
+
+DBWarden also writes a **schema snapshot** after each migration —
+a JSON file at `dbwarden/schemas/<migration_id>.schema.json`. Each
+snapshot contains a `checksum` field computed from the full snapshot
+content via SHA-256, plus a `previous_checksum` field linking it to
+the prior snapshot:
+
+```json
+{
+  "tables": { ... },
+  "checksum": "abc123...",
+  "previous_checksum": "def456..."
+}
+```
+
+Snapshots are written atomically (write to temp file, verify, rename)
+and read with integrity validation — if the file content doesn't match
+the stored checksum, the snapshot is rejected.
+
+The snapshot checksum chain serves a different purpose from the
+migration checksum. A migration checksum tells you a specific SQL
+file hasn't changed. A snapshot checksum tells you the full schema
+state at a given point is intact. If a snapshot is corrupted or
+manually edited, `find_latest_snapshot()` falls back to the previous
+intact snapshot.
+
 ## Preventing mismatches
 
 - Treat versioned migration files as immutable once applied to any shared environment

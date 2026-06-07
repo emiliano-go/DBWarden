@@ -128,4 +128,68 @@ concurrency:
 
 `cancel-in-progress: false` queues the second run instead of cancelling it, which avoids orphaned locks from killed jobs.
 
-See also: [Safe Deployment](safe-deployment.md) | [CI/CD Patterns](ci-cd-patterns.md) | [`lock` commands](../commands/lock.md)
+### 6. Confirm status
+
+Run `dbwarden status` to verify no pending migrations remain:
+
+```bash
+dbwarden status --database primary
+```
+
+## Distributed locking with Redis
+
+For multi-instance deployments where multiple application replicas could
+trigger migrations concurrently, DBWarden provides a Redis-backed
+distributed lock through `dbwarden.fastapi.lock`:
+
+```python
+from dbwarden.fastapi import migration_lock
+
+# Within a FastAPI route or lifespan:
+async with migration_lock() as locked:
+    if locked:
+        await run_migration()
+```
+
+The Redis lock uses `SETNX` + `EXPIRE` with a default TTL of 60 seconds.
+If the application crashes while holding the lock, Redis releases it
+automatically after the TTL expires. Long-running migrations should
+specify a custom TTL or implement lock extension.
+
+The lock is also used internally by the `POST /migrate` FastAPI endpoint
+to serialize migration requests across application instances.
+
+### Database-level vs Redis lock
+
+| Aspect | Database lock | Redis lock |
+|--------|---------------|------------|
+| Scope | CLI commands (`migrate`, `seed`) | FastAPI `POST /migrate` endpoint |
+| Storage | `_dbwarden_lock` table in the target database | Redis key |
+| TTL | No TTL — manual `unlock` required after crash | 60-second default TTL |
+| Failure mode | Blocks other CLI commands until released | Auto-released after TTL |
+| External dependency | None (uses the database itself) | Redis required |
+
+Both locks can be used independently or together — they guard different
+entry points. The database lock protects the CLI; the Redis lock
+protects the FastAPI endpoint.
+
+## Lifespan integration
+
+The `dbwarden_lifespan` context manager wraps migration logic and
+engine disposal into a single FastAPI-compatible lifespan. When using
+the Redis lock in a lifespan, acquire the lock before entering the
+migration context:
+
+```python
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from dbwarden.fastapi import dbwarden_lifespan, migration_lock
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with migration_lock():
+        async with dbwarden_lifespan(mode="migrate", allow_in_production=True):
+            yield
+```
+
+See also: [Safe Deployment](safe-deployment.md) | [CI/CD Patterns](ci-cd-patterns.md) | [`lock` commands](../commands/lock.md) | [FastAPI Lifespan](../fastapi/index.md)
