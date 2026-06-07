@@ -10,10 +10,12 @@ from dbwarden.commands import (
     handle_database_list,
     handle_database_remove,
     handle_diff,
+    handle_downgrade,
     handle_history,
     handle_init,
     handle_lock_status,
     handle_make_migrations,
+    handle_make_rollback,
     handle_migrate,
     handle_new,
     handle_rollback,
@@ -21,6 +23,7 @@ from dbwarden.commands import (
     handle_seed_create,
     handle_seed_list,
     handle_seed_rollback,
+    handle_snapshot,
     handle_squash,
     handle_status,
     handle_unlock,
@@ -331,6 +334,45 @@ def rollback(
     handle_rollback(
         count=count, to_version=to_version, verbose=verbose, database=database
     )
+
+
+@app.command()
+def downgrade(
+    to_version: str = typer.Option(
+        ..., "--to", "-t", help="Target version to downgrade to"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
+    database: str | None = typer.Option(
+        None, "--database", "-d", help="Target database name"
+    ),
+):
+    """Downgrade to a specific migration version by reverting applied migrations."""
+    validate_directory()
+    handle_downgrade(to_version=to_version, verbose=verbose, database=database)
+
+
+@app.command()
+def make_rollback(
+    migration_file: str = typer.Argument(
+        ..., help="Path to migration SQL file"
+    ),
+):
+    """Generate a rollback SQL file for a given migration file."""
+    handle_make_rollback(migration_file=migration_file)
+
+
+@app.command()
+def snapshot(
+    table_name: str = typer.Argument(..., help="Table name to snapshot"),
+    database: str | None = typer.Option(
+        None, "--database", "-d", help="Target database name"
+    ),
+):
+    """Snapshot the DDL schema of a specific table."""
+    validate_directory()
+    handle_snapshot(table_name=table_name, database=database)
 
 
 @app.command()

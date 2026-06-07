@@ -1,0 +1,88 @@
+from __future__ import annotations
+
+from dbwarden.config import get_database
+from dbwarden.database.connection import get_db_connection
+from dbwarden.output import console
+
+
+def snapshot_cmd(
+    table_name: str,
+    database: str | None = None,
+) -> None:
+    config = get_database(database)
+    db_type = config.database_type
+
+    with get_db_connection(database) as connection:
+        if db_type == "clickhouse":
+            _snapshot_clickhouse(connection, table_name)
+        else:
+            _snapshot_generic(connection, table_name)
+
+
+def _snapshot_generic(connection, table_name: str) -> None:
+    from sqlalchemy import inspect
+
+    inspector = inspect(connection)
+    all_tables = inspector.get_table_names()
+    if table_name not in all_tables:
+        console.print(f"Table '{table_name}' not found in database.", style="red")
+        return
+
+    columns = inspector.get_columns(table_name)
+    indexes = inspector.get_indexes(table_name)
+    foreign_keys = inspector.get_foreign_keys(table_name)
+
+    lines = [f"CREATE TABLE {table_name} ("]
+    col_defs = []
+    for col in columns:
+        col_type = str(col["type"])
+        nullable = "" if col.get("nullable", True) else " NOT NULL"
+        default = ""
+        if col.get("default") is not None and str(col["default"]) != "None":
+            default = f" DEFAULT {col['default']}"
+        col_defs.append(f"    {col['name']} {col_type}{nullable}{default}")
+    lines.append(",\n".join(col_defs))
+    lines.append(");")
+
+    console.print("\n".join(lines), style="white", markup=False)
+
+    if indexes:
+        console.print("\n-- Indexes:", style="dim")
+        for idx in indexes:
+            cols = ", ".join(idx["column_names"])
+            unique = "UNIQUE " if idx.get("unique") else ""
+            console.print(
+                f"CREATE {unique}INDEX {idx['name']} ON {table_name} ({cols});",
+                style="white",
+                markup=False,
+            )
+
+    if foreign_keys:
+        console.print("\n-- Foreign Keys:", style="dim")
+        for fk in foreign_keys:
+            cols = ", ".join(fk["constrained_columns"])
+            ref_cols = ", ".join(fk["referred_columns"])
+            console.print(
+                f"ALTER TABLE {table_name} ADD CONSTRAINT {fk['name']} "
+                f"FOREIGN KEY ({cols}) REFERENCES {fk['referred_table']} ({ref_cols});",
+                style="white",
+                markup=False,
+            )
+
+
+def _snapshot_clickhouse(connection, table_name: str) -> None:
+    from sqlalchemy import text
+
+    result = connection.execute(
+        text(
+            "SELECT create_table_query FROM system.tables "
+            "WHERE database = currentDatabase() AND name = :name"
+        ),
+        parameters={"name": table_name},
+    )
+    row = result.fetchone()
+    if not row:
+        console.print(f"Table '{table_name}' not found in database.", style="red")
+        return
+
+    console.print(row.create_table_query, style="white", markup=False)
