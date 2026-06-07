@@ -62,23 +62,6 @@ If a type cannot be translated safely:
 - non-strict mode: fallback to `TEXT` + warning
 - strict mode: fail migration generation
 
-## Type Translation Behavior
-
-DBWarden maps many backend-specific types to SQLite-compatible types.
-
-Examples:
-
-- `UUID` -> `TEXT`
-- `JSON` / `JSONB` -> `TEXT`
-- `TIMESTAMPTZ` -> `DATETIME`
-- `SERIAL` / `BIGSERIAL` -> `INTEGER`
-- `Nullable(UInt64)` (ClickHouse) -> `INTEGER`
-
-For unsupported or unknown types that cannot be converted safely:
-
-- DBWarden falls back to `TEXT`
-- Logs a warning indicating the fallback
-
 ## Default expression handling
 
 Backend expressions such as `now()` or `gen_random_uuid()` may not have direct SQLite equivalents.
@@ -86,18 +69,6 @@ Backend expressions such as `now()` or `gen_random_uuid()` may not have direct S
 In non-strict mode, unsupported defaults are dropped with warning.
 
 In strict mode, unsupported defaults fail generation.
-
-## Default Expression Translation
-
-DBWarden also handles unsupported default expressions.
-
-Examples of expressions that may be removed for SQLite compatibility:
-
-- `now()`
-- `gen_random_uuid()`
-- sequence-based defaults (like `nextval(...)`)
-
-In non-strict mode, unsupported defaults are removed and a warning is logged.
 
 ## Strict Translation Mode
 
@@ -122,31 +93,6 @@ Use this when you want to catch every lossy conversion early.
 
 This balances speed and correctness.
 
-## Recommended Setup
-
-For fast local testing and predictable developer workflows, use SQLite as your dev database:
-
-```python
-from dbwarden import database_config
-
-
-primary = database_config(
-    database_name="primary",
-    default=True,
-    database_type="postgresql",
-    database_url_sync="postgresql://user:password@localhost:5432/main",
-    dev_database_type="sqlite",
-    dev_database_url="sqlite:///./development.db",
-)
-```
-
-Then run development commands with:
-
-```bash
-dbwarden --dev migrate -d primary
-dbwarden --dev make-migrations "add indexes" -d primary
-```
-
 ## Troubleshooting
 
 `--dev mode is enabled, but database '<name>' has no dev_database_url configured`:
@@ -168,7 +114,4 @@ Generated SQL differs from production expectations:
 - Some backend features cannot be represented exactly in SQLite.
 - For production accuracy, always test migrations against your production-like database too.
 
-## Navigation
 
-- Previous: [Migration File Format](migration-files.md)
-- Next: [Migration Locking](advanced/migration-locking.md)
