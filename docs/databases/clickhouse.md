@@ -90,7 +90,15 @@ Table recreation is typically required to add or remove FKs in ClickHouse.
 
 ### Indexes
 
-ClickHouse uses a different indexing model (skip indices, bloom filters) that does not map to standard `CREATE INDEX`. Index add/drop operations for ClickHouse emit a comment.
+ClickHouse uses a different indexing model (skip indices, bloom filters) that does not map to standard `CREATE INDEX`.
+
+When a model `Index` has `clickhouse_type` set in `Index.info` (e.g., `info={"clickhouse_type": "minmax", "clickhouse_granularity": 3}`), DBWarden generates real ClickHouse DDL:
+
+```sql
+ALTER TABLE table ADD INDEX idx_name (col1, col2) TYPE minmax GRANULARITY 3
+```
+
+If `clickhouse_type` is not specified, index add/drop operations emit a comment placeholder instead.
 
 ### Safe Type Change
 

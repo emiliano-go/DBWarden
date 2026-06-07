@@ -296,6 +296,11 @@ def make_migrations(
         "--rename-table",
         help="Declare a table rename as old_table:new_table. Repeatable.",
     ),
+    concurrent: bool = typer.Option(
+        True,
+        "--concurrent/--no-concurrent",
+        help="Use CREATE INDEX CONCURRENTLY on PostgreSQL (disable inside transactions)",
+    ),
 ):
     """Auto-generate SQL migration from SQLAlchemy models."""
     validate_directory()
@@ -307,6 +312,7 @@ def make_migrations(
         rename_flags=rename,
         safe_type_change=safe_type_change,
         rename_table_flags=rename_table,
+        concurrent=concurrent,
     )
 
 

@@ -36,6 +36,7 @@ dbwarden make-migrations --database primary --safe-type-change
 - `--rename` — Repeatable. Declare a column rename in the format `table.old_name:new_name`. See [Rename Detection](#rename-detection) below.
 - `--rename-table` — Repeatable. Declare a table rename in the format `old_table:new_table`. See [Table Rename Detection](#table-rename-detection) below.
 - `--safe-type-change` — Use a multi-step strategy for type changes: add a temporary column, data migration comment, verification step, then drop-and-rename. Useful for databases where `ALTER COLUMN TYPE` would lock the table.
+- `--concurrent` / `--no-concurrent` — Enable or disable `CREATE INDEX CONCURRENTLY` for PostgreSQL (default: `--concurrent`). Use `--no-concurrent` when the migration runs inside a transaction block.
 
 ## Schema Snapshots
 
@@ -333,15 +334,33 @@ FKs are compared by content (columns, referenced table, referenced columns), not
 | **Index added** | Index present in model but absent from snapshot indexes | `CREATE [UNIQUE] INDEX ... ON table (columns)` |
 | **Index dropped** | Index present in snapshot but absent from model indexes | `DROP INDEX ...` |
 
-Indexes are compared by `(frozenset(columns), unique)`, not by name. Two indexes on the same columns with the same uniqueness flag are treated as identical regardless of name.
+**Full-content comparison:** Indexes are compared by **all** of these attributes, not just columns + unique. Any difference triggers a drop+add:
+
+| Attribute | SQL Clause | Backend | Example |
+|-----------|-----------|---------|---------|
+| `using` | `USING <method>` | PostgreSQL, SQLite (partial) | `USING gin`, `USING gist`, `USING hash` |
+| `unique` | `UNIQUE` | All | `CREATE UNIQUE INDEX` |
+| `where` | `WHERE <predicate>` | PostgreSQL | `WHERE status = 'active'` |
+| `include` | `INCLUDE (<cols>)` | PostgreSQL | `INCLUDE (email, name)` |
+| `with_params` | `WITH (<params>)` | PostgreSQL | `WITH (fillfactor = 70)` |
+| `tablespace` | `TABLESPACE <name>` | PostgreSQL | `TABLESPACE fast_space` |
+| `nulls_not_distinct` | `NULLS NOT DISTINCT` | PostgreSQL 15+ | On unique indexes |
+| `column_sorting` | Per-column `ASC/DESC NULLS FIRST/LAST` | PostgreSQL | `col1 DESC NULLS LAST, col2 ASC` |
+| `clickhouse_type` | `TYPE <type>` | ClickHouse | `TYPE minmax`, `TYPE bloom_filter` |
+| `clickhouse_granularity` | `GRANULARITY <n>` | ClickHouse | `GRANULARITY 3` |
+| `concurrently` | `CONCURRENTLY` | PostgreSQL | `--concurrent` / `--no-concurrent` |
+
+Omitted attributes or `None`-valued attributes are treated as defaults (btree, no partial, no INCLUDE, etc.), so a plain `Index("ix", "col")` produces the same signature across versions.
 
 **Name generation:** Auto-generated index names follow the pattern:
 - `idx_{table}_{col1}_{col2}` for non-unique indexes
 - `uq_{table}_{col1}_{col2}` for unique indexes
+- Non-btree `USING` methods append a suffix: `idx_{table}_{col}_{method}`
 
 **Backend specifics:**
-- PostgreSQL uses `CREATE INDEX CONCURRENTLY` for non-blocking index creation
-- SQLite uses standard `CREATE INDEX`
+- PostgreSQL uses `CREATE INDEX CONCURRENTLY` by default (`--concurrent`). Use `--no-concurrent` inside transaction blocks.
+- SQLite and MySQL use standard `CREATE INDEX`.
+- ClickHouse generates `ALTER TABLE ... ADD INDEX ... TYPE <type> GRANULARITY <n>` when `clickhouse_type` is set; otherwise emits a comment.
 
 ## Statement ordering
 

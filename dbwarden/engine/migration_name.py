@@ -8,6 +8,7 @@ class Change:
     table: str
     target: Optional[str] = None
     resolved_from: Optional[str] = None
+    index_type: Optional[str] = None
 
 
 def autogenerate_migration_name(changes: list[Change]) -> str:
@@ -31,7 +32,10 @@ def autogenerate_migration_name(changes: list[Change]) -> str:
 
 def _single_change(change: Change) -> str:
     if change.target:
-        return _truncate(f"{change.operation}_{change.table}_{change.target}")
+        target = change.target
+        if change.index_type and change.index_type != "btree":
+            target = f"{target}_{change.index_type}"
+        return _truncate(f"{change.operation}_{change.table}_{target}")
     return _truncate(f"{change.operation}_{change.table}")
 
 

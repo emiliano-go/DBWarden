@@ -256,6 +256,7 @@ def make_migrations_cmd(
     rename_flags: list[str] | None = None,
     safe_type_change: bool = False,
     rename_table_flags: list[str] | None = None,
+    concurrent: bool = True,
 ) -> None:
     """
     Auto-generate SQL migration from SQLAlchemy models.
@@ -268,6 +269,7 @@ def make_migrations_cmd(
         rename_flags: List of user-supplied --rename flag strings.
         safe_type_change: Use multi-step safe type change strategy.
         rename_table_flags: List of user-supplied --rename-table flag strings.
+        concurrent: Use CREATE INDEX CONCURRENTLY on PostgreSQL.
     """
     logger = get_logger()
 
@@ -434,6 +436,7 @@ def make_migrations_cmd(
         safe_type_change=safe_type_change,
         confirmed_table_intents=confirmed_table_intents,
         table_resolved_from_map=table_resolved_from_map,
+        concurrent=concurrent,
     )
 
     safe_desc = _resolve_migration_description(description, changes)
@@ -565,6 +568,7 @@ def generate_migration_sql(
     safe_type_change: bool = False,
     confirmed_table_intents: set[tuple[str, str]] | None = None,
     table_resolved_from_map: dict[tuple[str, str], str] | None = None,
+    concurrent: bool = True,
 ) -> tuple[str, str, list[Change]]:
     """
     Generate upgrade and rollback SQL from table definitions.
@@ -633,6 +637,7 @@ def generate_migration_sql(
             upgrade_sql, rollback_sql, changes = snapshot_diff_to_sql(
                 upgrade_ops, rollback_ops, database=database, db_name=db_name,
                 safe_type_change=safe_type_change,
+                concurrent=concurrent,
             )
         except Exception:
             snapshot = None
