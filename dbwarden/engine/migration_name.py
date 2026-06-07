@@ -131,6 +131,9 @@ def _pluralize(operation: str) -> str:
         "drop_foreign_key": "drop_foreign_keys",
         "add_constraint": "add_constraints",
         "drop_constraint": "drop_constraints",
+        "alter_column_type": "alter_column_types",
+        "alter_column_nullable": "alter_column_nullables",
+        "alter_column_default": "alter_column_defaults",
     }
     return singular_to_plural.get(operation, operation + "s")
 
@@ -143,7 +146,10 @@ def _truncate(name: str) -> str:
     op_words = {"add", "drop", "alter", "create", "rename", "adds", "drops", "alters", "creates", "renames",
                "add_columns", "drop_columns", "rename_columns", "create_tables", "drop_tables",
                "add_indexes", "drop_indexes", "add_foreign_keys", "drop_foreign_keys",
-               "add_constraints", "drop_constraints"}
+               "add_constraints", "drop_constraints",
+               "alter_column_type", "alter_column_types",
+               "alter_column_nullable", "alter_column_nullables",
+               "alter_column_default", "alter_column_defaults"}
     
     operation = []
     identifiers = []

@@ -78,6 +78,8 @@ def handle_make_migrations(
     database: str | None = None,
     output_plan: bool = False,
     rename_flags: list[str] | None = None,
+    safe_type_change: bool = False,
+    rename_table_flags: list[str] | None = None,
 ) -> None:
     """Handle make-migrations command."""
     make_migrations_cmd(
@@ -86,6 +88,8 @@ def handle_make_migrations(
         database=database,
         output_plan=output_plan,
         rename_flags=rename_flags,
+        safe_type_change=safe_type_change,
+        rename_table_flags=rename_table_flags,
     )
 
 

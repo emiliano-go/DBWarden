@@ -5,10 +5,60 @@ import json
 import os
 import re
 import tempfile
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from enum import IntEnum
 from typing import Any
 
 from dbwarden.engine.model_discovery import ModelColumn, ModelTable
+
+
+class StatementOrder(IntEnum):
+    RENAME_TABLE = 0
+    RENAME_COLUMN = 1
+    ALTER_COLUMN_TYPE = 2
+    ALTER_COLUMN_NULLABLE = 3
+    ALTER_COLUMN_DEFAULT = 4
+    CREATE_TABLE = 5
+    ADD_COLUMN = 6
+    ALTER_FOREIGN_KEY = 7
+    ALTER_INDEX = 8
+    DROP_COLUMN = 9
+    DROP_TABLE = 10
+
+
+@dataclass
+class TableRenameIntent:
+    old_table: str
+    new_table: str
+
+
+@dataclass
+class MigrationStatement:
+    order: StatementOrder
+    upgrade_sql: str
+    rollback_sql: str
+
+
+def _assemble_migration(
+    statements: list[MigrationStatement],
+) -> tuple[str, str]:
+    upgrade_parts: list[str] = []
+    rollback_parts: list[str] = []
+    for stmt in sorted(statements, key=lambda s: s.order):
+        upgrade_parts.append(stmt.upgrade_sql)
+        rollback_parts.append(stmt.rollback_sql)
+    rollback_parts.reverse()
+    return "\n\n".join(upgrade_parts), "\n\n".join(rollback_parts)
+
+
+def _get_backend(db_name: str | None = None) -> str:
+    try:
+        from dbwarden.config import get_database
+        config = get_database(db_name)
+        return config.database_type
+    except Exception:
+        return "sqlite"
 
 
 TYPE_NORMALIZATION_MAP: dict[str, str | None] = {
@@ -76,6 +126,77 @@ def normalize_type(raw_type: str) -> dict[str, Any]:
     if fallback_match:
         return {"type": raw_type.strip(), "raw": True}
     return {"type": raw_type.strip(), "raw": True}
+
+
+def _build_alter_type_sql(
+    table: str,
+    column: str,
+    new_type: str,
+    backend: str,
+) -> tuple[str, str]:
+    if backend == "postgresql":
+        upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {new_type}"
+        rollback = f"-- ALTER TABLE {table} ALTER COLUMN {column} TYPE <original_type>"
+    elif backend in ("mysql", "mariadb"):
+        upgrade = f"ALTER TABLE {table} MODIFY COLUMN {column} {new_type}"
+        rollback = f"-- ALTER TABLE {table} MODIFY COLUMN {column} <original_type>"
+    elif backend == "sqlite":
+        upgrade = (
+            f"-- SQLite does not support ALTER COLUMN TYPE.\n"
+            f"-- Use 'dbwarden new' to write a manual migration for:\n"
+            f"-- ALTER TABLE {table} ALTER COLUMN {column} TYPE {new_type}"
+        )
+        rollback = f"-- ALTER TABLE {table} ALTER COLUMN {column} TYPE <original_type>"
+    else:
+        upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {new_type}"
+        rollback = f"-- ALTER TABLE {table} ALTER COLUMN {column} TYPE <original_type>"
+    return upgrade, rollback
+
+
+def _build_alter_nullable_sql(
+    table: str,
+    column: str,
+    nullable: bool,
+    col_type: str,
+    backend: str,
+) -> tuple[str, str]:
+    if backend == "postgresql":
+        if nullable:
+            upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} DROP NOT NULL"
+            rollback = f"ALTER TABLE {table} ALTER COLUMN {column} SET NOT NULL"
+        else:
+            upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} SET NOT NULL"
+            rollback = f"ALTER TABLE {table} ALTER COLUMN {column} DROP NOT NULL"
+    elif backend in ("mysql", "mariadb"):
+        null_clause = "NULL" if nullable else "NOT NULL"
+        upgrade = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type} {null_clause}"
+        rollback = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type} {'NOT NULL' if nullable else 'NULL'}"
+    elif backend == "sqlite":
+        upgrade = f"-- SQLite: ALTER TABLE {table} ALTER COLUMN {column} {'DROP' if nullable else 'SET'} NOT NULL (not supported)"
+        rollback = f"-- SQLite: ALTER TABLE {table} ALTER COLUMN {column} {'SET' if nullable else 'DROP'} NOT NULL (not supported)"
+    else:
+        if nullable:
+            upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} DROP NOT NULL"
+            rollback = f"ALTER TABLE {table} ALTER COLUMN {column} SET NOT NULL"
+        else:
+            upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} SET NOT NULL"
+            rollback = f"ALTER TABLE {table} ALTER COLUMN {column} DROP NOT NULL"
+    return upgrade, rollback
+
+
+def _build_alter_default_sql(
+    table: str,
+    column: str,
+    default: Any,
+    backend: str,
+) -> tuple[str, str]:
+    if default is not None:
+        upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT {default}"
+        rollback = f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT"
+    else:
+        upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT"
+        rollback = f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT <original_default>"
+    return upgrade, rollback
 
 
 def _is_autoincrement(column: dict[str, Any]) -> bool:
@@ -439,6 +560,61 @@ def detect_renames(
     return renames
 
 
+def _compute_table_overlap(
+    dropped_table: str,
+    added_table: str,
+    snapshot: dict[str, Any],
+    model_tables: list[ModelTable],
+) -> float:
+    snap_cols = snapshot["tables"][dropped_table]["columns"]
+    model_table = next((t for t in model_tables if t.name == added_table), None)
+    if model_table is None:
+        return 0.0
+
+    model_cols = {
+        col.name.lower(): normalize_type(col.type)["type"]
+        for col in model_table.columns
+    }
+    snap_cols_normalized = {
+        name: col.get("type", "")
+        for name, col in snap_cols.items()
+    }
+
+    matches = sum(
+        1 for name, typ in model_cols.items()
+        if snap_cols_normalized.get(name) == typ
+    )
+    max_cols = max(len(model_cols), len(snap_cols_normalized))
+    return matches / max_cols if max_cols > 0 else 0.0
+
+
+RENAME_TABLE_OVERLAP_THRESHOLD = 0.6
+
+
+def _rename_table_sql(intent: TableRenameIntent, backend: str) -> MigrationStatement:
+    if backend == "clickhouse":
+        return MigrationStatement(
+            order=StatementOrder.RENAME_TABLE,
+            upgrade_sql=(
+                f"-- ClickHouse does not support ALTER TABLE RENAME.\n"
+                f"-- Use 'dbwarden new' to write a manual migration:\n"
+                f"-- RENAME TABLE {intent.old_table} TO {intent.new_table};"
+            ),
+            rollback_sql=(
+                f"-- RENAME TABLE {intent.new_table} TO {intent.old_table};"
+            ),
+        )
+
+    upgrade = f"ALTER TABLE {intent.old_table} RENAME TO {intent.new_table};"
+    rollback = f"ALTER TABLE {intent.new_table} RENAME TO {intent.old_table};"
+
+    return MigrationStatement(
+        order=StatementOrder.RENAME_TABLE,
+        upgrade_sql=upgrade,
+        rollback_sql=rollback,
+    )
+
+
 def diff_models_against_snapshot(
     model_tables: list[ModelTable],
     snapshot: dict[str, Any],
@@ -510,6 +686,62 @@ def diff_models_against_snapshot(
                 "old_name": new_name,
                 "new_name": old_name,
             })
+
+        for col_name in snap_columns:
+            if col_name not in model_columns:
+                continue
+            if col_name in renamed_old or col_name in renamed_new:
+                continue
+            snap_col = snap_columns[col_name]
+            model_col = model_columns[col_name]
+            snap_type = normalize_type(snap_col.get("type", ""))["type"]
+            model_type = normalize_type(str(model_col.type))["type"]
+            if snap_type != model_type:
+                upgrade_ops.append({
+                    "type": "alter_column_type",
+                    "table": table.name,
+                    "column": col_name,
+                    "snap_type": snap_col.get("type", ""),
+                    "model_type": model_col.type,
+                })
+                rollback_ops.append({
+                    "type": "alter_column_type",
+                    "table": table.name,
+                    "column": col_name,
+                    "snap_type": snap_col.get("type", ""),
+                    "model_type": model_col.type,
+                })
+            snap_nullable = snap_col.get("nullable", True)
+            if snap_nullable != model_col.nullable:
+                upgrade_ops.append({
+                    "type": "alter_column_nullable",
+                    "table": table.name,
+                    "column": col_name,
+                    "nullable": model_col.nullable,
+                    "col_type": model_col.type,
+                })
+                rollback_ops.append({
+                    "type": "alter_column_nullable",
+                    "table": table.name,
+                    "column": col_name,
+                    "nullable": snap_nullable,
+                    "col_type": snap_col.get("type", ""),
+                })
+            snap_default = snap_col.get("default")
+            model_default = model_col.default
+            if snap_default != model_default:
+                upgrade_ops.append({
+                    "type": "alter_column_default",
+                    "table": table.name,
+                    "column": col_name,
+                    "default": model_default,
+                })
+                rollback_ops.append({
+                    "type": "alter_column_default",
+                    "table": table.name,
+                    "column": col_name,
+                    "default": snap_default,
+                })
 
         for col_name, col_def in dropped_cols:
             if col_name in renamed_old:
@@ -632,6 +864,7 @@ def snapshot_diff_to_sql(
     rollback_ops: list[dict[str, Any]],
     database: str | None = None,
     db_name: str | None = None,
+    safe_type_change: bool = False,
 ) -> tuple[str, str, list[Any]]:
     from dbwarden.engine.model_discovery import (
         generate_add_column_sql,
@@ -640,27 +873,42 @@ def snapshot_diff_to_sql(
     )
     from dbwarden.engine.migration_name import Change
 
-    upgrade_parts: list[str] = []
-    rollback_parts: list[str] = []
+    statements: list[MigrationStatement] = []
     changes: list[Change] = []
+    backend = _get_backend(db_name)
 
     for op in upgrade_ops:
-        if op["type"] == "create_table":
+        if op["type"] == "rename_table":
+            intent = TableRenameIntent(old_table=op["old_table"], new_table=op["new_table"])
+            stmt = _rename_table_sql(intent, backend)
+            statements.append(stmt)
+            changes.append(Change(
+                operation="rename_table", table=op["old_table"], target=op["new_table"],
+                resolved_from=op.get("resolved_from"),
+            ))
+        elif op["type"] == "create_table":
             table = _find_model_table(op["table"], db_name=db_name)
             if table:
                 sql = generate_create_table_sql(table, db_name)
-                upgrade_parts.append(sql)
+                statements.append(MigrationStatement(
+                    order=StatementOrder.CREATE_TABLE,
+                    upgrade_sql=sql,
+                    rollback_sql=generate_drop_object_sql(table),
+                ))
                 changes.append(Change(operation="create_table", table=op["table"]))
-            rollback_parts.append(generate_drop_object_sql(
-                _find_model_table(op["table"], db_name=db_name) or ModelTable(name=op["table"], columns=[])
-            ))
         elif op["type"] == "drop_table":
-            upgrade_parts.append(f"DROP TABLE {op['table']}")
-            rollback_parts.append(f"CREATE TABLE {op['table']} (/* restore from snapshot */)")
+            statements.append(MigrationStatement(
+                order=StatementOrder.DROP_TABLE,
+                upgrade_sql=f"DROP TABLE {op['table']}",
+                rollback_sql=f"CREATE TABLE {op['table']} (/* restore from snapshot */)",
+            ))
             changes.append(Change(operation="drop_table", table=op["table"]))
         elif op["type"] == "rename_column":
-            upgrade_parts.append(f"ALTER TABLE {op['table']} RENAME COLUMN {op['old_name']} TO {op['new_name']}")
-            rollback_parts.append(f"ALTER TABLE {op['table']} RENAME COLUMN {op['new_name']} TO {op['old_name']}")
+            statements.append(MigrationStatement(
+                order=StatementOrder.RENAME_COLUMN,
+                upgrade_sql=f"ALTER TABLE {op['table']} RENAME COLUMN {op['old_name']} TO {op['new_name']}",
+                rollback_sql=f"ALTER TABLE {op['table']} RENAME COLUMN {op['new_name']} TO {op['old_name']}",
+            ))
             changes.append(Change(
                 operation="rename_column", table=op["table"], target=op["new_name"],
                 resolved_from=op.get("resolved_from"),
@@ -669,21 +917,108 @@ def snapshot_diff_to_sql(
             model_col = op.get("model_column")
             if model_col:
                 sql = generate_add_column_sql(op["table"], model_col, db_name)
-                upgrade_parts.append(sql)
+                statements.append(MigrationStatement(
+                    order=StatementOrder.ADD_COLUMN,
+                    upgrade_sql=sql,
+                    rollback_sql=f"ALTER TABLE {op['table']} DROP COLUMN {op['column']}",
+                ))
             else:
                 col_def = op.get("definition", {})
-                upgrade_parts.append(
-                    f"ALTER TABLE {op['table']} ADD COLUMN {op['column']} {col_def.get('type', '???')}"
-                )
-            rollback_parts.append(f"ALTER TABLE {op['table']} DROP COLUMN {op['column']}")
+                statements.append(MigrationStatement(
+                    order=StatementOrder.ADD_COLUMN,
+                    upgrade_sql=f"ALTER TABLE {op['table']} ADD COLUMN {op['column']} {col_def.get('type', '???')}",
+                    rollback_sql=f"ALTER TABLE {op['table']} DROP COLUMN {op['column']}",
+                ))
             changes.append(Change(operation="add_column", table=op["table"], target=op["column"]))
         elif op["type"] == "drop_column":
-            upgrade_parts.append(f"ALTER TABLE {op['table']} DROP COLUMN {op['column']}")
-            rollback_parts.append(f"ALTER TABLE {op['table']} ADD COLUMN {op['column']} {op.get('definition', {}).get('type', '???')}")
+            warning = f"-- WARNING: DROPPING COLUMN {op['table']}.{op['column']}\n"
+            statements.append(MigrationStatement(
+                order=StatementOrder.DROP_COLUMN,
+                upgrade_sql=f"{warning}ALTER TABLE {op['table']} DROP COLUMN {op['column']}",
+                rollback_sql=f"ALTER TABLE {op['table']} ADD COLUMN {op['column']} {op.get('definition', {}).get('type', '???')}",
+            ))
             changes.append(Change(operation="drop_column", table=op["table"], target=op["column"]))
+        elif op["type"] == "alter_column_type":
+            model_type = op.get("model_type", "")
+            if safe_type_change:
+                temp_col = f"{op['column']}_new"
+                stmts = _build_safe_type_change_sql(op["table"], op["column"], model_type, backend)
+                for s in stmts:
+                    statements.append(s)
+                changes.append(Change(operation="alter_column_type", table=op["table"], target=op["column"]))
+            else:
+                alter_up, alter_rb = _build_alter_type_sql(op["table"], op["column"], model_type, backend)
+                statements.append(MigrationStatement(
+                    order=StatementOrder.ALTER_COLUMN_TYPE,
+                    upgrade_sql=alter_up,
+                    rollback_sql=alter_rb,
+                ))
+                changes.append(Change(operation="alter_column_type", table=op["table"], target=op["column"]))
+        elif op["type"] == "alter_column_nullable":
+            nullable = op.get("nullable", True)
+            col_type = op.get("col_type", "")
+            null_up, null_rb = _build_alter_nullable_sql(op["table"], op["column"], nullable, col_type, backend)
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_COLUMN_NULLABLE,
+                upgrade_sql=null_up,
+                rollback_sql=null_rb,
+            ))
+            changes.append(Change(operation="alter_column_nullable", table=op["table"], target=op["column"]))
+        elif op["type"] == "alter_column_default":
+            default = op.get("default")
+            def_up, def_rb = _build_alter_default_sql(op["table"], op["column"], default, backend)
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_COLUMN_DEFAULT,
+                upgrade_sql=def_up,
+                rollback_sql=def_rb,
+            ))
+            changes.append(Change(operation="alter_column_default", table=op["table"], target=op["column"]))
 
-    rollback_parts.reverse()
-    return "\n\n".join(upgrade_parts), "\n\n".join(rollback_parts), changes
+    upgrade_sql, rollback_sql = _assemble_migration(statements)
+    return upgrade_sql, rollback_sql, changes
+
+
+def _build_safe_type_change_sql(
+    table: str,
+    column: str,
+    new_type: str,
+    backend: str,
+) -> list[MigrationStatement]:
+    if backend == "sqlite":
+        return [
+            MigrationStatement(
+                order=StatementOrder.ALTER_COLUMN_TYPE,
+                upgrade_sql=(
+                    f"-- SQLite safe type change not supported.\n"
+                    f"-- Manually recreate {table} with new type for {column}."
+                ),
+                rollback_sql="-- (inverse requires manual migration)",
+            ),
+        ]
+
+    temp_col = f"{column}__new"
+    return [
+        MigrationStatement(
+            order=StatementOrder.ADD_COLUMN,
+            upgrade_sql=f"ALTER TABLE {table} ADD COLUMN {temp_col} {new_type}",
+            rollback_sql=f"ALTER TABLE {table} DROP COLUMN {temp_col}",
+        ),
+        MigrationStatement(
+            order=StatementOrder.ALTER_COLUMN_DEFAULT,
+            upgrade_sql=f"-- Data migration needed: UPDATE {table} SET {temp_col} = CAST({column} AS {new_type})",
+            rollback_sql="-- (inverse requires manual migration)",
+        ),
+        MigrationStatement(
+            order=StatementOrder.ALTER_COLUMN_DEFAULT,
+            upgrade_sql=f"-- Manually verify {temp_col} before dropping {column}",
+            rollback_sql="-- (inverse requires manual migration)",
+        ),
+        MigrationStatement(
+            order=StatementOrder.DROP_COLUMN,
+            upgrade_sql=f"-- After verification: ALTER TABLE {table} DROP COLUMN {column}; ALTER TABLE {table} RENAME COLUMN {temp_col} TO {column}",
+            rollback_sql="-- (inverse requires manual migration)",
+        ),
+    ]
 
 
 def _filter_duplicates_from_snapshot_diff(

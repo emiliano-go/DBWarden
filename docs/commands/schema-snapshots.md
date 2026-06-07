@@ -1,0 +1,158 @@
+# Schema Snapshots
+
+Schema snapshots are JSON files that record the full DDL state of a database at the point a migration was applied. They enable offline migration generation, intelligent rename detection, and column-level change detection (type, nullability, default).
+
+## How they work
+
+After each versioned migration is successfully applied by `migrate`, DBWarden extracts the complete schema from the live database and writes it as a `<migration_id>.schema.json` file:
+
+```
+dbwarden/schemas/
+  primary__0001_init.schema.json
+  primary__0002_add_email.schema.json
+  primary__0003_create_posts.schema.json
+```
+
+### Snapshot contents
+
+Each snapshot captures:
+
+```json
+{
+  "format_version": 1,
+  "migration_id": "primary__0003_create_posts",
+  "database_name": "primary",
+  "database_type": "postgresql",
+  "applied_at": "2026-06-07T10:30:00Z",
+  "checksum": "sha256...",
+  "tables": {
+    "users": {
+      "columns": {
+        "id": {
+          "type": "integer",
+          "nullable": false,
+          "primary_key": true,
+          "default": null,
+          "comment": null
+        },
+        "email": {
+          "type": "varchar",
+          "nullable": false,
+          "primary_key": false,
+          "default": null,
+          "comment": null
+        }
+      },
+      "primary_key": ["id"],
+      "comment": null
+    }
+  },
+  "enums": {},
+  "indexes": {},
+  "constraints": {}
+}
+```
+
+### Integrity
+
+Snapshots are self-integrity-checked with a SHA-256 checksum. If a snapshot file is tampered with (manually edited, corrupted), `read_snapshot()` returns `None` and `make-migrations` falls back to the live database.
+
+## Why snapshots?
+
+### Offline diffing
+
+Once the first snapshot exists, `make-migrations` can generate new migrations **without a live database connection**. This is useful in:
+
+- CI pipelines where only model files are available
+- Air-gapped environments
+- Development setups without a full database
+
+### Rename detection (columns)
+
+Rename detection relies on comparing the snapshot's columns against the model's columns:
+
+1. A column present in the snapshot but absent from the model → **dropped**.
+2. A column present in the model but absent from the snapshot → **added**.
+3. If a dropped column and an added column share the same normalized type, they are candidates for a **rename**.
+
+Without snapshots (the legacy live-DB fallback path), rename detection is not possible because the live DB already reflects the current state and has no record of dropped columns.
+
+### Rename detection (tables)
+
+Table renames are detected by comparing tables present in the snapshot but absent from models (dropped) against tables absent from the snapshot but present in models (added). A **column overlap heuristic** computes the ratio of matching column names+types between the two tables. If the ratio is ≥ 0.6, the pair is a rename candidate.
+
+Detected table renames are prompted interactively (TTY) or suggested via the `--rename-table` flag (CI). Confirmed renames emit `ALTER TABLE ... RENAME TO` and are applied to the snapshot before column-level processing, so subsequent column renames reference the new table name.
+
+### Column-level change detection
+
+Snapshots also enable `make-migrations` to detect when a column's **type**, **nullability**, or **default** has changed. For columns present in both the snapshot and the model with the same name, the diff engine compares:
+
+- **Normalized type** — If `varchar` in the snapshot but `text` in the model, an `ALTER COLUMN TYPE` operation is emitted.
+- **Nullable flag** — If nullable differs, `SET NOT NULL` or `DROP NOT NULL` is generated.
+- **Default value** — If the default differs, `SET DEFAULT` or `DROP DEFAULT` is generated.
+
+These operations are emitted only when a snapshot exists. Without a snapshot (the live-DB fallback path), only new and dropped columns are detected.
+
+### Audit trail
+
+Every schema snapshot is an immutable record of the database schema at a specific migration version. You can inspect any historical snapshot to see exactly what the schema looked like.
+
+## How they are created
+
+Snapshots are created automatically by the `migrate` command after applying a versioned migration:
+
+```
+dbwarden migrate --database primary
+```
+
+The snapshot is written **after** all pending migrations have been applied. If the write fails (permission issue, disk full, etc.), a warning is logged but the migration itself is not rolled back. Failure to write a snapshot is non-fatal.
+
+### Snapshots are NOT created for
+
+- `--dry-run` or `--sandbox` runs (no real schema change)
+- Rollback operations (snapshot remains as-is for audit)
+- Repeatable migrations (`RA__`, `ROC__`)
+
+## Rollback and re-apply
+
+- **Rollback does not delete the snapshot.** The snapshot stays as an audit record of what was applied.
+- **Re-applying a migration** overwrites the snapshot with the current schema state.
+
+## Finding the latest snapshot
+
+`make-migrations` uses `find_latest_snapshot()` which scans `dbwarden/schemas/` for snapshot files matching the current database name and picks the one with the highest version prefix (e.g., `0003` > `0002`).
+
+If no snapshot exists for the database, `make-migrations` falls back to diffing against the live database (which does not include rename detection).
+
+## Snapshot lifecycle summary
+
+| Event | Snapshot |
+|-------|----------|
+| First `migrate` | Created after apply |
+| Subsequent `migrate` | Overwritten with latest schema |
+| `rollback` | Unchanged (kept as audit) |
+| Re-apply same version | Overwritten |
+| `--dry-run` / `--sandbox` | Not written |
+| `make-migrations` (snapshot exists) | Read for diff + rename detection |
+| `make-migrations` (no snapshot) | Fallback to live DB diff |
+
+## DB-agnostic type normalization
+
+Column types in the snapshot are normalized to a canonical set so that equivalent types across databases are treated the same:
+
+| Canonical type | Matches |
+|----------------|---------|
+| `integer` | INT, INTEGER, INT4, TINYINT, SMALLINT |
+| `biginteger` | BIGINT, INT8 |
+| `varchar` | VARCHAR, CHARACTER VARYING |
+| `text` | TEXT, LONGTEXT, CLOB |
+| `boolean` | BOOLEAN, BOOL |
+| `timestamp` | TIMESTAMP, DATETIME |
+| `numeric` | NUMERIC, DECIMAL (with precision/scale) |
+| `float` | FLOAT, REAL, DOUBLE |
+| `bytes` | BYTEA, BLOB, BINARY |
+| `uuid` | UUID |
+| `enum` | ENUM |
+| (unknown) | Stored as-is with `"raw": true` |
+
+This normalization is what powers the rename detection — two columns with the same normalized type are candidates for rename, even if their raw SQL type strings differ.

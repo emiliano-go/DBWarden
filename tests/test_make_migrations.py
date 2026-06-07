@@ -6,6 +6,9 @@ from pathlib import Path
 from dbwarden.commands.make_migrations import (
     RenameIntent,
     _parse_rename_flags,
+    _parse_rename_table_flags,
+    _validate_table_rename_intents,
+    _format_table_rename_warning,
     build_migration_plan,
     generate_migration_sql,
     make_migrations_cmd,
@@ -195,3 +198,113 @@ def test_build_plan_operation_omits_resolved_from_when_none():
         upgrade_sql="ALTER TABLE users ADD COLUMN age INTEGER",
     )
     assert "resolved_from" not in plan["operations"][0]
+
+
+def test_parse_rename_table_flags_valid():
+    result = _parse_rename_table_flags(["users:accounts", "posts:articles"])
+    assert len(result) == 2
+    assert result[0] == {"old_table": "users", "new_table": "accounts"}
+    assert result[1] == {"old_table": "posts", "new_table": "articles"}
+
+
+def test_parse_rename_table_flags_invalid_format():
+    import pytest
+    with pytest.raises(ValueError, match="Invalid --rename-table format"):
+        _parse_rename_table_flags(["badformat"])
+
+
+def test_parse_rename_table_flags_empty_parts():
+    import pytest
+    with pytest.raises(ValueError, match="Invalid --rename-table format"):
+        _parse_rename_table_flags(["users:"])
+
+
+def test_validate_table_rename_intents_old_not_in_snapshot():
+    import pytest
+    with pytest.raises(ValueError, match="does not exist"):
+        _validate_table_rename_intents(
+            [{"old_table": "ghost", "new_table": "phantom"}],
+            {"tables": {"users": {"columns": {}}}},
+            {"phantom"},
+        )
+
+
+def test_validate_table_rename_intents_new_already_in_snapshot():
+    import pytest
+    with pytest.raises(ValueError, match="already exists"):
+        _validate_table_rename_intents(
+            [{"old_table": "users", "new_table": "accounts"}],
+            {"tables": {"users": {"columns": {}}, "accounts": {"columns": {}}}},
+            {"accounts"},
+        )
+
+
+def test_validate_table_rename_intents_old_still_in_models():
+    import pytest
+    with pytest.raises(ValueError, match="still present"):
+        _validate_table_rename_intents(
+            [{"old_table": "users", "new_table": "accounts"}],
+            {"tables": {"users": {"columns": {}}}},
+            {"users", "accounts"},
+        )
+
+
+def test_validate_table_rename_intents_new_not_in_models():
+    import pytest
+    with pytest.raises(ValueError, match="not found in models"):
+        _validate_table_rename_intents(
+            [{"old_table": "users", "new_table": "accounts"}],
+            {"tables": {"users": {"columns": {}}}},
+            set(),
+        )
+
+
+def test_validate_table_rename_intents_valid():
+    _validate_table_rename_intents(
+        [{"old_table": "users", "new_table": "accounts"}],
+        {"tables": {"users": {"columns": {}}}},
+        {"accounts"},
+    )
+
+
+def test_format_table_rename_warning():
+    msg = _format_table_rename_warning([("users", "accounts", 0.78)])
+    assert "users" in msg
+    assert "accounts" in msg
+    assert "78%" in msg
+    assert "--rename-table" in msg
+
+
+def test_build_plan_operation_rename_table():
+    plan = build_migration_plan(
+        migration_id="test__0001_rename_table",
+        changes=[
+            Change(operation="rename_table", table="users", target="accounts",
+                   resolved_from="rename_flag"),
+        ],
+        upgrade_sql="ALTER TABLE users RENAME TO accounts",
+    )
+    op = plan["operations"][0]
+    assert op["type"] == "rename_table"
+    assert op["new_name"] == "accounts"
+    assert op["old_table"] == "users"
+    assert op["resolved_from"] == "rename_flag"
+
+
+def test_generate_migration_sql_with_table_rename():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        table = ModelTable(
+            name="accounts",
+            columns=[
+                ModelColumn("id", "INTEGER", False, True, False, None, None),
+            ],
+        )
+        upgrade_sql, rollback_sql, changes = generate_migration_sql(
+            [table],
+            confirmed_table_intents={("users", "accounts")},
+            table_resolved_from_map={("users", "accounts"): "rename_flag"},
+        )
+        assert any(
+            c.operation == "rename_table" and c.target == "accounts"
+            for c in changes
+        )
