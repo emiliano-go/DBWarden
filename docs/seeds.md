@@ -47,7 +47,7 @@ This creates a new file like `seeds/V0001__seed_initial_users.sql` containing a 
 ### Python seed
 
 ```bash
-dbwarden seed create "generate sample data" --database primary --seed-type python
+dbwarden seed create "generate sample data" --database primary --type python
 ```
 
 Creates `seeds/V0001__generate_sample_data.py`:
@@ -202,7 +202,4 @@ The `DBWardenRouter` includes seed status in its `GET /status` response:
 
 See [FastAPI Reference](fastapi/reference.md) for details.
 
-## Navigation
 
-- Previous: [Migration Files](migration-files.md)
-- Next: [Observability](observability.md)
