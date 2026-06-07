@@ -69,6 +69,42 @@ class TestConfig:
             finally:
                 os.chdir(old)
 
+    def test_get_config_uses_custom_seed_table(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                _write_settings(
+                    Path("dbwarden.py"),
+                    [
+                        "from dbwarden import database_config",
+                        "",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./test.db', seed_table='custom_seeds')",
+                    ],
+                )
+                config = get_config()
+                assert config.seed_table == "custom_seeds"
+            finally:
+                os.chdir(old)
+
+    def test_get_config_default_seed_table(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                _write_settings(
+                    Path("dbwarden.py"),
+                    [
+                        "from dbwarden import database_config",
+                        "",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./test.db')",
+                    ],
+                )
+                config = get_config()
+                assert config.seed_table == "_dbwarden_seeds"
+            finally:
+                os.chdir(old)
+
     def test_get_config_with_model_paths(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             old = os.getcwd()

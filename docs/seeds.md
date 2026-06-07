@@ -56,37 +56,37 @@ Creates `seeds/V0001__generate_sample_data.py`:
 """Seed: generate sample data for database: primary."""
 
 
-def seed(connection):
+def seed(connection, session):
     """Populate seed data.
 
     Args:
-        connection: SQLAlchemy connection or ClickHouse client.
+        connection: SQLAlchemy raw DB-API connection.
+        session: SQLAlchemy ORM Session.
     """
-    # Programmatic data generation here
-    pass
+    # Use session for ORM access:
+    # session.add(MyModel(...))
+    # session.flush()
+
+    # Or use connection for raw SQL:
+    # connection.execute("INSERT INTO ...")
 ```
 
-The `seed()` function receives a database connection. Use it to insert data programmatically:
+The `seed()` function receives **two** arguments: a raw SQLAlchemy `Connection` and an ORM `Session` bound to the same transaction. Use the one that fits your style:
 
 ```python
-import random
-from datetime import datetime, timedelta
-
-
-def seed(connection):
-    users = []
+# Using raw connection
+def seed(connection, session):
     for i in range(100):
-        users.append({
-            "name": f"user_{i}",
-            "email": f"user_{i}@example.com",
-            "created_at": datetime.utcnow() - timedelta(days=random.randint(0, 365)),
-        })
-    for user in users:
         connection.execute(
-            "INSERT INTO users (name, email, created_at) VALUES (:name, :email, :created_at)",
-            user,
+            "INSERT INTO users (name) VALUES (:name)",
+            {"name": f"user_{i}"},
         )
-    connection.commit()
+
+# Using ORM session
+def seed(connection, session):
+    for i in range(100):
+        session.add(User(name=f"user_{i}"))
+    session.flush()
 ```
 
 ## Applying seeds
@@ -157,7 +157,17 @@ dbwarden seed rollback --database primary --to-version 0002
 
 ## Seed tracking
 
-DBWarden tracks applied seeds in a `_dbwarden_seeds` table:
+DBWarden tracks applied seeds in a database table (default: `_dbwarden_seeds`). The table name is configurable per-database via the `seed_table` parameter in `database_config(...)`:
+
+```python
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://localhost/myapp",
+    seed_table="custom_seeds",
+)
+```
 
 | Column | Description |
 |--------|-------------|

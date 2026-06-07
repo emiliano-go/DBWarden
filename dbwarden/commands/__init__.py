@@ -37,6 +37,7 @@ def handle_database_add(
     database_type: str | None = None,
     model_paths: list[str] | None = None,
     migrations_dir: str | None = None,
+    seed_table: str | None = None,
     default: bool = False,
 ) -> None:
     """Legacy alias for settings database add."""
@@ -47,6 +48,7 @@ def handle_database_add(
         database_type=database_type,
         url=url,
         migrations_dir=migrations_dir,
+        seed_table=seed_table,
         model_paths=model_paths,
         default=default,
     )
@@ -195,6 +197,8 @@ def handle_settings_database_add_command(
     database_type: str,
     url: str,
     migrations_dir: str | None = None,
+    migration_table: str | None = None,
+    seed_table: str | None = None,
     model_paths: list[str] | None = None,
     dev_type: str | None = None,
     dev_url: str | None = None,
@@ -206,6 +210,8 @@ def handle_settings_database_add_command(
         database_type=database_type,
         url=url,
         migrations_dir=migrations_dir,
+        migration_table=migration_table,
+        seed_table=seed_table,
         model_paths=model_paths,
         dev_type=dev_type,
         dev_url=dev_url,

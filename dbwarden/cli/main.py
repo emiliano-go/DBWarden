@@ -100,6 +100,9 @@ def database_add(
     migrations_dir: str | None = typer.Option(
         None, "--migrations-dir", help="Migration directory"
     ),
+    seed_table: str | None = typer.Option(
+        None, "--seed-table", help="Seed tracking table name",
+    ),
     default: bool = typer.Option(False, "--default", help="Set as default database"),
 ):
     """Add a new database to the configuration."""
@@ -109,6 +112,7 @@ def database_add(
         database_type=database_type,
         model_paths=model_paths,
         migrations_dir=migrations_dir,
+        seed_table=seed_table,
         default=default,
     )
 
@@ -149,6 +153,12 @@ def settings_database_add(
     migrations_dir: str | None = typer.Option(
         None, "--migrations-dir", help="Migrations directory"
     ),
+    migration_table: str | None = typer.Option(
+        None, "--migration-table", help="Migration tracking table name",
+    ),
+    seed_table: str | None = typer.Option(
+        None, "--seed-table", help="Seed tracking table name",
+    ),
     model_paths: list[str] | None = typer.Option(
         None, "--model-path", help="Model path (repeatable)"
     ),
@@ -167,6 +177,8 @@ def settings_database_add(
         database_type=database_type,
         url=url,
         migrations_dir=migrations_dir,
+        migration_table=migration_table,
+        seed_table=seed_table,
         model_paths=model_paths,
         dev_type=dev_type,
         dev_url=dev_url,

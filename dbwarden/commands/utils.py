@@ -38,6 +38,10 @@ def config_cmd() -> None:
             f"    migration_table: {display_value(db, 'migration_table', db.migration_table)}",
             style="white",
         )
+        console.print(
+            f"    seed_table: {display_value(db, 'seed_table', db.seed_table)}",
+            style="white",
+        )
         if db.model_paths:
             console.print(
                 f"    model_paths: {display_value(db, 'model_paths', db.model_paths)}",

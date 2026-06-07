@@ -73,6 +73,7 @@ def _entry_kwargs(entry: DatabaseEntry) -> dict[str, Any]:
         "dev_database_type": entry.dev_database_type,
         "dev_database_url": entry.dev_database_url,
         "overlap_models": entry.overlap_models,
+        "seed_table": entry.seed_table,
     }
 
 
@@ -87,6 +88,7 @@ def _render_entry(entry: DatabaseEntry) -> str:
         "secure_values",
         "migrations_dir",
         "migration_table",
+        "seed_table",
         "model_paths",
         "dev_database_type",
         "dev_database_url",
@@ -175,6 +177,10 @@ def handle_settings_show(database: str | None = None, all_databases: bool = Fals
                 "Migration Table",
                 display_value(db, "migration_table", db.migration_table),
             )
+            _print_field(
+                "Seed Table",
+                display_value(db, "seed_table", db.seed_table),
+            )
             _print_field("Model Paths", display_value(db, "model_paths", db.model_paths))
             _print_field(
                 "Dev Database Type",
@@ -212,6 +218,10 @@ def handle_settings_show(database: str | None = None, all_databases: bool = Fals
         "Migration Table",
         display_value(db, "migration_table", db.migration_table),
     )
+    _print_field(
+        "Seed Table",
+        display_value(db, "seed_table", db.seed_table),
+    )
     _print_field("Model Paths", display_value(db, "model_paths", db.model_paths))
     _print_field(
         "Dev Database Type",
@@ -247,6 +257,7 @@ def handle_settings_database_add(
     url: str,
     migrations_dir: str | None = None,
     migration_table: str | None = None,
+    seed_table: str | None = None,
     model_paths: list[str] | None = None,
     dev_type: str | None = None,
     dev_url: str | None = None,
@@ -268,6 +279,7 @@ def handle_settings_database_add(
             "database_url_sync": url,
             "migrations_dir": migrations_dir,
             "migration_table": migration_table,
+            "seed_table": seed_table,
             "model_paths": model_paths,
             "dev_database_type": dev_type,
             "dev_database_url": dev_url,
