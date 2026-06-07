@@ -11,6 +11,7 @@ from dbwarden.commands import (
     handle_database_remove,
     handle_diff,
     handle_downgrade,
+    handle_generate_models,
     handle_history,
     handle_init,
     handle_lock_status,
@@ -223,6 +224,47 @@ def settings_database_clear_dev(
 ):
     """Clear development database settings."""
     handle_settings_database_clear_dev_command(name)
+
+
+@app.command()
+def generate_models(
+    output: str = typer.Option(
+        "models", "--output", "-o", help="Output directory for generated model files"
+    ),
+    tables: str | None = typer.Option(
+        None, "--tables", help="Comma-separated list of tables to include"
+    ),
+    exclude_tables: str | None = typer.Option(
+        None, "--exclude-tables", help="Comma-separated list of tables to exclude"
+    ),
+    clickhouse_engines: bool = typer.Option(
+        False, "--clickhouse-engines", help="Include ClickHouse engine metadata"
+    ),
+    relationships: bool = typer.Option(
+        False, "--relationships", help="Generate relationship attributes"
+    ),
+    dialect: str | None = typer.Option(
+        None, "--dialect", help="SQL dialect for type mapping (auto-detected by default)"
+    ),
+    single_file: bool = typer.Option(
+        False, "--single-file", help="Generate a single models.py file"
+    ),
+    database: str | None = typer.Option(
+        None, "--database", "-d", help="Target database name"
+    ),
+):
+    """Reverse-engineer SQLAlchemy model code from a live database."""
+    validate_directory()
+    handle_generate_models(
+        output=output,
+        tables=tables,
+        exclude_tables=exclude_tables,
+        clickhouse_engines=clickhouse_engines,
+        relationships=relationships,
+        dialect=dialect,
+        single_file=single_file,
+        database=database,
+    )
 
 
 @app.command()

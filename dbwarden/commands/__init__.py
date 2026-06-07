@@ -2,6 +2,7 @@ from dbwarden.commands.check import check_cmd
 from dbwarden.commands.check_db import check_db_cmd
 from dbwarden.commands.downgrade import downgrade_cmd
 from dbwarden.commands.extra import diff_cmd, lock_status_cmd, squash_cmd, unlock_cmd
+from dbwarden.commands.generate_models import generate_models_cmd
 from dbwarden.commands.history import history_cmd
 from dbwarden.commands.init import init_cmd
 from dbwarden.commands.make_migrations import make_migrations_cmd, new_migration_cmd
@@ -260,6 +261,28 @@ def handle_snapshot(
     database: str | None = None,
 ) -> None:
     snapshot_cmd(table_name=table_name, database=database)
+
+
+def handle_generate_models(
+    output: str = "models",
+    tables: str | None = None,
+    exclude_tables: str | None = None,
+    clickhouse_engines: bool = False,
+    relationships: bool = False,
+    dialect: str | None = None,
+    single_file: bool = False,
+    database: str | None = None,
+) -> None:
+    generate_models_cmd(
+        output=output,
+        tables=tables,
+        exclude_tables=exclude_tables,
+        clickhouse_engines=clickhouse_engines,
+        relationships=relationships,
+        dialect=dialect,
+        single_file=single_file,
+        database=database,
+    )
 
 
 def handle_seed_create(

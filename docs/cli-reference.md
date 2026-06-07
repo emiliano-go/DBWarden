@@ -105,6 +105,17 @@ dbwarden new "backfill" --database primary --version 0042
 
 Options: `--database`, `--version`
 
+### `generate-models`
+
+```bash
+dbwarden generate-models --output ./models/ --database primary
+dbwarden generate-models --output ./models/ --database primary --single-file
+dbwarden generate-models --database primary --tables users,posts
+dbwarden generate-models --database primary --exclude-tables logs,audit
+```
+
+Options: `--output`/`-o` (default `models`), `--tables`, `--exclude-tables`, `--clickhouse-engines`, `--relationships`, `--dialect`, `--single-file`, `--database`/`-d`
+
 ### `squash`
 
 ```bash
