@@ -288,6 +288,11 @@ def migrate_single(
                 db_name=db_name,
             )
 
+            _write_migration_snapshot(
+                db_name=db_name,
+                migration_id=Path(filename).stem,
+            )
+
             duration = time.time() - start_time
             logger.log_migration_end(version, filename, duration)
             versioned_count += 1
@@ -443,6 +448,26 @@ def migrate_cmd(
             dry_run=dry_run,
             sandbox=sandbox,
         )
+
+
+def _write_migration_snapshot(
+    db_name: str | None = None,
+    migration_id: str = "",
+) -> None:
+    from dbwarden.engine.snapshot import extract_full_schema_snapshot, write_snapshot
+
+    try:
+        snapshot = extract_full_schema_snapshot(database=db_name)
+        filepath = write_snapshot(
+            snapshot,
+            database=db_name,
+            migration_id=migration_id,
+        )
+        logger = get_logger(db_name=db_name)
+        logger.info(f"Schema snapshot written: {filepath}")
+    except Exception as exc:
+        logger = get_logger(db_name=db_name)
+        logger.warning(f"Failed to write schema snapshot: {exc}")
 
 
 def _get_filepaths_by_version(

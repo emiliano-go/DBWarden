@@ -105,6 +105,17 @@ dbwarden new "backfill" --database primary --version 0042
 
 Options: `--database`, `--version`
 
+### `generate-models`
+
+```bash
+dbwarden generate-models --output ./models/ --database primary
+dbwarden generate-models --output ./models/ --database primary --single-file
+dbwarden generate-models --database primary --tables users,posts
+dbwarden generate-models --database primary --exclude-tables logs,audit
+```
+
+Options: `--output`/`-o` (default `models`), `--tables`, `--exclude-tables`, `--clickhouse-engines`, `--relationships`, `--dialect`, `--single-file`, `--database`/`-d`
+
 ### `squash`
 
 ```bash
@@ -145,6 +156,30 @@ dbwarden rollback --database primary --to-version 0007
 ```
 
 Options: `--database`, `--count`, `--to-version`, `--verbose`
+
+### `downgrade`
+
+```bash
+dbwarden downgrade --to 0005 --database primary
+```
+
+Options: `--to` (required), `--database`, `--verbose`
+
+### `make-rollback`
+
+```bash
+dbwarden make-rollback migrations/primary__0005_add_table.sql
+```
+
+Generates a `.rollback.sql` file for the given migration file.
+
+### `snapshot`
+
+```bash
+dbwarden snapshot users --database primary
+```
+
+Outputs the DDL schema of the specified table.
 
 ## Seed management
 

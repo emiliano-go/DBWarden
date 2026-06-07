@@ -10,10 +10,13 @@ from dbwarden.commands import (
     handle_database_list,
     handle_database_remove,
     handle_diff,
+    handle_downgrade,
+    handle_generate_models,
     handle_history,
     handle_init,
     handle_lock_status,
     handle_make_migrations,
+    handle_make_rollback,
     handle_migrate,
     handle_new,
     handle_rollback,
@@ -21,6 +24,7 @@ from dbwarden.commands import (
     handle_seed_create,
     handle_seed_list,
     handle_seed_rollback,
+    handle_snapshot,
     handle_squash,
     handle_status,
     handle_unlock,
@@ -223,6 +227,47 @@ def settings_database_clear_dev(
 
 
 @app.command()
+def generate_models(
+    output: str = typer.Option(
+        "models", "--output", "-o", help="Output directory for generated model files"
+    ),
+    tables: str | None = typer.Option(
+        None, "--tables", help="Comma-separated list of tables to include"
+    ),
+    exclude_tables: str | None = typer.Option(
+        None, "--exclude-tables", help="Comma-separated list of tables to exclude"
+    ),
+    clickhouse_engines: bool = typer.Option(
+        False, "--clickhouse-engines", help="Include ClickHouse engine metadata"
+    ),
+    relationships: bool = typer.Option(
+        False, "--relationships", help="Generate relationship attributes"
+    ),
+    dialect: str | None = typer.Option(
+        None, "--dialect", help="SQL dialect for type mapping (auto-detected by default)"
+    ),
+    single_file: bool = typer.Option(
+        False, "--single-file", help="Generate a single models.py file"
+    ),
+    database: str | None = typer.Option(
+        None, "--database", "-d", help="Target database name"
+    ),
+):
+    """Reverse-engineer SQLAlchemy model code from a live database."""
+    validate_directory()
+    handle_generate_models(
+        output=output,
+        tables=tables,
+        exclude_tables=exclude_tables,
+        clickhouse_engines=clickhouse_engines,
+        relationships=relationships,
+        dialect=dialect,
+        single_file=single_file,
+        database=database,
+    )
+
+
+@app.command()
 def make_migrations(
     description: str = typer.Argument(None, help="Description for the migration"),
     verbose: bool = typer.Option(
@@ -331,6 +376,45 @@ def rollback(
     handle_rollback(
         count=count, to_version=to_version, verbose=verbose, database=database
     )
+
+
+@app.command()
+def downgrade(
+    to_version: str = typer.Option(
+        ..., "--to", "-t", help="Target version to downgrade to"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
+    database: str | None = typer.Option(
+        None, "--database", "-d", help="Target database name"
+    ),
+):
+    """Downgrade to a specific migration version by reverting applied migrations."""
+    validate_directory()
+    handle_downgrade(to_version=to_version, verbose=verbose, database=database)
+
+
+@app.command()
+def make_rollback(
+    migration_file: str = typer.Argument(
+        ..., help="Path to migration SQL file"
+    ),
+):
+    """Generate a rollback SQL file for a given migration file."""
+    handle_make_rollback(migration_file=migration_file)
+
+
+@app.command()
+def snapshot(
+    table_name: str = typer.Argument(..., help="Table name to snapshot"),
+    database: str | None = typer.Option(
+        None, "--database", "-d", help="Target database name"
+    ),
+):
+    """Snapshot the DDL schema of a specific table."""
+    validate_directory()
+    handle_snapshot(table_name=table_name, database=database)
 
 
 @app.command()

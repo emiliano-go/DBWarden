@@ -190,13 +190,16 @@ def build_migration_plan(
 
 
 def _build_plan_operation(change: Change) -> dict[str, str]:
-    operation = {
+    operation: dict[str, str] = {
         "type": change.operation,
         "table": change.table,
         "severity": "INFO",
     }
     if change.target:
-        operation["column"] = change.target
+        if change.operation == "rename_column":
+            operation["new_name"] = change.target
+        else:
+            operation["column"] = change.target
     return operation
 
 
@@ -213,6 +216,9 @@ def generate_migration_sql(
     - CREATE TABLE for new tables
     - ALTER TABLE ADD COLUMN for new columns in existing tables
 
+    When a schema snapshot exists, it uses the snapshot for rename detection.
+    Otherwise falls back to diffing against the live database.
+
     Args:
         tables: List of ModelTable objects.
         migrations_dir: Path to migrations directory.
@@ -222,74 +228,112 @@ def generate_migration_sql(
     Returns:
         Tuple of (upgrade_sql, rollback_sql, changes).
     """
-    try:
-        config = get_database(database)
-        existing_tables = extract_tables_from_database(config.sqlalchemy_url)
-    except Exception:
-        existing_tables = {}
-
-    migration_tables = {}
-    if migrations_dir:
-        migration_tables = extract_tables_from_migrations(migrations_dir)
-
-    known_tables: dict[str, set[str]] = {
-        table_name: {col.lower() for col in columns}
-        for table_name, columns in existing_tables.items()
-    }
-    for table_name, columns in migration_tables.items():
-        if table_name in known_tables:
-            known_tables[table_name].update({col.lower() for col in columns})
-        else:
-            known_tables[table_name] = {col.lower() for col in columns}
-
-    upgrade_parts = []
-    rollback_parts = []
+    upgrade_sql: str = ""
+    rollback_sql: str = ""
     changes: list[Change] = []
+    snapshot: Any = None
 
-    for table in tables:
-        existing_columns = known_tables.get(table.name, set())
+    try:
+        from dbwarden.engine.snapshot import (
+            find_latest_snapshot,
+            diff_models_against_snapshot,
+            snapshot_diff_to_sql,
+        )
 
-        if not existing_columns:
-            create_sql = generate_create_table_sql(table, db_name)
-            upgrade_parts.append(create_sql)
-            rollback_parts.append(generate_drop_object_sql(table))
-            changes.append(Change(operation="create_table", table=table.name))
-        else:
-            for column in table.columns:
-                if column.name.lower() not in existing_columns:
-                    alter_sql = generate_add_column_sql(table.name, column, db_name)
-                    upgrade_parts.append(alter_sql)
-                    rollback_parts.append(
-                        f"ALTER TABLE {table.name} DROP COLUMN {column.name}"
-                    )
-                    changes.append(Change(operation="add_column", table=table.name, target=column.name))
+        snapshot = find_latest_snapshot(database)
+    except Exception:
+        snapshot = None
 
-                    known_tables.setdefault(table.name, set()).add(column.name.lower())
+    if snapshot is not None:
+        try:
+            upgrade_ops, rollback_ops = diff_models_against_snapshot(
+                tables, snapshot, database=database, db_name=db_name
+            )
+            upgrade_sql, rollback_sql, changes = snapshot_diff_to_sql(
+                upgrade_ops, rollback_ops, database=database, db_name=db_name
+            )
+        except Exception:
+            snapshot = None
 
-    rollback_parts.reverse()
+    if snapshot is None:
+        try:
+            config = get_database(database)
+            existing_tables = extract_tables_from_database(config.sqlalchemy_url)
+        except Exception:
+            existing_tables = {}
+
+        migration_tables = {}
+        if migrations_dir:
+            migration_tables = extract_tables_from_migrations(migrations_dir)
+
+        known_tables: dict[str, set[str]] = {
+            table_name: {col.lower() for col in columns}
+            for table_name, columns in existing_tables.items()
+        }
+        for table_name, columns in migration_tables.items():
+            if table_name in known_tables:
+                known_tables[table_name].update({col.lower() for col in columns})
+            else:
+                known_tables[table_name] = {col.lower() for col in columns}
+
+        upgrade_parts: list[str] = []
+        rollback_parts: list[str] = []
+        changes: list[Change] = []
+
+        for table in tables:
+            existing_columns = known_tables.get(table.name, set())
+
+            if not existing_columns:
+                create_sql = generate_create_table_sql(table, db_name)
+                upgrade_parts.append(create_sql)
+                rollback_parts.append(generate_drop_object_sql(table))
+                changes.append(Change(operation="create_table", table=table.name))
+            else:
+                for column in table.columns:
+                    if column.name.lower() not in existing_columns:
+                        alter_sql = generate_add_column_sql(table.name, column, db_name)
+                        upgrade_parts.append(alter_sql)
+                        rollback_parts.append(
+                            f"ALTER TABLE {table.name} DROP COLUMN {column.name}"
+                        )
+                        changes.append(Change(operation="add_column", table=table.name, target=column.name))
+                        known_tables.setdefault(table.name, set()).add(column.name.lower())
+
+        rollback_parts.reverse()
+
+        if migrations_dir:
+            existing_statements = get_pending_migration_statements(migrations_dir)
+            filtered_upgrade_parts = []
+            filtered_rollback_parts = []
+            filtered_changes = []
+
+            for upgrade_sql, rollback_sql in zip(upgrade_parts, rollback_parts):
+                if upgrade_sql.strip() in existing_statements:
+                    continue
+                filtered_upgrade_parts.append(upgrade_sql)
+                filtered_rollback_parts.append(rollback_sql)
+
+            for change, upgrade_sql in zip(changes, upgrade_parts):
+                if upgrade_sql.strip() in existing_statements:
+                    continue
+                filtered_changes.append(change)
+
+            upgrade_parts = filtered_upgrade_parts
+            rollback_parts = filtered_rollback_parts
+            changes = filtered_changes
+
+        upgrade_sql = "\n\n".join(upgrade_parts)
+        rollback_sql = "\n\n".join(rollback_parts)
 
     if migrations_dir:
         existing_statements = get_pending_migration_statements(migrations_dir)
-        filtered_upgrade_parts = []
-        filtered_rollback_parts = []
-        filtered_changes = []
+        if upgrade_sql.strip():
+            from dbwarden.engine.snapshot import _filter_duplicates_from_snapshot_diff
+            upgrade_sql, rollback_sql, changes = _filter_duplicates_from_snapshot_diff(
+                upgrade_sql, rollback_sql, changes, existing_statements
+            )
 
-        for upgrade_sql, rollback_sql in zip(upgrade_parts, rollback_parts):
-            if upgrade_sql.strip() in existing_statements:
-                continue
-            filtered_upgrade_parts.append(upgrade_sql)
-            filtered_rollback_parts.append(rollback_sql)
-
-        for change, upgrade_sql in zip(changes, upgrade_parts):
-            if upgrade_sql.strip() in existing_statements:
-                continue
-            filtered_changes.append(change)
-
-        upgrade_parts = filtered_upgrade_parts
-        rollback_parts = filtered_rollback_parts
-        changes = filtered_changes
-
-    return "\n\n".join(upgrade_parts), "\n\n".join(rollback_parts), changes
+    return upgrade_sql, rollback_sql, changes
 
 
 def new_migration_cmd(
