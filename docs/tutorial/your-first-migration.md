@@ -52,7 +52,4 @@ dbwarden rollback --database primary --count 1
 dbwarden migrate --database primary
 ```
 
-## Navigation
 
-- Previous: [Configuration](../configuration/index.md)
-- Next: [Applying Migrations](applying-migrations.md)

@@ -26,6 +26,4 @@ Teams that value SQL review as part of their deployment flow, projects with mult
 - Upgrade and rollback are defined together
 - Safety features (locking, checksums, status) are built in
 
-## Navigation
 
-- Next: [Installation](../installation.md)
