@@ -25,7 +25,3 @@ After multiple versioned migrations that have been stable through several releas
 3. Test that rollback still works correctly
 4. Keep the new file, retire the old ones in version control
 
-## Navigation
-
-- Previous: [Checksum Integrity](checksum-integrity.md)
-- Next: [CI/CD Patterns](ci-cd-patterns.md)

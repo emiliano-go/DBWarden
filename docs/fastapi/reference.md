@@ -726,8 +726,4 @@ db = database_config(
 
 ---
 
-## Navigation
 
-- **[Tutorial](tutorial/first-steps.md)** - Get started
-- **[Concepts](concepts.md)** - Understand how it works
-- **[Advanced](advanced/multi-database.md)** - Advanced patterns

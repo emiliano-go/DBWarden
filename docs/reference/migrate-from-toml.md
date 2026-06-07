@@ -246,6 +246,3 @@ If migration causes issues, you can always:
 
 However, the Python-based approach is the future direction and offers significant benefits.
 
-## Navigation
-
-- Previous: [Architecture](../architecture-deep-dive.md)

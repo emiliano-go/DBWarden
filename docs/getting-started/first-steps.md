@@ -114,7 +114,4 @@ Use status to confirm pending/applied counts and history to confirm execution or
 - [Your First Migration](../tutorial/your-first-migration.md)
 - [Applying Migrations](../tutorial/applying-migrations.md)
 
-## Navigation
 
-- Previous: [Installation](../installation.md)
-- Next: [Configuration](../configuration/index.md)

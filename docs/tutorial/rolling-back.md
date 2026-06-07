@@ -38,7 +38,4 @@ When rollback is risky, prefer a forward-fix migration.
 
 Reference: [Safe Deployment](../advanced/safe-deployment.md)
 
-## Navigation
 
-- Previous: [Applying Migrations](applying-migrations.md)
-- Next: [Checking Status](checking-status.md)

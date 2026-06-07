@@ -50,7 +50,4 @@ dbwarden --dev --strict-translation make-migrations "validate" --database primar
 
 Reference: [SQL Translation](../sql-translation.md)
 
-## Navigation
 
-- Previous: [Checking Status](checking-status.md)
-- Next: [Multi-Database Setup](multi-database-setup.md)
