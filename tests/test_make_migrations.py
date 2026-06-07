@@ -3,7 +3,13 @@ import tempfile
 import json
 from pathlib import Path
 
-from dbwarden.commands.make_migrations import build_migration_plan, generate_migration_sql, make_migrations_cmd
+from dbwarden.commands.make_migrations import (
+    RenameIntent,
+    _parse_rename_flags,
+    build_migration_plan,
+    generate_migration_sql,
+    make_migrations_cmd,
+)
 from dbwarden.config import set_dev_mode
 from dbwarden.engine.model_discovery import ModelColumn, ModelTable
 from dbwarden.engine.migration_name import Change
@@ -144,3 +150,48 @@ def test_make_migrations_writes_plan_file_next_to_sql():
             assert plan["checksum"]
         finally:
             os.chdir(old_cwd)
+
+
+def test_parse_rename_flags_valid():
+    result = _parse_rename_flags(["users.name:full_name", "posts.title:headline"])
+    assert len(result) == 2
+    assert result[0] == RenameIntent("users", "name", "full_name")
+    assert result[1] == RenameIntent("posts", "title", "headline")
+
+
+def test_parse_rename_flags_invalid_format():
+    import pytest
+    with pytest.raises(ValueError, match="Invalid --rename format"):
+        _parse_rename_flags(["badformat"])
+
+
+def test_parse_rename_flags_missing_new_name():
+    import pytest
+    with pytest.raises(ValueError, match="Invalid --rename format"):
+        _parse_rename_flags(["users.name:"])
+
+
+def test_build_plan_operation_includes_resolved_from():
+    plan = build_migration_plan(
+        migration_id="test__0001_rename",
+        changes=[
+            Change(operation="rename_column", table="users", target="email",
+                   resolved_from="rename_flag"),
+        ],
+        upgrade_sql="ALTER TABLE users RENAME COLUMN name TO email",
+    )
+    op = plan["operations"][0]
+    assert op["resolved_from"] == "rename_flag"
+    assert op["type"] == "rename_column"
+    assert op["new_name"] == "email"
+
+
+def test_build_plan_operation_omits_resolved_from_when_none():
+    plan = build_migration_plan(
+        migration_id="test__0001_add",
+        changes=[
+            Change(operation="add_column", table="users", target="age"),
+        ],
+        upgrade_sql="ALTER TABLE users ADD COLUMN age INTEGER",
+    )
+    assert "resolved_from" not in plan["operations"][0]

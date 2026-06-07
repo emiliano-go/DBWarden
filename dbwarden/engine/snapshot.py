@@ -544,6 +544,89 @@ def diff_models_against_snapshot(
     return upgrade_ops, rollback_ops
 
 
+def _apply_rename_intents(
+    upgrade_ops: list[dict[str, Any]],
+    rollback_ops: list[dict[str, Any]],
+    confirmed_renames: set[tuple[str, str, str]],
+    resolved_from_map: dict[tuple[str, str, str], str] | None = None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """
+    Post-process diff ops to apply only the confirmed rename intents.
+
+    confirmed_renames: set of (table, old_name, new_name) tuples.
+    resolved_from_map: optional mapping from rename key to "rename_flag" / "prompt" / "auto_detected".
+
+    - Rename_column ops NOT in the set → converted back to drop+add.
+    - Drop+add pairs that match a confirmed rename → converted to rename_column.
+    """
+    confirmed_set: set[tuple[str, str, str]] = set()
+    for table, old, new in confirmed_renames:
+        confirmed_set.add((table, old, new))
+    origin = resolved_from_map or {}
+
+    rename_ops_by_key: dict[tuple[str, str, str], int] = {}
+    for i, op in enumerate(upgrade_ops):
+        if op["type"] == "rename_column":
+            key = (op["table"], op["old_name"], op["new_name"])
+            rename_ops_by_key[key] = i
+
+    # Build tracking for drop+add pairs by table
+    table_adds: dict[str, list[tuple[int, str]]] = {}
+    table_drops: dict[str, list[tuple[int, str]]] = {}
+    for i, op in enumerate(upgrade_ops):
+        if op["type"] == "add_column":
+            table_adds.setdefault(op["table"], []).append((i, op["column"]))
+        elif op["type"] == "drop_column":
+            table_drops.setdefault(op["table"], []).append((i, op["column"]))
+
+    added_used: set[int] = set()
+    dropped_used: set[int] = set()
+
+    for table, old, new in sorted(confirmed_set, key=lambda x: (x[0], x[1], x[2])):
+        key = (table, old, new)
+        if key not in rename_ops_by_key:
+            for drop_i, drop_col in table_drops.get(table, []):
+                if drop_i in dropped_used or drop_col != old:
+                    continue
+                for add_i, add_col in table_adds.get(table, []):
+                    if add_i in added_used or add_col != new:
+                        continue
+                    upgrade_ops[drop_i] = {
+                        "type": "rename_column", "table": table,
+                        "old_name": old, "new_name": new,
+                        "resolved_from": origin.get(key),
+                    }
+                    upgrade_ops[add_i] = None
+                    rollback_ops[drop_i] = {
+                        "type": "rename_column", "table": table,
+                        "old_name": new, "new_name": old,
+                    }
+                    rollback_ops[add_i] = None
+                    added_used.add(add_i)
+                    dropped_used.add(drop_i)
+                    break
+                break
+
+    for key, op_i in rename_ops_by_key.items():
+        table, old, new = key
+        if (table, old, new) in confirmed_set:
+            upgrade_ops[op_i]["resolved_from"] = origin.get(key)
+        else:
+            upgrade_ops[op_i] = {
+                "type": "drop_column", "table": table,
+                "column": old,
+            }
+            rollback_ops[op_i] = {
+                "type": "add_column", "table": table,
+                "column": old, "definition": {},
+            }
+
+    upgrade_ops = [op for op in upgrade_ops if op is not None]
+    rollback_ops = [op for op in rollback_ops if op is not None]
+
+    return upgrade_ops, rollback_ops
+
+
 def snapshot_diff_to_sql(
     upgrade_ops: list[dict[str, Any]],
     rollback_ops: list[dict[str, Any]],
@@ -578,7 +661,10 @@ def snapshot_diff_to_sql(
         elif op["type"] == "rename_column":
             upgrade_parts.append(f"ALTER TABLE {op['table']} RENAME COLUMN {op['old_name']} TO {op['new_name']}")
             rollback_parts.append(f"ALTER TABLE {op['table']} RENAME COLUMN {op['new_name']} TO {op['old_name']}")
-            changes.append(Change(operation="rename_column", table=op["table"], target=op["new_name"]))
+            changes.append(Change(
+                operation="rename_column", table=op["table"], target=op["new_name"],
+                resolved_from=op.get("resolved_from"),
+            ))
         elif op["type"] == "add_column":
             model_col = op.get("model_column")
             if model_col:

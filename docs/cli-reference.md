@@ -92,9 +92,17 @@ dbwarden settings database-clear-dev primary
 dbwarden make-migrations "create users table" --database primary
 dbwarden make-migrations --verbose --database primary
 dbwarden make-migrations --plan --database primary
+dbwarden make-migrations --rename users.username:email --database primary
 ```
 
-Options: `--database`, `--plan`, `--verbose`
+Options:
+
+- `--database`/`-d` — Target database
+- `--plan` — Print migration plan JSON without writing files
+- `--verbose`/`-v` — Verbose output
+- `--rename` — Repeatable. Declare a column rename in format `table.old_name:new_name`. Auto-detected renames can also be confirmed via interactive prompt (TTY) or must be declared with `--rename` in CI.
+
+See [make-migrations](commands/make-migrations.md) for full documentation including rename detection, schema snapshots, and plan format.
 
 ### `new`
 
