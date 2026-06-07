@@ -152,10 +152,10 @@ Options: `--database`, `--count`, `--to-version`, `--verbose`
 
 ```bash
 dbwarden seed create "seed initial data" --database primary
-dbwarden seed create "populate lookup tables" --database primary --seed-type python
+dbwarden seed create "populate lookup tables" --database primary --type python
 ```
 
-Options: `--database`, `--seed-type` (`sql` or `python`, default `sql`), `--verbose`
+Options: `--database`, `--type` (`sql` or `python`, default `sql`), `--verbose`
 
 ### `seed apply`
 
@@ -271,7 +271,4 @@ dbwarden database remove analytics
 
 Prefer `settings` commands for new workflows.
 
-## Navigation
 
-- Previous: [Safe Deployment](advanced/safe-deployment.md)
-- Next: [Supported Databases](databases.md)
