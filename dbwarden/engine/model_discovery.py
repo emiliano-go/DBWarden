@@ -184,6 +184,13 @@ def _clickhouse_options_for_model(model_class: type) -> dict:
         "clickhouse_mv_order_by",
         "clickhouse_mv_populate",
         "clickhouse_projections",
+        "clickhouse_zookeeper_path",
+        "clickhouse_replica_name",
+        "clickhouse_dictionary",
+        "clickhouse_dict_layout",
+        "clickhouse_dict_source",
+        "clickhouse_dict_lifetime",
+        "clickhouse_dict_primary_key",
     }
     options = {key: table_args[key] for key in keys if key in table_args}
     _validate_clickhouse_options(options)
@@ -261,8 +268,36 @@ def _validate_clickhouse_options(options: dict) -> None:
             if not projection.get("name") or not projection.get("query"):
                 raise ValueError("clickhouse_projections entries require name and query")
 
+    zk_path = options.get("clickhouse_zookeeper_path")
+    if zk_path is not None and not isinstance(zk_path, str):
+        raise ValueError("clickhouse_zookeeper_path must be a string")
+
+    replica_name = options.get("clickhouse_replica_name")
+    if replica_name is not None and not isinstance(replica_name, str):
+        raise ValueError("clickhouse_replica_name must be a string")
+
+    dictionary_enabled = bool(options.get("clickhouse_dictionary"))
+    if dictionary_enabled:
+        if not options.get("clickhouse_dict_layout"):
+            raise ValueError("clickhouse_dict_layout is required when clickhouse_dictionary=True")
+        if not options.get("clickhouse_dict_source"):
+            raise ValueError("clickhouse_dict_source is required when clickhouse_dictionary=True")
+        if not options.get("clickhouse_dict_lifetime"):
+            raise ValueError("clickhouse_dict_lifetime is required when clickhouse_dictionary=True")
+        if not isinstance(options.get("clickhouse_dict_layout"), str):
+            raise ValueError("clickhouse_dict_layout must be a string")
+        if not isinstance(options.get("clickhouse_dict_source"), str):
+            raise ValueError("clickhouse_dict_source must be a string")
+        if not isinstance(options.get("clickhouse_dict_lifetime"), (str, int)):
+            raise ValueError("clickhouse_dict_lifetime must be a string or integer")
+        pk = options.get("clickhouse_dict_primary_key")
+        if pk is not None and not isinstance(pk, (str, list, tuple)):
+            raise ValueError("clickhouse_dict_primary_key must be a string or list/tuple of strings")
+
 
 def _object_type_for_clickhouse_options(options: dict) -> str:
+    if options.get("clickhouse_dictionary"):
+        return "dictionary"
     if options.get("clickhouse_mv"):
         return "materialized_view"
     return "table"
@@ -285,16 +320,26 @@ def _format_clickhouse_expression(value: str | list[str] | tuple[str, ...]) -> s
     return "(" + ", ".join(value) + ")"
 
 
-def _format_clickhouse_engine(value: str | tuple | list) -> str:
+def _format_clickhouse_engine(value: str | tuple | list, zookeeper_path: str | None = None, replica_name: str | None = None) -> str:
     if isinstance(value, str):
-        return f"{value}()"
-    if isinstance(value, (tuple, list)) and value:
+        engine_name = value
+        extra_args = []
+    elif isinstance(value, (tuple, list)) and value:
         engine_name = value[0]
         if not isinstance(engine_name, str) or not engine_name.strip():
             raise ValueError("clickhouse_engine must start with a non-empty engine name")
-        args = ", ".join(str(item) for item in value[1:])
-        return f"{engine_name}({args})"
-    raise ValueError("clickhouse_engine must be a string or tuple/list")
+        extra_args = list(str(item) for item in value[1:])
+    else:
+        raise ValueError("clickhouse_engine must be a string or tuple/list")
+
+    if zookeeper_path is not None:
+        extra_args.insert(0, zookeeper_path)
+    if replica_name is not None:
+        extra_args.insert(1 if zookeeper_path is not None else 0, replica_name)
+
+    if extra_args:
+        return f"{engine_name}({', '.join(extra_args)})"
+    return f"{engine_name}()"
 
 
 def _render_clickhouse_table_suffix(table: ModelTable) -> str:
@@ -304,7 +349,9 @@ def _render_clickhouse_table_suffix(table: ModelTable) -> str:
 
     parts: list[str] = []
     engine = options.get("clickhouse_engine", "MergeTree")
-    parts.append(f"ENGINE = {_format_clickhouse_engine(engine)}")
+    zk_path = options.get("clickhouse_zookeeper_path")
+    replica_name = options.get("clickhouse_replica_name")
+    parts.append(f"ENGINE = {_format_clickhouse_engine(engine, zookeeper_path=zk_path, replica_name=replica_name)}")
 
     order_by = options.get("clickhouse_order_by")
     if order_by is not None:
@@ -737,6 +784,10 @@ def generate_add_column_sql(
 def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> str:
     """Generate CREATE TABLE SQL from a ModelTable."""
     backend = _get_backend_name(db_name)
+
+    if backend == "clickhouse" and table.object_type == "dictionary":
+        return generate_create_dictionary_sql(table)
+
     column_defs = []
 
     for col in table.columns:
@@ -821,7 +872,33 @@ def generate_drop_object_sql(table: ModelTable) -> str:
     _validate_identifier(table.name, "table_name")
     if table.object_type == "materialized_view":
         return f"DROP VIEW {table.name}"
+    if table.object_type == "dictionary":
+        return f"DROP DICTIONARY {table.name}"
     return generate_drop_table_sql(table.name)
+
+
+def generate_create_dictionary_sql(table: ModelTable) -> str:
+    """Generate CREATE DICTIONARY SQL from a ModelTable."""
+    options = table.clickhouse_options
+    columns_sql = ",\n".join(
+        f"    {col.name} {col.type}"
+        for col in table.columns
+    )
+    pk = options.get("clickhouse_dict_primary_key")
+    if pk is None and table.columns:
+        pk = table.columns[0].name
+    primary_key_sql = f"PRIMARY KEY {_format_clickhouse_expression(pk)}"
+    lifetime = options["clickhouse_dict_lifetime"]
+    lifetime_sql = f"LIFETIME({lifetime})" if isinstance(lifetime, str) else f"LIFETIME({lifetime})"
+    return (
+        f"CREATE DICTIONARY IF NOT EXISTS {table.name} (\n"
+        f"{columns_sql}\n"
+        f")\n"
+        f"{primary_key_sql}\n"
+        f"SOURCE({options['clickhouse_dict_source']})\n"
+        f"{lifetime_sql}\n"
+        f"LAYOUT({options['clickhouse_dict_layout']})"
+    )
 
 
 def extract_tables_from_database(sqlalchemy_url: str) -> dict[str, set[str]]:
