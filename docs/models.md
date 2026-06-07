@@ -41,6 +41,8 @@ Supported keys:
 - `clickhouse_mv_order_by`
 - `clickhouse_mv_populate`
 - `clickhouse_projections`
+- `clickhouse_zookeeper_path`
+- `clickhouse_replica_name`
 
 Example:
 
@@ -66,6 +68,30 @@ Notes:
 - tuple/list engine values render positional arguments, for example `("ReplacingMergeTree", "version_column")`
 - `clickhouse_primary_key` may be a string or ordered list/tuple, but it must be a prefix of `clickhouse_order_by`
 - if no ClickHouse engine is configured, DBWarden currently falls back to `ENGINE = MergeTree()`
+
+### Replicated engines
+
+For Replicated\* engine tables, use `clickhouse_zookeeper_path` and `clickhouse_replica_name` alongside `clickhouse_engine`:
+
+```python
+class ReplicatedEvent(Base):
+    __tablename__ = "replicated_events"
+    __table_args__ = {
+        "clickhouse_engine": "ReplicatedMergeTree",
+        "clickhouse_zookeeper_path": "'/clickhouse/tables/shard1'",
+        "clickhouse_replica_name": "'{replica}'",
+        "clickhouse_order_by": ["event_time"],
+        "clickhouse_partition_by": "toYYYYMM(event_time)",
+    }
+```
+
+This renders as:
+
+```sql
+ENGINE = ReplicatedMergeTree('/clickhouse/tables/shard1', '{replica}')
+```
+
+`clickhouse_zookeeper_path` and `clickhouse_replica_name` are injected as the first two engine arguments. If the engine value is a tuple form like `("ReplicatedReplacingMergeTree", "ver_col")`, they are inserted before the existing positional arguments.
 
 ### Materialized views
 
@@ -108,6 +134,55 @@ Current behavior:
 - projection definitions are rendered into generated ClickHouse DDL
 - safety checks classify added projections as `INFO`
 - removed projections are classified as `WARNING`
+
+### Dictionaries
+
+ClickHouse dictionaries are defined as model classes with `clickhouse_dictionary=True` in `__table_args__`:
+
+```python
+class CountryCode(Base):
+    __tablename__ = "country_codes"
+    __table_args__ = {
+        "clickhouse_dictionary": True,
+        "clickhouse_dict_layout": "FLAT()",
+        "clickhouse_dict_source": "CLICKHOUSE(HOST 'localhost' TABLE 'countries')",
+        "clickhouse_dict_lifetime": "MIN 0 MAX 3600",
+        "clickhouse_dict_primary_key": "code",
+    }
+```
+
+Required keys when `clickhouse_dictionary=True`:
+
+| Key | Description | Example |
+|-----|-------------|---------|
+| `clickhouse_dict_layout` | Dictionary layout | `"FLAT()"`, `"COMPLEX_KEY_HASHED()"` |
+| `clickhouse_dict_source` | Source configuration | `"CLICKHOUSE(HOST '...' TABLE '...')"` |
+| `clickhouse_dict_lifetime` | Cache lifetime | `"MIN 0 MAX 3600"` or `3600` |
+
+Optional key:
+
+| Key | Description | Default |
+|-----|-------------|---------|
+| `clickhouse_dict_primary_key` | Primary key expression | First column |
+
+Generated SQL:
+
+```sql
+CREATE DICTIONARY IF NOT EXISTS country_codes (
+    code String,
+    name String
+)
+PRIMARY KEY code
+SOURCE(CLICKHOUSE(HOST 'localhost' TABLE 'countries'))
+LIFETIME(MIN 0 MAX 3600)
+LAYOUT(FLAT())
+```
+
+Current behavior:
+
+- dictionary columns are defined like regular model columns; the first column is the default primary key
+- safety checks classify new dictionaries as `INFO`
+- dictionary source, layout, and lifetime changes are classified as `WARNING` (requires `--force`)
 
 ### Column hints
 
