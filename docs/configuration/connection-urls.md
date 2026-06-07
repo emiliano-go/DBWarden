@@ -373,7 +373,7 @@ except Exception as e:
 
 ```bash
 # Check configuration
-dbwarden database
+dbwarden settings show
 
 # Test connection
 dbwarden check-db

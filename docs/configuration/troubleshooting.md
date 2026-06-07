@@ -503,10 +503,10 @@ dbwarden --verbose migrate
 
 ```bash
 # Show all configuration
-dbwarden database
+dbwarden settings show
 
 # Show specific database
-dbwarden database --database primary
+dbwarden settings show --database primary
 ```
 
 ### Test imports
@@ -526,7 +526,7 @@ dbwarden check-db --database primary
 ## Recap
 
  Most issues are configuration or import errors  
- Use `dbwarden database` to inspect configuration  
+ Use `dbwarden settings show` to inspect configuration  
  Use `dbwarden check-db` to test connections  
  Specify `model_paths` for faster loading  
  Check Python imports with `python -c`  

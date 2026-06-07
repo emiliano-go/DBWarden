@@ -262,13 +262,13 @@ primary = database_config(
 
 **Without `secure_values`:**
 ```bash
-$ dbwarden database
+$ dbwarden settings show
 URL: postgresql://user:SECRET_PASSWORD@prod-host/myapp
 ```
 
 **With `secure_values=True`:**
 ```bash
-$ dbwarden database
+$ dbwarden settings show --all
 URL: DATABASE_URL (expression)
 ```
 
@@ -431,7 +431,4 @@ analytics = database_config(
 **Help:**
 - [Troubleshooting](../configuration/troubleshooting.md) - Common issues
 
-## Navigation
 
-- Previous: [Supported Databases](../databases.md)
-- Next: [Architecture](../architecture-deep-dive.md)

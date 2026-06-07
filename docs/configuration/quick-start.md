@@ -49,7 +49,7 @@ Start with SQLite for the simplest setup. Switch to PostgreSQL later.
 Verify DBWarden can read your config:
 
 ```bash
-dbwarden database
+dbwarden settings show
 ```
 
 You'll see:
@@ -208,7 +208,7 @@ You learned how to:
 
  Initialize a DBWarden project  
  Create your first `database_config()`  
- Verify configuration with `dbwarden database`  
+ Verify configuration with `dbwarden settings show --all`  
  Add model discovery  
  Upgrade from SQLite to PostgreSQL  
  Add dev mode for local development  

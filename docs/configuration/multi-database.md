@@ -392,7 +392,7 @@ overlap_models=True
 
 **Check default:**
 ```bash
-dbwarden database  # Shows which is default
+dbwarden settings show  # Shows which is default
 ```
 
 **Be explicit:**
