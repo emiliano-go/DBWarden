@@ -36,6 +36,7 @@ dbwarden make-migrations --database primary --safe-type-change
 - `--rename` — Repeatable. Declare a column rename in the format `table.old_name:new_name`. See [Rename Detection](#rename-detection) below.
 - `--rename-table` — Repeatable. Declare a table rename in the format `old_table:new_table`. See [Table Rename Detection](#table-rename-detection) below.
 - `--safe-type-change` — Use a multi-step strategy for type changes: add a temporary column, data migration comment, verification step, then drop-and-rename. Useful for databases where `ALTER COLUMN TYPE` would lock the table.
+- `--concurrent` / `--no-concurrent` — Enable or disable `CREATE INDEX CONCURRENTLY` for PostgreSQL (default: `--concurrent`). Use `--no-concurrent` when the migration runs inside a transaction block.
 
 ## Schema Snapshots
 
@@ -61,6 +62,13 @@ When a column is dropped from the snapshot and a new column of the same type is 
 | Different types | Never auto-detected (emits drop + add) |
 | Same name kept | Skipped (no op) |
 | 2+ dropped + 2+ added of same type | Paired sequentially (positional) |
+
+### Rename detection edge cases
+
+- **Ambiguous multi-rename**: When 2+ dropped columns and 2+ added columns share the same normalized type, all are treated as renames (paired in insertion order). This is intentionally permissive — false positives can be declined interactively or overridden with `--rename`.
+- **Drop-add conversion with `resolved_from`**: A confirmed drop+add pair is converted to a `rename_column` op with `resolved_from` tracking the confirmation source (`"rename_flag"` or `"prompt"`).
+- **Non-matching confirmed set**: If a confirmed rename tuple does not match any op (e.g., table name mismatch), it is silently ignored.
+- **Table + column rename interaction**: Table renames are processed first (statement order 0). After the snapshot is updated with the new table name, column renames are detected against the renamed table. The column rename's `resolved_from` is independent of the table rename's `resolved_from`.
 
 ### Interactive prompt (TTY)
 
@@ -180,7 +188,24 @@ For databases that don't support in-place `ALTER COLUMN TYPE` (or when you want 
 3. Verification step comment
 4. After manual verification, drop the old column and rename the temporary column
 
-On SQLite, this strategy is not supported and a comment is emitted instead.
+**Limitations:**
+
+| Backend | Supported | Notes |
+|---------|-----------|-------|
+| PostgreSQL | Yes | Multi-step temp column strategy |
+| MySQL / MariaDB | Yes | Multi-step temp column strategy |
+| SQLite | No | Comment emitted (SQLite cannot drop columns before 3.35.0 and has limited ALTER TABLE) |
+| ClickHouse | No | Comment emitted |
+
+### DROP COLUMN warning
+
+All `DROP COLUMN` statements are prefixed with a warning comment:
+
+```sql
+-- WARNING: DROPPING COLUMN users.legacy_field
+
+ALTER TABLE users DROP COLUMN legacy_field
+```
 
 ### DROP COLUMN warning
 
@@ -254,6 +279,14 @@ dbwarden make-migrations --rename-table users:accounts --rename accounts.usernam
 
 Note: when combining table and column renames, the column rename references the **new** table name. Table renames are applied to the snapshot before column-level processing.
 
+### Table rename edge cases
+
+- **Empty tables**: If either the snapshot table or the model table has zero columns, the overlap ratio is `0.0` and the pair is not a rename candidate.
+- **Zero overlap**: If no columns match by name and normalized type, the ratio is `0.0` — emitted as drop+add.
+- **Exact match**: If all columns match, the ratio is `1.0` — always a rename candidate.
+- **Table rename + column changes in the same table**: After the table rename is applied to the snapshot, column diffs are computed against the new table name. Column renames, type changes, nullable changes, and default changes are all detected on the renamed table.
+- **ClickHouse**: `ALTER TABLE RENAME` emits a comment-only placeholder since ClickHouse does not support it.
+
 ### SQL generation
 
 All four supported backends (SQLite, PostgreSQL, MySQL, MariaDB) use the same syntax:
@@ -268,6 +301,67 @@ ALTER TABLE accounts RENAME TO users;
 
 ClickHouse emits a comment-only placeholder since it does not support `ALTER TABLE RENAME`.
 
+## Foreign Key and Index Diff
+
+When a schema snapshot exists, `make-migrations` also detects changes to foreign keys and indexes by comparing the snapshot's stored constraints and indexes against the model's declared relationships and indexes.
+
+### Foreign Key vs Index limitations and edge cases
+
+- **Silent skip on missing ref**: If an FK references a table that does not exist in the snapshot, the FK is silently skipped (no error, no SQL). This prevents generating broken SQL but can be surprising. To ensure the FK is emitted, make sure the referenced table exists in the snapshot before running `make-migrations`.
+- **Content-based comparison (not name-based)**: Both FKs and indexes are compared by their structural properties, not their names. Renaming a constraint or index does not produce a drop+add.
+- **ClickHouse**: FK and index operations emit comment-only placeholders (not supported).
+- **SQLite FKs**: Not directly alterable. A comment suggesting table recreation is emitted.
+
+### Foreign Key Detection
+
+| Change | Detection | Generated SQL |
+|--------|-----------|---------------|
+| **FK added** | FK present in model columns but absent from snapshot constraints | `ALTER TABLE ... ADD CONSTRAINT ... FOREIGN KEY ...` |
+| **FK dropped** | FK present in snapshot constraints but absent from model columns | `ALTER TABLE ... DROP CONSTRAINT ...` (or `DROP FOREIGN KEY` on MySQL/MariaDB) |
+
+FKs are compared by content (columns, referenced table, referenced columns), not by name. This means renaming an FK constraint is not treated as a drop+add.
+
+**Validation:** Before emitting an `ADD FOREIGN KEY`, the diff engine verifies that the referenced table and columns exist in the snapshot. If they don't, the FK is silently skipped to avoid generating broken SQL.
+
+**Deferrable constraints (Postgres only):** When detected, `DEFERRABLE INITIALLY DEFERRED` is appended to the constraint SQL.
+
+**SQLite:** FK constraints are not directly alterable. A comment is emitted suggesting table recreation.
+
+### Index Detection
+
+| Change | Detection | Generated SQL |
+|--------|-----------|---------------|
+| **Index added** | Index present in model but absent from snapshot indexes | `CREATE [UNIQUE] INDEX ... ON table (columns)` |
+| **Index dropped** | Index present in snapshot but absent from model indexes | `DROP INDEX ...` |
+
+**Full-content comparison:** Indexes are compared by **all** of these attributes, not just columns + unique. Any difference triggers a drop+add:
+
+| Attribute | SQL Clause | Backend | Example |
+|-----------|-----------|---------|---------|
+| `using` | `USING <method>` | PostgreSQL, SQLite (partial) | `USING gin`, `USING gist`, `USING hash` |
+| `unique` | `UNIQUE` | All | `CREATE UNIQUE INDEX` |
+| `where` | `WHERE <predicate>` | PostgreSQL | `WHERE status = 'active'` |
+| `include` | `INCLUDE (<cols>)` | PostgreSQL | `INCLUDE (email, name)` |
+| `with_params` | `WITH (<params>)` | PostgreSQL | `WITH (fillfactor = 70)` |
+| `tablespace` | `TABLESPACE <name>` | PostgreSQL | `TABLESPACE fast_space` |
+| `nulls_not_distinct` | `NULLS NOT DISTINCT` | PostgreSQL 15+ | On unique indexes |
+| `column_sorting` | Per-column `ASC/DESC NULLS FIRST/LAST` | PostgreSQL | `col1 DESC NULLS LAST, col2 ASC` |
+| `clickhouse_type` | `TYPE <type>` | ClickHouse | `TYPE minmax`, `TYPE bloom_filter` |
+| `clickhouse_granularity` | `GRANULARITY <n>` | ClickHouse | `GRANULARITY 3` |
+| `concurrently` | `CONCURRENTLY` | PostgreSQL | `--concurrent` / `--no-concurrent` |
+
+Omitted attributes or `None`-valued attributes are treated as defaults (btree, no partial, no INCLUDE, etc.), so a plain `Index("ix", "col")` produces the same signature across versions.
+
+**Name generation:** Auto-generated index names follow the pattern:
+- `idx_{table}_{col1}_{col2}` for non-unique indexes
+- `uq_{table}_{col1}_{col2}` for unique indexes
+- Non-btree `USING` methods append a suffix: `idx_{table}_{col}_{method}`
+
+**Backend specifics:**
+- PostgreSQL uses `CREATE INDEX CONCURRENTLY` by default (`--concurrent`). Use `--no-concurrent` inside transaction blocks.
+- SQLite and MySQL use standard `CREATE INDEX`.
+- ClickHouse generates `ALTER TABLE ... ADD INDEX ... TYPE <type> GRANULARITY <n>` when `clickhouse_type` is set; otherwise emits a comment.
+
 ## Statement ordering
 
 Operations in the generated migration are ordered consistently:
@@ -280,8 +374,8 @@ ALTER COLUMN NULLABLE (3)
 ALTER COLUMN DEFAULT  (4)
 CREATE TABLE        (5)
 ADD COLUMN          (6)
-ALTER FOREIGN KEY   (7)   — reserved for future use
-ALTER INDEX         (8)   — reserved for future use
+ALTER FOREIGN KEY   (7)   — FK adds and drops
+ALTER INDEX         (8)   — index adds and drops
 DROP COLUMN         (9)
 DROP TABLE          (10)
 ```
@@ -354,6 +448,10 @@ When no description is provided, DBWarden automatically generates a descriptive 
 | Single ALTER COLUMN TYPE | `alter_column_type_tablename_col` |
 | Single ALTER COLUMN NULLABLE | `alter_column_nullable_tablename_col` |
 | Single ALTER COLUMN DEFAULT | `alter_column_default_tablename_col` |
+| Single ADD FOREIGN KEY | `add_foreign_key_tablename_ref_table` |
+| Single DROP FOREIGN KEY | `drop_foreign_key_tablename` |
+| Single ADD INDEX | `add_index_tablename_col` |
+| Single DROP INDEX | `drop_index_tablename` |
 | ADD + DROP (same table) | `alter_tablename_col1_col2` |
 | Changes across tables | `add_column_users_email_and_1_more_tables` |
 | Many targets | `add_columns_tablename_col1_col2_and_3_more` |

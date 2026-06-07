@@ -3,7 +3,8 @@ import re
 import sys
 from pathlib import Path
 from types import ModuleType
-from typing import List, Optional, Type
+from dataclasses import dataclass, field
+from typing import Any, List, Optional, Type
 
 from sqlalchemy import (
     Column,
@@ -136,6 +137,70 @@ class ModelColumn:
         }
 
 
+@dataclass
+class IndexInfo:
+    columns: list[str]
+    unique: bool = False
+    using: str | None = None
+    where: str | None = None
+    include: list[str] | None = None
+    with_params: dict[str, Any] | None = None
+    tablespace: str | None = None
+    nulls_not_distinct: bool = False
+    column_sorting: dict[str, str] | None = None
+    comment: str | None = None
+    concurrently: bool = True
+    clickhouse_type: str | None = None
+    clickhouse_granularity: int | None = None
+
+    def to_dict(self) -> dict:
+        d: dict[str, Any] = {
+            "columns": self.columns,
+            "unique": self.unique,
+        }
+        if self.using is not None:
+            d["using"] = self.using
+        if self.where is not None:
+            d["where"] = self.where
+        if self.include is not None:
+            d["include"] = self.include
+        if self.with_params is not None:
+            d["with_params"] = self.with_params
+        if self.tablespace is not None:
+            d["tablespace"] = self.tablespace
+        if self.nulls_not_distinct:
+            d["nulls_not_distinct"] = True
+        if self.column_sorting is not None:
+            d["column_sorting"] = self.column_sorting
+        if self.comment is not None:
+            d["comment"] = self.comment
+        if not self.concurrently:
+            d["concurrently"] = False
+        if self.clickhouse_type is not None:
+            d["clickhouse_type"] = self.clickhouse_type
+        if self.clickhouse_granularity is not None:
+            d["clickhouse_granularity"] = self.clickhouse_granularity
+        return d
+
+    @staticmethod
+    def from_dict(d: dict) -> "IndexInfo":
+        return IndexInfo(
+            columns=list(d.get("columns", [])),
+            unique=bool(d.get("unique", False)),
+            using=d.get("using"),
+            where=d.get("where"),
+            include=list(d.get("include", [])) if d.get("include") else None,
+            with_params=dict(d.get("with_params", {})) if d.get("with_params") else None,
+            tablespace=d.get("tablespace"),
+            nulls_not_distinct=bool(d.get("nulls_not_distinct", False)),
+            column_sorting=dict(d.get("column_sorting", {})) if d.get("column_sorting") else None,
+            comment=d.get("comment"),
+            concurrently=bool(d.get("concurrently", True)),
+            clickhouse_type=d.get("clickhouse_type"),
+            clickhouse_granularity=d.get("clickhouse_granularity"),
+        )
+
+
 class ModelTable:
     """Represents a table from a SQLAlchemy model."""
 
@@ -145,11 +210,18 @@ class ModelTable:
         columns: List[ModelColumn],
         clickhouse_options: Optional[dict] = None,
         object_type: str = "table",
+        foreign_keys: Optional[list[dict]] = None,
+        indexes: Optional[list[dict | IndexInfo]] = None,
     ):
         self.name = name
         self.columns = columns
         self.clickhouse_options = clickhouse_options or {}
         self.object_type = object_type
+        self.foreign_keys = foreign_keys or []
+        self.indexes: list[IndexInfo] = [
+            IndexInfo.from_dict(idx) if isinstance(idx, dict) else idx
+            for idx in (indexes or [])
+        ]
 
     def to_dict(self) -> dict:
         return {
@@ -157,7 +229,18 @@ class ModelTable:
             "columns": [col.to_dict() for col in self.columns],
             "clickhouse_options": self.clickhouse_options,
             "object_type": self.object_type,
+            "foreign_keys": self.foreign_keys,
+            "indexes": [idx.to_dict() if isinstance(idx, IndexInfo) else idx for idx in self.indexes],
         }
+
+
+def _extract_dialect_option(idx: Any, key: str, default: Any = None) -> Any:
+    """Extract a dialect option from a SQLAlchemy Index object, checking all backends."""
+    for prefix in ("postgresql", "mysql", "mariadb", "sqlite"):
+        val = idx.dialect_options.get(prefix, {}).get(key)
+        if val is not None:
+            return val
+    return default
 
 
 def _extract_table_args_dict(model_class: type) -> dict:
@@ -580,6 +663,57 @@ def extract_table_from_model(
             if col:
                 columns.append(col)
 
+        # Extract FK info from parsed column.foreign_key strings
+        foreign_keys: list[dict[str, Any]] = []
+        for col in columns:
+            if col.foreign_key:
+                # Format: "referred_table(referred_column)"
+                fk = col.foreign_key
+                if "(" in fk and fk.endswith(")"):
+                    ref_table, ref_col = fk[:-1].split("(", 1)
+                else:
+                    ref_table, ref_col = fk, "id"
+                foreign_keys.append({
+                    "columns": [col.name],
+                    "referred_table": ref_table,
+                    "referred_columns": [ref_col],
+                })
+
+        # Extract indexes from SQLAlchemy model
+        indexes: list[IndexInfo] = []
+        for idx in model_class.__table__.indexes:
+            idx_cols = list(idx.columns.keys())
+            info = IndexInfo(
+                columns=idx_cols,
+                unique=bool(idx.unique),
+                using=_extract_dialect_option(idx, "using"),
+                where=_extract_dialect_option(idx, "where"),
+                include=list(idx.include_columns) if hasattr(idx, "include_columns") and idx.include_columns else None,
+                nulls_not_distinct=bool(_extract_dialect_option(idx, "nulls_not_district", False)),
+                with_params=_extract_dialect_option(idx, "with"),
+                tablespace=_extract_dialect_option(idx, "tablespace"),
+            )
+            # Extract per-column sort info from Index expressions
+            for expr in idx.expressions:
+                if hasattr(expr, "name") and expr.name:
+                    # Determine ASC/DESC and NULLS FIRST/LAST from the expression
+                    sorting_parts = []
+                    order = getattr(expr, "_order", None)
+                    if order is not None:
+                        sorting_parts.append(order)
+                    nulls = getattr(expr, "_nulls", None)
+                    if nulls is not None:
+                        sorting_parts.append(f"nulls {nulls}")
+                    if sorting_parts:
+                        if info.column_sorting is None:
+                            info.column_sorting = {}
+                        info.column_sorting[expr.name] = " ".join(sorting_parts)
+            # ClickHouse: read from index.info dict
+            if _get_backend_name(db_name) == "clickhouse":
+                info.clickhouse_type = idx.info.get("clickhouse_type", "minmax")
+                info.clickhouse_granularity = idx.info.get("clickhouse_granularity", 1)
+            indexes.append(info)
+
         clickhouse_options = {}
         object_type = "table"
         if _get_backend_name(db_name) == "clickhouse":
@@ -591,6 +725,8 @@ def extract_table_from_model(
             columns=columns,
             clickhouse_options=clickhouse_options,
             object_type=object_type,
+            foreign_keys=foreign_keys,
+            indexes=indexes,
         )
     except Exception:
         return None

@@ -23,6 +23,80 @@ def _write_migration(directory: str, name: str, content: str) -> None:
         f.write(content)
 
 
+def test_parse_rename_flags_with_dots_in_column_name():
+    result = _parse_rename_flags(["users.json_field:json_data"])
+    assert len(result) == 1
+    assert result[0] == RenameIntent("users", "json_field", "json_data")
+
+
+def test_parse_rename_table_flags_with_dashes():
+    result = _parse_rename_table_flags(["my-table:our-table"])
+    assert len(result) == 1
+    assert result[0] == {"old_table": "my-table", "new_table": "our-table"}
+
+
+def test_format_table_rename_warning_zero_percent():
+    msg = _format_table_rename_warning([("a", "b", 0.0)])
+    assert "0%" in msg
+
+
+def test_format_table_rename_warning_multiple():
+    msg = _format_table_rename_warning([("a", "b", 0.9), ("c", "d", 0.75)])
+    assert "a" in msg
+    assert "b" in msg
+    assert "c" in msg
+    assert "d" in msg
+
+
+def test_generate_migration_sql_with_table_rename_and_column_rename():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        _write_migration(
+            tmpdir,
+            "0001_create.sql",
+            """-- upgrade
+
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER NOT NULL PRIMARY KEY,
+    name VARCHAR NOT NULL
+)
+
+-- rollback
+
+DROP TABLE users
+""",
+        )
+        accounts = ModelTable(
+            name="accounts",
+            columns=[
+                ModelColumn("id", "INTEGER", False, True, False, None, None),
+                ModelColumn("full_name", "VARCHAR", True, False, False, None, None),
+            ],
+        )
+        upgrade_sql, rollback_sql, changes = generate_migration_sql(
+            [accounts],
+            migrations_dir=tmpdir,
+            confirmed_table_intents={("users", "accounts")},
+            table_resolved_from_map={("users", "accounts"): "rename_flag"},
+        )
+        assert any(c.operation == "rename_table" for c in changes)
+        assert "ALTER TABLE users RENAME TO accounts;" in upgrade_sql
+
+
+def test_generate_migration_sql_table_rename_no_snapshot():
+    table = ModelTable(
+        name="accounts",
+        columns=[
+            ModelColumn("id", "INTEGER", False, True, False, None, None),
+        ],
+    )
+    upgrade_sql, rollback_sql, changes = generate_migration_sql(
+        [table],
+        confirmed_table_intents={("users", "accounts")},
+        table_resolved_from_map={("users", "accounts"): "prompt"},
+    )
+    assert any(c.operation == "rename_table" for c in changes)
+
+
 def test_generate_migration_sql_skips_duplicate_create_from_pending_migration():
     with tempfile.TemporaryDirectory() as tmpdir:
         _write_migration(
