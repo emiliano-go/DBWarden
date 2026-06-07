@@ -90,15 +90,30 @@ All four backends support `ALTER TABLE t ALTER COLUMN c SET DEFAULT value` and `
 
 | Backend | CREATE INDEX | DROP INDEX | Notes |
 |---------|-------------|------------|-------|
-| PostgreSQL | `CREATE [UNIQUE] INDEX CONCURRENTLY` | `DROP INDEX` | Non-blocking creation |
+| PostgreSQL | `CREATE [UNIQUE] INDEX [CONCURRENTLY] ... USING <method> INCLUDE (<cols>) WITH (<params>) WHERE <pred> TABLESPACE <ts>` | `DROP INDEX` | Full feature support |
 | MySQL / MariaDB | `CREATE [UNIQUE] INDEX` | `DROP INDEX` | Standard |
 | SQLite | `CREATE [UNIQUE] INDEX` | `DROP INDEX` | Standard |
 
-**PostgreSQL `CONCURRENTLY`**: DBWarden uses `CREATE INDEX CONCURRENTLY` for PostgreSQL to avoid table locking. Note that `CONCURRENTLY` requires the transaction to be committed separately — it cannot be run inside a transaction block. If your migration runs multiple CSs, `CONCURRENTLY` may fail.
+**PostgreSQL advanced parameters** — all are supported in `_build_index_sql`:
 
-**Content-based comparison**: Indexes are compared by `(frozenset(columns), unique)`, not by name. Two indexes on the same columns with the same uniqueness flag are treated as identical regardless of name.
+| Parameter | SQL Clause | Model Attribute |
+|-----------|-----------|-----------------|
+| `using` | `USING btree \| gin \| gist \| hash \| brin` | `postgresql_using` dialect option |
+| `include` | `INCLUDE (col1, col2)` | `Index.include_columns` |
+| `with_params` | `WITH (fillfactor = 70, ...)` | `postgresql_with` dialect option |
+| `tablespace` | `TABLESPACE <name>` | `postgresql_tablespace` dialect option |
+| `where` | `WHERE <predicate>` | `postgresql_where` dialect option |
+| `nulls_not_distinct` | `NULLS NOT DISTINCT` | `postgresql_nulls_not_distinct` dialect option |
+| `column_sorting` | `col1 DESC NULLS LAST, col2 ASC` | `Index.expressions` order/nulls attrs |
+| `concurrently` | `CONCURRENTLY` | CLI `--concurrent/--no-concurrent` |
 
-**Auto-generated names**: `idx_{table}_{col1}_{col2}` (non-unique), `uq_{table}_{col1}_{col2}` (unique).
+**PostgreSQL `CONCURRENTLY`**: DBWarden defaults to `CREATE INDEX CONCURRENTLY` to avoid table locking. Pass `--no-concurrent` when the migration must run inside a transaction block (PostgreSQL requires `CONCURRENTLY` outside a transaction).
+
+**Full-content comparison**: Indexes are compared by **all** attributes (using, unique, where, include, with_params, tablespace, nulls_not_distinct, column_sorting, concurrently), not just columns + name. Any difference produces a drop+add — ALTER INDEX is not used.
+
+**Auto-generated names**: `idx_{table}_{col1}_{col2}` (non-unique), `uq_{table}_{col1}_{col2}` (unique). Non-btree `USING` methods append a suffix: `idx_{table}_{col}_{method}`.
+
+**No ALTER INDEX**: All index parameter changes (adding a WHERE clause, switching USING methods, changing sort order) produce `DROP INDEX` + `CREATE INDEX`. This is intentional — `ALTER INDEX` support varies widely across backends and index attribute types.
 
 ## Safe Type Change
 

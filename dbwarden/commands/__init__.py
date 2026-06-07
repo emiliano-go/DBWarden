@@ -80,6 +80,7 @@ def handle_make_migrations(
     rename_flags: list[str] | None = None,
     safe_type_change: bool = False,
     rename_table_flags: list[str] | None = None,
+    concurrent: bool = True,
 ) -> None:
     """Handle make-migrations command."""
     make_migrations_cmd(
@@ -90,6 +91,7 @@ def handle_make_migrations(
         rename_flags=rename_flags,
         safe_type_change=safe_type_change,
         rename_table_flags=rename_table_flags,
+        concurrent=concurrent,
     )
 
 

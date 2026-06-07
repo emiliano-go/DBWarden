@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from enum import IntEnum
 from typing import Any
 
-from dbwarden.engine.model_discovery import ModelColumn, ModelTable
+from dbwarden.engine.model_discovery import IndexInfo, ModelColumn, ModelTable
 
 
 class StatementOrder(IntEnum):
@@ -327,12 +327,43 @@ def extract_full_schema_snapshot(
                 continue
             if idx.get("unique") and set(idx.get("column_names", [])) == pk_columns:
                 continue
-            indexes[idx_name] = {
+            idx_entry: dict[str, Any] = {
                 "table": table_name,
                 "columns": list(idx.get("column_names", [])),
                 "unique": bool(idx.get("unique", False)),
-                "type": idx.get("dialect_options", {}).get("sqlite_using", "btree"),
             }
+            idx_dialect = idx.get("dialect_options", {})
+            for k in ("postgresql_using", "mysql_using", "mariadb_using", "sqlite_using"):
+                val = idx_dialect.get(k)
+                if val:
+                    idx_entry["using"] = val
+                    break
+            if "using" not in idx_entry:
+                idx_entry["using"] = "btree"
+            for k in ("postgresql_where",):
+                val = idx_dialect.get(k)
+                if val:
+                    idx_entry["where"] = val
+                    break
+            incl = idx.get("include_columns")
+            if incl:
+                idx_entry["include"] = list(incl)
+            for k in ("postgresql_with",):
+                val = idx_dialect.get(k)
+                if val:
+                    idx_entry["with_params"] = val
+                    break
+            for k in ("postgresql_tablespace",):
+                val = idx_dialect.get(k)
+                if val:
+                    idx_entry["tablespace"] = val
+                    break
+            for k in ("postgresql_nulls_not_distinct",):
+                val = idx_dialect.get(k)
+                if val:
+                    idx_entry["nulls_not_distinct"] = True
+                    break
+            indexes[idx_name] = idx_entry
 
         for fk in inspector.get_foreign_keys(table_name):
             fk_name = fk.get("name", "")
@@ -615,6 +646,66 @@ def _rename_table_sql(intent: TableRenameIntent, backend: str) -> MigrationState
     )
 
 
+def _index_sig(idx_or_info: dict | IndexInfo) -> tuple:
+    if isinstance(idx_or_info, IndexInfo):
+        return (
+            frozenset(idx_or_info.columns),
+            idx_or_info.unique,
+            idx_or_info.using,
+            idx_or_info.where,
+            frozenset(idx_or_info.include or []),
+            frozenset((idx_or_info.with_params or {}).items()),
+            idx_or_info.tablespace,
+            idx_or_info.nulls_not_distinct,
+            frozenset((idx_or_info.column_sorting or {}).items()),
+            idx_or_info.clickhouse_type,
+            idx_or_info.clickhouse_granularity,
+        )
+    return (
+        frozenset(idx_or_info.get("columns", [])),
+        bool(idx_or_info.get("unique", False)),
+        idx_or_info.get("using"),
+        idx_or_info.get("where"),
+        frozenset(idx_or_info.get("include", []) or []),
+        frozenset((idx_or_info.get("with_params") or {}).items()),
+        idx_or_info.get("tablespace"),
+        bool(idx_or_info.get("nulls_not_distinct", False)),
+        frozenset((idx_or_info.get("column_sorting") or {}).items()),
+        idx_or_info.get("clickhouse_type"),
+        idx_or_info.get("clickhouse_granularity"),
+    )
+
+
+def _index_op_from_info(info: IndexInfo, table: str) -> dict[str, Any]:
+    op: dict[str, Any] = {
+        "type": "add_index",
+        "table": table,
+        "columns": info.columns,
+        "unique": info.unique,
+    }
+    if info.using is not None:
+        op["using"] = info.using
+    if info.where is not None:
+        op["where"] = info.where
+    if info.include is not None:
+        op["include"] = info.include
+    if info.with_params is not None:
+        op["with_params"] = info.with_params
+    if info.tablespace is not None:
+        op["tablespace"] = info.tablespace
+    if info.nulls_not_distinct:
+        op["nulls_not_distinct"] = True
+    if info.column_sorting is not None:
+        op["column_sorting"] = info.column_sorting
+    if not info.concurrently:
+        op["concurrently"] = False
+    if info.clickhouse_type is not None:
+        op["clickhouse_type"] = info.clickhouse_type
+    if info.clickhouse_granularity is not None:
+        op["clickhouse_granularity"] = info.clickhouse_granularity
+    return op
+
+
 def diff_models_against_snapshot(
     model_tables: list[ModelTable],
     snapshot: dict[str, Any],
@@ -844,24 +935,18 @@ def diff_models_against_snapshot(
     snapshot_indexes = snapshot.get("indexes", {})
     for table in model_tables:
         model_idxs = table.indexes or []
-        model_idx_sigs: set[tuple[frozenset[str], bool]] = {
-            (frozenset(idx["columns"]), idx.get("unique", False))
-            for idx in model_idxs
-        }
+        model_idx_sigs = {_index_sig(idx) for idx in model_idxs}
 
         # Snapshot indexes for this table
         snap_idxs = [
             (name, idx) for name, idx in snapshot_indexes.items()
             if idx.get("table") == table.name
         ]
-        snap_idx_sigs: set[tuple[frozenset[str], bool]] = {
-            (frozenset(idx["columns"]), idx.get("unique", False))
-            for _, idx in snap_idxs
-        }
+        snap_idx_sigs = {_index_sig(idx) for _, idx in snap_idxs}
 
         # Indexes to drop (in snapshot but not in model)
         for name, idx in snap_idxs:
-            sig = (frozenset(idx["columns"]), idx.get("unique", False))
+            sig = _index_sig(idx)
             if sig not in model_idx_sigs:
                 upgrade_ops.append({
                     "type": "drop_index",
@@ -869,29 +954,45 @@ def diff_models_against_snapshot(
                     "index_name": name,
                     "columns": idx["columns"],
                     "unique": idx.get("unique", False),
+                    "using": idx.get("using"),
+                    "where": idx.get("where"),
+                    "include": idx.get("include"),
+                    "with_params": idx.get("with_params"),
+                    "tablespace": idx.get("tablespace"),
+                    "nulls_not_distinct": idx.get("nulls_not_distinct", False),
+                    "column_sorting": idx.get("column_sorting"),
+                    "concurrently": idx.get("concurrently", True),
+                    "clickhouse_type": idx.get("clickhouse_type"),
+                    "clickhouse_granularity": idx.get("clickhouse_granularity"),
                 })
                 rollback_ops.append({
                     "type": "add_index",
                     "table": table.name,
                     "columns": idx["columns"],
                     "unique": idx.get("unique", False),
+                    "using": idx.get("using"),
+                    "where": idx.get("where"),
+                    "include": idx.get("include"),
+                    "with_params": idx.get("with_params"),
+                    "tablespace": idx.get("tablespace"),
+                    "nulls_not_distinct": idx.get("nulls_not_distinct", False),
+                    "column_sorting": idx.get("column_sorting"),
+                    "concurrently": idx.get("concurrently", True),
+                    "clickhouse_type": idx.get("clickhouse_type"),
+                    "clickhouse_granularity": idx.get("clickhouse_granularity"),
                 })
 
         # Indexes to add (in model but not in snapshot)
         for idx in model_idxs:
-            sig = (frozenset(idx["columns"]), idx.get("unique", False))
+            sig = _index_sig(idx)
             if sig not in snap_idx_sigs:
-                upgrade_ops.append({
-                    "type": "add_index",
-                    "table": table.name,
-                    "columns": idx["columns"],
-                    "unique": idx.get("unique", False),
-                })
+                upgrade_ops.append(_index_op_from_info(idx, table.name))
                 rollback_ops.append({
                     "type": "drop_index",
                     "table": table.name,
-                    "columns": idx["columns"],
-                    "unique": idx.get("unique", False),
+                    "index_name": None,
+                    "columns": idx.columns,
+                    "unique": idx.unique,
                 })
 
     return upgrade_ops, rollback_ops
@@ -986,6 +1087,7 @@ def snapshot_diff_to_sql(
     database: str | None = None,
     db_name: str | None = None,
     safe_type_change: bool = False,
+    concurrent: bool = True,
 ) -> tuple[str, str, list[Any]]:
     from dbwarden.engine.model_discovery import (
         generate_add_column_sql,
@@ -997,6 +1099,15 @@ def snapshot_diff_to_sql(
     statements: list[MigrationStatement] = []
     changes: list[Change] = []
     backend = _get_backend(db_name)
+
+    # Apply global concurrent flag to all index ops
+    if not concurrent:
+        for op in upgrade_ops:
+            if op["type"] in ("add_index", "drop_index"):
+                op["concurrently"] = False
+        for op in rollback_ops:
+            if op["type"] in ("add_index", "drop_index"):
+                op["concurrently"] = False
 
     for op in upgrade_ops:
         if op["type"] == "rename_table":
@@ -1113,8 +1224,10 @@ def snapshot_diff_to_sql(
                 statements.append(s)
             if op["type"] == "add_index":
                 target = ",".join(op["columns"])
+                idx_type = op.get("using")
                 changes.append(Change(
                     operation="add_index", table=op["table"], target=target,
+                    index_type=idx_type,
                 ))
             else:
                 changes.append(Change(
@@ -1193,27 +1306,87 @@ def _build_foreign_key_sql(op: dict[str, Any], backend: str) -> list[MigrationSt
         ]
 
 
-def _build_index_name(table: str, columns: list[str], unique: bool) -> str:
+def _build_index_name(table: str, columns: list[str], unique: bool, using: str | None = None) -> str:
     prefix = "uq" if unique else "idx"
     cols = "_".join(columns)
-    return f"{prefix}_{table}_{cols}"
+    name = f"{prefix}_{table}_{cols}"
+    if using and using != "btree":
+        name += f"_{using}"
+    return name
 
 
 def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatement]:
     table = op["table"]
     columns = op.get("columns", [])
     unique = op.get("unique", False)
-    idx_name = op.get("index_name") or _build_index_name(table, columns, unique)
+    using = op.get("using")
+    where = op.get("where")
+    include = op.get("include")
+    with_params = op.get("with_params")
+    tablespace = op.get("tablespace")
+    nulls_not_distinct = op.get("nulls_not_distinct", False)
+    column_sorting = op.get("column_sorting")
+    concurrently = op.get("concurrently", True)
+    clickhouse_type = op.get("clickhouse_type")
+    clickhouse_granularity = op.get("clickhouse_granularity")
+    idx_name = op.get("index_name") or _build_index_name(table, columns, unique, using)
 
     if op["type"] == "add_index":
-        unique_clause = "UNIQUE " if unique else ""
-        cols = ", ".join(columns)
-        if backend == "sqlite":
-            upgrade = f"CREATE {unique_clause}INDEX {idx_name} ON {table} ({cols});"
-        elif backend == "postgresql":
-            upgrade = f"CREATE {unique_clause}INDEX CONCURRENTLY {idx_name} ON {table} ({cols});"
-        else:
-            upgrade = f"CREATE {unique_clause}INDEX {idx_name} ON {table} ({cols});"
+        if backend == "clickhouse" and clickhouse_type:
+            upgrade = (
+                f"ALTER TABLE {table} ADD INDEX {idx_name} "
+                f"({', '.join(columns)}) "
+                f"TYPE {clickhouse_type} "
+                f"GRANULARITY {clickhouse_granularity or 1};"
+            )
+            rollback = f"ALTER TABLE {table} DROP INDEX {idx_name};"
+            return [
+                MigrationStatement(
+                    order=StatementOrder.ALTER_INDEX,
+                    upgrade_sql=upgrade,
+                    rollback_sql=rollback,
+                ),
+            ]
+
+        parts = ["CREATE"]
+        if unique:
+            parts.append("UNIQUE")
+        parts.append("INDEX")
+        if backend == "postgresql" and concurrently:
+            parts.append("CONCURRENTLY")
+        parts.append(idx_name)
+        parts.append(f"ON {table}")
+
+        if using and using != "btree":
+            parts.append(f"USING {using}")
+
+        # Column list with sort orders
+        col_parts = []
+        for col in columns:
+            col_sql = col
+            sorting = (column_sorting or {}).get(col, "")
+            if sorting:
+                col_sql += f" {sorting}"
+            col_parts.append(col_sql)
+        parts.append(f"({', '.join(col_parts)})")
+
+        if include and backend == "postgresql":
+            parts.append(f"INCLUDE ({', '.join(include)})")
+
+        if with_params and backend == "postgresql":
+            opts = ", ".join(f"{k} = {v}" for k, v in with_params.items())
+            parts.append(f"WITH ({opts})")
+
+        if tablespace and backend == "postgresql":
+            parts.append(f"TABLESPACE {tablespace}")
+
+        if where:
+            parts.append(f"WHERE {where}")
+
+        if nulls_not_distinct and backend == "postgresql":
+            parts.append("NULLS NOT DISTINCT")
+
+        upgrade = " ".join(parts) + ";"
         rollback = f"DROP INDEX {idx_name};"
         return [
             MigrationStatement(
@@ -1225,8 +1398,41 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
     else:  # drop_index
         upgrade = f"DROP INDEX {idx_name};"
         unique_clause = "UNIQUE " if unique else ""
-        cols = ", ".join(columns)
-        rollback = f"CREATE {unique_clause}INDEX {idx_name} ON {table} ({cols});"
+        cols_list = ", ".join(columns)
+        rollback_parts = ["CREATE"]
+        if unique:
+            rollback_parts.append("UNIQUE")
+        rollback_parts.append("INDEX")
+        if backend == "postgresql" and concurrently:
+            rollback_parts.append("CONCURRENTLY")
+        rollback_parts.append(idx_name)
+        rollback_parts.append(f"ON {table}")
+
+        if using and using != "btree":
+            rollback_parts.append(f"USING {using}")
+
+        col_parts_rb = []
+        for col in columns:
+            col_sql = col
+            sorting = (column_sorting or {}).get(col, "")
+            if sorting:
+                col_sql += f" {sorting}"
+            col_parts_rb.append(col_sql)
+        rollback_parts.append(f"({', '.join(col_parts_rb)})")
+
+        if include and backend == "postgresql":
+            rollback_parts.append(f"INCLUDE ({', '.join(include)})")
+        if with_params and backend == "postgresql":
+            opts = ", ".join(f"{k} = {v}" for k, v in with_params.items())
+            rollback_parts.append(f"WITH ({opts})")
+        if tablespace and backend == "postgresql":
+            rollback_parts.append(f"TABLESPACE {tablespace}")
+        if where:
+            rollback_parts.append(f"WHERE {where}")
+        if nulls_not_distinct and backend == "postgresql":
+            rollback_parts.append("NULLS NOT DISTINCT")
+
+        rollback = " ".join(rollback_parts) + ";"
         return [
             MigrationStatement(
                 order=StatementOrder.ALTER_INDEX,
