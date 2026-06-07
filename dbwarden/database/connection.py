@@ -11,37 +11,19 @@ from dbwarden.logging import get_logger
 
 
 def _convert_url_to_clickhouse_dialect(url: str) -> str:
-    """Convert HTTP URL to clickhouse-connect dialect format."""
-    if url.startswith("http://"):
-        url = url.replace("http://", "", 1)
-    elif url.startswith("https://"):
-        url = url.replace("https://", "", 1)
+    """Convert HTTP URL or clickhousedb URL to clickhouse-connect dialect format."""
+    from sqlalchemy.engine import make_url
 
-    if "@" in url:
-        parts = url.split("@", 1)
-        before_at = parts[0]
-        after_at = parts[1]
-
-        if ":" in before_at:
-            user, password = before_at.split(":", 1)
-        else:
-            user = ""
-            password = ""
-
-        if "/" in after_at:
-            host_port, db = after_at.split("/", 1)
-            db_path = f"/{db}"
-        else:
-            host_port = after_at
-            db_path = ""
-
-        if user:
-            if password:
-                return f"clickhousedb://{user}:{password}@{host_port}{db_path}"
-            else:
-                return f"clickhousedb://{user}@{host_port}{db_path}"
-        else:
-            return f"clickhousedb://{host_port}{db_path}"
+    if url.startswith(("http://", "https://", "clickhousedb://")):
+        parsed = make_url(url)
+        host = parsed.host or "localhost"
+        port = parsed.port or 8123
+        username = parsed.username or "default"
+        password = parsed.password or ""
+        database = parsed.database or "default"
+        if password:
+            return f"clickhousedb://{username}:{password}@{host}:{port}/{database}"
+        return f"clickhousedb://{username}@{host}:{port}/{database}"
 
     return f"clickhousedb://{url}"
 
@@ -142,14 +124,18 @@ def get_db_connection(db_name: str | None = None) -> Generator[Any, None, None]:
         logger.log_connection_init(db_type)
         _connection_init_logged = True
 
-    with engine.begin() as connection:
-        postgres_schema = config.postgres_schema
-        if postgres_schema:
-            connection.execute(
-                text("SET search_path TO :postgres_schema"),
-                parameters={"postgres_schema": postgres_schema},
-            )
-        yield connection
+    if db_type == "clickhouse":
+        with engine.connect() as connection:
+            yield connection
+    else:
+        with engine.begin() as connection:
+            postgres_schema = config.postgres_schema
+            if postgres_schema:
+                connection.execute(
+                    text("SET search_path TO :postgres_schema"),
+                    parameters={"postgres_schema": postgres_schema},
+                )
+            yield connection
 
 
 def get_engine(db_name: str | None = None) -> Engine:

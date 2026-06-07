@@ -390,7 +390,7 @@ def _finalize_entries(
                 entry.database_type,
                 base_dir,
             )
-            if async_target_key in target_owners:
+            if async_target_key in target_owners and target_owners[async_target_key] != entry.database_name:
                 raise ConfigurationError(
                     "Duplicate database target detected for async URL: "
                     f"'{entry.database_name}' collides with '{target_owners[async_target_key]}'"
