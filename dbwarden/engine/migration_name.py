@@ -7,6 +7,7 @@ class Change:
     operation: str
     table: str
     target: Optional[str] = None
+    resolved_from: Optional[str] = None
 
 
 def autogenerate_migration_name(changes: list[Change]) -> str:

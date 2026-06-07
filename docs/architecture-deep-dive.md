@@ -55,10 +55,32 @@ Rollback uses the same lock discipline, selecting rollback SQL from applied file
 1. discover model paths
 2. import model modules
 3. extract table/column metadata
-4. compare against known schema state (database + migration history)
-5. generate upgrade and rollback SQL
-6. write migration file
-7. write companion `.plan.json` metadata file
+4. load latest schema snapshot (`dbwarden/schemas/*.schema.json`) if one exists
+5. if snapshot exists: **snapshot-diff path**
+   - diff model tables against snapshot tables
+   - auto-detect column renames from dropped↔added pairs of the same type
+   - apply user `--rename` flags and/or interactive prompts to confirm renames
+   - emit `RENAME COLUMN` (confirmed) or `DROP` + `ADD` (not confirmed)
+   - generate upgrade and rollback SQL from the ops
+6. if no snapshot: **live-DB fallback path**
+   - extract known columns from database + existing migration files
+   - compare model columns against known columns
+   - emit `CREATE TABLE` / `ADD COLUMN` only (no rename detection)
+7. deduplicate against existing migration statements
+8. write migration file
+9. write companion `.plan.json` metadata file (with `resolved_from` on rename ops)
+
+### Snapshot write lifecycle (in `migrate`)
+
+After applying versioned migrations, `migrate` calls `_write_migration_snapshot()`:
+
+1. connect to database (respecting sandbox override)
+2. extract full schema: tables, columns, types, indexes, constraints, enums
+3. compute SHA-256 checksum
+4. write `<migration_id>.schema.json` to `dbwarden/schemas/`
+5. on failure: log warning (non-blocking)
+
+Snapshots are not written during `--dry-run`, `--sandbox`, or for repeatable migrations.
 
 ## Repeatable migration model
 

@@ -43,6 +43,9 @@ checks: all from a single configuration source.
 - **Safe by default**: Migration locking, checksum integrity, collision
   detection, and schema drift checks before you deploy. DBWarden protects
   your database, from accidents and from itself.
+- **Schema snapshots**: After each migration, DBWarden captures the full
+  schema DDL as a checksummed JSON snapshot. These snapshots power offline
+  migration generation and intelligent column rename detection.
 
 ## Requirements
 

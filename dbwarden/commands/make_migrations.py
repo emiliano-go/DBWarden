@@ -1,6 +1,8 @@
 import os
 import re
+import sys
 import json
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -26,6 +28,75 @@ from dbwarden.engine.version import (
 )
 from dbwarden.logging import get_logger
 from dbwarden.output import console
+
+
+@dataclass
+class RenameIntent:
+    table: str
+    old_name: str
+    new_name: str
+
+
+def _parse_rename_flags(flags: list[str]) -> list[RenameIntent]:
+    intents: list[RenameIntent] = []
+    for flag in flags:
+        parts = flag.split(".", 1)
+        if len(parts) != 2 or ":" not in parts[1]:
+            raise ValueError(
+                f"Invalid --rename format: {flag!r}. Expected table.old_name:new_name"
+            )
+        table = parts[0]
+        old_new = parts[1].split(":", 1)
+        if len(old_new) != 2 or not old_new[0] or not old_new[1]:
+            raise ValueError(
+                f"Invalid --rename format: {flag!r}. Expected table.old_name:new_name"
+            )
+        intents.append(RenameIntent(table=table, old_name=old_new[0], new_name=old_new[1]))
+    return intents
+
+
+def _format_rename_warning(intents: list[tuple[str, str, str, str]]) -> str:
+    lines = [
+        "The following auto-detected column renames were not confirmed:"
+    ]
+    for tbl, old, new, _flag_example in intents:
+        lines.append(
+            f"  {tbl}.{old} \u2192 {new} (use --rename {tbl}.{old}:{new} to confirm)"
+        )
+    lines.append("These will be emitted as DROP + ADD instead of RENAME.")
+    return "\n".join(lines)
+
+
+def _prompt_rename_confirmations(
+    renames: list[tuple[str, str, str]],
+) -> list[tuple[str, str, str]]:
+    confirmed: list[tuple[str, str, str]] = []
+    if not renames:
+        return confirmed
+    if len(renames) == 1:
+        tbl, old, new = renames[0]
+        answer = input(
+            f"Detected rename: {tbl}.{old} \u2192 {tbl}.{new}. Confirm rename? [Y/n]: "
+        ).strip().lower()
+        if answer in ("", "y", "yes"):
+            confirmed.append((tbl, old, new))
+    else:
+        print("Detected column renames:")
+        for i, (tbl, old, new) in enumerate(renames, 1):
+            print(f"  [{i}] {tbl}.{old} \u2192 {tbl}.{new}")
+        print("  [s] Skip all")
+        print("  [a] Accept all")
+        answer = input("Select renames to confirm (e.g. 1,3 or a or s): ").strip().lower()
+        if answer == "a":
+            confirmed.extend(renames)
+        elif answer != "s":
+            for part in answer.split(","):
+                part = part.strip()
+                if part.isdigit():
+                    idx = int(part) - 1
+                    if 0 <= idx < len(renames):
+                        confirmed.append(renames[idx])
+    return confirmed
 
 
 def get_pending_migration_statements(migrations_dir: str) -> set[str]:
@@ -61,6 +132,7 @@ def make_migrations_cmd(
     verbose: bool = False,
     database: str | None = None,
     output_plan: bool = False,
+    rename_flags: list[str] | None = None,
 ) -> None:
     """
     Auto-generate SQL migration from SQLAlchemy models.
@@ -70,6 +142,7 @@ def make_migrations_cmd(
         verbose: Enable verbose logging.
         database: Target database name.
         output_plan: Print the migration plan JSON without writing files.
+        rename_flags: List of user-supplied --rename flag strings.
     """
     logger = get_logger()
 
@@ -102,11 +175,77 @@ def make_migrations_cmd(
 
     logger.info(f"Found {len(tables)} tables in models")
 
+    rename_intents: list[RenameIntent] = []
+    if rename_flags:
+        rename_intents = _parse_rename_flags(rename_flags)
+
+    confirmed_renames: set[tuple[str, str, str]] = set()
+    resolved_from_map: dict[tuple[str, str, str], str] = {}
+
+    for intent in rename_intents:
+        key = (intent.table, intent.old_name, intent.new_name)
+        confirmed_renames.add(key)
+        resolved_from_map[key] = "rename_flag"
+
+    try:
+        from dbwarden.engine.snapshot import (
+            find_latest_snapshot,
+            diff_models_against_snapshot,
+        )
+        snapshot = find_latest_snapshot(database)
+    except Exception:
+        snapshot = None
+
+    if snapshot is not None:
+        model_by_name = {t.name: t for t in tables}
+        snapshot_tables = snapshot.get("tables", {})
+        auto_detected_renames: list[tuple[str, str, str]] = []
+
+        for table in tables:
+            if table.name not in snapshot_tables:
+                continue
+            snap_cols = snapshot_tables[table.name].get("columns", {})
+            model_cols = {c.name: c for c in table.columns}
+
+            dropped = [(n, snap_cols[n]) for n in snap_cols if n not in model_cols]
+            added = [(n, model_cols[n]) for n in model_cols if n not in snap_cols]
+
+            if not dropped or not added:
+                continue
+
+            from dbwarden.engine.snapshot import detect_renames
+            renames = detect_renames(table.name, dropped, added)
+            for old, new in renames:
+                key = (table.name, old, new)
+                if key not in confirmed_renames:
+                    auto_detected_renames.append((table.name, old, new))
+
+        if auto_detected_renames:
+            if sys.stdin.isatty():
+                prompted = _prompt_rename_confirmations(auto_detected_renames)
+                for key in prompted:
+                    confirmed_renames.add(key)
+                    resolved_from_map[key] = "prompt"
+            else:
+                logger.warning(_format_rename_warning(
+                    (t, o, n, f"{t}.{o}:{n}")
+                    for t, o, n in auto_detected_renames
+                ))
+                console.print(
+                    _format_rename_warning(
+                        (t, o, n, f"{t}.{o}:{n}")
+                        for t, o, n in auto_detected_renames
+                    ),
+                    style="yellow",
+                )
+
     migrations_dir = get_migrations_directory(database)
     next_number = get_next_migration_number(migrations_dir)
 
     upgrade_sql, rollback_sql, changes = generate_migration_sql(
-        tables, migrations_dir, database, db_name
+        tables, migrations_dir, database, db_name,
+        confirmed_renames=confirmed_renames,
+        resolved_from_map=resolved_from_map,
     )
 
     safe_desc = _resolve_migration_description(description, changes)
@@ -131,7 +270,6 @@ def make_migrations_cmd(
     filepath = os.path.join(migrations_dir, filename)
     plan_filepath = str(Path(filepath).with_suffix(".plan.json"))
 
-    # Validate the final path stays within migrations directory
     migrations_dir_canonical = os.path.realpath(migrations_dir)
     filepath_canonical = os.path.realpath(filepath)
     if not filepath_canonical.startswith(migrations_dir_canonical + os.sep):
@@ -195,6 +333,8 @@ def _build_plan_operation(change: Change) -> dict[str, str]:
         "table": change.table,
         "severity": "INFO",
     }
+    if change.resolved_from:
+        operation["resolved_from"] = change.resolved_from
     if change.target:
         if change.operation == "rename_column":
             operation["new_name"] = change.target
@@ -208,6 +348,8 @@ def generate_migration_sql(
     migrations_dir: str | None = None,
     database: str | None = None,
     db_name: str | None = None,
+    confirmed_renames: set[tuple[str, str, str]] | None = None,
+    resolved_from_map: dict[tuple[str, str, str], str] | None = None,
 ) -> tuple[str, str, list[Change]]:
     """
     Generate upgrade and rollback SQL from table definitions.
@@ -224,6 +366,8 @@ def generate_migration_sql(
         migrations_dir: Path to migrations directory.
         database: Database name for backend-specific types.
         db_name: Database name for filename generation.
+        confirmed_renames: Set of (table, old_name, new_name) tuples confirmed by user.
+        resolved_from_map: Optional mapping from rename key to origin string.
 
     Returns:
         Tuple of (upgrade_sql, rollback_sql, changes).
@@ -232,12 +376,14 @@ def generate_migration_sql(
     rollback_sql: str = ""
     changes: list[Change] = []
     snapshot: Any = None
+    confirmed_renames = confirmed_renames or set()
 
     try:
         from dbwarden.engine.snapshot import (
             find_latest_snapshot,
             diff_models_against_snapshot,
             snapshot_diff_to_sql,
+            _apply_rename_intents,
         )
 
         snapshot = find_latest_snapshot(database)
@@ -249,6 +395,10 @@ def generate_migration_sql(
             upgrade_ops, rollback_ops = diff_models_against_snapshot(
                 tables, snapshot, database=database, db_name=db_name
             )
+            if confirmed_renames:
+                upgrade_ops, rollback_ops = _apply_rename_intents(
+                    upgrade_ops, rollback_ops, confirmed_renames, resolved_from_map
+                )
             upgrade_sql, rollback_sql, changes = snapshot_diff_to_sql(
                 upgrade_ops, rollback_ops, database=database, db_name=db_name
             )
