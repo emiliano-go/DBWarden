@@ -51,7 +51,4 @@ dbwarden status --all
 - keep model boundaries clear per database
 - use `overlap_models=True` only when overlap is intentional
 
-## Navigation
 
-- Previous: [Dev Mode](dev-mode.md)
-- Next: [Migration File Format](../migration-files.md)

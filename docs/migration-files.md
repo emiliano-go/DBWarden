@@ -178,7 +178,4 @@ dbwarden rollback --database primary --count 1
 dbwarden migrate --database primary
 ```
 
-## Navigation
 
-- Previous: [Multi-Database Setup](tutorial/multi-database-setup.md)
-- Next: [SQL Translation](sql-translation.md)

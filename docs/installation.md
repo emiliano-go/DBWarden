@@ -160,7 +160,3 @@ poetry update dbwarden
 
 Check the release notes when upgrading major versions - there may be configuration or workflow changes.
 
-## Navigation
-
-- Previous: [Introduction](getting-started/introduction.md)
-- Next: [First Steps](getting-started/first-steps.md)

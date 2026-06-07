@@ -190,10 +190,4 @@ app = FastAPI(lifespan=lifespan)
 
 **Result:** Less boilerplate, fewer bugs, easier maintenance.
 
-## Navigation
 
-Ready to start? Head to **[First Steps](tutorial/first-steps.md)** to build your first app.
-
-Already know the basics? Jump to **[Advanced User Guide](#advanced-user-guide)**.
-
-Looking for something specific? Check the **[API Reference](reference.md)**.

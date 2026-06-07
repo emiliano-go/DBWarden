@@ -55,7 +55,4 @@ dbwarden history --database primary
 
 Reference: [CLI Reference](../cli-reference.md)
 
-## Navigation
 
-- Previous: [Your First Migration](your-first-migration.md)
-- Next: [Rolling Back](rolling-back.md)

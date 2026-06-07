@@ -50,7 +50,4 @@ dbwarden history --database primary
 
 Reference: [CLI Reference](../cli-reference.md)
 
-## Navigation
 
-- Previous: [Rolling Back](rolling-back.md)
-- Next: [Dev Mode](dev-mode.md)
