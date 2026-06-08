@@ -10,7 +10,7 @@ When `dbwarden migrate` runs, it:
 2. Executes all pending migrations within that lock
 3. Releases the lock on success or failure
 
-The lock is stored in the target database itself — no external service (Redis, filesystem) is required.
+The lock is stored in the target database itself: no external service (Redis, filesystem) is required.
 
 If a second `migrate` invocation starts while the first holds the lock, it fails immediately with:
 
@@ -48,7 +48,7 @@ The `locked_at` timestamp and `pid` are recorded at acquisition time. Use these 
 
 If a migration raises an error after partial execution:
 
-1. DBWarden rolls back the in-flight transaction (if the database supports transactional DDL — PostgreSQL does, MySQL does not)
+1. DBWarden rolls back the in-flight transaction (if the database supports transactional DDL, PostgreSQL does, MySQL does not)
 2. The lock is released
 3. The CLI exits non-zero
 
@@ -97,7 +97,7 @@ dbwarden migrate --database primary
 Do not run `unlock` if:
 
 - You are unsure whether a migration process is still running
-- The `locked_at` timestamp is recent (within seconds or minutes) — the process may still be alive
+- The `locked_at` timestamp is recent (within seconds or minutes); the process may still be alive
 - Multiple processes share a database and you cannot confirm all are idle
 
 Releasing a lock held by a live migration process will allow a second migration to start concurrently, which can corrupt schema state.
@@ -107,7 +107,7 @@ Releasing a lock held by a live migration process will allow a second migration 
 In CI/CD, run migrations from a single job with no parallelism:
 
 ```yaml
-# GitHub Actions — serialize via job dependency
+# GitHub Actions: serialize via job dependency
 jobs:
   migrate:
     runs-on: ubuntu-latest
@@ -165,11 +165,11 @@ to serialize migration requests across application instances.
 |--------|---------------|------------|
 | Scope | CLI commands (`migrate`, `seed`) | FastAPI `POST /migrate` endpoint |
 | Storage | `_dbwarden_lock` table in the target database | Redis key |
-| TTL | No TTL — manual `unlock` required after crash | 60-second default TTL |
+| TTL | No TTL: manual `unlock` required after crash | 60-second default TTL |
 | Failure mode | Blocks other CLI commands until released | Auto-released after TTL |
 | External dependency | None (uses the database itself) | Redis required |
 
-Both locks can be used independently or together — they guard different
+Both locks can be used independently or together; they guard different
 entry points. The database lock protects the CLI; the Redis lock
 protects the FastAPI endpoint.
 

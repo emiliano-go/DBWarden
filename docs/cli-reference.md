@@ -99,12 +99,12 @@ dbwarden make-migrations --safe-type-change --database primary
 
 Options:
 
-- `--database`/`-d` — Target database
-- `--plan` — Print migration plan JSON without writing files
-- `--verbose`/`-v` — Verbose output
-- `--rename` — Repeatable. Declare a column rename in format `table.old_name:new_name`.
-- `--rename-table` — Repeatable. Declare a table rename in format `old_table:new_table`.
-- `--safe-type-change` — Multi-step safe type change strategy.
+- `--database`/`-d`: Target database
+- `--plan`: Print migration plan JSON without writing files
+- `--verbose`/`-v`: Verbose output
+- `--rename`: Repeatable. Declare a column rename in format `table.old_name:new_name`.
+- `--rename-table`: Repeatable. Declare a table rename in format `old_table:new_table`.
+- `--safe-type-change`: Multi-step safe type change strategy.
 
 See [make-migrations](commands/make-migrations.md) for full documentation including rename detection, column-level changes, schema snapshots, and plan format.
 

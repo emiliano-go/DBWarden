@@ -87,9 +87,9 @@ Detected table renames are prompted interactively (TTY) or suggested via the `--
 
 Snapshots also enable `make-migrations` to detect when a column's **type**, **nullability**, or **default** has changed. For columns present in both the snapshot and the model with the same name, the diff engine compares:
 
-- **Normalized type** — If `varchar` in the snapshot but `text` in the model, an `ALTER COLUMN TYPE` operation is emitted.
-- **Nullable flag** — If nullable differs, `SET NOT NULL` or `DROP NOT NULL` is generated.
-- **Default value** — If the default differs, `SET DEFAULT` or `DROP DEFAULT` is generated.
+- **Normalized type**: If `varchar` in the snapshot but `text` in the model, an `ALTER COLUMN TYPE` operation is emitted.
+- **Nullable flag**: If nullable differs, `SET NOT NULL` or `DROP NOT NULL` is generated.
+- **Default value**: If the default differs, `SET DEFAULT` or `DROP DEFAULT` is generated.
 
 These operations are emitted only when a snapshot exists. Without a snapshot (the live-DB fallback path), only new and dropped columns are detected.
 
@@ -159,7 +159,7 @@ Column types in the snapshot are normalized to a canonical set so that equivalen
 | `enum` | ENUM |
 | (unknown) | Stored as-is with `"raw": true` |
 
-This normalization is what powers the rename detection — two columns with the same normalized type are candidates for rename, even if their raw SQL type strings differ.
+This normalization is what powers the rename detection: two columns with the same normalized type are candidates for rename, even if their raw SQL type strings differ.
 
 ## Edge Cases and Restrictions
 

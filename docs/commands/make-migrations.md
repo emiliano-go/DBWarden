@@ -29,14 +29,14 @@ dbwarden make-migrations --database primary --safe-type-change
 
 ## Options
 
-- `description` (optional) — Custom migration name. If not provided, automatically generated from schema changes.
-- `--database`, `-d` — Target database.
-- `--plan` — Print the migration plan JSON without writing files.
-- `--verbose`, `-v` — Verbose output.
-- `--rename` — Repeatable. Declare a column rename in the format `table.old_name:new_name`. See [Rename Detection](#rename-detection) below.
-- `--rename-table` — Repeatable. Declare a table rename in the format `old_table:new_table`. See [Table Rename Detection](#table-rename-detection) below.
-- `--safe-type-change` — Use a multi-step strategy for type changes: add a temporary column, data migration comment, verification step, then drop-and-rename. Useful for databases where `ALTER COLUMN TYPE` would lock the table.
-- `--concurrent` / `--no-concurrent` — Enable or disable `CREATE INDEX CONCURRENTLY` for PostgreSQL (default: `--concurrent`). Use `--no-concurrent` when the migration runs inside a transaction block.
+- `description` (optional): Custom migration name. If not provided, automatically generated from schema changes.
+- `--database`, `-d`: Target database.
+- `--plan`: Print the migration plan JSON without writing files.
+- `--verbose`, `-v`: Verbose output.
+- `--rename`: Repeatable. Declare a column rename in the format `table.old_name:new_name`. See [Rename Detection](#rename-detection) below.
+- `--rename-table`: Repeatable. Declare a table rename in the format `old_table:new_table`. See [Table Rename Detection](#table-rename-detection) below.
+- `--safe-type-change`: Use a multi-step strategy for type changes: add a temporary column, data migration comment, verification step, then drop-and-rename. Useful for databases where `ALTER COLUMN TYPE` would lock the table.
+- `--concurrent` / `--no-concurrent`: Enable or disable `CREATE INDEX CONCURRENTLY` for PostgreSQL (default: `--concurrent`). Use `--no-concurrent` when the migration runs inside a transaction block.
 
 ## Schema Snapshots
 
@@ -65,7 +65,7 @@ When a column is dropped from the snapshot and a new column of the same type is 
 
 ### Rename detection edge cases
 
-- **Ambiguous multi-rename**: When 2+ dropped columns and 2+ added columns share the same normalized type, all are treated as renames (paired in insertion order). This is intentionally permissive — false positives can be declined interactively or overridden with `--rename`.
+- **Ambiguous multi-rename**: When 2+ dropped columns and 2+ added columns share the same normalized type, all are treated as renames (paired in insertion order). This is intentionally permissive; false positives can be declined interactively or overridden with `--rename`.
 - **Drop-add conversion with `resolved_from`**: A confirmed drop+add pair is converted to a `rename_column` op with `resolved_from` tracking the confirmation source (`"rename_flag"` or `"prompt"`).
 - **Non-matching confirmed set**: If a confirmed rename tuple does not match any op (e.g., table name mismatch), it is silently ignored.
 - **Table + column rename interaction**: Table renames are processed first (statement order 0). After the snapshot is updated with the new table name, column renames are detected against the renamed table. The column rename's `resolved_from` is independent of the table rename's `resolved_from`.
@@ -141,7 +141,7 @@ When a schema snapshot exists, `make-migrations` does more than detect new and d
 
 Types are normalized before comparison (see [Schema Snapshots](schema-snapshots.md)). If the normalized type differs between the snapshot and the model, an `alter_column_type` operation is emitted.
 
-Example — model changes `VARCHAR` to `TEXT`:
+Example: model changes `VARCHAR` to `TEXT`:
 
 ```sql
 -- upgrade
@@ -229,7 +229,7 @@ When a table is dropped from the snapshot and a new table with similar columns i
 | Overlap ratio ≥ 0.6 | Prompted as a rename candidate |
 | Overlap ratio < 0.6 | Emitted as drop+add with a warning comment |
 
-The overlap ratio is `matching_columns / max(len(snapshot_cols), len(model_cols))`. A 0.6 threshold is intentionally conservative — a 10-column table with 6 matching columns is a plausible rename, while a 2-column table with 1 match is not.
+The overlap ratio is `matching_columns / max(len(snapshot_cols), len(model_cols))`. A 0.6 threshold is intentionally conservative: a 10-column table with 6 matching columns is a plausible rename, while a 2-column table with 1 match is not.
 
 ### Interactive prompt (TTY)
 
@@ -282,8 +282,8 @@ Note: when combining table and column renames, the column rename references the 
 ### Table rename edge cases
 
 - **Empty tables**: If either the snapshot table or the model table has zero columns, the overlap ratio is `0.0` and the pair is not a rename candidate.
-- **Zero overlap**: If no columns match by name and normalized type, the ratio is `0.0` — emitted as drop+add.
-- **Exact match**: If all columns match, the ratio is `1.0` — always a rename candidate.
+- **Zero overlap**: If no columns match by name and normalized type, the ratio is `0.0`: emitted as drop+add.
+- **Exact match**: If all columns match, the ratio is `1.0`: always a rename candidate.
 - **Table rename + column changes in the same table**: After the table rename is applied to the snapshot, column diffs are computed against the new table name. Column renames, type changes, nullable changes, and default changes are all detected on the renamed table.
 - **ClickHouse**: `ALTER TABLE RENAME` emits a comment-only placeholder since ClickHouse does not support it.
 
@@ -367,15 +367,15 @@ Omitted attributes or `None`-valued attributes are treated as defaults (btree, n
 Operations in the generated migration are ordered consistently:
 
 ```
-RENAME TABLE        (0)   — table renames first (all subsequent ops use new name)
+RENAME TABLE        (0)  : table renames first (all subsequent ops use new name)
 RENAME COLUMN       (1)
 ALTER COLUMN TYPE   (2)
 ALTER COLUMN NULLABLE (3)
 ALTER COLUMN DEFAULT  (4)
 CREATE TABLE        (5)
 ADD COLUMN          (6)
-ALTER FOREIGN KEY   (7)   — FK adds and drops
-ALTER INDEX         (8)   — index adds and drops
+ALTER FOREIGN KEY   (7)  : FK adds and drops
+ALTER INDEX         (8)  : index adds and drops
 DROP COLUMN         (9)
 DROP TABLE          (10)
 ```
@@ -392,7 +392,7 @@ When a migration is generated, DBWarden writes two files side by side:
 The companion plan file contains machine-readable metadata about the generated migration:
 
 - `migration_id`
-- `operations` — each operation includes `type`, `table`, `severity` and optionally `resolved_from` (for rename operations)
+- `operations`: each operation includes `type`, `table`, `severity` and optionally `resolved_from` (for rename operations)
 - `required_flags`
 - `checksum`
 
@@ -500,7 +500,7 @@ dbwarden make-migrations --database primary --plan
 - Generated `.plan.json` files are useful for CI checks and debugging.
 - If no models are discovered, configure `model_paths` explicitly.
 - With `--dev`, translation can target dev SQLite behavior.
-- Schema snapshots are written to `dbwarden/schemas/` after each successful `migrate` — see [Schema Snapshots](schema-snapshots.md).
+- Schema snapshots are written to `dbwarden/schemas/` after each successful `migrate`: see [Schema Snapshots](schema-snapshots.md).
 - Column-level diff (type/null/default changes) only works with a schema snapshot.
 - Without a snapshot, `make-migrations` falls back to live-DB diffing which only detects new/dropped columns.
 

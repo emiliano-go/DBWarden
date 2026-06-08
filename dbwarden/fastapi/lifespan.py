@@ -44,11 +44,11 @@ async def dbwarden_lifespan(
     Parameters
     ----------
     mode:
-        - ``"check"`` — run read-only schema validation at startup
+        - ``"check"``: run read-only schema validation at startup
           (default). Raises on drift unless *fail_fast=False*.
-        - ``"migrate"`` — auto-apply pending migrations at startup.
+        - ``"migrate"``: auto-apply pending migrations at startup.
           Blocked in production unless *allow_in_production=True*.
-        - ``"none"`` — skip all startup checks; only manage engine
+        - ``"none"``: skip all startup checks; only manage engine
           lifecycle (create on demand, dispose on shutdown).
     database:
         Target a single database by name.

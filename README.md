@@ -28,14 +28,14 @@ DBWarden is a drop-in alternative to Alembic built for FastAPI: SQL-first migrat
 - **Schema snapshots**: After every migration, a checksummed JSON snapshot is written. These snapshots power rename detection, offline migration generation, and column-level diffing without querying the live database.
 - **Column-level diffing**: Type, nullable, default, and comment changes generate precise `ALTER COLUMN` statements.
 - **Rich index metadata**: Partial indexes (`WHERE`), covering indexes (`INCLUDE`), `USING` methods, `NULLS NOT DISTINCT`, column sort order, storage parameters, and ClickHouse skip indexes.
-- **FastAPI-native sessions**: `session=primary.async_session` as a route annotation — no `Depends`, no `Annotated`, no `SessionDep`.
+- **FastAPI-native sessions**: `session=primary.async_session` as a route annotation: no `Depends`, no `Annotated`, no `SessionDep`.
 - **Single config source**: `database_config(...)` drives migrations, sessions, health checks, and seeds.
 - **Dev mode**: Run SQLite locally against a PostgreSQL production schema with automatic SQL translation.
 - **Multi-database**: One project, multiple databases, full isolation.
 - **Sandbox & dry-run**: Test migrations in a temporary database or preview SQL without touching anything.
 - **Observability**: Prometheus metrics (6 families), JSON logging, FastAPI routers for `/metrics`, `/status`, `/migrate`.
 - **Versioned seeds**: SQL and Python seed files with checksummed idempotent application.
-- **PostgreSQL first-class**: Reverse-engineer a live database with `generate-models`, feed into `make-migrations` — zero diff.
+- **PostgreSQL first-class**: Reverse-engineer a live database with `generate-models`, feed into `make-migrations`: zero diff.
 - **ClickHouse first-class**: Table options, replicated engines, dictionaries, materialized views, projections, skip indexes.
 
 ## Requirements
@@ -74,7 +74,7 @@ primary = database_config(
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base
 from dbwarden import TableMeta
-from dbwarden.schema import index
+from dbwarden.schema import IndexSpec
 
 Base = declarative_base()
 
@@ -100,7 +100,7 @@ class Post(Base):
 
     class Meta(TableMeta):
         indexes = [
-            index("ix_posts_created_at", ["created_at"]),
+            IndexSpec(name="ix_posts_created_at", columns=["created_at"]),
         ]
 ```
 
@@ -224,7 +224,7 @@ user = User.from_schema(data)
 session.add(user)
 await session.commit()
 
-api_result = user.to_schema()  # PublicSchema — excludes password_hash
+api_result = user.to_schema()  # PublicSchema: excludes password_hash
 ```
 
 `CreateSchema` derives required fields from nullable columns. `PublicSchema` omits fields with `public = False`. No separate schema definitions to maintain.
@@ -241,7 +241,7 @@ dbwarden make-migrations
 # → No changes detected
 ```
 
-The round-trip is confirmed — your generated models match the database schema exactly. The following PostgreSQL features are fully supported:
+The round-trip is confirmed: your generated models match the database schema exactly. The following PostgreSQL features are fully supported:
 
 - Identity columns with sequence options
 - Generated columns (`GENERATED ALWAYS AS (...) STORED`)

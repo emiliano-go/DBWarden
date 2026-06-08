@@ -117,13 +117,13 @@ Each backend has deep-dive documentation:
 
 ### PostgreSQL
 
-PostgreSQL is a **first-class backend** with full round-trip support. All metadata — identity columns, collation, storage, compression, generated columns, fillfactor, tablespace, inheritance, exclude constraints, deferrable FKs, and advanced index options — is captured by the snapshot, diffed correctly, and emitted as valid DDL.
+PostgreSQL is a **first-class backend** with full round-trip support. All metadata: identity columns, collation, storage, compression, generated columns, fillfactor, tablespace, inheritance, exclude constraints, deferrable FKs, and advanced index options, is captured by the snapshot, diffed correctly, and emitted as valid DDL.
 
 See [PostgreSQL Deep Dive](databases/postgresql.md) for the complete reference.
 
 ### MySQL / MariaDB
 
-- **DDL is NOT transactional** — each statement auto-commits; partial failure possible
+- **DDL is NOT transactional**: each statement auto-commits; partial failure possible
 - MariaDB configured as `database_type="mariadb"` (separate from MySQL)
 - FK drop uses `DROP FOREIGN KEY` (not `DROP CONSTRAINT`)
 - Column type/nullable changes use `MODIFY COLUMN` (requires full column definition)

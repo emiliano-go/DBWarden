@@ -41,9 +41,9 @@ dbwarden status --database primary
 
 Common causes:
 
-1. **Editor auto-format** — your editor reformatted whitespace in the file
-2. **Merge conflict** — conflict markers were added/removed inside a migration file
-3. **Intentional edit** — someone changed the migration to fix a typo or add a comment
+1. **Editor auto-format**: your editor reformatted whitespace in the file
+2. **Merge conflict**: conflict markers were added/removed inside a migration file
+3. **Intentional edit**: someone changed the migration to fix a typo or add a comment
 
 ## Resolution: dev environment
 
@@ -66,7 +66,7 @@ In production, never modify applied migration files. The resolution is:
 1. **Revert the file** to its exact applied state (use git history)
 2. Create a **new migration** for any schema changes you need to make
 
-If the file change was accidental and the schema is correct, reverting the file is safe — no data or schema change occurs.
+If the file change was accidental and the schema is correct, reverting the file is safe; no data or schema change occurs.
 
 If the file was intentionally changed to fix an error in a migration that was already applied in production, the database schema may already reflect the original (wrong) SQL. Coordinate carefully:
 
@@ -87,7 +87,7 @@ Never. A checksum mismatch means recorded history diverges from what is on disk.
 
 ## Schema snapshot checksums
 
-DBWarden also writes a **schema snapshot** after each migration —
+DBWarden also writes a **schema snapshot** after each migration:
 a JSON file at `dbwarden/schemas/<migration_id>.schema.json`. Each
 snapshot contains a `checksum` field computed from the full snapshot
 content via SHA-256, plus a `previous_checksum` field linking it to
@@ -102,7 +102,7 @@ the prior snapshot:
 ```
 
 Snapshots are written atomically (write to temp file, verify, rename)
-and read with integrity validation — if the file content doesn't match
+and read with integrity validation; if the file content doesn't match
 the stored checksum, the snapshot is rejected.
 
 The snapshot checksum chain serves a different purpose from the

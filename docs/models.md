@@ -74,7 +74,7 @@ These attributes work with any `database_type`. Backend-specific subclasses (`PG
 
 ## PostgreSQL Model Metadata
 
-When `database_type="postgresql"`, DBWarden supports first-class PostgreSQL metadata via `class Meta(PGTableMeta)` inner classes. This is the **only** supported surface — `mapped_column(info=...)` raises `DBWardenConfigError`.
+When `database_type="postgresql"`, DBWarden supports first-class PostgreSQL metadata via `class Meta(PGTableMeta)` inner classes. This is the **only** supported surface: `mapped_column(info=...)` raises `DBWardenConfigError`.
 
 ### Table-Level Meta
 

@@ -4,10 +4,10 @@ Manage seed data for a database.
 
 ## Subcommands
 
-- `seed create` — create a new seed file
-- `seed apply` — apply pending seeds
-- `seed list` — list seeds and their status
-- `seed rollback` — roll back applied seeds
+- `seed create`: create a new seed file
+- `seed apply`: apply pending seeds
+- `seed list`: list seeds and their status
+- `seed rollback`: roll back applied seeds
 
 ---
 
@@ -24,9 +24,9 @@ dbwarden seed create "populate lookup tables" --database primary --type python
 
 ### Options
 
-- `--database`, `-d` — target database handle
-- `--type` — `sql` (default) or `python`
-- `--seed-table` — custom seed tracking table name (default: `_dbwarden_seeds`)
+- `--database`, `-d`: target database handle
+- `--type`: `sql` (default) or `python`
+- `--seed-table`: custom seed tracking table name (default: `_dbwarden_seeds`)
 - `--verbose`, `-v`
 
 ---
@@ -47,10 +47,10 @@ dbwarden seed apply --all
 ### Options
 
 - `--database`, `-d`
-- `--all`, `-a` — apply across all configured databases
-- `--version` — apply up to this seed version
-- `--seed-table` — custom seed tracking table name
-- `--dry-run` — preview without executing
+- `--all`, `-a`: apply across all configured databases
+- `--version`: apply up to this seed version
+- `--seed-table`: custom seed tracking table name
+- `--dry-run`: preview without executing
 - `--verbose`, `-v`
 
 ---
@@ -89,8 +89,8 @@ dbwarden seed rollback --database primary --to-version 0003
 ### Options
 
 - `--database`, `-d`
-- `--count` — number of seeds to roll back (default: 1)
-- `--to-version` — roll back to this seed version
+- `--count`: number of seeds to roll back (default: 1)
+- `--to-version`: roll back to this seed version
 - `--verbose`, `-v`
 
 See also: [Seed Management](../seeds.md)

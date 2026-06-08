@@ -395,7 +395,7 @@ def extract_full_schema_snapshot(
                 col_entry["comment"] = comment
 
             if database_type == "postgresql":
-                # Enum detection — check SQLAlchemy type object directly
+                # Enum detection: check SQLAlchemy type object directly
                 if hasattr(col_type, "enums") and col_type.enums and hasattr(col_type, "name") and col_type.name:
                     col_entry["type"] = "enum"
                     col_entry["enum_name"] = col_type.name
@@ -1362,7 +1362,7 @@ def diff_models_against_snapshot(
                 handled_snap.add(snap_name)
                 handled_model.add(model_name)
             elif snap_entry.get("columns") == model_entry.get("columns"):
-                # Same columns, different name — emit RENAME CONSTRAINT
+                # Same columns, different name: emit RENAME CONSTRAINT
                 rename_payload = {"old_name": snap_name, "new_name": model_name, "columns": list(cols_sig)}
                 upgrade_ops.append({"type": "rename_unique_constraint", "table": table.name, **rename_payload})
                 rollback_ops.append({"type": "rename_unique_constraint", "table": table.name, "old_name": model_name, "new_name": snap_name, "columns": list(cols_sig)})

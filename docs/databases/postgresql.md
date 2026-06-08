@@ -1,6 +1,6 @@
 # PostgreSQL
 
-DBWarden treats PostgreSQL as a **first-class backend** — every natively supported feature is reverse-engineered, diffed, and emitted as correct DDL.
+DBWarden treats PostgreSQL as a **first-class backend**: every natively supported feature is reverse-engineered, diffed, and emitted as correct DDL.
 
 ## First-Class Features
 
@@ -40,7 +40,7 @@ The following PostgreSQL features are fully supported in this round-trip:
 
 ## Declaring Metadata
 
-PostgreSQL metadata is declared in a `class Meta` inner class on the model. This is the **only** supported surface — `mapped_column(info=...)` raises `DBWardenConfigError`.
+PostgreSQL metadata is declared in a `class Meta` inner class on the model. This is the **only** supported surface: `mapped_column(info=...)` raises `DBWardenConfigError`.
 
 ### Table-Level Meta
 
@@ -158,7 +158,7 @@ DBWarden defaults to `CREATE INDEX CONCURRENTLY` to avoid table locking. Pass `-
 
 ### Column Type Changes
 
-Emits `ALTER TABLE t ALTER COLUMN c TYPE newtype`. If a `USING` expression is needed (e.g., casting text to integer), write a manual migration — DBWarden does not auto-generate `USING` clauses.
+Emits `ALTER TABLE t ALTER COLUMN c TYPE newtype`. If a `USING` expression is needed (e.g., casting text to integer), write a manual migration; DBWarden does not auto-generate `USING` clauses.
 
 ### Safe Type Change
 
@@ -231,7 +231,7 @@ The snapshot JSON captures all PostgreSQL-specific metadata. Key sections:
 
 ## Constraint Diffing
 
-Constraints (unique, check, foreign key, exclude) are compared by full attribute content. Any difference in signature — columns, expression, options — produces a `DROP` + `ADD`. Constraint name changes are detected as a new constraint (the old name is dropped, the new name is added).
+Constraints (unique, check, foreign key, exclude) are compared by full attribute content. Any difference in signature: columns, expression, options, produces a `DROP` + `ADD`. Constraint name changes are detected as a new constraint (the old name is dropped, the new name is added).
 
 FK comparison uses a 6-tuple signature: `(columns, ref_table, ref_columns, on_delete, on_update, deferrable)`.
 

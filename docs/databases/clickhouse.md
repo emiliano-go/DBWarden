@@ -111,7 +111,7 @@ If `clickhouse_type` is not specified, index add/drop operations emit a comment 
 
 ## DDL Transactional Behavior
 
-ClickHouse executes DDL statements individually. There is no transactional DDL — partial failure during a multi-statement migration can leave the schema in an inconsistent state. Each statement is applied atomically, but there is no rollback across statements.
+ClickHouse executes DDL statements individually. There is no transactional DDL; partial failure during a multi-statement migration can leave the schema in an inconsistent state. Each statement is applied atomically, but there is no rollback across statements.
 
 ## Statement Ordering
 

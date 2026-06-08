@@ -135,8 +135,8 @@ def DBWardenRouter(
 
     Endpoints:
 
-    * ``GET /status`` — per-database migration and seed status.
-    * ``POST /migrate`` — trigger migration execution (auth-guarded when enabled).
+    * ``GET /status``: per-database migration and seed status.
+    * ``POST /migrate``: trigger migration execution (auth-guarded when enabled).
     """
     router = APIRouter()
     mode = os.environ.get("DBWARDEN_MIGRATE_AUTH", auth_mode)

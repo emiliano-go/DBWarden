@@ -9,7 +9,7 @@ import pytest
 
 
 class TestMetricsModule:
-    """Tests for dbwarden.metrics — Prometheus metric definitions."""
+    """Tests for dbwarden.metrics: Prometheus metric definitions."""
 
     def test_metrics_enabled_false_by_default(self):
         from dbwarden.metrics import metrics_enabled

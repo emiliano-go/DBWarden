@@ -41,7 +41,7 @@ def MetricsRouter() -> APIRouter:
 class MetricsMiddleware:
     """ASGI middleware that tracks request duration and updates pending-migration gauges.
 
-    This is intentionally lightweight — it refreshes the pending-migration
+    This is intentionally lightweight; it refreshes the pending-migration
     gauge once per request so that ``/metrics`` always returns current values.
     """
 

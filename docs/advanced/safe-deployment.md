@@ -93,15 +93,15 @@ See [Migration Locking](migration-locking.md) for full lock recovery guidance.
 
 If a migration applied successfully but produced incorrect data or schema:
 
-**Option A — Rollback** (if the migration has a `-- rollback` section):
+**Option A: Rollback** (if the migration has a `-- rollback` section):
 
 ```bash
 dbwarden rollback --database primary
 ```
 
-This executes the rollback SQL defined in the migration file. Verify the rollback SQL was written when the migration was created — not all migrations include one.
+This executes the rollback SQL defined in the migration file. Verify the rollback SQL was written when the migration was created; not all migrations include one.
 
-**Option B — Forward fix** (preferred for data migrations):
+**Option B: Forward fix** (preferred for data migrations):
 
 ```bash
 # Create a corrective migration

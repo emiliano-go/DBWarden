@@ -223,6 +223,6 @@ CI pipelines treat non-zero as job failure by default. No extra configuration ne
 - Store `DATABASE_URL` as an encrypted secret, not a plain environment variable
 - Archive migration output logs as artifacts for audit trails
 - Use `dbwarden history` output as a post-migration artifact
-- Run `dbwarden status` before and after `migrate` — before confirms what will run, after confirms nothing is pending
+- Run `dbwarden status` before and after `migrate`; before confirms what will run, after confirms nothing is pending
 
 See also: [Safe Deployment](safe-deployment.md) | [Credentials and Secrets](../configuration/credentials.md) | [Migration Locking](migration-locking.md)

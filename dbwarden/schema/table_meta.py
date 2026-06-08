@@ -16,7 +16,7 @@ class TableMeta:
 
 
 class PGTableMeta(TableMeta):
-    """PostgreSQL table-level metadata — inherit in ``class Meta`` for autocomplete."""
+    """PostgreSQL table-level metadata; inherit in ``class Meta`` for autocomplete."""
     comment: str | None = None
     pg_fillfactor: int | None = None
     pg_tablespace: str | None = None
@@ -30,7 +30,7 @@ class PGTableMeta(TableMeta):
 
 
 class PGColumnMeta:
-    """PostgreSQL column-level metadata — inherit in ``Meta`` inner classes for autocomplete.
+    """PostgreSQL column-level metadata; inherit in ``Meta`` inner classes for autocomplete.
 
     Example::
 
@@ -54,7 +54,7 @@ class PGColumnMeta:
 
 
 class CHTableMeta(TableMeta):
-    """ClickHouse table-level metadata — inherit in ``class Meta`` for autocomplete."""
+    """ClickHouse table-level metadata; inherit in ``class Meta`` for autocomplete."""
     comment: str | None = None
     ch_engine: str | tuple | list | None = None
     ch_order_by: str | list[str] | None = None
@@ -68,7 +68,7 @@ class CHTableMeta(TableMeta):
 
 
 class CHColumnMeta:
-    """ClickHouse column-level metadata — inherit in ``Meta`` inner classes for autocomplete."""
+    """ClickHouse column-level metadata; inherit in ``Meta`` inner classes for autocomplete."""
     comment: str | None = None
     ch_codec: str | None = None
     ch_default_expression: str | None = None

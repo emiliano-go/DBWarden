@@ -4,13 +4,13 @@ Manage DBWarden database configuration.
 
 ## Subcommands
 
-- `settings show` — display current configuration
-- `settings default-database` — set the default database
-- `settings database-add` — register a new database
-- `settings database-remove` — remove a registered database
-- `settings database-rename` — rename a registered database
-- `settings database-set-dev` — configure dev mode for a database
-- `settings database-clear-dev` — remove dev mode from a database
+- `settings show`: display current configuration
+- `settings default-database`: set the default database
+- `settings database-add`: register a new database
+- `settings database-remove`: remove a registered database
+- `settings database-rename`: rename a registered database
+- `settings database-set-dev`: configure dev mode for a database
+- `settings database-clear-dev`: remove dev mode from a database
 
 ---
 
@@ -28,7 +28,7 @@ dbwarden settings show --all
 
 ### Options
 
-- `--all`, `-a` — show all configured databases
+- `--all`, `-a`: show all configured databases
 
 ---
 
@@ -59,17 +59,17 @@ dbwarden settings database-add analytics \
 
 ### Options
 
-- `--type` — database type (`postgresql`, `sqlite`, `clickhouse`, etc.)
-- `--url` / `--database-url-sync` — sync connection URL
-- `--url-async` / `--database-url-async` — async connection URL (required for FastAPI async session support)
-- `--migrations-dir` — custom migrations directory (default: `migrations/<name>`)
-- `--migration-table` — custom migration tracking table name (default: `_dbwarden_migrations`)
-- `--model-path` — model discovery path, repeatable for multiple paths
-- `--dev-type` — database type for dev mode
-- `--dev-url` — connection URL for dev mode
-- `--overlap-models` — allow models shared with another database
-- `--seed-table` — custom seed tracking table name (default: `_dbwarden_seeds`)
-- `--default` — make this the default database
+- `--type`: database type (`postgresql`, `sqlite`, `clickhouse`, etc.)
+- `--url` / `--database-url-sync`: sync connection URL
+- `--url-async` / `--database-url-async`: async connection URL (required for FastAPI async session support)
+- `--migrations-dir`: custom migrations directory (default: `migrations/<name>`)
+- `--migration-table`: custom migration tracking table name (default: `_dbwarden_migrations`)
+- `--model-path`: model discovery path, repeatable for multiple paths
+- `--dev-type`: database type for dev mode
+- `--dev-url`: connection URL for dev mode
+- `--overlap-models`: allow models shared with another database
+- `--seed-table`: custom seed tracking table name (default: `_dbwarden_seeds`)
+- `--default`: make this the default database
 
 ---
 
@@ -111,8 +111,8 @@ dbwarden settings database-set-dev primary \
 
 ### Options
 
-- `--type` — dev database type
-- `--url` — dev connection URL
+- `--type`: dev database type
+- `--url`: dev connection URL
 
 ---
 
