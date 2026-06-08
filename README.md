@@ -67,6 +67,7 @@ configuration source.
   All metrics are safe no-ops without `prometheus-client` installed.
 - **Versioned seeds**: SQL and Python seed files with automatic versioning,
   idempotent application, rollback support, and dedicated CLI commands.
+- **PostgreSQL first-class**: Identity columns, collation, storage, compression, generated columns, fillfactor, tablespace, unlogged tables, partitioning, inheritance, exclude constraints, deferred constraints, check constraints with `NO INHERIT`, index options (`USING`, `WHERE`, `INCLUDE`, `NULLS NOT DISTINCT`, column sorting), enum types, and full type normalization. Reverse-engineer with `generate-models`, feed back into `make-migrations`; **zero diff** verified.
 - **ClickHouse first-class**: Table options, replicated engines, external
   dictionaries, materialized views, projections, skip indexes, and a
   dedicated safety analyzer — all from SQLAlchemy model definitions.
@@ -546,6 +547,17 @@ dbwarden generate-models --db primary --tables users,orders
 
 # Single models.py with ClickHouse engine metadata:
 dbwarden generate-models --db clickhouse-db --clickhouse-engines --single-file
+```
+
+For PostgreSQL, `generate-models` emits full `class Meta(PGTableMeta)` inner classes with all backend-specific metadata: identity columns, collation, storage, compression, partitioning, check constraints with `NO INHERIT`, deferred unique constraints, exclusion constraints, and index options. The round-trip is verified:
+
+```bash
+# Step 1: reverse-engineer a live PostgreSQL database
+dbwarden generate-models -d primary --tables users
+
+# Step 2: feed the generated models back in, zero diff
+dbwarden make-migrations
+# → No changes detected; the generated models match the DB exactly
 ```
 
 ---

@@ -21,9 +21,60 @@ Related docs:
 - [Configuration](configuration/index.md)
 - [Your First Migration](tutorial/your-first-migration.md)
 
+## Common Meta Attributes
+
+Every backend supports a core set of cross-database attributes via `class Meta(TableMeta)`:
+
+### Table-level
+
+| Attribute | Type | SQL | Backends |
+|-----------|------|-----|----------|
+| `comment` | `str` | `COMMENT ON TABLE t IS '...'` | All |
+| `indexes` | `list[dict]` | `CREATE INDEX ...` | All |
+| `checks` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` | All |
+| `uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` | All |
+
+```python
+from dbwarden import Base, TableMeta
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    email = Column(String(255))
+
+    class Meta(TableMeta):
+        comment = "Core user accounts"
+        indexes = [
+            {"name": "ix_users_email", "columns": ["email"]},
+        ]
+```
+
+### Column-level
+
+| Attribute | Type | SQL | Backends |
+|-----------|------|-----|----------|
+| `comment` | `str` | `COMMENT ON COLUMN t.c IS '...'` | All |
+| `public` | `bool` | Controls field visibility in schemap auto-schema | All |
+
+```python
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    internal_note = Column(Text)
+
+    class Meta(TableMeta):
+        class internal_note:
+            comment = "Internal system note"
+            public = False
+```
+
+These attributes work with any `database_type`. Backend-specific subclasses (`PGTableMeta`, `CHTableMeta`) inherit all common attributes and add their own.
+
 ## PostgreSQL Model Metadata
 
-When `database_type="postgresql"`, DBWarden supports first-class PostgreSQL metadata via `class Meta` inner classes. This is the **only** supported surface — `mapped_column(info=...)` raises `DBWardenConfigError`.
+When `database_type="postgresql"`, DBWarden supports first-class PostgreSQL metadata via `class Meta(PGTableMeta)` inner classes. This is the **only** supported surface — `mapped_column(info=...)` raises `DBWardenConfigError`.
 
 ### Table-Level Meta
 
@@ -41,6 +92,8 @@ class User(Base):
         pg_fillfactor = 80
         pg_tablespace = "fastspace"
 ```
+
+`PGTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds PostgreSQL-specific ones (`pg_fillfactor`, `pg_tablespace`, `pg_unlogged`, `pg_partition`, `pg_inherits`, `pg_excludes`, `pg_indexes`, `pg_checks`, `pg_uniques`).
 
 ### Column-Level Meta
 
@@ -64,6 +117,8 @@ class User(Base):
             pg_storage = "EXTENDED"
             pg_collation = "en_US.UTF-8"
 ```
+
+`PGColumnMeta` includes the common `comment` and `public` attributes plus PostgreSQL-specific ones (`pg_collation`, `pg_storage`, `pg_compression`, `pg_generated`, `pg_identity` and its sequence options).
 
 For the full list of supported attributes, see [PostgreSQL Deep Dive](databases/postgresql.md).
 

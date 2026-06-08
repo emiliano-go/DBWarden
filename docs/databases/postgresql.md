@@ -6,7 +6,16 @@ DBWarden treats PostgreSQL as a **first-class backend** — every natively suppo
 
 "First-class" means the round-trip is verified: reverse-engineer a live database with `generate-models`, feed the output back into `make-migrations`, and get **zero diff**.
 
-The following PostgreSQL features are fully supported:
+```bash
+# Step 1: reverse-engineer your live PostgreSQL database
+dbwarden generate-models -d primary --tables users,orders,items
+
+# Step 2: feed the generated models back in, zero diff
+dbwarden make-migrations
+# → "No changes detected"  (output is empty; your models match the DB exactly)
+```
+
+The following PostgreSQL features are fully supported in this round-trip:
 
 | Category | Features |
 |----------|----------|
@@ -17,11 +26,15 @@ The following PostgreSQL features are fully supported:
 | Generated Columns | `GENERATED ALWAYS AS (...) STORED` via `pg_generated` |
 | Table Fillfactor | `WITH (fillfactor = N)` via `pg_fillfactor` |
 | Tablespace | `SET TABLESPACE` via `pg_tablespace` |
+| Unlogged Tables | `UNLOGGED` via `pg_unlogged` |
+| Partitioning | `PARTITION BY RANGE / LIST / HASH (columns)` via `pg_partition` |
 | Table Inheritance | `INHERITS (parent)` via `pg_inherits` |
 | EXCLUDE Constraints | `EXCLUDE USING gist (...)` via `pg_excludes` |
+| Check Constraints | `CHECK (...)` with `NO INHERIT` support via `pg_checks` |
+| Unique Constraints | Full option diff: `NULLS NOT DISTINCT`, `DEFERRABLE INITIALLY DEFERRED`, `INCLUDE` via `pg_uniques` |
 | Deferrable FK | `DEFERRABLE INITIALLY DEFERRED` with `ON DELETE` / `ON UPDATE` options |
-| Constraint Types | `CHECK`, `UNIQUE`, `FOREIGN KEY` with full diff support |
 | Index Options | `USING`, `WHERE`, `INCLUDE`, `WITH`, `TABLESPACE`, `NULLS NOT DISTINCT`, `CONCURRENTLY`, column sorting |
+| Enum Types | `CREATE TYPE ... AS ENUM`, `ALTER TYPE ... ADD VALUE ... AFTER ...` |
 | Comments | Table and column `COMMENT ON` |
 | Type Normalization | `SERIAL` → `integer` + autoincrement, `TIMESTAMPTZ`, `NUMERIC(p,s)`, `VARCHAR(n)`, `DOUBLE PRECISION`, `REAL`, `JSONB`, `UUID`, `ARRAY`, `ENUM`, `TSTZRANGE` |
 
@@ -50,17 +63,28 @@ class User(Base):
         ]
 ```
 
-Supported `PGTableMeta` attributes:
+`PGTableMeta` inherits from `TableMeta`, which provides common attributes shared across all backends:
+
+| Attribute | Type | SQL |
+|-----------|------|-----|
+| `comment` | `str` | `COMMENT ON TABLE t IS '...'` |
+| `indexes` | `list[dict]` | `CREATE INDEX ...` |
+| `checks` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` |
+| `uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` |
+
+PostgreSQL-specific `PGTableMeta` attributes:
 
 | Attribute | Type | SQL |
 |-----------|------|-----|
 | `pg_fillfactor` | `int` | `ALTER TABLE t SET (fillfactor = N)` |
 | `pg_tablespace` | `str` | `ALTER TABLE t SET TABLESPACE name` |
+| `pg_unlogged` | `bool` | `CREATE UNLOGGED TABLE ...` / `ALTER TABLE t SET UNLOGGED` |
+| `pg_partition` | `dict` | `PARTITION BY RANGE / LIST / HASH (columns)` |
 | `pg_inherits` | `str \| list[str]` | `ALTER TABLE t INHERIT parent` |
 | `pg_excludes` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... EXCLUDE USING ...` |
-| `pg_indexes` | `list[dict]` | `CREATE INDEX ...` |
-| `pg_checks` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` |
-| `pg_uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` |
+| `pg_indexes` | `list[dict]` | `CREATE INDEX ...` (with `USING`, `WHERE`, `INCLUDE`, `NULLS NOT DISTINCT`, column sorting) |
+| `pg_checks` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` (with `NO INHERIT`) |
+| `pg_uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` (with `DEFERRABLE`, `NULLS NOT DISTINCT`, `INCLUDE`) |
 
 ### Column-Level Meta
 
@@ -88,7 +112,14 @@ class User(Base):
             pg_collation = "en_US.UTF-8"
 ```
 
-Supported `PGColumnMeta` attributes:
+`PGColumnMeta` includes common column attributes shared across all backends:
+
+| Attribute | Type | SQL |
+|-----------|------|-----|
+| `comment` | `str` | `COMMENT ON COLUMN t.c IS '...'` |
+| `public` | `bool` | Controls field visibility in schemap auto-schema |
+
+PostgreSQL-specific `PGColumnMeta` attributes:
 
 | Attribute | Type | SQL |
 |-----------|------|-----|
@@ -170,7 +201,12 @@ The snapshot JSON captures all PostgreSQL-specific metadata. Key sections:
   "pg_table": {
     "pg_fillfactor": 80,
     "pg_tablespace": "fastspace",
+    "pg_unlogged": false,
     "pg_inherits": "base_entity",
+    "pg_partition": {
+      "strategy": "RANGE",
+      "columns": ["created_at"]
+    },
     "pg_excludes": [
       {"name": "excl_room_booking", "expression": "EXCLUDE USING gist (room_id WITH =, during WITH &&)"}
     ]
@@ -201,13 +237,13 @@ FK comparison uses a 6-tuple signature: `(columns, ref_table, ref_columns, on_de
 
 ## Reverse Engineering
 
-`generate-models` queries `pg_class`, `pg_attribute`, `pg_constraint`, `pg_inherits`, `pg_tablespace`, and `pg_collation` to reverse-engineer all PostgreSQL metadata. The emitted model uses `class Meta` with `PGTableMeta` and `PGColumnMeta` inner classes.
+`generate-models` queries `pg_class`, `pg_attribute`, `pg_constraint`, `pg_inherits`, `pg_tablespace`, `pg_partitioned_table`, and `pg_collation` to reverse-engineer all PostgreSQL metadata. The emitted model uses `class Meta` with `PGTableMeta` and `PGColumnMeta` inner classes.
 
 ```bash
 dbwarden generate-models -d primary
 ```
 
-Generated output:
+Generated output for a table with identity, storage, compression, collation, and fillfactor:
 
 ```python
 class User(Base):
@@ -231,6 +267,21 @@ class User(Base):
             pg_compression = "pglz"
             pg_collation = "en_US.UTF-8"
 ```
+
+For a partitioned table, `generate-models` emits `pg_partition`:
+
+```python
+class Event(Base):
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+
+    class Meta(PGTableMeta):
+        pg_partition = {"strategy": "RANGE", "columns": ["created_at"]}
+```
+
+Unlogged tables, `NO INHERIT` check constraints, deferred unique constraints, and `ALTER TYPE ... ADD VALUE` for enums are all detected and emitted automatically.
 
 ## Safety Classification
 
