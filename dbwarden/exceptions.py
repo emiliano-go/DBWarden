@@ -16,6 +16,12 @@ class ConfigurationError(DBWardenError):
     pass
 
 
+class DBWardenConfigError(ConfigurationError):
+    """Raised when DBWarden-specific model/config metadata is invalid."""
+
+    pass
+
+
 class VersionNotFoundError(DBWardenError):
     """Raised when a migration version is not found."""
 
