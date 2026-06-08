@@ -12,6 +12,8 @@ DBWarden supports PostgreSQL, MySQL, MariaDB, and SQLite. While all four share s
 
 **PostgreSQL**: DDL is transactional. If a migration file contains multiple statements and one fails, all prior DDL in that file is rolled back. This makes PostgreSQL the safest backend for automated migration runs.
 
+PostgreSQL is also a **first-class backend** with full support for identity columns, collation, storage, compression, generated columns, table fillfactor, tablespace, inheritance, EXCLUDE constraints, deferrable FK options, and advanced index parameters. See [PostgreSQL Deep Dive](postgresql.md) for complete details.
+
 **MySQL / MariaDB**: DDL statements auto-commit immediately. If a 5-statement migration fails on the 4th statement, the first 3 are already committed and cannot be rolled back. Manual inspection and recovery may be needed. Always test MySQL/MariaDB migrations in a staging environment first.
 
 **SQLite**: DDL is transactional only within explicit `BEGIN/COMMIT` blocks. DBWarden migration files are executed with each statement as a separate implicit transaction. This means SQLite is similar to MySQL in practice — partial failure is possible.
@@ -75,16 +77,16 @@ All four backends support `ALTER TABLE t ALTER COLUMN c SET DEFAULT value` and `
 
 | Backend | ADD FK | DROP FK | Notes |
 |---------|--------|---------|-------|
-| PostgreSQL | `ADD CONSTRAINT ... FOREIGN KEY` | `DROP CONSTRAINT ...` | Supports `DEFERRABLE INITIALLY DEFERRED` |
+| PostgreSQL | `ADD CONSTRAINT ... FOREIGN KEY` | `DROP CONSTRAINT ...` | Supports `ON DELETE`, `ON UPDATE`, `DEFERRABLE` |
 | MySQL | `ADD CONSTRAINT ... FOREIGN KEY` | `DROP FOREIGN KEY ...` | Uses constraint name, not FK name |
 | MariaDB | `ADD CONSTRAINT ... FOREIGN KEY` | `DROP FOREIGN KEY ...` | Same as MySQL |
 | SQLite | Not supported (comment) | Not supported (comment) | Recreate table |
 
-**Deferrable constraints (PostgreSQL only)**: When the FK op has `"deferrable": true`, DBWarden appends `DEFERRABLE INITIALLY DEFERRED` to the constraint SQL.
+**PostgreSQL FK options**: `ON DELETE`, `ON UPDATE`, and `DEFERRABLE INITIALLY DEFERRED` are fully supported. See [PostgreSQL Deep Dive](postgresql.md).
 
 **Validation**: Before emitting `ADD FOREIGN KEY`, DBWarden verifies that the referenced table and columns exist in the snapshot. If they don't, the FK is silently skipped to avoid generating broken SQL. This can happen when the referenced table is added in the same migration batch. If an FK is unexpectedly missing from generated SQL, check whether the referenced table exists in the snapshot.
 
-**Content-based comparison**: FKs are compared by `(columns, referenced_table, referenced_columns)`, not by constraint name. Renaming an FK constraint does not produce a drop+add.
+**Content-based comparison**: FKs are compared by a 6-tuple signature `(columns, ref_table, ref_columns, on_delete, on_update, deferrable)`, not by constraint name. Renaming an FK constraint or changing options produces a drop+add.
 
 ## Index Handling
 
@@ -94,18 +96,7 @@ All four backends support `ALTER TABLE t ALTER COLUMN c SET DEFAULT value` and `
 | MySQL / MariaDB | `CREATE [UNIQUE] INDEX` | `DROP INDEX` | Standard |
 | SQLite | `CREATE [UNIQUE] INDEX` | `DROP INDEX` | Standard |
 
-**PostgreSQL advanced parameters** — all are supported in `_build_index_sql`:
-
-| Parameter | SQL Clause | Model Attribute |
-|-----------|-----------|-----------------|
-| `using` | `USING btree \| gin \| gist \| hash \| brin` | `postgresql_using` dialect option |
-| `include` | `INCLUDE (col1, col2)` | `Index.include_columns` |
-| `with_params` | `WITH (fillfactor = 70, ...)` | `postgresql_with` dialect option |
-| `tablespace` | `TABLESPACE <name>` | `postgresql_tablespace` dialect option |
-| `where` | `WHERE <predicate>` | `postgresql_where` dialect option |
-| `nulls_not_distinct` | `NULLS NOT DISTINCT` | `postgresql_nulls_not_distinct` dialect option |
-| `column_sorting` | `col1 DESC NULLS LAST, col2 ASC` | `Index.expressions` order/nulls attrs |
-| `concurrently` | `CONCURRENTLY` | CLI `--concurrent/--no-concurrent` |
+**PostgreSQL advanced parameters** — all are supported in `_build_index_sql`. See [PostgreSQL Deep Dive](postgresql.md) for full coverage.
 
 **PostgreSQL `CONCURRENTLY`**: DBWarden defaults to `CREATE INDEX CONCURRENTLY` to avoid table locking. Pass `--no-concurrent` when the migration must run inside a transaction block (PostgreSQL requires `CONCURRENTLY` outside a transaction).
 
@@ -154,17 +145,21 @@ This applies to all SQL backends. The warning is a comment only and does not aff
 ## Statement Ordering
 
 ```
-RENAME TABLE        (0)
-RENAME COLUMN       (1)
-ALTER COLUMN TYPE   (2)
+RENAME TABLE         (0)
+RENAME COLUMN        (1)
+ALTER COLUMN TYPE    (2)
 ALTER COLUMN NULLABLE (3)
-ALTER COLUMN DEFAULT  (4)
-CREATE TABLE        (5)
-ADD COLUMN          (6)
-ALTER FOREIGN KEY   (7)
-ALTER INDEX         (8)
-DROP COLUMN         (9)
-DROP TABLE          (10)
+ALTER COLUMN DEFAULT (4)
+CREATE TABLE         (5)
+ADD COLUMN           (6)
+ALTER FOREIGN KEY    (7)
+ALTER INDEX          (8)
+DROP COLUMN          (9)
+DROP TABLE           (10)
+ALTER TABLE COMMENT  (11)
+ALTER COLUMN COMMENT (12)
+ALTER TABLE OPTIONS  (13)
+ALTER TABLE CONSTRAINT (14)
 ```
 
 This ordering ensures safe execution across all SQL backends. Table renames come first so all subsequent ops use the new name. Drops come last to minimize risk of referencing dropped objects.
@@ -188,6 +183,7 @@ The plan JSON `resolved_from` field indicates how a rename was confirmed:
 ### PostgreSQL
 - `USING` clause for type casts is not auto-generated (write a manual migration)
 - `CREATE INDEX CONCURRENTLY` may not work within multi-statement transactions
+- `ALTER COLUMN ADD GENERATED ... AS (expr) STORED` is not supported by PostgreSQL; DBWarden emits a comment placeholder
 
 ### MySQL / MariaDB
 - DDL is not transactional — partial failure leaves schema inconsistent

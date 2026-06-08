@@ -1,6 +1,53 @@
 from dbwarden.commands.check import check_cmd
 from dbwarden.engine.model_discovery import ModelColumn, ModelTable
-from dbwarden.engine.safety import analyze_schema
+from dbwarden.engine.safety import analyze_schema, classify_enum_change, classify_pg_type_change
+
+
+def test_classify_pg_type_change_safe_growth():
+    assert classify_pg_type_change({"type": "varchar", "length": 100}, {"type": "varchar", "length": 255}) == "SAFE"
+
+
+def test_classify_pg_type_change_critical_shrink():
+    assert classify_pg_type_change({"type": "varchar", "length": 255}, {"type": "varchar", "length": 100}) == "CRITICAL"
+
+
+def test_classify_enum_change_warn_on_add():
+    assert classify_enum_change(["a"], ["a", "b"]) == "WARN"
+
+
+def test_classify_enum_change_critical_on_remove():
+    assert classify_enum_change(["a", "b"], ["a"]) == "CRITICAL"
+
+
+def test_analyze_schema_pg_comment_and_meta_changes():
+    model_tables = [
+        ModelTable(
+            name="users",
+            comment="New table comment",
+            columns=[ModelColumn("email", "VARCHAR(255)", False, False, False, None, None, comment="New email", pg_meta={"pg_collation": "en_US.UTF-8"})],
+        )
+    ]
+    snapshot = {
+        "users": {
+            "object_type": "table",
+            "database_type": "postgresql",
+            "comment": "Old table comment",
+            "columns": {
+                "email": {
+                    "type": "varchar",
+                    "nullable": False,
+                    "default": None,
+                    "comment": "Old email",
+                    "pg_column": {"collation": "C"},
+                }
+            },
+            "clickhouse_options": {},
+        }
+    }
+    issues = analyze_schema(model_tables, snapshot)
+    assert any(i.change_type == "change_table_comment" for i in issues)
+    assert any(i.change_type == "change_column_comment" for i in issues)
+    assert any(i.change_type == "change_pg_column_meta" for i in issues)
 
 
 def test_analyze_schema_add_projection_is_info():

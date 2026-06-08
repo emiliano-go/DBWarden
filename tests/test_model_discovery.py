@@ -466,9 +466,11 @@ class TestColumnExtraction:
         assert col is not None
         assert col.nullable == False
 
-    def test_extract_column_translates_jsonb_to_text_for_sqlite(self):
+    def test_extract_column_translates_jsonb_to_text_for_sqlite(self, monkeypatch):
         from sqlalchemy import Column
         from sqlalchemy.dialects.postgresql import JSONB
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "sqlite")
 
         col_obj = Column("payload", JSONB)
 
@@ -477,9 +479,11 @@ class TestColumnExtraction:
         assert col is not None
         assert col.type == "TEXT"
 
-    def test_extract_column_falls_back_unknown_type_to_text_for_sqlite(self):
+    def test_extract_column_falls_back_unknown_type_to_text_for_sqlite(self, monkeypatch):
         from sqlalchemy import Column
         from sqlalchemy.types import UserDefinedType
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "sqlite")
 
         class Geography(UserDefinedType):
             def get_col_spec(self, **kw):

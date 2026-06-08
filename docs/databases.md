@@ -117,12 +117,9 @@ Each backend has deep-dive documentation:
 
 ### PostgreSQL
 
-- Transactional DDL — entire migration file succeeds or rolls back atomically
-- Column rename: uses `ALTER TABLE ... RENAME COLUMN ... TO ...`
-- Index creation: uses `CREATE INDEX CONCURRENTLY` for non-blocking behavior
-- Deferrable FK constraints: `DEFERRABLE INITIALLY DEFERRED`
-- Best suited for production workloads with JSONB, UUID, full-text search
-- Prefer production runs on actual PostgreSQL instance
+PostgreSQL is a **first-class backend** with full round-trip support. All metadata — identity columns, collation, storage, compression, generated columns, fillfactor, tablespace, inheritance, exclude constraints, deferrable FKs, and advanced index options — is captured by the snapshot, diffed correctly, and emitted as valid DDL.
+
+See [PostgreSQL Deep Dive](databases/postgresql.md) for the complete reference.
 
 ### MySQL / MariaDB
 

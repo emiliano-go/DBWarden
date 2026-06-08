@@ -25,6 +25,10 @@ class StatementOrder(IntEnum):
     ALTER_INDEX = 8
     DROP_COLUMN = 9
     DROP_TABLE = 10
+    ALTER_TABLE_COMMENT = 11
+    ALTER_COLUMN_COMMENT = 12
+    ALTER_TABLE_OPTIONS = 13
+    ALTER_TABLE_CONSTRAINT = 14
 
 
 @dataclass
@@ -70,6 +74,9 @@ TYPE_NORMALIZATION_MAP: dict[str, str | None] = {
     "int2": "integer",
     "bigint": "biginteger",
     "int8": "biginteger",
+    "serial": "integer",
+    "bigserial": "biginteger",
+    "smallserial": "integer",
     "varchar": "varchar",
     "character varying": "varchar",
     "text": "text",
@@ -79,10 +86,13 @@ TYPE_NORMALIZATION_MAP: dict[str, str | None] = {
     "boolean": "boolean",
     "bool": "boolean",
     "timestamp": "timestamp",
+    "timestamptz": "timestamptz",
+    "timestamp with time zone": "timestamptz",
     "datetime": "timestamp",
     "date": "date",
     "float": "float",
-    "real": "float",
+    "float32": "float32",
+    "real": "float32",
     "double precision": "float",
     "double": "float",
     "numeric": "numeric",
@@ -95,12 +105,21 @@ TYPE_NORMALIZATION_MAP: dict[str, str | None] = {
     "binary": "bytes",
     "varbinary": "bytes",
     "enum": "enum",
+    "tsvector": "tsvector",
+    "tstzrange": "tstzrange",
+    "tsrange": "tsrange",
+    "daterange": "daterange",
+    "int4range": "int4range",
+    "int8range": "int8range",
+    "numrange": "numrange",
 }
 
 _RAW_TYPE_PATTERN = re.compile(r"^([a-zA-Z][a-zA-Z0-9_]*)(?:\((\d+)(?:\s*,\s*(\d+))?\))?\s*$")
 
 
 def normalize_type(raw_type: str) -> dict[str, Any]:
+    # Strip COLLATE clause for normalization purposes
+    raw_type = re.sub(r'\s+COLLATE\s+"[^"]*"', "", raw_type, flags=re.IGNORECASE)
     raw_clean = raw_type.strip().lower()
     raw_no_parens = re.sub(r"\(.*?\)", "", raw_clean).strip()
     raw_no_parens_clean = re.sub(r"\s+", " ", raw_no_parens).strip()
@@ -113,6 +132,11 @@ def normalize_type(raw_type: str) -> dict[str, Any]:
         normalized = TYPE_NORMALIZATION_MAP.get(base)
     if normalized is not None:
         result: dict[str, Any] = {"type": normalized}
+        if normalized == "timestamptz":
+            result["type"] = "timestamp"
+            result["has_timezone"] = True
+        if normalized == "float32":
+            result["type"] = "float"
         full_lower = raw_type.strip().lower()
         length_match = re.search(r"\((\d+)\)", full_lower)
         if length_match and normalized in ("varchar",):
@@ -197,6 +221,87 @@ def _build_alter_default_sql(
         upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT"
         rollback = f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT <original_default>"
     return upgrade, rollback
+
+
+def _build_pg_meta_sql(
+    table: str,
+    column: str,
+    col_type: str,
+    snap_type: str,
+    to_pg_column: dict[str, Any],
+    from_pg_column: dict[str, Any],
+    backend: str,
+) -> list[MigrationStatement]:
+    if backend != "postgresql":
+        return []
+
+    mapping = [
+        ("collation", "pg_collation"),
+        ("storage", "pg_storage"),
+        ("compression", "pg_compression"),
+        ("generated", "pg_generated"),
+        ("identity", "pg_identity"),
+        ("identity_start", "pg_identity_start"),
+        ("identity_increment", "pg_identity_increment"),
+        ("identity_min", "pg_identity_min"),
+        ("identity_max", "pg_identity_max"),
+    ]
+    stmts: list[MigrationStatement] = []
+    for key, model_key in mapping:
+        from_val = from_pg_column.get(key)
+        to_val = to_pg_column.get(model_key)
+        if from_val == to_val:
+            continue
+        if key == "collation":
+            up = f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {col_type} COLLATE \"{to_val}\";" if to_val else f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {col_type};"
+            rb = f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {snap_type} COLLATE \"{from_val}\";" if from_val else f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {snap_type};"
+        elif key == "storage":
+            up = f"ALTER TABLE {table} ALTER COLUMN {column} SET STORAGE {to_val};" if to_val else f"ALTER TABLE {table} ALTER COLUMN {column} SET STORAGE EXTENDED;"
+            rb = f"ALTER TABLE {table} ALTER COLUMN {column} SET STORAGE {from_val};" if from_val else f"ALTER TABLE {table} ALTER COLUMN {column} SET STORAGE EXTENDED;"
+        elif key == "compression":
+            if to_val:
+                up = f"ALTER TABLE {table} ALTER COLUMN {column} SET COMPRESSION {to_val};"
+            else:
+                up = f"ALTER TABLE {table} ALTER COLUMN {column} SET COMPRESSION DEFAULT;"
+            if from_val:
+                rb = f"ALTER TABLE {table} ALTER COLUMN {column} SET COMPRESSION {from_val};"
+            else:
+                rb = f"ALTER TABLE {table} ALTER COLUMN {column} SET COMPRESSION DEFAULT;"
+        elif key == "generated":
+            if to_val:
+                up = f"ALTER TABLE {table} ALTER COLUMN {column} SET EXPRESSION AS ({to_val});"
+            else:
+                up = f"ALTER TABLE {table} ALTER COLUMN {column} DROP EXPRESSION;"
+            if from_val:
+                rb = f"ALTER TABLE {table} ALTER COLUMN {column} SET EXPRESSION AS ({from_val});"
+            else:
+                rb = f"ALTER TABLE {table} ALTER COLUMN {column} DROP EXPRESSION;"
+        elif key == "identity":
+            if to_val:
+                up = f"ALTER TABLE {table} ALTER COLUMN {column} ADD GENERATED {to_val} AS IDENTITY;"
+            else:
+                up = f"ALTER TABLE {table} ALTER COLUMN {column} DROP IDENTITY IF EXISTS;"
+            if from_val:
+                rb = f"ALTER TABLE {table} ALTER COLUMN {column} ADD GENERATED {from_val} AS IDENTITY;"
+            else:
+                rb = f"ALTER TABLE {table} ALTER COLUMN {column} DROP IDENTITY IF EXISTS;"
+        elif key in ("identity_start", "identity_increment", "identity_min", "identity_max"):
+            pg_key = key.replace("identity_", "")
+            if to_val is not None:
+                up = f"ALTER TABLE {table} ALTER COLUMN {column} SET ({pg_key} {to_val});"
+            else:
+                up = f"ALTER TABLE {table} ALTER COLUMN {column} SET ({pg_key} DEFAULT);"
+            if from_val is not None:
+                rb = f"ALTER TABLE {table} ALTER COLUMN {column} SET ({pg_key} {from_val});"
+            else:
+                rb = f"ALTER TABLE {table} ALTER COLUMN {column} SET ({pg_key} DEFAULT);"
+        else:
+            continue
+        stmts.append(MigrationStatement(
+            order=StatementOrder.ALTER_COLUMN_TYPE,
+            upgrade_sql=up, rollback_sql=rb,
+        ))
+    return stmts
 
 
 def _is_autoincrement(column: dict[str, Any]) -> bool:
@@ -285,23 +390,93 @@ def extract_full_schema_snapshot(
             if "scale" in normalized:
                 col_entry["scale"] = normalized["scale"]
 
-            enum_match = re.match(r"^([a-zA-Z_][a-zA-Z0-9_]*)$", raw_type_str)
-            if database_type == "postgresql" and enum_match:
-                with engine.connect() as conn:
-                    result = conn.execute(
-                        text(
-                            "SELECT t.typname FROM pg_type t "
-                            "JOIN pg_enum e ON t.oid = e.enumtypid "
-                            "WHERE t.typname = :tname LIMIT 1"
-                        ),
-                        {"tname": raw_type_str},
-                    )
-                    if result.fetchone():
-                        col_entry["enum_name"] = raw_type_str
-
             comment = col.get("comment")
             if comment is not None:
                 col_entry["comment"] = comment
+
+            if database_type == "postgresql":
+                # Enum detection — check SQLAlchemy type object directly
+                if hasattr(col_type, "enums") and col_type.enums and hasattr(col_type, "name") and col_type.name:
+                    col_entry["type"] = "enum"
+                    col_entry["enum_name"] = col_type.name
+                    col_entry["pg_type"] = {
+                        "kind": "enum",
+                        "type_name": col_type.name,
+                        "values": list(col_type.enums),
+                    }
+                # Fallback: raw type string might be the enum type name
+                enum_match = re.match(r"^([a-zA-Z_][a-zA-Z0-9_]*)$", raw_type_str)
+                if enum_match and engine is not None:
+                    try:
+                        with engine.connect() as conn:
+                            enum_row = conn.execute(
+                                text("SELECT t.oid, t.typname FROM pg_type t JOIN pg_enum e ON t.oid = e.enumtypid WHERE t.typname = :tname LIMIT 1"),
+                                {"tname": raw_type_str},
+                            ).fetchone()
+                            if enum_row:
+                                col_entry["type"] = "enum"
+                                col_entry["enum_name"] = raw_type_str
+                                val_rows = conn.execute(
+                                    text("SELECT enumlabel FROM pg_enum WHERE enumtypid = :oid ORDER BY enumsortorder"),
+                                    {"oid": enum_row[0]},
+                                ).fetchall()
+                                col_entry["pg_type"] = {
+                                    "kind": "enum",
+                                    "type_name": raw_type_str,
+                                    "values": [r[0] for r in val_rows],
+                                }
+                    except Exception:
+                        pass
+
+                pg_column: dict[str, Any] = {}
+                if col.get("identity"):
+                    identity = col["identity"]
+                    pg_column["identity"] = "always" if identity.get("always") else "by_default"
+                    if identity.get("start") is not None:
+                        pg_column["identity_start"] = identity["start"]
+                    if identity.get("increment") is not None:
+                        pg_column["identity_increment"] = identity["increment"]
+                    if identity.get("minvalue") is not None:
+                        pg_column["identity_min"] = identity["minvalue"]
+                    if identity.get("maxvalue") is not None:
+                        pg_column["identity_max"] = identity["maxvalue"]
+                type_obj = col["type"]
+                collation = getattr(type_obj, "collation", None)
+                if collation:
+                    pg_column["collation"] = collation
+                if col.get("computed"):
+                    pg_column["generated"] = col["computed"].get("sqltext", "")
+
+                # pg_type for specialized types
+                type_str_lower = raw_type_str.lower()
+                if getattr(type_obj, "item_type", None) is not None:
+                    col_entry["pg_type"] = {"kind": "array", "inner": str(type_obj.item_type), "dimensions": 1}
+                    col_entry["type"] = "array"
+                elif type_str_lower in ("tsvector",):
+                    col_entry["pg_type"] = {"kind": "tsvector"}
+                    col_entry["type"] = "tsvector"
+                elif type_str_lower == "jsonb":
+                    col_entry["pg_type"] = {"kind": "jsonb"}
+                elif normalized.get("has_timezone") and col_entry.get("type") == "timestamp":
+                    col_entry["pg_type"] = {"kind": "timestamptz"}
+                elif col_entry.get("enum_name"):
+                    pass  # pg_type already set above
+                else:
+                    try:
+                        if engine is not None:
+                            with engine.connect() as _c:
+                                range_row = _c.execute(
+                                    text("SELECT rngtypid::regtype::text FROM pg_range WHERE rngtypid = (SELECT oid FROM pg_type WHERE typname = :t)"),
+                                    {"t": raw_type_str.lower()},
+                                ).fetchone()
+                                if range_row:
+                                    col_entry["pg_type"] = {"kind": "range", "range_type": raw_type_str}
+                                    col_entry["type"] = raw_type_str
+                    except Exception:
+                        pass
+
+                if pg_column:
+                    col_entry["pg_column"] = pg_column
 
             columns_dict[col_name] = col_entry
 
@@ -316,6 +491,107 @@ def extract_full_schema_snapshot(
                 table_comment = inspector.get_table_comment(table_name)
                 if table_comment and table_comment.get("text"):
                     table_entry["comment"] = table_comment["text"]
+            except Exception:
+                pass
+
+            try:
+                _conn = engine.connect() if own_engine and engine is not None else connection
+                pg_table: dict[str, Any] = {}
+
+                try:
+                    rows = _conn.execute(
+                        text("SELECT unnest(COALESCE(reloptions, '{}')) FROM pg_class WHERE relname = :t"),
+                        {"t": table_name},
+                    ).fetchall()
+                    params: dict[str, Any] = {}
+                    for row in rows:
+                        kv = row[0].split("=", 1)
+                        if len(kv) == 2:
+                            key = f"pg_{kv[0]}"
+                            val: Any = kv[1]
+                            if val.isdigit():
+                                val = int(val)
+                            params[key] = val
+                    if params:
+                        pg_table.update(params)
+                except Exception:
+                    pass
+
+                try:
+                    row = _conn.execute(
+                        text(
+                            "SELECT spcname FROM pg_tablespace t "
+                            "JOIN pg_class c ON c.reltablespace = t.oid "
+                            "WHERE c.relname = :t"
+                        ),
+                        {"t": table_name},
+                    ).fetchone()
+                    if row:
+                        pg_table["pg_tablespace"] = row[0]
+                except Exception:
+                    pass
+
+                try:
+                    rows = _conn.execute(
+                        text("SELECT inhparent::regclass::text FROM pg_inherits WHERE inhrelid = CAST(:t AS regclass)"),
+                        {"t": table_name},
+                    ).fetchall()
+                    parents = [r[0] for r in rows]
+                    if len(parents) == 1:
+                        pg_table["pg_inherits"] = parents[0]
+                    elif parents:
+                        pg_table["pg_inherits"] = parents
+                except Exception:
+                    pass
+
+                try:
+                    rows = _conn.execute(
+                        text(
+                            "SELECT conname, pg_get_constraintdef(oid) AS definition "
+                            "FROM pg_constraint "
+                            "WHERE conrelid = CAST(:t AS regclass) AND contype = 'x'"
+                        ),
+                        {"t": table_name},
+                    ).fetchall()
+                    excludes = [{"name": r[0], "expression": r[1]} for r in rows]
+                    if excludes:
+                        pg_table["pg_excludes"] = excludes
+                except Exception:
+                    pass
+
+                try:
+                    rows = _conn.execute(
+                        text(
+                            "SELECT a.attname, a.attstorage, a.attcompression "
+                            "FROM pg_attribute a "
+                            "WHERE a.attrelid = CAST(:t AS regclass) AND a.attnum > 0 AND NOT a.attisdropped "
+                            "ORDER BY a.attnum"
+                        ),
+                        {"t": table_name},
+                    ).fetchall()
+                    storage_map = {'p': 'PLAIN', 'm': 'MAIN', 'e': 'EXTERNAL', 'x': 'EXTENDED'}
+                    for r in rows:
+                        cname = r[0]
+                        if cname in columns_dict:
+                            pg_col = columns_dict[cname].get("pg_column", {})
+                            if isinstance(pg_col, dict):
+                                if r[1]:
+                                    pg_col["storage"] = storage_map.get(r[1], r[1])
+                                if r[2]:
+                                    pg_col["compression"] = r[2]
+                                if pg_col:
+                                    columns_dict[cname]["pg_column"] = pg_col
+                except Exception:
+                    pass
+
+                if pg_table:
+                    table_entry["pg_table"] = pg_table
+
+                if own_engine and _conn is not None:
+                    try:
+                        _conn.close()
+                    except Exception:
+                        pass
             except Exception:
                 pass
 
@@ -363,20 +639,56 @@ def extract_full_schema_snapshot(
                 if val:
                     idx_entry["nulls_not_distinct"] = True
                     break
+
+            if database_type == "postgresql" and idx_name and engine is not None:
+                try:
+                    with engine.connect() as _c:
+                        sort_rows = _c.execute(
+                            text("""
+                                SELECT a.attname,
+                                       pg_index_column_has_property(i.indexrelid, k, 'asc') AS is_asc,
+                                       pg_index_column_has_property(i.indexrelid, k, 'nulls_first') AS nf
+                                FROM pg_index i
+                                CROSS JOIN LATERAL generate_series(1, array_length(i.indkey, 1)) AS k
+                                JOIN pg_class ci ON ci.oid = i.indexrelid
+                                JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[k]
+                                WHERE ci.relname = :idxname AND i.indkey[k] <> 0
+                                ORDER BY k
+                            """),
+                            {"idxname": idx_name},
+                        ).fetchall()
+                        sorting: dict[str, str] = {}
+                        for r in sort_rows:
+                            parts: list[str] = []
+                            if r.is_asc is False:
+                                parts.append("DESC")
+                            if r.nf is False:
+                                parts.append("NULLS LAST")
+                            elif r.nf is True:
+                                parts.append("NULLS FIRST")
+                            if parts:
+                                sorting[r.attname] = " ".join(parts)
+                        if sorting:
+                            idx_entry["column_sorting"] = sorting
+                except Exception:
+                    pass
             indexes[idx_name] = idx_entry
 
         for fk in inspector.get_foreign_keys(table_name):
             fk_name = fk.get("name", "")
             if not fk_name:
                 fk_name = f"fk_{table_name}_{'_'.join(fk.get('constrained_columns', []))}"
+            fk_options = fk.get("options", {})
             constraints[fk_name] = {
                 "type": "foreign_key",
+                "name": fk_name,
                 "table": table_name,
                 "columns": list(fk.get("constrained_columns", [])),
                 "referenced_table": fk.get("referred_table", ""),
                 "referenced_columns": list(fk.get("referred_columns", [])),
-                "on_delete": fk.get("options", {}).get("ondelete", "NO ACTION"),
-                "on_update": fk.get("options", {}).get("onupdate", "NO ACTION"),
+                "on_delete": fk_options.get("ondelete", "NO ACTION"),
+                "on_update": fk_options.get("onupdate", "NO ACTION"),
+                "deferrable": bool(fk_options.get("deferrable", False)),
             }
 
         for uq in inspector.get_unique_constraints(table_name):
@@ -385,6 +697,7 @@ def extract_full_schema_snapshot(
                 continue
             constraints[uq_name] = {
                 "type": "unique",
+                "name": uq_name,
                 "table": table_name,
                 "columns": list(uq.get("column_names", [])),
             }
@@ -395,6 +708,7 @@ def extract_full_schema_snapshot(
                 ck_name = f"ck_{table_name}_{hash(ck.get('sqltext', ''))}"
             constraints[ck_name] = {
                 "type": "check",
+                "name": ck_name,
                 "table": table_name,
                 "columns": [],
                 "expression": ck.get("sqltext", ""),
@@ -649,28 +963,28 @@ def _rename_table_sql(intent: TableRenameIntent, backend: str) -> MigrationState
 def _index_sig(idx_or_info: dict | IndexInfo) -> tuple:
     if isinstance(idx_or_info, IndexInfo):
         return (
-            frozenset(idx_or_info.columns),
+            tuple(idx_or_info.columns),
             idx_or_info.unique,
-            idx_or_info.using,
+            idx_or_info.using or "btree",
             idx_or_info.where,
-            frozenset(idx_or_info.include or []),
-            frozenset((idx_or_info.with_params or {}).items()),
+            tuple(idx_or_info.include or []),
+            tuple(sorted((idx_or_info.with_params or {}).items())),
             idx_or_info.tablespace,
             idx_or_info.nulls_not_distinct,
-            frozenset((idx_or_info.column_sorting or {}).items()),
+            tuple((idx_or_info.column_sorting or {}).items()),
             idx_or_info.clickhouse_type,
             idx_or_info.clickhouse_granularity,
         )
     return (
-        frozenset(idx_or_info.get("columns", [])),
+        tuple(idx_or_info.get("columns", [])),
         bool(idx_or_info.get("unique", False)),
-        idx_or_info.get("using"),
+        idx_or_info.get("using") or "btree",
         idx_or_info.get("where"),
-        frozenset(idx_or_info.get("include", []) or []),
-        frozenset((idx_or_info.get("with_params") or {}).items()),
+        tuple(idx_or_info.get("include", []) or []),
+        tuple(sorted((idx_or_info.get("with_params") or {}).items())),
         idx_or_info.get("tablespace"),
         bool(idx_or_info.get("nulls_not_distinct", False)),
-        frozenset((idx_or_info.get("column_sorting") or {}).items()),
+        tuple(sorted((idx_or_info.get("column_sorting") or {}).items())),
         idx_or_info.get("clickhouse_type"),
         idx_or_info.get("clickhouse_granularity"),
     )
@@ -704,6 +1018,34 @@ def _index_op_from_info(info: IndexInfo, table: str) -> dict[str, Any]:
     if info.clickhouse_granularity is not None:
         op["clickhouse_granularity"] = info.clickhouse_granularity
     return op
+
+
+_SNAP_TO_MODEL_KEY = {
+    "collation": "pg_collation",
+    "storage": "pg_storage",
+    "compression": "pg_compression",
+    "generated": "pg_generated",
+    "identity": "pg_identity",
+    "identity_start": "pg_identity_start",
+    "identity_increment": "pg_identity_increment",
+    "identity_min": "pg_identity_min",
+    "identity_max": "pg_identity_max",
+}
+
+def snap_to_model_key(snap_key: str) -> str:
+    return _SNAP_TO_MODEL_KEY.get(snap_key, snap_key)
+
+
+def _normalize_default(d: Any) -> str | None:
+    if d is None:
+        return None
+    s = str(d).strip()
+    while len(s) >= 2 and s[0] == s[-1] and s[0] in ("'", '"'):
+        s = s[1:-1]
+    s = s.replace("\\'", "'").replace('\\"', '"')
+    if s.upper() in ("TRUE", "FALSE"):
+        s = s.upper()
+    return s
 
 
 def diff_models_against_snapshot(
@@ -746,8 +1088,23 @@ def diff_models_against_snapshot(
         if table.name not in snapshot_tables:
             continue
 
-        snap_columns = snapshot_tables[table.name].get("columns", {})
+        snap_table = snapshot_tables[table.name]
+        snap_columns = snap_table.get("columns", {})
         model_columns = {c.name: c for c in table.columns}
+
+        snap_comment = snap_table.get("comment")
+        if snap_comment != table.comment:
+            upgrade_ops.append({
+                "type": "alter_table_comment",
+                "table": table.name,
+                "comment": table.comment,
+                "previous_comment": snap_comment,
+            })
+            rollback_ops.append({
+                "type": "alter_table_comment",
+                "table": table.name,
+                "comment": snap_comment,
+            })
 
         dropped_cols = []
         for col_name in snap_columns:
@@ -818,8 +1175,8 @@ def diff_models_against_snapshot(
                     "nullable": snap_nullable,
                     "col_type": snap_col.get("type", ""),
                 })
-            snap_default = snap_col.get("default")
-            model_default = model_col.default
+            snap_default = _normalize_default(snap_col.get("default"))
+            model_default = _normalize_default(model_col.default)
             if snap_default != model_default:
                 upgrade_ops.append({
                     "type": "alter_column_default",
@@ -832,6 +1189,50 @@ def diff_models_against_snapshot(
                     "table": table.name,
                     "column": col_name,
                     "default": snap_default,
+                })
+            snap_col_comment = snap_col.get("comment")
+            if snap_col_comment != model_col.comment:
+                upgrade_ops.append({
+                    "type": "alter_column_comment",
+                    "table": table.name,
+                    "column": col_name,
+                    "comment": model_col.comment,
+                    "previous_comment": snap_col_comment,
+                })
+                rollback_ops.append({
+                    "type": "alter_column_comment",
+                    "table": table.name,
+                    "column": col_name,
+                    "comment": snap_col_comment,
+                })
+            snap_pg_col = snap_col.get("pg_column") or {}
+            model_pg_meta = model_col.pg_meta or {}
+            norm_snap_pg_col = {
+                snap_to_model_key(k): v for k, v in snap_pg_col.items()
+                if snap_to_model_key(k) not in ("pg_type",)
+            }
+            model_pg_meta_filtered = {
+                k: v for k, v in model_pg_meta.items()
+                if k not in ("pg_type", "pg_enum_name", "pg_enum_values")
+            }
+            if norm_snap_pg_col != model_pg_meta_filtered:
+                upgrade_ops.append({
+                    "type": "alter_pg_column_meta",
+                    "table": table.name,
+                    "column": col_name,
+                    "col_type": model_col.type,
+                    "snap_type": snap_col.get("type", ""),
+                    "from_pg_column": snap_pg_col,
+                    "to_pg_column": model_pg_meta,
+                })
+                rollback_ops.append({
+                    "type": "alter_pg_column_meta",
+                    "table": table.name,
+                    "column": col_name,
+                    "col_type": snap_col.get("type", ""),
+                    "snap_type": model_col.type,
+                    "from_pg_column": model_pg_meta,
+                    "to_pg_column": snap_pg_col,
                 })
 
         for col_name, col_def in dropped_cols:
@@ -864,29 +1265,149 @@ def diff_models_against_snapshot(
                 "column": col_name,
             })
 
+        # --- Constraint diff (unique, check, exclude) ---
+        table_constraints = snapshot.get("constraints", {})
+        snap_uniques = {
+            name: c for name, c in table_constraints.items()
+            if c.get("type") == "unique" and c.get("table") == table.name
+        }
+        model_uniques = {u.get("name") or f"uq_{table.name}_{'_'.join(u.get('columns', []))}": u for u in (table.uniques or [])}
+
+        # RENAME CONSTRAINT optimization: same columns, different name
+        snap_by_cols: dict[frozenset, tuple[str, dict]] = {}
+        model_by_cols: dict[frozenset, tuple[str, dict]] = {}
+        for n, u in snap_uniques.items():
+            snap_by_cols[frozenset(u.get("columns", []))] = (n, u)
+        for n, u in model_uniques.items():
+            model_by_cols[frozenset(u.get("columns", []))] = (n, u)
+        handled_snap: set[str] = set()
+        handled_model: set[str] = set()
+        for cols_sig, (snap_name, snap_entry) in snap_by_cols.items():
+            model_match = model_by_cols.get(cols_sig)
+            if model_match is None:
+                continue
+            model_name, model_entry = model_match
+            if snap_name == model_name:
+                handled_snap.add(snap_name)
+                handled_model.add(model_name)
+            elif snap_entry.get("columns") == model_entry.get("columns"):
+                # Same columns, different name — emit RENAME CONSTRAINT
+                rename_payload = {"old_name": snap_name, "new_name": model_name, "columns": list(cols_sig)}
+                upgrade_ops.append({"type": "rename_unique_constraint", "table": table.name, **rename_payload})
+                rollback_ops.append({"type": "rename_unique_constraint", "table": table.name, "old_name": model_name, "new_name": snap_name, "columns": list(cols_sig)})
+                handled_snap.add(snap_name)
+                handled_model.add(model_name)
+        for name, uq in snap_uniques.items():
+            if name in handled_snap:
+                continue
+            if name not in model_uniques or snap_uniques[name] != model_uniques[name]:
+                payload = {k: v for k, v in uq.items() if k not in {"type", "table"}}
+                upgrade_ops.append({"type": "drop_unique_constraint", "table": table.name, "name": name, **payload})
+                rollback_ops.append({"type": "add_unique_constraint", "table": table.name, "name": name, **payload})
+        for name, uq in model_uniques.items():
+            if name in handled_model:
+                continue
+            if name not in snap_uniques:
+                payload = {k: v for k, v in uq.items() if k not in {"type", "table"}}
+                upgrade_ops.append({"type": "add_unique_constraint", "table": table.name, "name": name, **payload})
+                rollback_ops.append({"type": "drop_unique_constraint", "table": table.name, "name": name, **payload})
+
+        snap_checks = {
+            name: c for name, c in table_constraints.items()
+            if c.get("type") == "check" and c.get("table") == table.name
+        }
+        model_checks = {c.get("name") or f"ck_{table.name}_{i}": c for i, c in enumerate(table.checks or [])}
+        for name, ck in snap_checks.items():
+            snap_sig = {k: v for k, v in ck.items() if k not in {"type", "table", "columns"}}
+            model_sig = model_checks.get(name, {})
+            if name not in model_checks or snap_sig != model_sig:
+                payload = {k: v for k, v in ck.items() if k not in {"type", "table"}}
+                upgrade_ops.append({"type": "drop_check_constraint", "table": table.name, "name": name, **payload})
+                rollback_ops.append({"type": "add_check_constraint", "table": table.name, "name": name, **payload})
+        for name, ck in model_checks.items():
+            if name not in snap_checks:
+                upgrade_ops.append({"type": "add_check_constraint", "table": table.name, "name": name, **ck})
+                rollback_ops.append({"type": "drop_check_constraint", "table": table.name, "name": name, **ck})
+
+        # --- Table-level PG metadata diff (pg_table) ---
+        snap_pg_table = snapshot_tables[table.name].get("pg_table", {}) or {}
+        model_pg_table = table.pg_table or {}
+        scalar_keys = {k for k in set(snap_pg_table.keys()) | set(model_pg_table.keys()) if k != "pg_excludes"}
+        for key in sorted(scalar_keys):
+            if snap_pg_table.get(key) != model_pg_table.get(key):
+                upgrade_ops.append({
+                    "type": "alter_pg_table",
+                    "table": table.name,
+                    "key": key,
+                    "from_value": snap_pg_table.get(key),
+                    "to_value": model_pg_table.get(key),
+                })
+                rollback_ops.append({
+                    "type": "alter_pg_table",
+                    "table": table.name,
+                    "key": key,
+                    "from_value": model_pg_table.get(key),
+                    "to_value": snap_pg_table.get(key),
+                })
+
+        snap_excl_list = snap_pg_table.get("pg_excludes", []) or []
+        model_excl_list = model_pg_table.get("pg_excludes", []) or []
+        snap_excludes = {e["name"]: e for e in snap_excl_list}
+        model_excludes = {e["name"]: e for e in model_excl_list}
+
+        for name, ex in snap_excludes.items():
+            if name not in model_excludes or snap_excludes[name] != model_excludes.get(name):
+                upgrade_ops.append({
+                    "type": "drop_exclude_constraint",
+                    "table": table.name,
+                    "name": name,
+                    "expression": ex.get("expression", ""),
+                })
+                rollback_ops.append({
+                    "type": "add_exclude_constraint",
+                    "table": table.name,
+                    "name": name,
+                    "expression": ex.get("expression", ""),
+                })
+        for name, ex in model_excludes.items():
+            if name not in snap_excludes:
+                upgrade_ops.append({
+                    "type": "add_exclude_constraint",
+                    "table": table.name,
+                    "name": name,
+                    "expression": ex.get("expression", ""),
+                })
+                rollback_ops.append({
+                    "type": "drop_exclude_constraint",
+                    "table": table.name,
+                    "name": name,
+                    "expression": ex.get("expression", ""),
+                })
+
     # --- FK diff ---
+    def _fk_sig(fk: dict) -> tuple:
+        return (
+            frozenset(fk.get("columns", [])),
+            fk.get("referenced_table") or fk.get("referred_table", ""),
+            frozenset(fk.get("referenced_columns", fk.get("referred_columns", []))),
+            fk.get("on_delete", "NO ACTION"),
+            fk.get("on_update", "NO ACTION"),
+            bool(fk.get("deferrable", False)),
+        )
+
     snapshot_constraints = snapshot.get("constraints", {})
     for table in model_tables:
         model_fks = table.foreign_keys or []
-        model_fk_sigs: set[tuple[frozenset[str], str, frozenset[str]]] = {
-            (frozenset(fk["columns"]), fk["referred_table"], frozenset(fk["referred_columns"]))
-            for fk in model_fks
-        }
+        model_fk_sigs = {_fk_sig(fk) for fk in model_fks}
 
-        # Snapshot FKs for this table
         snap_fks = [
             c for c in snapshot_constraints.values()
             if c.get("type") == "foreign_key" and c.get("table") == table.name
         ]
-        snap_fk_sigs: set[tuple[frozenset[str], str, frozenset[str]]] = {
-            (frozenset(fk["columns"]), fk["referenced_table"], frozenset(fk["referenced_columns"]))
-            for fk in snap_fks
-        }
+        snap_fk_sigs = {_fk_sig(fk) for fk in snap_fks}
 
-        # FKs to drop (in snapshot but not in model)
         for fk in snap_fks:
-            sig = (frozenset(fk["columns"]), fk["referenced_table"], frozenset(fk["referenced_columns"]))
-            if sig not in model_fk_sigs:
+            if _fk_sig(fk) not in model_fk_sigs:
                 upgrade_ops.append({
                     "type": "drop_foreign_key",
                     "table": table.name,
@@ -902,13 +1423,11 @@ def diff_models_against_snapshot(
                     "referenced_columns": fk["referenced_columns"],
                     "on_delete": fk.get("on_delete", "NO ACTION"),
                     "on_update": fk.get("on_update", "NO ACTION"),
+                    "deferrable": bool(fk.get("deferrable", False)),
                 })
 
-        # FKs to add (in model but not in snapshot)
         for fk in model_fks:
-            sig = (frozenset(fk["columns"]), fk["referred_table"], frozenset(fk["referred_columns"]))
-            if sig not in snap_fk_sigs:
-                # Validate referred table/columns exist in snapshot
+            if _fk_sig(fk) not in snap_fk_sigs:
                 snap_tbl = snapshot.get("tables", {}).get(fk["referred_table"])
                 if snap_tbl is None:
                     continue
@@ -922,6 +1441,9 @@ def diff_models_against_snapshot(
                     "columns": fk["columns"],
                     "referenced_table": fk["referred_table"],
                     "referenced_columns": fk["referred_columns"],
+                    "on_delete": fk.get("on_delete", "NO ACTION"),
+                    "on_update": fk.get("on_update", "NO ACTION"),
+                    "deferrable": fk.get("deferrable", False),
                 })
                 rollback_ops.append({
                     "type": "drop_foreign_key",
@@ -1205,6 +1727,137 @@ def snapshot_diff_to_sql(
                 rollback_sql=def_rb,
             ))
             changes.append(Change(operation="alter_column_default", table=op["table"], target=op["column"]))
+        elif op["type"] == "alter_table_comment":
+            comment = op.get("comment") or ""
+            prev = op.get("previous_comment") or ""
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_COMMENT,
+                upgrade_sql=f"COMMENT ON TABLE {op['table']} IS '{comment.replace(chr(39), chr(39)+chr(39))}';" if comment else f"COMMENT ON TABLE {op['table']} IS NULL;",
+                rollback_sql=f"COMMENT ON TABLE {op['table']} IS '{prev.replace(chr(39), chr(39)+chr(39))}';" if prev else f"COMMENT ON TABLE {op['table']} IS NULL;",
+            ))
+            changes.append(Change(operation="alter_table_comment", table=op["table"]))
+        elif op["type"] == "alter_column_comment":
+            comment = op.get("comment") or ""
+            prev = op.get("previous_comment") or ""
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_COLUMN_COMMENT,
+                upgrade_sql=f"COMMENT ON COLUMN {op['table']}.{op['column']} IS '{comment.replace(chr(39), chr(39)+chr(39))}';" if comment else f"COMMENT ON COLUMN {op['table']}.{op['column']} IS NULL;",
+                rollback_sql=f"COMMENT ON COLUMN {op['table']}.{op['column']} IS '{prev.replace(chr(39), chr(39)+chr(39))}';" if prev else f"COMMENT ON COLUMN {op['table']}.{op['column']} IS NULL;",
+            ))
+            changes.append(Change(operation="alter_column_comment", table=op["table"], target=op["column"]))
+        elif op["type"] == "alter_pg_column_meta":
+            stmts = _build_pg_meta_sql(
+                op["table"], op["column"], op["col_type"], op["snap_type"],
+                op["to_pg_column"], op["from_pg_column"], backend,
+            )
+            for s in stmts:
+                statements.append(s)
+            changes.append(Change(operation="alter_pg_column_meta", table=op["table"], target=op["column"]))
+        elif op["type"] == "alter_pg_table":
+            key = op["key"]
+            to_val = op.get("to_value")
+            from_val = op.get("from_value")
+            if backend == "postgresql":
+                if key == "fillfactor":
+                    if to_val is not None:
+                        up = f"ALTER TABLE {op['table']} SET (fillfactor = {to_val});"
+                    else:
+                        up = f"ALTER TABLE {op['table']} RESET (fillfactor);"
+                    if from_val is not None:
+                        rb = f"ALTER TABLE {op['table']} SET (fillfactor = {from_val});"
+                    else:
+                        rb = f"ALTER TABLE {op['table']} RESET (fillfactor);"
+                    statements.append(MigrationStatement(
+                        order=StatementOrder.ALTER_TABLE_OPTIONS,
+                        upgrade_sql=up, rollback_sql=rb,
+                    ))
+                elif key == "tablespace":
+                    if to_val:
+                        up = f"ALTER TABLE {op['table']} SET TABLESPACE {to_val};"
+                    else:
+                        up = f"-- Cannot unset tablespace for {op['table']}; move to default manually"
+                    if from_val:
+                        rb = f"ALTER TABLE {op['table']} SET TABLESPACE {from_val};"
+                    else:
+                        rb = f"-- Cannot restore tablespace for {op['table']}; move to default manually"
+                    statements.append(MigrationStatement(
+                        order=StatementOrder.ALTER_TABLE_OPTIONS,
+                        upgrade_sql=up, rollback_sql=rb,
+                    ))
+                elif key == "inherits":
+                    if to_val:
+                        parents = ", ".join(to_val)
+                        up = f"ALTER TABLE {op['table']} INHERIT {parents};"
+                    else:
+                        up = f"-- Cannot remove all inheritance for {op['table']} via ALTER"
+                    if from_val:
+                        parents = ", ".join(from_val)
+                        rb = f"ALTER TABLE {op['table']} INHERIT {parents};"
+                    else:
+                        rb = f"-- Cannot restore inheritance for {op['table']} via ALTER"
+                    statements.append(MigrationStatement(
+                        order=StatementOrder.ALTER_TABLE_OPTIONS,
+                        upgrade_sql=up, rollback_sql=rb,
+                    ))
+            changes.append(Change(operation=f"alter_pg_table_{key}", table=op["table"]))
+        elif op["type"] in ("add_unique_constraint", "drop_unique_constraint"):
+            name = op["name"]
+            if op["type"] == "add_unique_constraint":
+                cols = ", ".join(op.get("columns", []))
+                if backend == "postgresql":
+                    using = op.get("using")
+                    using_clause = f" USING INDEX {using}" if using else ""
+                    up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} UNIQUE ({cols}){using_clause};"
+                else:
+                    up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} UNIQUE ({cols});"
+                rb = f"ALTER TABLE {op['table']} DROP CONSTRAINT {name};"
+            else:
+                up = f"ALTER TABLE {op['table']} DROP CONSTRAINT {name};"
+                cols = ", ".join(op.get("columns", []))
+                rb = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} UNIQUE ({cols});"
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_CONSTRAINT,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation=op["type"], table=op["table"]))
+        elif op["type"] == "rename_unique_constraint":
+            up = f"ALTER TABLE {op['table']} RENAME CONSTRAINT {op['old_name']} TO {op['new_name']};"
+            rb = f"ALTER TABLE {op['table']} RENAME CONSTRAINT {op['new_name']} TO {op['old_name']};"
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_CONSTRAINT,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation=op["type"], table=op["table"]))
+        elif op["type"] in ("add_check_constraint", "drop_check_constraint"):
+            name = op["name"]
+            if op["type"] == "add_check_constraint":
+                expr = op.get("expression", "")
+                up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} CHECK ({expr});"
+                rb = f"ALTER TABLE {op['table']} DROP CONSTRAINT IF EXISTS {name};"
+            else:
+                up = f"ALTER TABLE {op['table']} DROP CONSTRAINT IF EXISTS {name};"
+                expr = op.get("expression", "")
+                rb = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} CHECK ({expr});"
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_CONSTRAINT,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation=op["type"], table=op["table"]))
+        elif op["type"] in ("add_exclude_constraint", "drop_exclude_constraint"):
+            name = op["name"]
+            if op["type"] == "add_exclude_constraint":
+                expr = op.get("expression", "")
+                up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} EXCLUDE {expr};"
+                rb = f"ALTER TABLE {op['table']} DROP CONSTRAINT {name};"
+            else:
+                up = f"ALTER TABLE {op['table']} DROP CONSTRAINT {name};"
+                expr = op.get("expression", "")
+                rb = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} EXCLUDE {expr};"
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_CONSTRAINT,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation=op["type"], table=op["table"]))
         elif op["type"] in ("add_foreign_key", "drop_foreign_key"):
             stmts = _build_foreign_key_sql(op, backend)
             for s in stmts:
@@ -1268,6 +1921,12 @@ def _build_foreign_key_sql(op: dict[str, Any], backend: str) -> list[MigrationSt
             f"ALTER TABLE {table} ADD CONSTRAINT {fk_name} "
             f"FOREIGN KEY ({cols}) REFERENCES {ref_table}({ref_cols})"
         )
+        on_delete = op.get("on_delete")
+        on_update = op.get("on_update")
+        if on_delete and on_delete != "NO ACTION":
+            upgrade += f" ON DELETE {on_delete}"
+        if on_update and on_update != "NO ACTION":
+            upgrade += f" ON UPDATE {on_update}"
         if backend == "postgresql" and op.get("deferrable"):
             upgrade += " DEFERRABLE INITIALLY DEFERRED"
         upgrade += ";"

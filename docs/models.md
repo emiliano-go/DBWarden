@@ -21,6 +21,52 @@ Related docs:
 - [Configuration](configuration/index.md)
 - [Your First Migration](tutorial/your-first-migration.md)
 
+## PostgreSQL Model Metadata
+
+When `database_type="postgresql"`, DBWarden supports first-class PostgreSQL metadata via `class Meta` inner classes. This is the **only** supported surface — `mapped_column(info=...)` raises `DBWardenConfigError`.
+
+### Table-Level Meta
+
+Inherit from `PGTableMeta` on your `class Meta`:
+
+```python
+from dbwarden import Base, PGTableMeta
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+
+    class Meta(PGTableMeta):
+        pg_fillfactor = 80
+        pg_tablespace = "fastspace"
+```
+
+### Column-Level Meta
+
+Use `PGColumnMeta` inner classes named after the column:
+
+```python
+from dbwarden import Base, PGTableMeta, PGColumnMeta
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    bio = Column(Text)
+
+    class Meta(PGTableMeta):
+        class id(PGColumnMeta):
+            pg_identity = "always"
+            pg_identity_start = 100
+
+        class bio(PGColumnMeta):
+            pg_storage = "EXTENDED"
+            pg_collation = "en_US.UTF-8"
+```
+
+For the full list of supported attributes, see [PostgreSQL Deep Dive](databases/postgresql.md).
+
 ## ClickHouse Model Metadata
 
 When `database_type="clickhouse"`, DBWarden can read ClickHouse-specific options from `__table_args__` and column `info` metadata.

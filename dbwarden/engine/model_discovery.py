@@ -116,6 +116,8 @@ class ModelColumn:
         default: Optional[str],
         foreign_key: Optional[str],
         codec: Optional[str] = None,
+        comment: Optional[str] = None,
+        pg_meta: Optional[dict[str, Any]] = None,
     ):
         self.name = name
         self.type = type
@@ -125,6 +127,8 @@ class ModelColumn:
         self.default = default
         self.foreign_key = foreign_key
         self.codec = codec
+        self.comment = comment
+        self.pg_meta = pg_meta or {}
 
     def to_dict(self) -> dict:
         return {
@@ -136,12 +140,15 @@ class ModelColumn:
             "default": self.default,
             "foreign_key": self.foreign_key,
             "codec": self.codec,
+            "comment": self.comment,
+            "pg_meta": self.pg_meta,
         }
 
 
 @dataclass
 class IndexInfo:
     columns: list[str]
+    name: str | None = None
     unique: bool = False
     using: str | None = None
     where: str | None = None
@@ -160,6 +167,8 @@ class IndexInfo:
             "columns": self.columns,
             "unique": self.unique,
         }
+        if self.name is not None:
+            d["name"] = self.name
         if self.using is not None:
             d["using"] = self.using
         if self.where is not None:
@@ -187,6 +196,7 @@ class IndexInfo:
     @staticmethod
     def from_dict(d: dict) -> "IndexInfo":
         return IndexInfo(
+            name=d.get("name"),
             columns=list(d.get("columns", [])),
             unique=bool(d.get("unique", False)),
             using=d.get("using"),
@@ -214,6 +224,11 @@ class ModelTable:
         object_type: str = "table",
         foreign_keys: Optional[list[dict]] = None,
         indexes: Optional[list[dict | IndexInfo]] = None,
+        comment: str | None = None,
+        checks: Optional[list[dict[str, Any]]] = None,
+        uniques: Optional[list[dict[str, Any]]] = None,
+        excludes: Optional[list[dict[str, Any]]] = None,
+        pg_table: Optional[dict[str, Any]] = None,
     ):
         self.name = name
         self.columns = columns
@@ -224,6 +239,11 @@ class ModelTable:
             IndexInfo.from_dict(idx) if isinstance(idx, dict) else idx
             for idx in (indexes or [])
         ]
+        self.comment = comment
+        self.checks = checks or []
+        self.uniques = uniques or []
+        self.excludes = excludes or []
+        self.pg_table = pg_table or {}
 
     def to_dict(self) -> dict:
         return {
@@ -233,6 +253,11 @@ class ModelTable:
             "object_type": self.object_type,
             "foreign_keys": self.foreign_keys,
             "indexes": [idx.to_dict() if isinstance(idx, IndexInfo) else idx for idx in self.indexes],
+            "comment": self.comment,
+            "checks": self.checks,
+            "uniques": self.uniques,
+            "excludes": self.excludes,
+            "pg_table": self.pg_table,
         }
 
 
@@ -665,6 +690,7 @@ def extract_table_from_model(
     """
     try:
         apply_meta(model_class)
+        dw_meta = read_meta(model_class)
         table_name = model_class.__tablename__
         columns = []
 
@@ -694,6 +720,7 @@ def extract_table_from_model(
         for idx in model_class.__table__.indexes:
             idx_cols = list(idx.columns.keys())
             info = IndexInfo(
+                name=idx.name,
                 columns=idx_cols,
                 unique=bool(idx.unique),
                 using=_extract_dialect_option(idx, "using"),
@@ -726,6 +753,35 @@ def extract_table_from_model(
 
         clickhouse_options = {}
         object_type = "table"
+        comment = getattr(dw_meta, "comment", None) if dw_meta else None
+        checks = []
+        uniques = []
+        excludes = []
+        pg_table = {}
+
+        if dw_meta:
+            checks = list(getattr(dw_meta, "pg_checks", []) or getattr(dw_meta, "checks", []))
+            uniques = list(getattr(dw_meta, "pg_uniques", []) or getattr(dw_meta, "uniques", []))
+            excludes = list(getattr(dw_meta, "pg_excludes", []))
+            pg_indexes_meta = getattr(dw_meta, "pg_indexes", None) or []
+            # If no SQLAlchemy indexes exist but pg_indexes Meta data does, populate from Meta
+            if not indexes and pg_indexes_meta:
+                for idx_entry in pg_indexes_meta:
+                    idx_info = IndexInfo(
+                        name=idx_entry.get("name"),
+                        columns=list(idx_entry.get("columns", [])),
+                        unique=bool(idx_entry.get("unique", False)),
+                        using=idx_entry.get("using"),
+                        where=idx_entry.get("where"),
+                        include=idx_entry.get("include"),
+                        nulls_not_distinct=bool(idx_entry.get("nulls_not_distinct", False)),
+                        column_sorting=dict(idx_entry.get("column_sorting", {})) if idx_entry.get("column_sorting") else None,
+                    )
+                    indexes.append(idx_info)
+            if isinstance(dw_meta.backend_table, dict):
+                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
+                pg_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("pg_") and k not in excluded_pg_keys}
+
         if _get_backend_name(db_name) == "clickhouse":
             clickhouse_options = _clickhouse_options_for_model(model_class)
             object_type = _object_type_for_clickhouse_options(clickhouse_options)
@@ -737,6 +793,11 @@ def extract_table_from_model(
             object_type=object_type,
             foreign_keys=foreign_keys,
             indexes=indexes,
+            comment=comment,
+            checks=checks,
+            uniques=uniques,
+            excludes=excludes,
+            pg_table=pg_table,
         )
     except DBWardenConfigError:
         raise
@@ -758,6 +819,17 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
     try:
         name = column.name
         type_str = str(column.type)
+        backend = _get_backend_name(db_name)
+        if backend == "postgresql":
+            item_type = getattr(column.type, "item_type", None)
+            if item_type is not None:
+                type_str = "array"
+            elif getattr(column.type, "enums", None) and getattr(column.type, "name", None):
+                type_str = "enum"
+            elif type_str.upper() == "JSONB":
+                type_str = "jsonb"
+            elif getattr(column.type, "timezone", False):
+                type_str = "timestamptz"
         if _get_backend_name(db_name) == "clickhouse":
             clickhouse_type_override = column.info.get("clickhouse_type")
             if isinstance(clickhouse_type_override, str) and clickhouse_type_override.strip():
@@ -814,6 +886,8 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
                         default = None
             else:
                 default = default_str
+        elif backend == "postgresql" and column.server_default is not None:
+            default = str(column.server_default.arg)
 
         type_str = _map_sqlalchemy_type_to_backend(
             type_str, is_primary_key=primary_key, db_name=db_name
@@ -842,10 +916,40 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
                 foreign_key = colspec
 
         codec = None
+        comment = None
+        pg_meta: dict[str, Any] = {}
         if _get_backend_name(db_name) == "clickhouse":
             clickhouse_codec = column.info.get("clickhouse_codec")
             if isinstance(clickhouse_codec, str) and clickhouse_codec.strip():
                 codec = clickhouse_codec.strip()
+
+        if column.comment:
+            comment = column.comment
+        elif "dw_comment" in column.info:
+            comment = column.info["dw_comment"]
+
+        for key in (
+            "pg_collation",
+            "pg_storage",
+            "pg_compression",
+            "pg_generated",
+            "pg_identity",
+            "pg_identity_start",
+            "pg_identity_increment",
+            "pg_identity_min",
+            "pg_identity_max",
+        ):
+            if key in column.info:
+                pg_meta[key] = column.info[key]
+        if backend == "postgresql":
+            if item_type is not None:
+                pg_meta["pg_type"] = {
+                    "kind": "array",
+                    "inner": item_type.__class__.__name__.lower().replace("varchar", "varchar").replace("text", "text"),
+                    "dimensions": 1,
+                }
+            elif getattr(column.type, "enums", None) and getattr(column.type, "name", None):
+                pg_meta["pg_enum_name"] = column.type.name
 
         return ModelColumn(
             name=name,
@@ -856,6 +960,8 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
             default=default,
             foreign_key=foreign_key,
             codec=codec,
+            comment=comment,
+            pg_meta=pg_meta,
         )
     except Exception:
         return None

@@ -12,10 +12,59 @@ from dbwarden.engine.model_discovery import ModelTable, get_all_model_tables
 from dbwarden.models import SafetyIssue
 
 
+def classify_pg_type_change(from_type: dict[str, Any], to_type: dict[str, Any]) -> str:
+    from_kind = from_type.get("kind") or from_type.get("type")
+    to_kind = to_type.get("kind") or to_type.get("type")
+
+    if from_kind == "varchar" and to_kind == "varchar":
+        fl, tl = from_type.get("length"), to_type.get("length")
+        if fl is None or tl is None or tl >= fl:
+            return "SAFE"
+        return "CRITICAL"
+    if from_kind == "integer" and to_kind == "biginteger":
+        return "SAFE"
+    if from_kind == "varchar" and to_kind == "text":
+        return "SAFE"
+    if from_kind == "json" and to_kind == "jsonb":
+        return "SAFE"
+    if {from_kind, to_kind} == {"timestamp", "timestamptz"}:
+        return "WARN"
+    if from_kind == "numeric":
+        fp = from_type.get("precision")
+        tp = to_type.get("precision")
+        if fp and tp and tp < fp:
+            return "CRITICAL"
+    if from_kind != to_kind:
+        return "CRITICAL"
+    return "SAFE"
+
+
+def classify_enum_change(from_values: list[str], to_values: list[str]) -> str:
+    if set(from_values) - set(to_values):
+        return "CRITICAL"
+    if set(to_values) - set(from_values):
+        return "WARN"
+    return "SAFE"
+
+
 def _normalize_option_value(value: Any) -> Any:
     if isinstance(value, tuple):
         return list(value)
     return value
+
+
+def _snapshot_column_type_signature(snapshot_column: dict[str, Any]) -> dict[str, Any]:
+    extra_keys = {"length", "precision", "scale", "pg_type", "enum_name"}
+    if not any(key in snapshot_column for key in extra_keys):
+        from dbwarden.engine.snapshot import normalize_type
+
+        return normalize_type(str(snapshot_column.get("type", "")))
+
+    sig: dict[str, Any] = {"type": snapshot_column.get("type")}
+    for key in ("length", "precision", "scale", "pg_type", "enum_name"):
+        if key in snapshot_column:
+            sig[key] = snapshot_column[key]
+    return sig
 
 
 def extract_schema_snapshot(database: str | None = None) -> dict[str, dict[str, Any]]:
@@ -24,6 +73,21 @@ def extract_schema_snapshot(database: str | None = None) -> dict[str, dict[str, 
     config = get_database(database)
     if config.database_type == "clickhouse":
         return _extract_clickhouse_schema_snapshot(database)
+    if config.database_type == "postgresql":
+        from dbwarden.engine.snapshot import extract_full_schema_snapshot
+
+        full = extract_full_schema_snapshot(database=database)
+        snapshot: dict[str, dict[str, Any]] = {}
+        for table_name, table in full.get("tables", {}).items():
+            snapshot[table_name] = {
+                "database_type": "postgresql",
+                "object_type": "table",
+                "comment": table.get("comment"),
+                "columns": table.get("columns", {}),
+                "pg_table": table.get("pg_table", {}),
+                "clickhouse_options": {},
+            }
+        return snapshot
     return _extract_generic_schema_snapshot(database)
 
 
@@ -211,6 +275,16 @@ def _analyze_table(table_snapshot: dict[str, Any], model_table: ModelTable) -> l
     snapshot_columns = table_snapshot.get("columns", {})
     model_columns = {column.name: column for column in model_table.columns}
 
+    if table_snapshot.get("comment") != model_table.comment:
+        issues.append(
+            SafetyIssue(
+                severity="INFO",
+                change_type="change_table_comment",
+                table_name=model_table.name,
+                message=f"Change comment of table '{model_table.name}'",
+            )
+        )
+
     if table_snapshot.get("object_type", "table") != model_table.object_type:
         issues.append(
             SafetyIssue(
@@ -252,10 +326,45 @@ def _analyze_table(table_snapshot: dict[str, Any], model_table: ModelTable) -> l
     for column_name in sorted(snapshot_columns.keys() & model_columns.keys()):
         snapshot_column = snapshot_columns[column_name]
         model_column = model_columns[column_name]
-        if str(snapshot_column.get("type")) != model_column.type:
+        from dbwarden.engine.snapshot import normalize_type
+
+        snapshot_type = _snapshot_column_type_signature(snapshot_column)
+        model_type = normalize_type(str(model_column.type))
+        model_pg_column = None
+        if model_column.pg_meta:
+            model_pg_column = {}
+            for src, dst in (
+                ("pg_collation", "collation"),
+                ("pg_storage", "storage"),
+                ("pg_compression", "compression"),
+                ("pg_generated", "generated"),
+                ("pg_identity", "identity"),
+                ("pg_identity_start", "identity_start"),
+                ("pg_identity_increment", "identity_increment"),
+                ("pg_identity_min", "identity_min"),
+                ("pg_identity_max", "identity_max"),
+            ):
+                if src in model_column.pg_meta:
+                    model_pg_column[dst] = model_column.pg_meta[src]
+            if not model_pg_column:
+                model_pg_column = None
+            if model_column.pg_meta.get("pg_type"):
+                model_type = {
+                    "type": model_column.pg_meta["pg_type"].get("kind", model_type.get("type")),
+                    "pg_type": model_column.pg_meta["pg_type"],
+                }
+            if model_column.pg_meta.get("pg_enum_name"):
+                model_type = {"type": "enum", "enum_name": model_column.pg_meta["pg_enum_name"]}
+        severity = "WARNING"
+        required_flag = "--force"
+        if table_snapshot.get("database_type") == "postgresql":
+            classification = classify_pg_type_change(snapshot_type, model_type)
+            severity = {"SAFE": "INFO", "WARN": "WARNING", "CRITICAL": "WARNING"}[classification]
+            required_flag = None if classification == "SAFE" else "--force"
+        if snapshot_type != model_type:
             issues.append(
                 SafetyIssue(
-                    severity="WARNING",
+                    severity=severity,
                     change_type="change_column_type",
                     table_name=model_table.name,
                     column_name=column_name,
@@ -263,7 +372,52 @@ def _analyze_table(table_snapshot: dict[str, Any], model_table: ModelTable) -> l
                         f"Change type of '{model_table.name}.{column_name}' from "
                         f"{snapshot_column.get('type')} to {model_column.type}"
                     ),
+                    required_flag=required_flag,
+                )
+            )
+
+        if snapshot_column.get("comment") != model_column.comment:
+            issues.append(
+                SafetyIssue(
+                    severity="INFO",
+                    change_type="change_column_comment",
+                    table_name=model_table.name,
+                    column_name=column_name,
+                    message=(
+                        f"Change comment of '{model_table.name}.{column_name}'"
+                    ),
+                )
+            )
+
+        if snapshot_column.get("pg_column") != model_pg_column:
+            issues.append(
+                SafetyIssue(
+                    severity="WARNING",
+                    change_type="change_pg_column_meta",
+                    table_name=model_table.name,
+                    column_name=column_name,
+                    message=(
+                        f"Change PostgreSQL metadata of '{model_table.name}.{column_name}'"
+                    ),
                     required_flag="--force",
+                )
+            )
+
+    snap_pg_table = table_snapshot.get("pg_table") or {}
+    model_pg_table = model_table.pg_table or {}
+    pg_table_keys = [("fillfactor", "INFO", None, "Change fillfactor for '{table}'"),
+                     ("tablespace", "WARNING", "--force", "Change tablespace for '{table}'"),
+                     ("inherits", "WARNING", "--force", "Change inheritance parents for '{table}'"),
+                     ("pg_excludes", "WARNING", "--force", "Change EXCLUDE constraints for '{table}'")]
+    for key, severity, required_flag, msg_template in pg_table_keys:
+        if snap_pg_table.get(key) != model_pg_table.get(key):
+            issues.append(
+                SafetyIssue(
+                    severity=severity,
+                    change_type=f"change_pg_table_{key}",
+                    table_name=model_table.name,
+                    message=msg_template.replace("{table}", model_table.name),
+                    required_flag=required_flag,
                 )
             )
 
@@ -337,7 +491,10 @@ def _analyze_clickhouse_options(table_snapshot: dict[str, Any], model_table: Mod
 
 
 def load_issues(database: str | None = None) -> list[SafetyIssue]:
-    model_tables = get_all_model_tables(db_name=database)
+    from dbwarden.config import get_database
+
+    config = get_database(database)
+    model_tables = get_all_model_tables(config.model_paths, db_name=database)
     schema_snapshot = extract_schema_snapshot(database=database)
     return analyze_schema(model_tables, schema_snapshot)
 

@@ -1709,7 +1709,7 @@ class TestIndexDiff:
             "on_delete": "CASCADE",
         }
         stmts = _build_foreign_key_sql(op, "postgresql")
-        assert "ON DELETE" not in stmts[0].upgrade_sql
+        assert "ON DELETE CASCADE" in stmts[0].upgrade_sql
 
     def test_fk_add_sql_does_not_include_on_update(self):
         op = {
@@ -1721,4 +1721,113 @@ class TestIndexDiff:
             "on_update": "SET NULL",
         }
         stmts = _build_foreign_key_sql(op, "postgresql")
-        assert "ON UPDATE" not in stmts[0].upgrade_sql
+        assert "ON UPDATE SET NULL" in stmts[0].upgrade_sql
+
+    def test_fk_diff_detects_on_delete_change(self):
+        snapshot = {
+            "tables": {
+                "users": {"columns": {"id": {"type": "integer"}, "group_id": {"type": "integer"}}},
+                "groups": {"columns": {"id": {"type": "integer"}}},
+            },
+            "constraints": {
+                "users_group_id_fkey": {
+                    "type": "foreign_key",
+                    "table": "users",
+                    "columns": ["group_id"],
+                    "referenced_table": "groups",
+                    "referenced_columns": ["id"],
+                    "on_delete": "NO ACTION",
+                    "on_update": "NO ACTION",
+                },
+            },
+            "indexes": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("group_id", "INTEGER", True, False, False, None, None),
+                ],
+                foreign_keys=[{"columns": ["group_id"], "referred_table": "groups", "referred_columns": ["id"], "on_delete": "CASCADE"}],
+            ),
+        ]
+        upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
+        assert any(op["type"] == "drop_foreign_key" for op in upgrade)
+        assert any(op["type"] == "add_foreign_key" and op.get("on_delete") == "CASCADE" for op in upgrade)
+
+    def test_unique_constraint_diff_add(self):
+        snapshot = {"tables": {"users": {"columns": {"email": {"type": "varchar"}}}}, "constraints": {}, "indexes": {}}
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[ModelColumn("email", "VARCHAR", False, False, False, None, None)],
+                uniques=[{"name": "uq_users_email", "columns": ["email"], "deferrable": True}],
+            )
+        ]
+        upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
+        assert any(op["type"] == "add_unique_constraint" for op in upgrade)
+
+    def test_check_constraint_diff_add(self):
+        snapshot = {"tables": {"users": {"columns": {"age": {"type": "integer"}}}}, "constraints": {}, "indexes": {}}
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[ModelColumn("age", "INTEGER", False, False, False, None, None)],
+                checks=[{"name": "ck_users_age", "expression": "age >= 0"}],
+            )
+        ]
+        upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
+        assert any(op["type"] == "add_check_constraint" for op in upgrade)
+
+    def test_comment_and_pg_meta_diff(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "comment": "Old comment",
+                    "columns": {
+                        "email": {
+                            "type": "varchar",
+                            "nullable": False,
+                            "comment": "Old email",
+                            "pg_column": {"collation": "C"},
+                        }
+                    },
+                }
+            },
+            "constraints": {},
+            "indexes": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[ModelColumn("email", "VARCHAR", False, False, False, None, None, comment="New email", pg_meta={"pg_collation": "en_US.UTF-8"})],
+                comment="New comment",
+            )
+        ]
+        upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
+        assert any(op["type"] == "alter_table_comment" for op in upgrade)
+        assert any(op["type"] == "alter_column_comment" for op in upgrade)
+        assert any(op["type"] == "alter_pg_column_meta" for op in upgrade)
+
+    def test_index_signature_preserves_column_order(self):
+        snapshot = {
+            "tables": {"users": {"columns": {"first_name": {"type": "varchar"}, "last_name": {"type": "varchar"}}}},
+            "indexes": {
+                "idx_users_name": {"table": "users", "columns": ["last_name", "first_name"], "unique": False, "using": "btree"},
+            },
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("first_name", "VARCHAR", True, False, False, None, None),
+                    ModelColumn("last_name", "VARCHAR", True, False, False, None, None),
+                ],
+                indexes=[{"columns": ["first_name", "last_name"], "unique": False, "using": "btree"}],
+            )
+        ]
+        upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
+        assert any(op["type"] == "drop_index" for op in upgrade)
+        assert any(op["type"] == "add_index" for op in upgrade)

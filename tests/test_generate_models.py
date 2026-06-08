@@ -39,6 +39,12 @@ def test_parse_clickhouse_nullable():
     assert _parse_type("Nullable(String)") == "String"
 
 
+def test_parse_postgresql_specific_types():
+    assert _parse_type("JSONB", dialect="postgresql") == "JSONB"
+    assert _parse_type("UUID", dialect="postgresql") == "UUID(as_uuid=True)"
+    assert _parse_type("INTEGER[]", dialect="postgresql") == "ARRAY(Integer)"
+
+
 def test_parse_clickhouse_types():
     assert _parse_type("Int32", dialect="clickhouse") == "Integer"
     assert _parse_type("UInt64", dialect="clickhouse") == "BigInteger"
@@ -71,6 +77,79 @@ def test_generate_table_code_with_foreign_key():
     ]
     code = _generate_table_code("posts", columns)
     assert "ForeignKey('users(id)')" in code
+
+
+def test_generate_table_code_with_postgresql_meta():
+    columns = [
+        {
+            "name": "email",
+            "type": "VARCHAR(255)",
+            "nullable": False,
+            "default": None,
+            "primary_key": False,
+            "unique": True,
+            "foreign_key": None,
+            "comment": "Primary contact email",
+            "pg_meta": {"pg_collation": "en_US.UTF-8"},
+            "dialect": "postgresql",
+        }
+    ]
+    code = _generate_table_code(
+        "users",
+        columns,
+        object_type="table",
+        pg_meta={"comment": "Core user accounts", "pg_indexes": [{"name": "ix_users_email", "columns": ["email"], "unique": True}]},
+    )
+    assert "class Meta(PGTableMeta):" in code
+    assert "comment = 'Core user accounts'" in code
+    assert "class email(PGColumnMeta):" in code
+    assert "pg_collation = 'en_US.UTF-8'" in code
+
+
+def test_write_models_postgresql_emits_dialect_imports_and_meta():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        from dbwarden.commands.generate_models import _write_models
+
+        tables = [
+            {
+                "name": "users",
+                "columns": [
+                    {
+                        "name": "id",
+                        "type": "UUID",
+                        "nullable": False,
+                        "default": None,
+                        "primary_key": True,
+                        "unique": False,
+                        "foreign_key": None,
+                        "autoincrement": False,
+                        "dialect": "postgresql",
+                    },
+                    {
+                        "name": "payload",
+                        "type": "JSONB",
+                        "nullable": True,
+                        "default": None,
+                        "primary_key": False,
+                        "unique": False,
+                        "foreign_key": None,
+                        "autoincrement": False,
+                        "dialect": "postgresql",
+                        "comment": "Payload",
+                        "pg_meta": {"pg_collation": "en_US.UTF-8"},
+                    },
+                ],
+                "clickhouse_options": None,
+                "object_type": "table",
+                "dialect": "postgresql",
+                "pg_meta": {"comment": "Users table"},
+            }
+        ]
+        _write_models(tmpdir, tables, single_file=True)
+        content = Path(tmpdir, "models.py").read_text()
+        assert "from sqlalchemy.dialects.postgresql import JSONB, UUID" in content
+        assert "class Meta(PGTableMeta):" in content
+        assert "comment = 'Users table'" in content
 
 
 def test_write_models_single_file():
