@@ -763,10 +763,11 @@ def extract_table_from_model(
             checks = list(getattr(dw_meta, "pg_checks", []) or getattr(dw_meta, "checks", []))
             uniques = list(getattr(dw_meta, "pg_uniques", []) or getattr(dw_meta, "uniques", []))
             excludes = list(getattr(dw_meta, "pg_excludes", []))
-            pg_indexes_meta = getattr(dw_meta, "pg_indexes", None) or []
-            # If no SQLAlchemy indexes exist but pg_indexes Meta data does, populate from Meta
-            if not indexes and pg_indexes_meta:
-                for idx_entry in pg_indexes_meta:
+            indexes_meta = getattr(dw_meta, "indexes", []) or []
+            pg_indexes_meta = getattr(dw_meta, "pg_indexes", []) or []
+            # If no SQLAlchemy indexes exist but Meta data does, populate from Meta
+            if not indexes:
+                for idx_entry in list(indexes_meta) + list(pg_indexes_meta):
                     idx_info = IndexInfo(
                         name=idx_entry.get("name"),
                         columns=list(idx_entry.get("columns", [])),
