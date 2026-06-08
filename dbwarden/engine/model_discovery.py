@@ -23,8 +23,10 @@ from dbwarden.engine.sqlite_translation import (
     translate_default_to_sqlite,
     translate_type_to_sqlite,
 )
+from dbwarden.exceptions import DBWardenConfigError
 from dbwarden.logging import get_logger
 from dbwarden.models import SchemaDifference
+from dbwarden.schema import apply_meta, read_meta
 
 Base = declarative_base()
 
@@ -276,6 +278,13 @@ def _clickhouse_options_for_model(model_class: type) -> dict:
         "clickhouse_dict_primary_key",
     }
     options = {key: table_args[key] for key in keys if key in table_args}
+
+    dw_meta = read_meta(model_class)
+    if dw_meta and isinstance(dw_meta.backend_table, dict):
+        for key, value in dw_meta.backend_table.items():
+            if key in keys or key.startswith("clickhouse_"):
+                options[key] = value
+
     _validate_clickhouse_options(options)
     return options
 
@@ -655,6 +664,7 @@ def extract_table_from_model(
         ModelTable object or None if extraction fails.
     """
     try:
+        apply_meta(model_class)
         table_name = model_class.__tablename__
         columns = []
 
@@ -689,7 +699,7 @@ def extract_table_from_model(
                 using=_extract_dialect_option(idx, "using"),
                 where=_extract_dialect_option(idx, "where"),
                 include=list(idx.include_columns) if hasattr(idx, "include_columns") and idx.include_columns else None,
-                nulls_not_distinct=bool(_extract_dialect_option(idx, "nulls_not_district", False)),
+                nulls_not_distinct=bool(_extract_dialect_option(idx, "nulls_not_distinct", False)),
                 with_params=_extract_dialect_option(idx, "with"),
                 tablespace=_extract_dialect_option(idx, "tablespace"),
             )
@@ -728,6 +738,8 @@ def extract_table_from_model(
             foreign_keys=foreign_keys,
             indexes=indexes,
         )
+    except DBWardenConfigError:
+        raise
     except Exception:
         return None
 
