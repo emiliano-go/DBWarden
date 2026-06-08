@@ -18,17 +18,6 @@ _LIST_FIELDS = {
     "my_indexes",
     "sq_indexes",
     "pg_inherits",
-    "ch_order_by",
-}
-
-_CLICKHOUSE_TABLE_KEY_MAP = {
-    "ch_engine": "clickhouse_engine",
-    "ch_order_by": "clickhouse_order_by",
-    "ch_partition_by": "clickhouse_partition_by",
-    "ch_sample_by": "clickhouse_sample_by",
-    "ch_ttl": "clickhouse_ttl",
-    "ch_zookeeper_path": "clickhouse_zookeeper_path",
-    "ch_replica_name": "clickhouse_replica_name",
 }
 
 
@@ -111,8 +100,6 @@ def _write_column_info(col, attrs: dict[str, Any]) -> None:
             col.info["dw_public"] = value
         else:
             col.info[attr] = value
-            if attr == "ch_codec":
-                col.info["clickhouse_codec"] = value
 
 
 def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
@@ -137,17 +124,6 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
             backend_table[key] = value
 
     if backend_table:
-        if "ch_object_type" in backend_table:
-            object_type = backend_table["ch_object_type"]
-            if object_type == "materialized_view":
-                backend_table["clickhouse_mv"] = True
-            if "ch_select_statement" in backend_table:
-                backend_table["clickhouse_mv_query"] = backend_table["ch_select_statement"]
-            if "ch_to_table" in backend_table:
-                backend_table["clickhouse_to_table"] = backend_table["ch_to_table"]
-        for src, dst in _CLICKHOUSE_TABLE_KEY_MAP.items():
-            if src in backend_table:
-                backend_table[dst] = backend_table[src]
         meta.backend_table = backend_table
 
     return meta

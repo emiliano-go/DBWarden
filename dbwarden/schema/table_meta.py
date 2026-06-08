@@ -54,22 +54,65 @@ class PGColumnMeta:
 
 
 class CHTableMeta(TableMeta):
-    """ClickHouse table-level metadata; inherit in ``class Meta`` for autocomplete."""
+    """ClickHouse table-level metadata; inherit in ``class Meta``.
+
+    All table options use ``ch_*`` typed attributes. Skip indexes use the
+    common ``indexes`` field with ``clickhouse_type`` / ``clickhouse_granularity``
+    on ``IndexSpec``.
+
+    Example::
+
+        class Meta(CHTableMeta):
+            ch_engine = ChEngineSpec("MergeTree")
+            ch_order_by = ["id", "created_at"]
+            ch_partition_by = "toYYYYMM(created_at)"
+            indexes = [index("ix_payload", ["payload"],
+                            clickhouse_type="bloom_filter",
+                            clickhouse_granularity=1)]
+    """
     comment: str | None = None
-    ch_engine: str | tuple | list | None = None
+    indexes: list[Any] = []
+    checks: list[Any] = []
+    uniques: list[Any] = []
+
+    ch_engine: Any = None
     ch_order_by: str | list[str] | None = None
+    ch_primary_key: str | list[str] | None = None
     ch_partition_by: str | None = None
     ch_sample_by: str | None = None
     ch_ttl: list[str] | None = None
-    ch_indexes: list[dict[str, Any]] = []
+    ch_settings: dict[str, str] | None = None
+
+    ch_object_type: str | None = None
+
+    ch_select_statement: str | None = None
+    ch_to_table: str | None = None
+
+    ch_dictionary: bool = False
+    ch_dict_layout: str | None = None
+    ch_dict_source: str | None = None
+    ch_dict_lifetime: str | int | None = None
+    ch_dict_primary_key: str | list[str] | None = None
+
+    ch_projections: list[Any] = []
+
     ch_zookeeper_path: str | None = None
     ch_replica_name: str | None = None
-    ch_projections: list[dict[str, str]] = []
 
 
 class CHColumnMeta:
-    """ClickHouse column-level metadata; inherit in ``Meta`` inner classes for autocomplete."""
+    """ClickHouse column-level metadata; inherit in ``Meta`` inner classes for autocomplete.
+
+    Example::
+
+        class Meta(CHTableMeta):
+            class payload(CHColumnMeta):
+                comment = "HTTP request body"
+                ch_codec = "ZSTD(3)"
+                ch_nullable = True
+    """
     comment: str | None = None
+    public: bool | None = None
     ch_codec: str | None = None
     ch_default_expression: str | None = None
     ch_materialized: str | None = None

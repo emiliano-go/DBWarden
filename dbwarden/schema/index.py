@@ -27,6 +27,8 @@ class IndexSpec:
     column_sorting: dict[str, str] | None = None
     comment: str | None = None
     concurrently: bool = True
+    clickhouse_type: str | None = None
+    clickhouse_granularity: int | None = None
 
 
 def index(
@@ -43,6 +45,8 @@ def index(
     column_sorting: dict[str, str] | None = None,
     comment: str | None = None,
     concurrently: bool = True,
+    clickhouse_type: str | None = None,
+    clickhouse_granularity: int | None = None,
 ) -> dict[str, Any]:
     """Build an index dict for ``class Meta``.
 
@@ -72,4 +76,8 @@ def index(
         d["comment"] = comment
     if not concurrently:
         d["concurrently"] = False
+    if clickhouse_type is not None:
+        d["clickhouse_type"] = clickhouse_type
+    if clickhouse_granularity is not None:
+        d["clickhouse_granularity"] = clickhouse_granularity
     return d

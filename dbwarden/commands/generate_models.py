@@ -340,48 +340,107 @@ def _generate_table_code(
         class_name = table_name.capitalize()
 
     lines: list[str] = []
-    if object_type == "dictionary":
-        ch_opts = dict(clickhouse_options or {})
-        ch_opts["clickhouse_dictionary"] = True
-        ch_args = _format_clickhouse_args(ch_opts)
-        lines.append(f"class {class_name}(Base):")
-        lines.append(f"    __tablename__ = {table_name!r}")
-        if ch_args:
-            lines.append(f"    __table_args__ = {ch_args}")
-        for col in columns:
-            col_line = _format_column(col)
-            if col_line:
-                lines.append(f"    {col_line}")
-        return "\n".join(lines) + "\n"
-
-    if object_type == "materialized_view":
-        ch_opts = dict(clickhouse_options or {})
-        ch_opts["clickhouse_mv"] = True
-        ch_args = _format_clickhouse_args(ch_opts)
-        lines.append(f"class {class_name}(Base):")
-        lines.append(f"    __tablename__ = {table_name!r}")
-        if ch_args:
-            lines.append(f"    __table_args__ = {ch_args}")
-        for col in columns:
-            col_line = _format_column(col)
-            if col_line:
-                lines.append(f"    {col_line}")
-        return "\n".join(lines) + "\n"
-
     lines.append(f"class {class_name}(Base):")
     lines.append(f"    __tablename__ = {table_name!r}")
-    if clickhouse_options:
-        ch_args = _format_clickhouse_args(clickhouse_options)
-        if ch_args:
-            lines.append(f"    __table_args__ = {ch_args}")
     for col in columns:
         col_line = _format_column(col)
         if col_line:
             lines.append(f"    {col_line}")
+    if clickhouse_options:
+        lines.append("")
+        lines.append("    class Meta(CHTableMeta):")
+        lines.extend(_render_clickhouse_meta(columns, clickhouse_options, object_type))
     if pg_meta or any(col.get("pg_meta") or col.get("comment") for col in columns):
         lines.append("")
         lines.extend(_render_postgresql_meta(columns, pg_meta))
     return "\n".join(lines) + "\n"
+
+
+def _render_clickhouse_meta(columns: list[dict], options: dict, object_type: str) -> list[str]:
+    lines: list[str] = []
+
+    engine_raw = options.get("ch_engine_raw")
+    if engine_raw is not None:
+        if hasattr(engine_raw, "name"):
+            args = [repr(getattr(engine_raw, "name"))]
+            if getattr(engine_raw, "args", None):
+                args.extend(f"{arg!r}" for arg in getattr(engine_raw, "args", ()))
+            if getattr(engine_raw, "zookeeper_path", None) is not None:
+                args.append(f"zookeeper_path={getattr(engine_raw, 'zookeeper_path')!r}")
+            if getattr(engine_raw, "replica_name", None) is not None:
+                args.append(f"replica_name={getattr(engine_raw, 'replica_name')!r}")
+            if getattr(engine_raw, "settings", None) is not None:
+                args.append(f"settings={getattr(engine_raw, 'settings')!r}")
+            lines.append(f"        ch_engine = ChEngineSpec({', '.join(args)})")
+        elif isinstance(engine_raw, dict) and engine_raw.get("name"):
+            args = [repr(engine_raw["name"])]
+            if engine_raw.get("args"):
+                args.extend(repr(arg) for arg in engine_raw.get("args", []))
+            if engine_raw.get("zookeeper_path") is not None:
+                args.append(f"zookeeper_path={engine_raw['zookeeper_path']!r}")
+            if engine_raw.get("replica_name") is not None:
+                args.append(f"replica_name={engine_raw['replica_name']!r}")
+            if engine_raw.get("settings") is not None:
+                args.append(f"settings={engine_raw['settings']!r}")
+            lines.append(f"        ch_engine = ChEngineSpec({', '.join(args)})")
+        else:
+            lines.append(f"        ch_engine = {options.get('ch_engine')!r}")
+
+    for key in (
+        "ch_order_by",
+        "ch_primary_key",
+        "ch_partition_by",
+        "ch_sample_by",
+        "ch_ttl",
+        "ch_settings",
+        "ch_object_type",
+        "ch_select_statement",
+        "ch_to_table",
+        "ch_dictionary",
+        "ch_dict_layout",
+        "ch_dict_source",
+        "ch_dict_lifetime",
+        "ch_dict_primary_key",
+        "ch_zookeeper_path",
+        "ch_replica_name",
+    ):
+        value = options.get(key)
+        if value is None:
+            continue
+        if key == "ch_dictionary" and value is True:
+            lines.append("        ch_dictionary = True")
+        else:
+            lines.append(f"        {key} = {value!r}")
+
+    projections = options.get("ch_projections") or []
+    if projections:
+        lines.append("        ch_projections = [")
+        for projection in projections:
+            if isinstance(projection, dict):
+                lines.append(
+                    f"            ProjectionSpec({projection.get('name')!r}, {projection.get('query', '')!r}),"
+                )
+            else:
+                lines.append(f"            ProjectionSpec({getattr(projection, 'name', '')!r}, {getattr(projection, 'query', '')!r}),")
+        lines.append("        ]")
+
+    for col in columns:
+        ch_meta = col.get("ch_meta") or {}
+        if not ch_meta and not col.get("comment"):
+            continue
+        lines.append("")
+        lines.append(f"        class {col['name']}(CHColumnMeta):")
+        if col.get("comment"):
+            lines.append(f"            comment = {col['comment']!r}")
+        for key in ("ch_codec", "ch_default_expression", "ch_materialized", "ch_alias", "ch_ttl"):
+            if ch_meta.get(key) is not None:
+                lines.append(f"            {key} = {ch_meta[key]!r}")
+        if ch_meta.get("ch_low_cardinality"):
+            lines.append("            ch_low_cardinality = True")
+        if ch_meta.get("ch_nullable"):
+            lines.append("            ch_nullable = True")
+
+    return lines
 
 
 def _format_column(col: dict) -> str:
@@ -473,6 +532,7 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
     if single_file:
         all_imports: set[str] = set()
         pg_dialect_imports: set[str] = set()
+        ch_meta_imports: set[str] = set()
         all_classes: list[str] = []
         for table in tables:
             for col in table["columns"]:
@@ -480,6 +540,8 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
             all_imports |= _resolve_imports(table["columns"], has_relationships)
             if table.get("dialect") == "postgresql":
                 pg_dialect_imports |= _resolve_postgresql_imports(table["columns"])
+            if table.get("clickhouse_options"):
+                ch_meta_imports.update({"CHColumnMeta", "CHTableMeta", "ChEngineSpec", "ProjectionSpec"})
             all_classes.append(
                 _generate_table_code(
                     table["name"],
@@ -511,6 +573,8 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
         )
         if pg_meta_imports:
             content += "from dbwarden import " + ", ".join(sorted(pg_meta_imports)) + "\n\n\n"
+        if ch_meta_imports:
+            content += "from dbwarden import " + ", ".join(sorted(ch_meta_imports)) + "\n\n\n"
         content += "\n\n".join(all_classes)
         (out_path / "models.py").write_text(content, encoding="utf-8")
         return
@@ -533,6 +597,8 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
             needs_pg_base.add("PGTableMeta")
         if needs_pg_base:
             content_lines.append("from dbwarden import " + ", ".join(sorted(needs_pg_base)) + "\n\n\n")
+        if table.get("clickhouse_options"):
+            content_lines.append("from dbwarden import CHColumnMeta, CHTableMeta, ChEngineSpec, ProjectionSpec\n\n\n")
         content_lines.append(
             _generate_table_code(
                 table["name"],
@@ -968,7 +1034,7 @@ def generate_models_cmd(
     if actual_dialect == "clickhouse":
         for t in tables_data:
             if t.get("clickhouse_options"):
-                for key in ("clickhouse_engine", "clickhouse_mv_query"):
+                for key in ("ch_engine", "ch_select_statement"):
                     if key in t["clickhouse_options"]:
                         break
                 else:
@@ -1005,41 +1071,43 @@ def _extract_clickhouse_options(connection, table_name: str) -> dict:
     options: dict = {}
     engine = getattr(row, "engine", "") or ""
     if engine:
-        options["clickhouse_engine"] = engine
+        options["ch_engine"] = engine
     sorting_key = _parse_tuple_expression(getattr(row, "sorting_key", None))
     if sorting_key:
-        options["clickhouse_order_by"] = sorting_key
+        options["ch_order_by"] = sorting_key if isinstance(sorting_key, list) else [sorting_key]
     primary_key = _parse_tuple_expression(getattr(row, "primary_key", None))
     if primary_key:
-        options["clickhouse_primary_key"] = primary_key
+        options["ch_primary_key"] = primary_key if isinstance(primary_key, list) else [primary_key]
     partition_key = _clean_expression(getattr(row, "partition_key", None))
     if partition_key:
-        options["clickhouse_partition_by"] = partition_key
+        options["ch_partition_by"] = partition_key
     sampling_key = _clean_expression(getattr(row, "sampling_key", None))
     if sampling_key:
-        options["clickhouse_sample_by"] = sampling_key
+        options["ch_sample_by"] = sampling_key
 
     create_query = getattr(row, "create_table_query", "") or ""
     ttl = _parse_ttl_expressions(create_query)
     if ttl:
-        options["clickhouse_ttl"] = ttl
+        options["ch_ttl"] = ttl
     projections = _parse_projection_names(create_query)
     if projections:
-        options["clickhouse_projections"] = [{"name": p, "query": ""} for p in projections]
+        options["ch_projections"] = [{"name": p, "query": ""} for p in projections]
     mv_query = _parse_mv_query(create_query)
     if mv_query:
-        options["clickhouse_mv_query"] = mv_query
+        options["ch_select_statement"] = mv_query
+        options["ch_object_type"] = "materialized_view"
     zk_path = _parse_zookeeper_path(create_query, engine)
     if zk_path:
-        options["clickhouse_zookeeper_path"] = zk_path
+        options["ch_zookeeper_path"] = zk_path
     replica = _parse_replica_name(create_query, engine)
     if replica:
-        options["clickhouse_replica_name"] = replica
+        options["ch_replica_name"] = replica
 
     if engine.upper() == "DICTIONARY":
-        options["clickhouse_dictionary"] = True
+        options["ch_dictionary"] = True
+        options["ch_object_type"] = "dictionary"
 
     if create_query.strip().upper().startswith("CREATE MATERIALIZED VIEW"):
-        options["clickhouse_mv"] = True
+        options["ch_object_type"] = "materialized_view"
 
     return options

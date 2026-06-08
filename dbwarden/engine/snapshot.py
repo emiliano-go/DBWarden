@@ -336,6 +336,26 @@ def extract_full_schema_snapshot(
 
     db_name = database or "default"
 
+    if database_type == "clickhouse":
+        if sqlalchemy_url is not None:
+            from sqlalchemy import create_engine
+
+            engine = create_engine(sqlalchemy_url)
+            try:
+                with engine.connect() as connection:
+                    return _extract_clickhouse_schema_snapshot(connection, db_name)
+            finally:
+                engine.dispose()
+
+        from dbwarden.database.connection import get_db_connection
+
+        conn_context = get_db_connection(database)
+        connection = conn_context.__enter__()
+        try:
+            return _extract_clickhouse_schema_snapshot(connection, db_name)
+        finally:
+            conn_context.__exit__(None, None, None)
+
     if sqlalchemy_url is not None and database_type is not None:
         from sqlalchemy import create_engine
         engine = create_engine(sqlalchemy_url)
@@ -813,6 +833,305 @@ def extract_full_schema_snapshot(
     }
 
 
+def _extract_clickhouse_schema_snapshot(connection: Any, db_name: str) -> dict[str, Any]:
+    from sqlalchemy import text
+    from dbwarden.schema.engine import ChEngineSpec
+
+    tables: dict[str, Any] = {}
+    enums: dict[str, Any] = {}
+    indexes: dict[str, Any] = {}
+    constraints: dict[str, Any] = {}
+
+    table_rows = connection.execute(
+        text(
+            "SELECT name, engine, engine_full, sorting_key, primary_key, partition_key, "
+            "sampling_key, create_table_query, comment "
+            "FROM system.tables WHERE database = currentDatabase()"
+        )
+    ).fetchall()
+
+    column_rows = connection.execute(
+        text(
+            "SELECT table, name, type, default_kind, default_expression, codec_expression, "
+            "ttl_expression, comment, is_in_primary_key, is_in_sorting_key, is_in_partition_key "
+            "FROM system.columns WHERE database = currentDatabase()"
+        )
+    ).fetchall()
+
+    index_rows = connection.execute(
+        text(
+            "SELECT table, name, type, expr, granularity FROM system.data_skipping_indices "
+            "WHERE database = currentDatabase()"
+        )
+    ).fetchall()
+
+    columns_by_table: dict[str, list[dict[str, Any]]] = {}
+    for row in column_rows:
+        columns_by_table.setdefault(row.table, []).append({
+            "name": row.name,
+            "type": row.type,
+            "default_kind": getattr(row, "default_kind", None),
+            "default_expression": getattr(row, "default_expression", None),
+            "codec_expression": getattr(row, "codec_expression", None),
+            "ttl_expression": getattr(row, "ttl_expression", None),
+            "comment": getattr(row, "comment", None),
+            "is_in_primary_key": bool(getattr(row, "is_in_primary_key", False)),
+            "is_in_sorting_key": bool(getattr(row, "is_in_sorting_key", False)),
+            "is_in_partition_key": bool(getattr(row, "is_in_partition_key", False)),
+        })
+
+    indexes_by_table: dict[str, list[dict[str, Any]]] = {}
+    for row in index_rows:
+        indexes_by_table.setdefault(row.table, []).append({
+            "name": row.name,
+            "type": row.type,
+            "expr": row.expr,
+            "granularity": row.granularity,
+        })
+
+    for row in table_rows:
+        table_name = row.name
+        create_query = getattr(row, "create_table_query", "") or ""
+        engine_name = getattr(row, "engine", "") or ""
+        engine_full = getattr(row, "engine_full", "") or ""
+        comment = getattr(row, "comment", None) or None
+
+        if engine_name.upper() == "DICTIONARY":
+            object_type = "dictionary"
+        elif create_query.strip().upper().startswith("CREATE MATERIALIZED VIEW"):
+            object_type = "materialized_view"
+        else:
+            object_type = "table"
+
+        ch_engine = ChEngineSpec.from_engine_string(engine_full or engine_name)
+        ch_engine_serialized = _serialize_clickhouse_engine(ch_engine)
+
+        sorting_key = _clickhouse_tuple_or_list(getattr(row, "sorting_key", None))
+        primary_key = _clickhouse_tuple_or_list(getattr(row, "primary_key", None))
+        partition_key = _clean_clickhouse_expression(getattr(row, "partition_key", None))
+        sampling_key = _clean_clickhouse_expression(getattr(row, "sampling_key", None))
+
+        ch_options: dict[str, Any] = {
+            "ch_engine_raw": ch_engine.to_dict(),
+            "ch_engine": ch_engine_serialized,
+            "ch_order_by": sorting_key,
+            "ch_primary_key": primary_key,
+            "ch_partition_by": partition_key,
+            "ch_sample_by": sampling_key,
+            "ch_ttl": _parse_clickhouse_ttl_expressions(create_query),
+            "ch_settings": _parse_clickhouse_settings(create_query),
+            "ch_object_type": object_type,
+            "ch_select_statement": _parse_clickhouse_mv_query(create_query),
+            "ch_to_table": _parse_clickhouse_mv_to_table(create_query),
+            "ch_dictionary": object_type == "dictionary",
+            "ch_dict_layout": _parse_clickhouse_dict_layout(create_query),
+            "ch_dict_source": _parse_clickhouse_dict_source(create_query),
+            "ch_dict_lifetime": _parse_clickhouse_dict_lifetime(create_query),
+            "ch_dict_primary_key": _parse_clickhouse_dict_primary_key(create_query),
+            "ch_projections": [
+                {"name": proj, "query": ""}
+                for proj in _parse_clickhouse_projection_names(create_query)
+            ],
+            "ch_zookeeper_path": _parse_clickhouse_zookeeper_path(create_query, engine_name),
+            "ch_replica_name": _parse_clickhouse_replica_name(create_query, engine_name),
+        }
+
+        columns_dict: dict[str, Any] = {}
+        for col in columns_by_table.get(table_name, []):
+            raw_type = col["type"]
+            ch_nullable = str(raw_type).startswith("Nullable(")
+            ch_low_cardinality = "LowCardinality(" in str(raw_type)
+            default_kind = col.get("default_kind")
+            default_expression = col.get("default_expression")
+            ch_column: dict[str, Any] = {
+                "ch_codec": _pick_clickhouse_codec(col.get("codec_expression")),
+                "ch_default_expression": default_expression if default_kind == "DEFAULT" else None,
+                "ch_materialized": default_expression if default_kind == "MATERIALIZED" else None,
+                "ch_alias": default_expression if default_kind == "ALIAS" else None,
+                "ch_ttl": col.get("ttl_expression"),
+                "ch_low_cardinality": ch_low_cardinality,
+                "ch_nullable": ch_nullable,
+                "ch_type": raw_type,
+            }
+
+            columns_dict[col["name"]] = {
+                "type": raw_type,
+                "nullable": ch_nullable,
+                "primary_key": bool(col.get("is_in_primary_key", False)),
+                "default": default_expression if default_kind == "DEFAULT" else None,
+                "comment": col.get("comment"),
+                "ch_column": ch_column,
+            }
+
+        table_entry: dict[str, Any] = {
+            "object_type": object_type,
+            "columns": columns_dict,
+            "primary_key": [c for c in (primary_key or [])] if isinstance(primary_key, list) else ([primary_key] if isinstance(primary_key, str) and primary_key else []),
+            "comment": comment,
+            "indexes": indexes_by_table.get(table_name, []),
+            "ch_options": ch_options,
+            "clickhouse_options": ch_options,
+        }
+        tables[table_name] = table_entry
+
+    return {
+        "format_version": 1,
+        "migration_id": "",
+        "database_name": db_name,
+        "database_type": "clickhouse",
+        "applied_at": "",
+        "tables": tables,
+        "enums": enums,
+        "indexes": indexes,
+        "constraints": constraints,
+    }
+
+
+def _serialize_clickhouse_engine(engine: Any) -> str | tuple | None:
+    if engine is None:
+        return None
+    if isinstance(engine, dict):
+        name = engine.get("name")
+        if not name:
+            return None
+        args = list(engine.get("args", []) or [])
+        if engine.get("zookeeper_path") is not None:
+            args.insert(0, engine["zookeeper_path"])
+        if engine.get("replica_name") is not None:
+            args.insert(1 if engine.get("zookeeper_path") is not None else 0, engine["replica_name"])
+        if not args:
+            return name
+        return tuple([name] + args)
+    if hasattr(engine, "name"):
+        args = [engine.name]
+        if getattr(engine, "zookeeper_path", None) is not None:
+            args.append(engine.zookeeper_path)
+        if getattr(engine, "replica_name", None) is not None:
+            args.append(engine.replica_name)
+        args.extend(list(getattr(engine, "args", ()) or ()))
+        return args[0] if len(args) == 1 else tuple(args)
+    return engine
+
+
+def _clickhouse_tuple_or_list(value: Any) -> str | list[str] | None:
+    if value is None:
+        return None
+    value_str = str(value).strip()
+    if not value_str:
+        return None
+    if value_str.startswith("tuple(") and value_str.endswith(")"):
+        inner = value_str[6:-1].strip()
+        if not inner:
+            return []
+        return [part.strip() for part in inner.split(",")]
+    return value_str
+
+
+def _clean_clickhouse_expression(value: Any) -> str | None:
+    if value is None:
+        return None
+    value_str = str(value).strip()
+    return value_str or None
+
+
+def _parse_clickhouse_ttl_expressions(create_query: str) -> list[str]:
+    ttl_match = re.search(
+        r"\bTTL\s+(.+?)(?:\n(?:SETTINGS|COMMENT|AS|PRIMARY KEY|ORDER BY|PARTITION BY|SAMPLE BY)\b|$)",
+        create_query,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if not ttl_match:
+        return []
+    ttl_body = ttl_match.group(1).strip()
+    return [part.strip() for part in ttl_body.split(",") if part.strip()]
+
+
+def _parse_clickhouse_projection_names(create_query: str) -> list[str]:
+    return re.findall(r"PROJECTION\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", create_query, re.IGNORECASE)
+
+
+def _parse_clickhouse_mv_query(create_query: str) -> str | None:
+    mv_match = re.search(r"\bAS\s+SELECT\s+.+$", create_query, re.IGNORECASE | re.DOTALL)
+    if not mv_match:
+        return None
+    return mv_match.group(0)[3:].strip()
+
+
+def _parse_clickhouse_mv_to_table(create_query: str) -> str | None:
+    match = re.search(r"\bTO\s+([a-zA-Z_][a-zA-Z0-9_\.]*)", create_query, re.IGNORECASE)
+    return match.group(1) if match else None
+
+
+def _parse_clickhouse_zookeeper_path(create_query: str, engine: str) -> str | None:
+    if "Replicated" not in engine:
+        return None
+    match = re.search(r"\bReplicated\w+\s*\(([^,]+),", create_query)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def _parse_clickhouse_replica_name(create_query: str, engine: str) -> str | None:
+    if "Replicated" not in engine:
+        return None
+    match = re.search(r"\bReplicated\w+\s*\([^,]+,\s*([^\)]+)\)", create_query)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
+def _parse_clickhouse_settings(create_query: str) -> dict[str, str] | None:
+    settings_match = re.search(r"\bSETTINGS\s+(.+?)(?:\n(?:COMMENT|AS)\b|$)", create_query, re.IGNORECASE | re.DOTALL)
+    if not settings_match:
+        return None
+    settings: dict[str, str] = {}
+    for item in settings_match.group(1).split(","):
+        if "=" not in item:
+            continue
+        key, value = item.split("=", 1)
+        settings[key.strip()] = value.strip().strip("'\"")
+    return settings or None
+
+
+def _parse_clickhouse_dict_layout(create_query: str) -> str | None:
+    match = re.search(r"\bLAYOUT\s*\((.+?)\)", create_query, re.IGNORECASE | re.DOTALL)
+    return match.group(1).strip() if match else None
+
+
+def _parse_clickhouse_dict_source(create_query: str) -> str | None:
+    match = re.search(r"\bSOURCE\s*\((.+?)\)", create_query, re.IGNORECASE | re.DOTALL)
+    return match.group(1).strip() if match else None
+
+
+def _parse_clickhouse_dict_lifetime(create_query: str) -> str | int | None:
+    match = re.search(r"\bLIFETIME\s*\((.+?)\)", create_query, re.IGNORECASE | re.DOTALL)
+    if not match:
+        return None
+    value = match.group(1).strip()
+    try:
+        return int(value)
+    except ValueError:
+        return value
+
+
+def _parse_clickhouse_dict_primary_key(create_query: str) -> str | None:
+    match = re.search(r"\bPRIMARY\s+KEY\s+(.+?)(?:\)|LAYOUT)", create_query, re.IGNORECASE | re.DOTALL)
+    return match.group(1).strip() if match else None
+
+
+def _pick_clickhouse_codec(codec_expr: Any) -> str | None:
+    if codec_expr is None:
+        return None
+    codec = str(codec_expr).strip()
+    if not codec:
+        return None
+    parts = [part.strip() for part in codec.split(",") if part.strip()]
+    if not parts:
+        return None
+    non_default = [part for part in parts if not part.upper().startswith("LZ4")]
+    return non_default[-1] if non_default else parts[-1]
+
+
 def compute_checksum(snapshot: dict[str, Any]) -> str:
     snapshot_copy = {k: v for k, v in snapshot.items() if k != "checksum"}
     raw = json.dumps(snapshot_copy, sort_keys=True, ensure_ascii=False, default=str)
@@ -1136,22 +1455,27 @@ def diff_models_against_snapshot(
             upgrade_ops.append({
                 "type": "create_table",
                 "table": table.name,
+                "object_type": table.object_type,
                 "sql": None,
             })
             rollback_ops.append({
                 "type": "drop_table",
                 "table": table.name,
+                "object_type": table.object_type,
             })
 
     for snap_table_name in snapshot_tables:
         if snap_table_name not in model_by_name:
+            snap_object_type = snapshot_tables[snap_table_name].get("object_type", "table")
             upgrade_ops.append({
                 "type": "drop_table",
                 "table": snap_table_name,
+                "object_type": snap_object_type,
             })
             rollback_ops.append({
                 "type": "create_table",
                 "table": snap_table_name,
+                "object_type": snap_object_type,
                 "sql": None,
             })
 
@@ -1175,6 +1499,48 @@ def diff_models_against_snapshot(
                 "type": "alter_table_comment",
                 "table": table.name,
                 "comment": snap_comment,
+            })
+
+        snap_ch_options = snap_table.get("ch_options") or snap_table.get("clickhouse_options") or {}
+        model_ch_options = table.clickhouse_options or {}
+        ch_option_keys = {
+            "ch_engine",
+            "ch_order_by",
+            "ch_primary_key",
+            "ch_partition_by",
+            "ch_sample_by",
+            "ch_ttl",
+            "ch_settings",
+            "ch_object_type",
+            "ch_select_statement",
+            "ch_to_table",
+            "ch_dictionary",
+            "ch_dict_layout",
+            "ch_dict_source",
+            "ch_dict_lifetime",
+            "ch_dict_primary_key",
+            "ch_zookeeper_path",
+            "ch_replica_name",
+            "ch_projections",
+        }
+        ch_changes: dict[str, dict[str, Any]] = {}
+        for key in ch_option_keys:
+            snap_val = snap_ch_options.get(key)
+            model_val = model_ch_options.get(key)
+            if json.dumps(snap_val, sort_keys=True, default=str) != json.dumps(model_val, sort_keys=True, default=str):
+                if snap_val is None and model_val is None:
+                    continue
+                ch_changes[key] = {"from": snap_val, "to": model_val}
+        if ch_changes:
+            upgrade_ops.append({
+                "type": "alter_ch_options",
+                "table": table.name,
+                "changes": ch_changes,
+            })
+            rollback_ops.append({
+                "type": "alter_ch_options",
+                "table": table.name,
+                "changes": {k: {"from": v["to"], "to": v["from"]} for k, v in ch_changes.items()},
             })
 
         dropped_cols = []
@@ -1304,6 +1670,24 @@ def diff_models_against_snapshot(
                     "snap_type": model_col.type,
                     "from_pg_column": model_pg_meta,
                     "to_pg_column": snap_pg_col,
+                })
+
+            snap_ch_col = snap_col.get("ch_column") or {}
+            model_ch_col = model_col.ch_meta or {}
+            if json.dumps(snap_ch_col, sort_keys=True, default=str) != json.dumps(model_ch_col, sort_keys=True, default=str):
+                upgrade_ops.append({
+                    "type": "alter_ch_column",
+                    "table": table.name,
+                    "column": col_name,
+                    "from_ch_column": snap_ch_col,
+                    "to_ch_column": model_ch_col,
+                })
+                rollback_ops.append({
+                    "type": "alter_ch_column",
+                    "table": table.name,
+                    "column": col_name,
+                    "from_ch_column": model_ch_col,
+                    "to_ch_column": snap_ch_col,
                 })
 
         for col_name, col_def in dropped_cols:
@@ -1721,6 +2105,7 @@ def snapshot_diff_to_sql(
         generate_add_column_sql,
         generate_create_table_sql,
         generate_drop_object_sql,
+        _format_clickhouse_expression,
     )
     from dbwarden.engine.migration_name import Change
 
@@ -1757,9 +2142,10 @@ def snapshot_diff_to_sql(
                 ))
                 changes.append(Change(operation="create_table", table=op["table"]))
         elif op["type"] == "drop_table":
+            drop_table = ModelTable(name=op["table"], columns=[], object_type=op.get("object_type", "table"))
             statements.append(MigrationStatement(
                 order=StatementOrder.DROP_TABLE,
-                upgrade_sql=f"DROP TABLE {op['table']}",
+                upgrade_sql=generate_drop_object_sql(drop_table),
                 rollback_sql=f"CREATE TABLE {op['table']} (/* restore from snapshot */)",
             ))
             changes.append(Change(operation="drop_table", table=op["table"]))
@@ -1864,6 +2250,111 @@ def snapshot_diff_to_sql(
                 upgrade_sql=up, rollback_sql=rb,
             ))
             changes.append(Change(operation="alter_column_comment", table=op["table"], target=op["column"]))
+        elif op["type"] == "alter_ch_options":
+            changes_map = op.get("changes", {})
+            up_stmts: list[str] = []
+            rb_stmts: list[str] = []
+            for key, change in changes_map.items():
+                to_val = change.get("to")
+                from_val = change.get("from")
+                if key == "ch_settings" and isinstance(to_val, dict):
+                    for setting_key, setting_value in to_val.items():
+                        up_stmts.append(f"ALTER TABLE {op['table']} MODIFY SETTING {setting_key} = {setting_value}")
+                    if isinstance(from_val, dict):
+                        for setting_key, setting_value in from_val.items():
+                            rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY SETTING {setting_key} = {setting_value}")
+                elif key == "ch_ttl" and to_val:
+                    ttl_sql = ", ".join(to_val) if isinstance(to_val, list) else str(to_val)
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY TTL {ttl_sql}")
+                    if from_val:
+                        prev_ttl = ", ".join(from_val) if isinstance(from_val, list) else str(from_val)
+                        rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY TTL {prev_ttl}")
+                elif key == "ch_order_by" and to_val:
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY ORDER BY {_format_clickhouse_expression(to_val)}")
+                    if from_val:
+                        rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY ORDER BY {_format_clickhouse_expression(from_val)}")
+                elif key == "ch_primary_key" and to_val:
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY PRIMARY KEY {_format_clickhouse_expression(to_val)}")
+                    if from_val:
+                        rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY PRIMARY KEY {_format_clickhouse_expression(from_val)}")
+                elif key == "ch_partition_by" and to_val:
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY PARTITION BY {to_val}")
+                    if from_val:
+                        rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY PARTITION BY {from_val}")
+                elif key == "ch_sample_by" and to_val:
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY SAMPLE BY {to_val}")
+                    if from_val:
+                        rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY SAMPLE BY {from_val}")
+                elif key == "ch_engine":
+                    up_stmts.append(f"-- ENGINE change for {op['table']} requires table recreation")
+                    rb_stmts.append(f"-- ENGINE change for {op['table']} requires table recreation")
+                elif key in {"ch_select_statement", "ch_to_table", "ch_dictionary", "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key", "ch_zookeeper_path", "ch_replica_name", "ch_object_type", "ch_projections"}:
+                    up_stmts.append(f"-- {key} change for {op['table']} requires manual migration")
+                    rb_stmts.append(f"-- {key} change for {op['table']} requires manual migration")
+
+            if up_stmts or rb_stmts:
+                statements.append(MigrationStatement(
+                    order=StatementOrder.ALTER_TABLE_OPTIONS,
+                    upgrade_sql="\n".join(up_stmts) if up_stmts else "-- no-op",
+                    rollback_sql="\n".join(rb_stmts) if rb_stmts else "-- no-op",
+                ))
+                changes.append(Change(operation="alter_ch_options", table=op["table"]))
+        elif op["type"] == "alter_ch_column":
+            from_ch = op.get("from_ch_column", {}) or {}
+            to_ch = op.get("to_ch_column", {}) or {}
+            base_type = to_ch.get("ch_type") or from_ch.get("ch_type") or ""
+            up_stmts: list[str] = []
+            rb_stmts: list[str] = []
+            if to_ch.get("ch_type") and to_ch.get("ch_type") != from_ch.get("ch_type"):
+                up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {to_ch['ch_type']}")
+                if from_ch.get("ch_type"):
+                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {from_ch['ch_type']}")
+            if to_ch.get("ch_codec") and to_ch.get("ch_codec") != from_ch.get("ch_codec"):
+                up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {base_type} CODEC({to_ch['ch_codec']})")
+                if from_ch.get("ch_codec"):
+                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {base_type} CODEC({from_ch['ch_codec']})")
+            if to_ch.get("ch_default_expression") != from_ch.get("ch_default_expression"):
+                if to_ch.get("ch_default_expression"):
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} DEFAULT {to_ch['ch_default_expression']}")
+                else:
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} REMOVE DEFAULT")
+                if from_ch.get("ch_default_expression"):
+                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} DEFAULT {from_ch['ch_default_expression']}")
+                else:
+                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} REMOVE DEFAULT")
+            if to_ch.get("ch_materialized") != from_ch.get("ch_materialized"):
+                if to_ch.get("ch_materialized"):
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} MATERIALIZED {to_ch['ch_materialized']}")
+                if from_ch.get("ch_materialized"):
+                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} MATERIALIZED {from_ch['ch_materialized']}")
+            if to_ch.get("ch_alias") != from_ch.get("ch_alias"):
+                if to_ch.get("ch_alias"):
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} ALIAS {to_ch['ch_alias']}")
+                if from_ch.get("ch_alias"):
+                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} ALIAS {from_ch['ch_alias']}")
+            if to_ch.get("ch_ttl") != from_ch.get("ch_ttl"):
+                if to_ch.get("ch_ttl"):
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} TTL {to_ch['ch_ttl']}")
+                else:
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} REMOVE TTL")
+                if from_ch.get("ch_ttl"):
+                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} TTL {from_ch['ch_ttl']}")
+                else:
+                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} REMOVE TTL")
+            if to_ch.get("ch_low_cardinality") != from_ch.get("ch_low_cardinality"):
+                up_stmts.append(f"-- {op['table']}.{op['column']} low cardinality change requires type recreation")
+                rb_stmts.append(f"-- {op['table']}.{op['column']} low cardinality change requires type recreation")
+            if to_ch.get("ch_nullable") != from_ch.get("ch_nullable"):
+                up_stmts.append(f"-- {op['table']}.{op['column']} nullable change requires type recreation")
+                rb_stmts.append(f"-- {op['table']}.{op['column']} nullable change requires type recreation")
+
+            if up_stmts or rb_stmts:
+                statements.append(MigrationStatement(
+                    order=StatementOrder.ALTER_COLUMN_TYPE,
+                    upgrade_sql="\n".join(up_stmts) if up_stmts else "-- no-op",
+                    rollback_sql="\n".join(rb_stmts) if rb_stmts else "-- no-op",
+                ))
+                changes.append(Change(operation="alter_ch_column", table=op["table"], target=op["column"]))
         elif op["type"] == "alter_pg_column_meta":
             stmts = _build_pg_meta_sql(
                 op["table"], op["column"], op["col_type"], op["snap_type"],

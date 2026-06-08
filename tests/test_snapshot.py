@@ -1831,3 +1831,76 @@ class TestIndexDiff:
         upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
         assert any(op["type"] == "drop_index" for op in upgrade)
         assert any(op["type"] == "add_index" for op in upgrade)
+
+
+class TestClickHouseDiff:
+    def test_diff_models_detects_clickhouse_option_change(self):
+        model_tables = [
+            ModelTable(
+                name="events",
+                columns=[
+                    ModelColumn("id", "UInt64", False, True, False, None, None, ch_meta={"ch_type": "UInt64"}),
+                ],
+                clickhouse_options={
+                    "ch_engine": "MergeTree",
+                    "ch_order_by": ["id"],
+                },
+            )
+        ]
+        snapshot = {
+            "tables": {
+                "events": {
+                    "object_type": "table",
+                    "columns": {
+                        "id": {
+                            "type": "UInt64",
+                            "nullable": False,
+                            "default": None,
+                            "ch_column": {"ch_type": "UInt64"},
+                        }
+                    },
+                    "clickhouse_options": {
+                        "ch_engine": "ReplacingMergeTree",
+                        "ch_order_by": ["id"],
+                    },
+                    "indexes": {},
+                }
+            },
+            "indexes": {},
+            "constraints": {},
+        }
+
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+
+        assert any(op["type"] == "alter_ch_options" for op in upgrade)
+        assert any(op["type"] == "alter_ch_options" for op in rollback)
+
+    def test_snapshot_diff_to_sql_clickhouse_ch_ops(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "clickhouse")
+
+        ops = [
+            {
+                "type": "alter_ch_options",
+                "table": "events",
+                "changes": {"ch_ttl": {"from": ["old_ttl"], "to": ["new_ttl"]}},
+            },
+            {
+                "type": "alter_ch_column",
+                "table": "events",
+                "column": "payload",
+                "from_ch_column": {"ch_type": "String"},
+                "to_ch_column": {"ch_type": "LowCardinality(String)", "ch_codec": "ZSTD(3)"},
+            },
+            {
+                "type": "drop_table",
+                "table": "dict_events",
+                "object_type": "dictionary",
+            },
+        ]
+
+        sql, rollback_sql, changes = snapshot_diff_to_sql(ops, [], db_name="clickhouse")
+
+        assert "ALTER TABLE events MODIFY TTL new_ttl" in sql
+        assert "ALTER TABLE events MODIFY COLUMN payload LowCardinality(String)" in sql
+        assert "DROP DICTIONARY dict_events" in sql
+        assert changes

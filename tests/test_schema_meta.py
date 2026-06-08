@@ -83,7 +83,6 @@ class TestMetaReader:
         assert email_info["dw_public"] is True
         assert email_info["pg_collation"] == "en_US.UTF-8"
         assert bio_info["ch_codec"] == "ZSTD(3)"
-        assert bio_info["clickhouse_codec"] == "ZSTD(3)"
         assert created_info["dw_comment"] == "Record creation timestamp"
         assert meta is not None
         assert meta.comment == "Core user accounts"
@@ -136,8 +135,8 @@ class TestMetaReader:
         table = extract_table_from_model(Event)
 
         assert table is not None
-        assert table.clickhouse_options["clickhouse_engine"] == "MergeTree"
-        assert table.clickhouse_options["clickhouse_order_by"] == ["id"]
+        assert table.clickhouse_options["ch_engine"] == "MergeTree"
+        assert table.clickhouse_options["ch_order_by"] == ["id"]
         assert table.columns[1].codec == "ZSTD(3)"
 
     def test_extract_table_from_model_allows_wrong_backend_keys(self, monkeypatch):

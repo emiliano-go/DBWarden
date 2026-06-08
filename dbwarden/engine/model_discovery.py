@@ -26,7 +26,11 @@ from dbwarden.engine.sqlite_translation import (
 from dbwarden.exceptions import DBWardenConfigError
 from dbwarden.logging import get_logger
 from dbwarden.models import SchemaDifference
-from dbwarden.schema import apply_meta, read_meta
+from dbwarden.schema import (
+    ProjectionSpec,
+    apply_meta,
+    read_meta,
+)
 
 Base = declarative_base()
 
@@ -118,6 +122,7 @@ class ModelColumn:
         codec: Optional[str] = None,
         comment: Optional[str] = None,
         pg_meta: Optional[dict[str, Any]] = None,
+        ch_meta: Optional[dict[str, Any]] = None,
     ):
         self.name = name
         self.type = type
@@ -129,9 +134,10 @@ class ModelColumn:
         self.codec = codec
         self.comment = comment
         self.pg_meta = pg_meta or {}
+        self.ch_meta = ch_meta or {}
 
     def to_dict(self) -> dict:
-        return {
+        d: dict[str, Any] = {
             "name": self.name,
             "type": self.type,
             "nullable": self.nullable,
@@ -143,6 +149,9 @@ class ModelColumn:
             "comment": self.comment,
             "pg_meta": self.pg_meta,
         }
+        if self.ch_meta:
+            d["ch_meta"] = self.ch_meta
+        return d
 
 
 @dataclass
@@ -279,155 +288,163 @@ def _extract_table_args_dict(model_class: type) -> dict:
     return {}
 
 
-def _clickhouse_options_for_model(model_class: type) -> dict:
-    table_args = _extract_table_args_dict(model_class)
-    keys = {
-        "clickhouse_engine",
-        "clickhouse_order_by",
-        "clickhouse_primary_key",
-        "clickhouse_partition_by",
-        "clickhouse_sample_by",
-        "clickhouse_ttl",
-        "clickhouse_mv",
-        "clickhouse_mv_query",
-        "clickhouse_mv_engine",
-        "clickhouse_mv_order_by",
-        "clickhouse_mv_populate",
-        "clickhouse_projections",
-        "clickhouse_zookeeper_path",
-        "clickhouse_replica_name",
-        "clickhouse_dictionary",
-        "clickhouse_dict_layout",
-        "clickhouse_dict_source",
-        "clickhouse_dict_lifetime",
-        "clickhouse_dict_primary_key",
-    }
-    options = {key: table_args[key] for key in keys if key in table_args}
-
+def _ch_options_from_meta(model_class: type) -> dict:
     dw_meta = read_meta(model_class)
-    if dw_meta and isinstance(dw_meta.backend_table, dict):
-        for key, value in dw_meta.backend_table.items():
-            if key in keys or key.startswith("clickhouse_"):
-                options[key] = value
+    if not dw_meta or not isinstance(dw_meta.backend_table, dict):
+        return {}
 
-    _validate_clickhouse_options(options)
+    raw = dw_meta.backend_table
+    options: dict[str, Any] = {}
+
+    ch_engine = raw.get("ch_engine")
+    if ch_engine is not None:
+        options["ch_engine_raw"] = ch_engine
+        options["ch_engine"] = _serialize_ch_engine(ch_engine)
+
+    for key in (
+        "ch_order_by", "ch_primary_key", "ch_partition_by", "ch_sample_by",
+        "ch_ttl", "ch_object_type", "ch_select_statement", "ch_to_table",
+        "ch_dictionary", "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime",
+        "ch_dict_primary_key", "ch_zookeeper_path", "ch_replica_name",
+        "ch_settings",
+    ):
+        if key in raw:
+            options[key] = raw[key]
+
+    ch_projections = raw.get("ch_projections") or []
+    options["ch_projections"] = [
+        p.to_dict() if isinstance(p, ProjectionSpec) else p
+        for p in ch_projections
+    ]
+
+    _validate_ch_options(options)
     return options
 
 
-def _validate_clickhouse_options(options: dict) -> None:
-    order_by = options.get("clickhouse_order_by")
-    primary_key = options.get("clickhouse_primary_key")
-    mv_enabled = bool(options.get("clickhouse_mv"))
-    projections = options.get("clickhouse_projections")
+def _serialize_ch_engine(engine: Any) -> str | tuple | None:
+    from dbwarden.schema.engine import ChEngineSpec
+    if isinstance(engine, ChEngineSpec):
+        args = [engine.name]
+        if engine.zookeeper_path is not None:
+            args.append(engine.zookeeper_path)
+        if engine.replica_name is not None:
+            args.append(engine.replica_name)
+        args.extend(engine.args)
+        return tuple(args)
+    if isinstance(engine, (str, tuple, list)):
+        return engine
+    return None
+
+
+def _validate_ch_options(options: dict) -> None:
+    order_by = options.get("ch_order_by")
+    primary_key = options.get("ch_primary_key")
+    projections = options.get("ch_projections")
+    settings = options.get("ch_settings")
 
     if order_by is not None and not isinstance(order_by, (str, list, tuple)):
-        raise ValueError("clickhouse_order_by must be a string or list/tuple of strings")
-
+        raise ValueError("ch_order_by must be a string or list/tuple of strings")
     if isinstance(order_by, (list, tuple)):
         if not order_by:
-            raise ValueError("clickhouse_order_by cannot be empty")
+            raise ValueError("ch_order_by cannot be empty")
         if not all(isinstance(item, str) and item.strip() for item in order_by):
-            raise ValueError("clickhouse_order_by entries must be non-empty strings")
+            raise ValueError("ch_order_by entries must be non-empty strings")
 
     if primary_key is not None and not isinstance(primary_key, (str, list, tuple)):
-        raise ValueError(
-            "clickhouse_primary_key must be a string or list/tuple of strings"
-        )
-
+        raise ValueError("ch_primary_key must be a string or list/tuple of strings")
     if isinstance(primary_key, (list, tuple)):
         if not primary_key:
-            raise ValueError("clickhouse_primary_key cannot be empty")
+            raise ValueError("ch_primary_key cannot be empty")
         if not all(isinstance(item, str) and item.strip() for item in primary_key):
-            raise ValueError("clickhouse_primary_key entries must be non-empty strings")
+            raise ValueError("ch_primary_key entries must be non-empty strings")
 
     if isinstance(order_by, (list, tuple)) and primary_key:
         normalized = [item.strip() for item in order_by]
         if isinstance(primary_key, str):
-            primary_key_parts = [primary_key]
+            pk_parts = [primary_key]
         else:
-            primary_key_parts = [item.strip() for item in primary_key]
+            pk_parts = [item.strip() for item in primary_key]
+        if normalized[:len(pk_parts)] != pk_parts:
+            raise ValueError("ch_primary_key must be a prefix of ch_order_by")
 
-        if normalized[: len(primary_key_parts)] != primary_key_parts:
-            raise ValueError(
-                "clickhouse_primary_key must be a prefix of clickhouse_order_by"
-            )
-
-    ttl = options.get("clickhouse_ttl")
+    ttl = options.get("ch_ttl")
     if ttl is not None:
-        if not isinstance(ttl, (list, tuple)):
-            raise ValueError("clickhouse_ttl must be a list/tuple of expressions")
+        if not isinstance(ttl, list):
+            raise ValueError("ch_ttl must be a list of expressions")
         if not all(isinstance(item, str) and item.strip() for item in ttl):
-            raise ValueError("clickhouse_ttl entries must be non-empty strings")
-
-    if mv_enabled and not options.get("clickhouse_mv_query"):
-        raise ValueError("clickhouse_mv_query is required when clickhouse_mv=True")
-
-    if options.get("clickhouse_mv_query") and not isinstance(
-        options.get("clickhouse_mv_query"), str
-    ):
-        raise ValueError("clickhouse_mv_query must be a string")
-
-    if "clickhouse_mv_populate" in options and not isinstance(
-        options.get("clickhouse_mv_populate"), bool
-    ):
-        raise ValueError("clickhouse_mv_populate must be a boolean")
-
-    mv_order_by = options.get("clickhouse_mv_order_by")
-    if mv_order_by is not None and not isinstance(mv_order_by, (str, list, tuple)):
-        raise ValueError("clickhouse_mv_order_by must be a string or list/tuple of strings")
+            raise ValueError("ch_ttl entries must be non-empty strings")
 
     if projections is not None:
         if not isinstance(projections, list):
-            raise ValueError("clickhouse_projections must be a list")
-        for projection in projections:
-            if not isinstance(projection, dict):
-                raise ValueError("clickhouse_projections entries must be objects")
-            if not projection.get("name") or not projection.get("query"):
-                raise ValueError("clickhouse_projections entries require name and query")
+            raise ValueError("ch_projections must be a list")
+        for proj in projections:
+            if isinstance(proj, dict):
+                if not proj.get("name") or not proj.get("query"):
+                    raise ValueError("ch_projections entries require name and query")
+            elif not hasattr(proj, "name") or not hasattr(proj, "query"):
+                raise ValueError("ch_projections entries must be ProjectionSpec or dict with name/query")
 
-    zk_path = options.get("clickhouse_zookeeper_path")
-    if zk_path is not None and not isinstance(zk_path, str):
-        raise ValueError("clickhouse_zookeeper_path must be a string")
+    if settings is not None:
+        if not isinstance(settings, dict):
+            raise ValueError("ch_settings must be a dict")
+        if not all(isinstance(k, str) and isinstance(v, str) for k, v in settings.items()):
+            raise ValueError("ch_settings keys and values must be strings")
 
-    replica_name = options.get("clickhouse_replica_name")
-    if replica_name is not None and not isinstance(replica_name, str):
-        raise ValueError("clickhouse_replica_name must be a string")
+    if options.get("ch_dictionary") or any(options.get(k) for k in ("ch_dict_layout", "ch_dict_source", "ch_dict_lifetime")):
+        if not options.get("ch_dict_layout"):
+            raise ValueError("ch_dict_layout is required for dictionary tables")
+        if not options.get("ch_dict_source"):
+            raise ValueError("ch_dict_source is required for dictionary tables")
+        if not options.get("ch_dict_lifetime"):
+            raise ValueError("ch_dict_lifetime is required for dictionary tables")
 
-    dictionary_enabled = bool(options.get("clickhouse_dictionary"))
-    if dictionary_enabled:
-        if not options.get("clickhouse_dict_layout"):
-            raise ValueError("clickhouse_dict_layout is required when clickhouse_dictionary=True")
-        if not options.get("clickhouse_dict_source"):
-            raise ValueError("clickhouse_dict_source is required when clickhouse_dictionary=True")
-        if not options.get("clickhouse_dict_lifetime"):
-            raise ValueError("clickhouse_dict_lifetime is required when clickhouse_dictionary=True")
-        if not isinstance(options.get("clickhouse_dict_layout"), str):
-            raise ValueError("clickhouse_dict_layout must be a string")
-        if not isinstance(options.get("clickhouse_dict_source"), str):
-            raise ValueError("clickhouse_dict_source must be a string")
-        if not isinstance(options.get("clickhouse_dict_lifetime"), (str, int)):
-            raise ValueError("clickhouse_dict_lifetime must be a string or integer")
-        pk = options.get("clickhouse_dict_primary_key")
-        if pk is not None and not isinstance(pk, (str, list, tuple)):
-            raise ValueError("clickhouse_dict_primary_key must be a string or list/tuple of strings")
+    zk = options.get("ch_zookeeper_path")
+    if zk is not None and not isinstance(zk, str):
+        raise ValueError("ch_zookeeper_path must be a string")
+    replica = options.get("ch_replica_name")
+    if replica is not None and not isinstance(replica, str):
+        raise ValueError("ch_replica_name must be a string")
 
 
-def _object_type_for_clickhouse_options(options: dict) -> str:
-    if options.get("clickhouse_dictionary"):
-        return "dictionary"
-    if options.get("clickhouse_mv"):
-        return "materialized_view"
-    return "table"
+def _detect_ch_object_type(options: dict) -> str:
+    explicit = options.get("ch_object_type")
+    auto: str = "table"
+
+    has_select = bool(options.get("ch_select_statement"))
+    has_dict = bool(options.get("ch_dictionary"))
+    has_dict_fields = any(
+        options.get(k) for k in ("ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key")
+    )
+
+    if has_select:
+        auto = "materialized_view"
+    if has_dict or has_dict_fields:
+        if auto == "materialized_view":
+            raise DBWardenConfigError(
+                "Conflicting ClickHouse object type: both ch_select_statement "
+                "and dictionary fields (ch_dict_layout, etc.) are set"
+            )
+        auto = "dictionary"
+
+    if explicit is not None:
+        if explicit != auto and not (explicit == "table" and auto == "table"):
+            raise DBWardenConfigError(
+                f"Explicit ch_object_type={explicit!r} conflicts with "
+                f"detected type {auto!r} based on other ch_* options"
+            )
+        return explicit
+
+    return auto
 
 
-def _render_clickhouse_projection(projection: dict) -> str:
-    projection_name = projection["name"]
-    projection_query = projection["query"]
-    return f"PROJECTION {projection_name} ({projection_query})"
+def _render_clickhouse_projection(projection: dict | Any) -> str:
+    if isinstance(projection, dict):
+        return f"PROJECTION {projection['name']} ({projection['query']})"
+    return f"PROJECTION {projection.name} ({projection.query})"
 
 
 def _render_clickhouse_projections(table: ModelTable) -> list[str]:
-    projections = table.clickhouse_options.get("clickhouse_projections") or []
+    projections = table.clickhouse_options.get("ch_projections") or []
     return [_render_clickhouse_projection(projection) for projection in projections]
 
 
@@ -444,10 +461,10 @@ def _format_clickhouse_engine(value: str | tuple | list, zookeeper_path: str | N
     elif isinstance(value, (tuple, list)) and value:
         engine_name = value[0]
         if not isinstance(engine_name, str) or not engine_name.strip():
-            raise ValueError("clickhouse_engine must start with a non-empty engine name")
+            raise ValueError("ch_engine must start with a non-empty engine name")
         extra_args = list(str(item) for item in value[1:])
     else:
-        raise ValueError("clickhouse_engine must be a string or tuple/list")
+        raise ValueError("ch_engine must be a string or tuple/list")
 
     if zookeeper_path is not None:
         extra_args.insert(0, zookeeper_path)
@@ -465,32 +482,151 @@ def _render_clickhouse_table_suffix(table: ModelTable) -> str:
         return " ENGINE = MergeTree()"
 
     parts: list[str] = []
-    engine = options.get("clickhouse_engine", "MergeTree")
-    zk_path = options.get("clickhouse_zookeeper_path")
-    replica_name = options.get("clickhouse_replica_name")
-    parts.append(f"ENGINE = {_format_clickhouse_engine(engine, zookeeper_path=zk_path, replica_name=replica_name)}")
 
-    order_by = options.get("clickhouse_order_by")
+    engine_raw = options.get("ch_engine", "MergeTree")
+    if isinstance(engine_raw, str):
+        engine_name = engine_raw
+        engine_args = []
+    elif isinstance(engine_raw, tuple):
+        engine_name = engine_raw[0] if engine_raw else "MergeTree"
+        engine_args = list(str(a) for a in engine_raw[1:])
+    elif isinstance(engine_raw, (list, tuple)):
+        engine_name = engine_raw[0] if engine_raw else "MergeTree"
+        engine_args = list(str(a) for a in engine_raw[1:])
+    else:
+        engine_name = "MergeTree"
+        engine_args = []
+    zk_path = options.get("ch_zookeeper_path")
+    replica_name = options.get("ch_replica_name")
+    if zk_path is not None:
+        engine_args.insert(0, zk_path)
+    if replica_name is not None:
+        engine_args.insert(1 if zk_path is not None else 0, replica_name)
+    if engine_args:
+        parts.append(f"ENGINE = {engine_name}({', '.join(engine_args)})")
+    else:
+        parts.append(f"ENGINE = {engine_name}()")
+
+    settings = options.get("ch_settings")
+    if settings:
+        settings_str = ", ".join(f"{k}={v}" for k, v in settings.items())
+        parts.append(f"SETTINGS {settings_str}")
+
+    order_by = options.get("ch_order_by")
     if order_by is not None:
         parts.append(f"ORDER BY {_format_clickhouse_expression(order_by)}")
 
-    primary_key = options.get("clickhouse_primary_key")
+    primary_key = options.get("ch_primary_key")
     if primary_key:
         parts.append(f"PRIMARY KEY {_format_clickhouse_expression(primary_key)}")
 
-    partition_by = options.get("clickhouse_partition_by")
+    partition_by = options.get("ch_partition_by")
     if partition_by:
         parts.append(f"PARTITION BY {partition_by}")
 
-    sample_by = options.get("clickhouse_sample_by")
+    sample_by = options.get("ch_sample_by")
     if sample_by:
         parts.append(f"SAMPLE BY {sample_by}")
 
-    ttl = options.get("clickhouse_ttl")
+    ttl = options.get("ch_ttl")
     if ttl:
-        parts.append("TTL " + ", ".join(ttl))
+        parts.append("TTL " + ", ".join(ttl) if isinstance(ttl, list) else f"TTL {ttl}")
 
     return "\n" + "\n".join(parts)
+
+
+def _map_sa_type_to_clickhouse(column) -> str:
+    raw_type_str = str(column.type).upper().strip()
+    ch_type = _render_ch_type_from_sa(column.type, raw_type_str)
+
+    ch_meta_attrs = getattr(column, "info", {})
+    if ch_meta_attrs.get("ch_low_cardinality"):
+        ch_type = f"LowCardinality({ch_type})"
+    if ch_meta_attrs.get("ch_nullable"):
+        ch_type = f"Nullable({ch_type})"
+
+    return ch_type
+
+
+def _render_ch_type_from_sa(sa_type, raw_type_str: str) -> str:
+    item_type = getattr(sa_type, "item_type", None)
+    if item_type is not None:
+        inner = _render_ch_type_from_sa(item_type, str(item_type).upper().strip())
+        return f"Array({inner})"
+
+    enums = getattr(sa_type, "enums", None)
+    if enums is not None and enums:
+        count = len(enums)
+        values = ", ".join(repr(v) for v in enums)
+        if count <= 127:
+            return f"Enum8({values})"
+        return f"Enum16({values})"
+
+    name = raw_type_str
+    base = name.split("(")[0] if "(" in name else name
+
+    if base in ("VARCHAR", "CHAR", "CHARACTER VARYING", "TEXT", "CLOB", "STRING"):
+        return "String"
+    if base in ("INT", "INTEGER", "INT32"):
+        return "Int32"
+    if base in ("BIGINT", "BIGINTEGER", "INT64"):
+        return "Int64"
+    if base in ("SMALLINT", "SMALLINTEGER", "INT16", "TINYINT"):
+        return "Int16"
+    if base in ("FLOAT", "FLOAT32", "REAL"):
+        return _maybe_float32(sa_type)
+    if base == "DOUBLE_PRECISION":
+        return "Float64"
+    if base in ("NUMERIC", "DECIMAL", "NUMBER"):
+        return _map_numeric_to_decimal(name)
+    if base == "BOOLEAN":
+        return "Bool"
+    if base == "DATE":
+        return "Date"
+    if base in ("DATETIME", "TIMESTAMP"):
+        return _map_datetime(sa_type, name)
+    if base in ("BLOB", "BYTEA", "BINARY", "LARGEBINARY"):
+        return "String"
+    if base == "JSON":
+        return "JSON"
+    if base in ("UUID",):
+        return "UUID"
+    if base in ("TIME", "INTERVAL"):
+        return "String"
+
+    return name
+
+
+def _maybe_float32(sa_type) -> str:
+    precision = getattr(sa_type, "precision", None)
+    if precision is None:
+        return "Float64"
+    if precision <= 24:
+        return "Float32"
+    return "Float64"
+
+
+def _map_numeric_to_decimal(name: str) -> str:
+    import re
+    m = re.match(r"NUMERIC\s*\(\s*(\d+)\s*(?:,\s*(\d+)\s*)?\)", name, re.IGNORECASE)
+    if not m:
+        m = re.match(r"DECIMAL\s*\(\s*(\d+)\s*(?:,\s*(\d+)\s*)?\)", name, re.IGNORECASE)
+    if m:
+        p = m.group(1)
+        s = m.group(2) or "0"
+        return f"Decimal({p}, {s})"
+    return "Decimal(38, 0)"
+
+
+def _map_datetime(sa_type, name: str) -> str:
+    import re
+    m = re.match(r"DATETIME(?:64)?\s*\(\s*(\d+)\s*\)", name, re.IGNORECASE)
+    if m:
+        return f"DateTime64({m.group(1)})"
+    timezone = getattr(sa_type, "timezone", None)
+    if timezone:
+        return "DateTime64(3)"
+    return "DateTime"
 
 
 def load_model_from_path(filepath: str) -> Optional[ModuleType]:
@@ -745,7 +881,6 @@ def extract_table_from_model(
                         if info.column_sorting is None:
                             info.column_sorting = {}
                         info.column_sorting[expr.name] = " ".join(sorting_parts)
-            # ClickHouse: read from index.info dict
             if _get_backend_name(db_name) == "clickhouse":
                 info.clickhouse_type = idx.info.get("clickhouse_type", "minmax")
                 info.clickhouse_granularity = idx.info.get("clickhouse_granularity", 1)
@@ -765,7 +900,6 @@ def extract_table_from_model(
             excludes = list(getattr(dw_meta, "pg_excludes", []))
             indexes_meta = getattr(dw_meta, "indexes", []) or []
             pg_indexes_meta = getattr(dw_meta, "pg_indexes", []) or []
-            # If no SQLAlchemy indexes exist but Meta data does, populate from Meta
             if not indexes:
                 for idx_entry in list(indexes_meta) + list(pg_indexes_meta):
                     idx_info = IndexInfo(
@@ -777,6 +911,8 @@ def extract_table_from_model(
                         include=idx_entry.get("include"),
                         nulls_not_distinct=bool(idx_entry.get("nulls_not_distinct", False)),
                         column_sorting=dict(idx_entry.get("column_sorting", {})) if idx_entry.get("column_sorting") else None,
+                        clickhouse_type=idx_entry.get("clickhouse_type"),
+                        clickhouse_granularity=idx_entry.get("clickhouse_granularity"),
                     )
                     indexes.append(idx_info)
             if isinstance(dw_meta.backend_table, dict):
@@ -784,8 +920,8 @@ def extract_table_from_model(
                 pg_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("pg_") and k not in excluded_pg_keys}
 
         if _get_backend_name(db_name) == "clickhouse":
-            clickhouse_options = _clickhouse_options_for_model(model_class)
-            object_type = _object_type_for_clickhouse_options(clickhouse_options)
+            clickhouse_options = _ch_options_from_meta(model_class)
+            object_type = _detect_ch_object_type(clickhouse_options)
 
         return ModelTable(
             name=table_name,
@@ -919,10 +1055,31 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
         codec = None
         comment = None
         pg_meta: dict[str, Any] = {}
+        ch_meta: dict[str, Any] = {}
         if _get_backend_name(db_name) == "clickhouse":
-            clickhouse_codec = column.info.get("clickhouse_codec")
-            if isinstance(clickhouse_codec, str) and clickhouse_codec.strip():
-                codec = clickhouse_codec.strip()
+            ch_codec = column.info.get("ch_codec")
+            if isinstance(ch_codec, str) and ch_codec.strip():
+                codec = ch_codec.strip()
+            ch_key_map = {
+                "ch_codec": "ch_codec",
+                "ch_default_expression": "ch_default_expression",
+                "ch_materialized": "ch_materialized",
+                "ch_alias": "ch_alias",
+                "ch_ttl": "ch_ttl",
+                "ch_low_cardinality": "ch_low_cardinality",
+                "ch_nullable": "ch_nullable",
+            }
+            for info_key, meta_key in ch_key_map.items():
+                val = column.info.get(info_key)
+                if val is not None:
+                    ch_meta[meta_key] = val
+
+            clickhouse_type_override = column.info.get("clickhouse_type")
+            if isinstance(clickhouse_type_override, str) and clickhouse_type_override.strip():
+                ch_type = clickhouse_type_override.strip()
+            else:
+                ch_type = _map_sa_type_to_clickhouse(column)
+            ch_meta["ch_type"] = ch_type
 
         if column.comment:
             comment = column.comment
@@ -976,6 +1133,7 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
             codec=codec,
             comment=comment,
             pg_meta=pg_meta,
+            ch_meta=ch_meta,
         )
     except Exception:
         return None
@@ -1105,34 +1263,50 @@ def _generate_clickhouse_materialized_view_sql(
     columns_sql: str,
 ) -> str:
     options = table.clickhouse_options
-    parts = [f"CREATE MATERIALIZED VIEW IF NOT EXISTS {table.name} (\n{columns_sql}\n)"]
-    if options.get("clickhouse_mv_populate"):
-        parts[0] += " POPULATE"
+    parts = [f"CREATE MATERIALIZED VIEW IF NOT EXISTS {table.name}"]
+    to_table = options.get("ch_to_table")
+    if to_table:
+        parts[0] += f" TO {to_table}"
+    parts[0] += f" (\n{columns_sql}\n)"
 
-    engine = options.get("clickhouse_mv_engine") or options.get("clickhouse_engine") or "MergeTree"
-    parts.append(f"ENGINE = {_format_clickhouse_engine(engine)}")
+    engine_raw = options.get("ch_engine", "MergeTree")
+    if isinstance(engine_raw, str):
+        engine_name = engine_raw
+        engine_args = []
+    elif isinstance(engine_raw, tuple):
+        engine_name = engine_raw[0] if engine_raw else "MergeTree"
+        engine_args = list(str(a) for a in engine_raw[1:])
+    else:
+        engine_name = "MergeTree"
+        engine_args = []
+    if engine_args:
+        parts.append(f"ENGINE = {engine_name}({', '.join(engine_args)})")
+    else:
+        parts.append(f"ENGINE = {engine_name}()")
 
-    order_by = options.get("clickhouse_mv_order_by") or options.get("clickhouse_order_by")
+    order_by = options.get("ch_order_by")
     if order_by is not None:
         parts.append(f"ORDER BY {_format_clickhouse_expression(order_by)}")
 
-    primary_key = options.get("clickhouse_primary_key")
+    primary_key = options.get("ch_primary_key")
     if primary_key:
         parts.append(f"PRIMARY KEY {_format_clickhouse_expression(primary_key)}")
 
-    partition_by = options.get("clickhouse_partition_by")
+    partition_by = options.get("ch_partition_by")
     if partition_by:
         parts.append(f"PARTITION BY {partition_by}")
 
-    sample_by = options.get("clickhouse_sample_by")
+    sample_by = options.get("ch_sample_by")
     if sample_by:
         parts.append(f"SAMPLE BY {sample_by}")
 
-    ttl = options.get("clickhouse_ttl")
+    ttl = options.get("ch_ttl")
     if ttl:
-        parts.append("TTL " + ", ".join(ttl))
+        parts.append("TTL " + ", ".join(ttl) if isinstance(ttl, list) else f"TTL {ttl}")
 
-    parts.append(f"AS {options['clickhouse_mv_query']}")
+    select = options.get("ch_select_statement")
+    if select:
+        parts.append(f"AS {select}")
     return "\n".join(parts)
 
 
@@ -1158,20 +1332,20 @@ def generate_create_dictionary_sql(table: ModelTable) -> str:
         f"    {col.name} {col.type}"
         for col in table.columns
     )
-    pk = options.get("clickhouse_dict_primary_key")
+    pk = options.get("ch_dict_primary_key")
     if pk is None and table.columns:
         pk = table.columns[0].name
     primary_key_sql = f"PRIMARY KEY {_format_clickhouse_expression(pk)}"
-    lifetime = options["clickhouse_dict_lifetime"]
+    lifetime = options["ch_dict_lifetime"]
     lifetime_sql = f"LIFETIME({lifetime})" if isinstance(lifetime, str) else f"LIFETIME({lifetime})"
     return (
         f"CREATE DICTIONARY IF NOT EXISTS {table.name} (\n"
         f"{columns_sql}\n"
         f")\n"
         f"{primary_key_sql}\n"
-        f"SOURCE({options['clickhouse_dict_source']})\n"
+        f"SOURCE({options['ch_dict_source']})\n"
         f"{lifetime_sql}\n"
-        f"LAYOUT({options['clickhouse_dict_layout']})"
+        f"LAYOUT({options['ch_dict_layout']})"
     )
 
 

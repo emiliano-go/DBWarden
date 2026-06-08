@@ -425,6 +425,33 @@ def _analyze_table(table_snapshot: dict[str, Any], model_table: ModelTable) -> l
     return issues
 
 
+_CH_OPTION_KEY_MAP: dict[str, str] = {
+    "ch_order_by": "clickhouse_order_by",
+    "ch_partition_by": "clickhouse_partition_by",
+    "ch_ttl": "clickhouse_ttl",
+    "ch_engine": "clickhouse_engine",
+    "ch_select_statement": "clickhouse_mv_query",
+    "ch_zookeeper_path": "clickhouse_zookeeper_path",
+    "ch_replica_name": "clickhouse_replica_name",
+    "ch_dict_source": "clickhouse_dict_source",
+    "ch_dict_layout": "clickhouse_dict_layout",
+    "ch_dict_lifetime": "clickhouse_dict_lifetime",
+}
+
+_CH_OPTION_RULES: dict[str, tuple[str, str | None, str]] = {
+    "ch_order_by": ("ERROR", None, "Change ORDER BY for '{table}'"),
+    "ch_partition_by": ("ERROR", None, "Change PARTITION BY for '{table}'"),
+    "ch_ttl": ("WARNING", "--force", "Change TTL for '{table}'"),
+    "ch_engine": ("WARNING", "--force", "Change engine for '{table}'"),
+    "ch_select_statement": ("WARNING", "--force", "Change materialized view query for '{table}'"),
+    "ch_zookeeper_path": ("WARNING", "--force", "Change ZooKeeper path for '{table}'"),
+    "ch_replica_name": ("WARNING", "--force", "Change replica name for '{table}'"),
+    "ch_dict_source": ("WARNING", "--force", "Change dictionary source for '{table}'"),
+    "ch_dict_layout": ("WARNING", "--force", "Change dictionary layout for '{table}'"),
+    "ch_dict_lifetime": ("WARNING", "--force", "Change dictionary lifetime for '{table}'"),
+}
+
+
 def _analyze_clickhouse_options(table_snapshot: dict[str, Any], model_table: ModelTable) -> list[SafetyIssue]:
     issues: list[SafetyIssue] = []
     snapshot_options = table_snapshot.get("clickhouse_options", {})
@@ -432,39 +459,42 @@ def _analyze_clickhouse_options(table_snapshot: dict[str, Any], model_table: Mod
     if not snapshot_options and not model_options:
         return issues
 
-    option_rules = {
-        "clickhouse_order_by": ("ERROR", None, "Change ORDER BY for '{table}'"),
-        "clickhouse_partition_by": ("ERROR", None, "Change PARTITION BY for '{table}'"),
-        "clickhouse_ttl": ("WARNING", "--force", "Change TTL for '{table}'"),
-        "clickhouse_engine": ("WARNING", "--force", "Change engine for '{table}'"),
-        "clickhouse_mv_query": ("WARNING", "--force", "Change materialized view query for '{table}'"),
-        "clickhouse_mv_populate": ("WARNING", "--force", "Enable POPULATE for materialized view '{table}'"),
-        "clickhouse_zookeeper_path": ("WARNING", "--force", "Change ZooKeeper path for '{table}'"),
-        "clickhouse_replica_name": ("WARNING", "--force", "Change replica name for '{table}'"),
-        "clickhouse_dict_source": ("WARNING", "--force", "Change dictionary source for '{table}'"),
-        "clickhouse_dict_layout": ("WARNING", "--force", "Change dictionary layout for '{table}'"),
-        "clickhouse_dict_lifetime": ("WARNING", "--force", "Change dictionary lifetime for '{table}'"),
-    }
+    for ch_key, (severity, required_flag, template) in _CH_OPTION_RULES.items():
+        model_val = _normalize_option_value(model_options.get(ch_key))
+        # Try ch_* first, fall back to clickhouse_* for backward compat
+        snap_key = ch_key
+        snap_val = _normalize_option_value(snapshot_options.get(snap_key))
+        if snap_val is None and snap_key in _CH_OPTION_KEY_MAP:
+            snap_val = _normalize_option_value(snapshot_options.get(_CH_OPTION_KEY_MAP[snap_key]))
 
-    for key, (severity, required_flag, template) in option_rules.items():
-        if _normalize_option_value(snapshot_options.get(key)) != _normalize_option_value(model_options.get(key)):
-            if snapshot_options.get(key) is None and model_options.get(key) is None:
+        if snap_val != model_val:
+            if snap_val is None and model_val is None:
                 continue
             issues.append(
                 SafetyIssue(
                     severity=severity,
-                    change_type=key,
+                    change_type=_CH_OPTION_KEY_MAP.get(ch_key, ch_key),
                     table_name=model_table.name,
                     message=template.format(table=model_table.name),
                     required_flag=required_flag,
                 )
             )
 
-    snapshot_projections = set(snapshot_options.get("clickhouse_projections") or [])
-    model_projections = {
-        projection["name"]
-        for projection in (model_options.get("clickhouse_projections") or [])
-    }
+    model_projections_raw = model_options.get("ch_projections") or []
+    model_projections = set()
+    for proj in model_projections_raw:
+        if isinstance(proj, dict):
+            model_projections.add(proj["name"])
+        elif hasattr(proj, "name"):
+            model_projections.add(proj.name)
+
+    snapshot_projections_raw = snapshot_options.get("ch_projections") or snapshot_options.get("clickhouse_projections") or []
+    snapshot_projections = set()
+    for proj in snapshot_projections_raw:
+        if isinstance(proj, dict):
+            snapshot_projections.add(proj["name"])
+        elif hasattr(proj, "name"):
+            snapshot_projections.add(proj.name)
 
     for projection_name in sorted(model_projections - snapshot_projections):
         issues.append(
