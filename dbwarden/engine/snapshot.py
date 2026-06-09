@@ -29,6 +29,7 @@ class StatementOrder(IntEnum):
     ALTER_COLUMN_COMMENT = 12
     ALTER_TABLE_OPTIONS = 13
     ALTER_TABLE_CONSTRAINT = 14
+    ALTER_COLUMN_AUTOINCREMENT = 15
 
 
 @dataclass
@@ -343,6 +344,9 @@ def _is_autoincrement(column: dict[str, Any]) -> bool:
     if any(kw in type_str for kw in ("serial", "bigserial", "smallserial")):
         return True
     if column.get("autoincrement"):
+        return True
+    default = column.get("default")
+    if isinstance(default, str) and "nextval" in default.lower():
         return True
     return False
 
@@ -1769,6 +1773,23 @@ def diff_models_against_snapshot(
                     "nullable": snap_nullable,
                     "col_type": snap_col.get("type", ""),
                 })
+            snap_autoinc = snap_col.get("autoincrement", False)
+            model_autoinc = model_col.autoincrement
+            if model_autoinc is not None and bool(snap_autoinc) != model_autoinc:
+                upgrade_ops.append({
+                    "type": "alter_column_autoincrement",
+                    "table": table.name,
+                    "column": col_name,
+                    "autoincrement": model_autoinc,
+                    "col_type": model_col.type,
+                })
+                rollback_ops.append({
+                    "type": "alter_column_autoincrement",
+                    "table": table.name,
+                    "column": col_name,
+                    "autoincrement": bool(snap_autoinc),
+                    "col_type": snap_col.get("type", ""),
+                })
             snap_default = _normalize_default(snap_col.get("default"))
             model_default = _normalize_default(model_col.default)
             if snap_default != model_default:
@@ -2372,6 +2393,42 @@ def snapshot_diff_to_sql(
                 rollback_sql=def_rb,
             ))
             changes.append(Change(operation="alter_column_default", table=op["table"], target=op["column"]))
+        elif op["type"] == "alter_column_autoincrement":
+            table = op["table"]
+            column = op["column"]
+            autoinc = op.get("autoincrement", False)
+            col_type = op.get("col_type", "integer")
+            seq_name = f"{table}_{column}_seq"
+            if backend == "postgresql":
+                if autoinc:
+                    upgrade_sql = (
+                        f"CREATE SEQUENCE IF NOT EXISTS {seq_name};\n"
+                        f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT nextval('{seq_name}');\n"
+                        f"ALTER SEQUENCE {seq_name} OWNED BY {table}.{column};"
+                    )
+                    rollback_sql = (
+                        f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT;\n"
+                        f"DROP SEQUENCE IF EXISTS {seq_name};"
+                    )
+                else:
+                    upgrade_sql = (
+                        f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT;\n"
+                        f"DROP SEQUENCE IF EXISTS {seq_name};"
+                    )
+                    rollback_sql = (
+                        f"CREATE SEQUENCE IF NOT EXISTS {seq_name};\n"
+                        f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT nextval('{seq_name}');\n"
+                        f"ALTER SEQUENCE {seq_name} OWNED BY {table}.{column};"
+                    )
+            else:
+                upgrade_sql = f"-- Autoincrement toggle for {table}.{column} only supported on PostgreSQL"
+                rollback_sql = f"-- Autoincrement toggle for {table}.{column} only supported on PostgreSQL"
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_COLUMN_AUTOINCREMENT,
+                upgrade_sql=upgrade_sql,
+                rollback_sql=rollback_sql,
+            ))
+            changes.append(Change(operation="alter_column_autoincrement", table=table, target=column))
         elif op["type"] == "alter_table_comment":
             comment = op.get("comment") or ""
             prev = op.get("previous_comment") or ""

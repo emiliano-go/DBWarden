@@ -56,7 +56,8 @@ def _get_backend_name(db_name: str | None = None) -> str:
 
 
 def _map_sqlalchemy_type_to_backend(
-    type_str: str, is_primary_key: bool = False, db_name: str | None = None
+    type_str: str, is_primary_key: bool = False, db_name: str | None = None,
+    autoincrement: bool | None = None,
 ) -> str:
     """
     Map SQLAlchemy type strings to backend-specific types.
@@ -65,6 +66,7 @@ def _map_sqlalchemy_type_to_backend(
         type_str: The SQLAlchemy type string (e.g., "INTEGER", "DATETIME", "VARCHAR(100)").
         is_primary_key: Whether this column is a primary key (for SERIAL/BIGSERIAL mapping).
         db_name: Database name for backend detection.
+        autoincrement: Whether the column has autoincrement enabled.
 
     Returns:
         Backend-specific type string.
@@ -74,9 +76,9 @@ def _map_sqlalchemy_type_to_backend(
     if backend == "postgresql":
         type_upper = type_str.upper()
 
-        if is_primary_key and type_upper == "INTEGER":
+        if autoincrement is not False and is_primary_key and type_upper == "INTEGER":
             return "SERIAL"
-        if is_primary_key and type_upper == "BIGINTEGER":
+        if autoincrement is not False and is_primary_key and type_upper == "BIGINTEGER":
             return "BIGSERIAL"
 
         type_mapping = {
@@ -123,6 +125,7 @@ class ModelColumn:
         comment: Optional[str] = None,
         pg_meta: Optional[dict[str, Any]] = None,
         ch_meta: Optional[dict[str, Any]] = None,
+        autoincrement: Optional[bool] = None,
     ):
         self.name = name
         self.type = type
@@ -135,6 +138,7 @@ class ModelColumn:
         self.comment = comment
         self.pg_meta = pg_meta or {}
         self.ch_meta = ch_meta or {}
+        self.autoincrement = autoincrement
 
     def to_dict(self) -> dict:
         d: dict[str, Any] = {
@@ -148,6 +152,7 @@ class ModelColumn:
             "codec": self.codec,
             "comment": self.comment,
             "pg_meta": self.pg_meta,
+            "autoincrement": self.autoincrement,
         }
         if self.ch_meta:
             d["ch_meta"] = self.ch_meta
@@ -1027,6 +1032,7 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
         nullable = column.nullable
         primary_key = column.primary_key
         unique = column.unique
+        autoincrement = column.autoincrement
         default = None
         if column.default:
             default_str = str(column.default)
@@ -1080,7 +1086,8 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
             default = str(column.server_default.arg)
 
         type_str = _map_sqlalchemy_type_to_backend(
-            type_str, is_primary_key=primary_key, db_name=db_name
+            type_str, is_primary_key=primary_key, db_name=db_name,
+            autoincrement=autoincrement,
         )
 
         if _get_backend_name(db_name) == "sqlite":
@@ -1190,6 +1197,7 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
             comment=comment,
             pg_meta=pg_meta,
             ch_meta=ch_meta,
+            autoincrement=autoincrement,
         )
     except Exception:
         return None
