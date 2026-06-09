@@ -235,16 +235,15 @@ Current behavior:
 
 ### Skip Indexes
 
-Use the `index()` factory with `clickhouse_type` and `clickhouse_granularity`:
+Use `ChIndexSpec` in `ch_indexes`:
 
 ```python
-from dbwarden import index
+from dbwarden import ChIndexSpec
 
 class Meta(CHTableMeta):
-    indexes = [
-        index("ix_payload", "payload",
-            clickhouse_type="bloom_filter",
-            clickhouse_granularity=1),
+    ch_indexes = [
+        ChIndexSpec("ix_payload", ["payload"],
+            type="bloom_filter", granularity=1),
     ]
 ```
 

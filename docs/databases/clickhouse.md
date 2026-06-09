@@ -150,21 +150,29 @@ class Meta(CHTableMeta):
 
 ### Skip Indexes
 
-Use the `index()` factory with `clickhouse_type` and `clickhouse_granularity`:
+Use `ChIndexSpec` in `ch_indexes`:
 
 ```python
-from dbwarden import index
+from dbwarden import ChIndexSpec
 
 class Meta(CHTableMeta):
-    indexes = [
-        index("ix_payload", "payload",
-            clickhouse_type="bloom_filter",
-            clickhouse_granularity=1),
-        index("ix_url", "url",
-            clickhouse_type="minmax",
-            clickhouse_granularity=3),
+    ch_indexes = [
+        ChIndexSpec("ix_payload", ["payload"],
+            type="bloom_filter", granularity=1),
+        ChIndexSpec("ix_url", ["url"],
+            type="minmax", granularity=3),
     ]
 ```
+
+The `ChIndexSpec` constructor fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | Index name |
+| `columns` | `list[str]` | Column names for the index |
+| `type` | `str` | Index type (`bloom_filter`, `minmax`, `set`, etc.) |
+| `granularity` | `int` | Index granularity (default: `1`) |
+| `expr` | `str` or `None` | Optional expression override for the index definition |
 
 Generated SQL:
 
