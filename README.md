@@ -1,27 +1,27 @@
-&#x3C;p align="center"&#x3E;
-  &#x3C;img src="https://raw.githubusercontent.com/emiliano-gandini-outeda/DBWarden/refs/heads/main/assets/icon.png" alt="DBWarden" width="128"/&#x3E;
-&#x3C;/p&#x3E;
-&#x3C;p align="center"&#x3E;
-    &#x3C;em&#x3E;The SQL-first database toolkit for SQLAlchemy.&#x3C;/em&#x3E;
-&#x3C;/p&#x3E;
-&#x3C;p align="center"&#x3E;
-  &#x3C;a href="https://www.python.org/downloads/"&#x3E;
-    &#x3C;img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&#x26;logoColor=white&#x26;style=for-the-badge" alt="Python"&#x3E;
-  &#x3C;/a&#x3E;
-  &#x3C;a href="https://pypi.org/project/dbwarden"&#x3E;
-    &#x3C;img src="https://img.shields.io/badge/PyPI-0.9.0-34D058?logo=pypi&#x26;logoColor=white&#x26;style=for-the-badge" alt="PyPI"&#x3E;
-  &#x3C;/a&#x3E;
-  &#x3C;a href="LICENSE"&#x3E;
-    &#x3C;img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License"&#x3E;
-  &#x3C;/a&#x3E;
-  &#x3C;a href="https://deepwiki.com/emiliano-gandini-outeda/DBWarden/"&#x3E;
-    &#x3C;img src="https://img.shields.io/badge/DeepWiki-8A2BE2?logo=readthedocs&#x26;logoColor=white&#x26;style=for-the-badge" alt="DeepWiki"&#x3E;
-  &#x3C;/a&#x3E;
-&#x3C;/p&#x3E;
+<p align="center">
+  <img src="https://raw.githubusercontent.com/emiliano-gandini-outeda/DBWarden/refs/heads/main/assets/icon.png" alt="DBWarden" width="128"/>
+</p>
+<p align="center">
+    <em>The SQL-first database toolkit for SQLAlchemy.</em>
+</p>
+<p align="center">
+  <a href="https://www.python.org/downloads/">
+    <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white&style=for-the-badge" alt="Python">
+  </a>
+  <a href="https://pypi.org/project/dbwarden">
+    <img src="https://img.shields.io/badge/PyPI-0.9.0-34D058?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
+  </a>
+  <a href="https://deepwiki.com/emiliano-gandini-outeda/DBWarden/">
+    <img src="https://img.shields.io/badge/DeepWiki-8A2BE2?logo=readthedocs&logoColor=white&style=for-the-badge" alt="DeepWiki">
+  </a>
+</p>
 
-&#x3C;p align="center"&#x3E;
-  &#x3C;strong&#x3E;&#x3C;a href="https://emiliano-gandini-outeda.me/DBWarden/"&#x3E;→ Full documentation&#x3C;/a&#x3E;&#x3C;/strong&#x3E;
-&#x3C;/p&#x3E;
+<p align="center">
+  <strong><a href="https://emiliano-gandini-outeda.me/DBWarden/">→ Full documentation</a></strong>
+</p>
 
 ---
 
