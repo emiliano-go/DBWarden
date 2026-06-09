@@ -140,7 +140,7 @@ def _extract_section_statements(content: str, section_marker: str) -> list[str]:
         list[str]: List of SQL statements.
     """
     lines = content.split("\n")
-    statements: list[str] = []
+    raw_statements: list[str] = []
     current_statement: list[str] = []
     in_section = False
 
@@ -155,7 +155,7 @@ def _extract_section_statements(content: str, section_marker: str) -> list[str]:
             if current_statement:
                 statement = "\n".join(current_statement).strip()
                 if statement:
-                    statements.append(statement)
+                    raw_statements.append(statement)
                 current_statement = []
             in_section = False
             continue
@@ -166,12 +166,17 @@ def _extract_section_statements(content: str, section_marker: str) -> list[str]:
             elif current_statement and not stripped:
                 statement = "\n".join(current_statement).strip()
                 if statement:
-                    statements.append(statement)
+                    raw_statements.append(statement)
                 current_statement = []
 
     if current_statement:
         statement = "\n".join(current_statement).strip()
         if statement:
-            statements.append(statement)
+            raw_statements.append(statement)
+
+    statements: list[str] = []
+    for raw in raw_statements:
+        parts = [s.strip() for s in raw.split(";") if s.strip()]
+        statements.extend(parts)
 
     return statements

@@ -109,6 +109,9 @@ def database_add(
     seed_table: str | None = typer.Option(
         None, "--seed-table", help="Seed tracking table name",
     ),
+    migration_table: str | None = typer.Option(
+        None, "--migration-table", help="Migration tracking table name",
+    ),
     default: bool = typer.Option(False, "--default", help="Set as default database"),
 ):
     """Add a new database to the configuration."""
@@ -119,6 +122,7 @@ def database_add(
         model_paths=model_paths,
         migrations_dir=migrations_dir,
         seed_table=seed_table,
+        migration_table=migration_table,
         default=default,
     )
 
