@@ -1,3 +1,41 @@
+---
+seo:
+  title: Quick Start - DBWarden Documentation
+  description: 'Quick Start Configure your first database in 2 minutes. Prerequisites
+    You should have: Python 3.10+ installed DBWarden installed pip install dbwarden
+    A database to connect to or use SQLite Step 1:...'
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/quick-start/
+  robots: index,follow
+  og:
+    type: website
+    title: Quick Start - DBWarden Documentation
+    description: 'Quick Start Configure your first database in 2 minutes. Prerequisites
+      You should have: Python 3.10+ installed DBWarden installed pip install dbwarden
+      A database to connect to or use SQLite Step 1:...'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/quick-start/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Quick Start - DBWarden Documentation
+    description: 'Quick Start Configure your first database in 2 minutes. Prerequisites
+      You should have: Python 3.10+ installed DBWarden installed pip install dbwarden
+      A database to connect to or use SQLite Step 1:...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Quick Start - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/quick-start/
+    description: 'Quick Start Configure your first database in 2 minutes. Prerequisites
+      You should have: Python 3.10+ installed DBWarden installed pip install dbwarden
+      A database to connect to or use SQLite Step 1:...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Quick Start
 
 Configure your first database in **2 minutes**.

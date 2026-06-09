@@ -1,3 +1,41 @@
+---
+seo:
+  title: Migration File Format - DBWarden Documentation
+  description: Migration File Format Migration files are the execution contract in
+    DBWarden. Everything that changes your database should be represented in explicit
+    SQL files that can be reviewed, tested, and...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/migration-files/
+  robots: index,follow
+  og:
+    type: website
+    title: Migration File Format - DBWarden Documentation
+    description: Migration File Format Migration files are the execution contract
+      in DBWarden. Everything that changes your database should be represented in
+      explicit SQL files that can be reviewed, tested, and...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/migration-files/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Migration File Format - DBWarden Documentation
+    description: Migration File Format Migration files are the execution contract
+      in DBWarden. Everything that changes your database should be represented in
+      explicit SQL files that can be reviewed, tested, and...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Migration File Format - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/migration-files/
+    description: Migration File Format Migration files are the execution contract
+      in DBWarden. Everything that changes your database should be represented in
+      explicit SQL files that can be reviewed, tested, and...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Migration File Format
 
 Migration files are the execution contract in DBWarden.

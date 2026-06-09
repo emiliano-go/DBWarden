@@ -1,3 +1,41 @@
+---
+seo:
+  title: 4. Offline & CI Workflows - DBWarden Documentation
+  description: 4. Offline & CI Workflows What You'll Learn How to export model state
+    to JSON for offline use How to generate migrations without a live database How
+    to integrate this into CI/CD pipelines...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/04-offline-ci/
+  robots: index,follow
+  og:
+    type: website
+    title: 4. Offline & CI Workflows - DBWarden Documentation
+    description: 4. Offline & CI Workflows What You'll Learn How to export model state
+      to JSON for offline use How to generate migrations without a live database How
+      to integrate this into CI/CD pipelines...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/04-offline-ci/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: 4. Offline & CI Workflows - DBWarden Documentation
+    description: 4. Offline & CI Workflows What You'll Learn How to export model state
+      to JSON for offline use How to generate migrations without a live database How
+      to integrate this into CI/CD pipelines...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: 4. Offline & CI Workflows - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/04-offline-ci/
+    description: 4. Offline & CI Workflows What You'll Learn How to export model state
+      to JSON for offline use How to generate migrations without a live database How
+      to integrate this into CI/CD pipelines...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # 4. Offline & CI Workflows
 
 ## What You'll Learn

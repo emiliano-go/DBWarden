@@ -1,3 +1,44 @@
+---
+description: Create your first SQL migration with DBWarden. Learn how to generate
+  upgrade and rollback SQL from SQLAlchemy models, apply migrations, and verify database
+  state.
+seo:
+  title: Your First Migration - DBWarden Documentation
+  description: Create your first SQL migration with DBWarden. Learn how to generate
+    upgrade and rollback SQL from SQLAlchemy models, apply migrations, and verify
+    database state.
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/your-first-migration/
+  robots: index,follow
+  og:
+    type: website
+    title: Your First Migration - DBWarden Documentation
+    description: Create your first SQL migration with DBWarden. Learn how to generate
+      upgrade and rollback SQL from SQLAlchemy models, apply migrations, and verify
+      database state.
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/your-first-migration/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Your First Migration - DBWarden Documentation
+    description: Create your first SQL migration with DBWarden. Learn how to generate
+      upgrade and rollback SQL from SQLAlchemy models, apply migrations, and verify
+      database state.
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Your First Migration - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/your-first-migration/
+    description: Create your first SQL migration with DBWarden. Learn how to generate
+      upgrade and rollback SQL from SQLAlchemy models, apply migrations, and verify
+      database state.
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Your First Migration
 
 Create your first migration from SQLAlchemy models.

@@ -1,7 +1,42 @@
 ---
-description: Test description from frontmatter
+description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy.
+  Generate reviewable SQL migrations, run impact analysis, validate with sandbox testing,
+  and deploy safely to production.
 seo:
-  test: hello
+  title: DBWarden - DBWarden Documentation
+  description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy.
+    Generate reviewable SQL migrations, run impact analysis, validate with sandbox
+    testing, and deploy safely to production.
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/
+  robots: index,follow
+  og:
+    type: website
+    title: DBWarden - DBWarden Documentation
+    description: DBWarden is a SQL-first database migration system for Python and
+      SQLAlchemy. Generate reviewable SQL migrations, run impact analysis, validate
+      with sandbox testing, and deploy safely to production.
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: DBWarden - DBWarden Documentation
+    description: DBWarden is a SQL-first database migration system for Python and
+      SQLAlchemy. Generate reviewable SQL migrations, run impact analysis, validate
+      with sandbox testing, and deploy safely to production.
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: DBWarden - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/
+    description: DBWarden is a SQL-first database migration system for Python and
+      SQLAlchemy. Generate reviewable SQL migrations, run impact analysis, validate
+      with sandbox testing, and deploy safely to production.
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
 ---
 
 # DBWarden

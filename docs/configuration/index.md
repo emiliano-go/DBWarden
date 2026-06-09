@@ -1,3 +1,44 @@
+---
+description: 'Learn how to configure DBWarden for single and multi-database setups:
+  connection URLs, model discovery, dev mode with SQLite translation, credential management,
+  and production patterns.'
+seo:
+  title: Configuration - DBWarden Documentation
+  description: 'Learn how to configure DBWarden for single and multi-database setups:
+    connection URLs, model discovery, dev mode with SQLite translation, credential
+    management, and production patterns.'
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/
+  robots: index,follow
+  og:
+    type: website
+    title: Configuration - DBWarden Documentation
+    description: 'Learn how to configure DBWarden for single and multi-database setups:
+      connection URLs, model discovery, dev mode with SQLite translation, credential
+      management, and production patterns.'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Configuration - DBWarden Documentation
+    description: 'Learn how to configure DBWarden for single and multi-database setups:
+      connection URLs, model discovery, dev mode with SQLite translation, credential
+      management, and production patterns.'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Configuration - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/
+    description: 'Learn how to configure DBWarden for single and multi-database setups:
+      connection URLs, model discovery, dev mode with SQLite translation, credential
+      management, and production patterns.'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Configuration
 
 DBWarden uses Python-based configuration with `database_config()` to define your databases.

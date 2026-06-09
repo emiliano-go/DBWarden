@@ -1,3 +1,41 @@
+---
+seo:
+  title: Model Discovery - DBWarden Documentation
+  description: 'Model Discovery Learn how DBWarden discovers your SQLAlchemy models
+    for migration generation. What Is Model Discovery? Model discovery is the process
+    where DBWarden: 1. Imports Python modules 2....'
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/model-discovery/
+  robots: index,follow
+  og:
+    type: website
+    title: Model Discovery - DBWarden Documentation
+    description: 'Model Discovery Learn how DBWarden discovers your SQLAlchemy models
+      for migration generation. What Is Model Discovery? Model discovery is the process
+      where DBWarden: 1. Imports Python modules 2....'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/model-discovery/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Model Discovery - DBWarden Documentation
+    description: 'Model Discovery Learn how DBWarden discovers your SQLAlchemy models
+      for migration generation. What Is Model Discovery? Model discovery is the process
+      where DBWarden: 1. Imports Python modules 2....'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Model Discovery - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/model-discovery/
+    description: 'Model Discovery Learn how DBWarden discovers your SQLAlchemy models
+      for migration generation. What Is Model Discovery? Model discovery is the process
+      where DBWarden: 1. Imports Python modules 2....'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Model Discovery
 
 Learn how DBWarden discovers your SQLAlchemy models for migration generation.

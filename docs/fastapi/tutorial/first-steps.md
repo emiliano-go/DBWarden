@@ -1,3 +1,41 @@
+---
+seo:
+  title: First Steps - DBWarden Documentation
+  description: 'First Steps Let''s create a FastAPI app with DBWarden in 2 minutes.
+    You''ll create a simple API with: Database sessions in routes Startup migration
+    checks Health endpoints Prerequisites You should...'
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/first-steps/
+  robots: index,follow
+  og:
+    type: website
+    title: First Steps - DBWarden Documentation
+    description: 'First Steps Let''s create a FastAPI app with DBWarden in 2 minutes.
+      You''ll create a simple API with: Database sessions in routes Startup migration
+      checks Health endpoints Prerequisites You should...'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/first-steps/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: First Steps - DBWarden Documentation
+    description: 'First Steps Let''s create a FastAPI app with DBWarden in 2 minutes.
+      You''ll create a simple API with: Database sessions in routes Startup migration
+      checks Health endpoints Prerequisites You should...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: First Steps - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/first-steps/
+    description: 'First Steps Let''s create a FastAPI app with DBWarden in 2 minutes.
+      You''ll create a simple API with: Database sessions in routes Startup migration
+      checks Health endpoints Prerequisites You should...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # First Steps
 
 Let's create a FastAPI app with DBWarden in **2 minutes**.

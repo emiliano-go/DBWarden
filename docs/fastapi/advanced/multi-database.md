@@ -1,3 +1,41 @@
+---
+seo:
+  title: Multi-Database - DBWarden Documentation
+  description: 'MultiDatabase Learn how to work with multiple databases in your FastAPI
+    application. When to Use Multiple Databases Common scenarios: Primary + Analytics
+    Separate reporting from transactional data...'
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/multi-database/
+  robots: index,follow
+  og:
+    type: website
+    title: Multi-Database - DBWarden Documentation
+    description: 'MultiDatabase Learn how to work with multiple databases in your
+      FastAPI application. When to Use Multiple Databases Common scenarios: Primary
+      + Analytics Separate reporting from transactional data...'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/multi-database/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Multi-Database - DBWarden Documentation
+    description: 'MultiDatabase Learn how to work with multiple databases in your
+      FastAPI application. When to Use Multiple Databases Common scenarios: Primary
+      + Analytics Separate reporting from transactional data...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Multi-Database - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/multi-database/
+    description: 'MultiDatabase Learn how to work with multiple databases in your
+      FastAPI application. When to Use Multiple Databases Common scenarios: Primary
+      + Analytics Separate reporting from transactional data...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Multi-Database
 
 Learn how to work with multiple databases in your FastAPI application.

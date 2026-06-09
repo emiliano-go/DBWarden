@@ -1,3 +1,41 @@
+---
+seo:
+  title: 11. Observability - DBWarden Documentation
+  description: 11. Observability What You'll Learn How to enable Prometheus metrics
+    for DBWarden How to use structured JSON logging How to add query tracing middleware
+    to FastAPI How to monitor connection pool...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/11-observability/
+  robots: index,follow
+  og:
+    type: website
+    title: 11. Observability - DBWarden Documentation
+    description: 11. Observability What You'll Learn How to enable Prometheus metrics
+      for DBWarden How to use structured JSON logging How to add query tracing middleware
+      to FastAPI How to monitor connection pool...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/11-observability/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: 11. Observability - DBWarden Documentation
+    description: 11. Observability What You'll Learn How to enable Prometheus metrics
+      for DBWarden How to use structured JSON logging How to add query tracing middleware
+      to FastAPI How to monitor connection pool...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: 11. Observability - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/11-observability/
+    description: 11. Observability What You'll Learn How to enable Prometheus metrics
+      for DBWarden How to use structured JSON logging How to add query tracing middleware
+      to FastAPI How to monitor connection pool...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # 11. Observability
 
 ## What You'll Learn

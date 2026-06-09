@@ -1,3 +1,41 @@
+---
+seo:
+  title: Production Patterns - DBWarden Documentation
+  description: Production Patterns Realworld configuration patterns for production
+    deployments. Environment Variables Basic Pattern python import os from dbwarden
+    import databaseconfig primary = databaseconfig...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/production-patterns/
+  robots: index,follow
+  og:
+    type: website
+    title: Production Patterns - DBWarden Documentation
+    description: Production Patterns Realworld configuration patterns for production
+      deployments. Environment Variables Basic Pattern python import os from dbwarden
+      import databaseconfig primary = databaseconfig...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/production-patterns/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Production Patterns - DBWarden Documentation
+    description: Production Patterns Realworld configuration patterns for production
+      deployments. Environment Variables Basic Pattern python import os from dbwarden
+      import databaseconfig primary = databaseconfig...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Production Patterns - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/production-patterns/
+    description: Production Patterns Realworld configuration patterns for production
+      deployments. Environment Variables Basic Pattern python import os from dbwarden
+      import databaseconfig primary = databaseconfig...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Production Patterns
 
 Real-world configuration patterns for production deployments.

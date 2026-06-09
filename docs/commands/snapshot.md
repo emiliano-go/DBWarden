@@ -1,3 +1,41 @@
+---
+seo:
+  title: '`snapshot` - DBWarden Documentation'
+  description: snapshot Output the DDL schema of a specific database table. Usage
+    bash dbwarden snapshot users database primary Options TABLE required Name of the
+    table to snapshot database, d Output For standard...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/snapshot/
+  robots: index,follow
+  og:
+    type: website
+    title: '`snapshot` - DBWarden Documentation'
+    description: snapshot Output the DDL schema of a specific database table. Usage
+      bash dbwarden snapshot users database primary Options TABLE required Name of
+      the table to snapshot database, d Output For standard...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/snapshot/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: '`snapshot` - DBWarden Documentation'
+    description: snapshot Output the DDL schema of a specific database table. Usage
+      bash dbwarden snapshot users database primary Options TABLE required Name of
+      the table to snapshot database, d Output For standard...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: '`snapshot` - DBWarden Documentation'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/snapshot/
+    description: snapshot Output the DDL schema of a specific database table. Usage
+      bash dbwarden snapshot users database primary Options TABLE required Name of
+      the table to snapshot database, d Output For standard...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # `snapshot`
 
 Output the DDL schema of a specific database table.

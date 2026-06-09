@@ -35,12 +35,18 @@ def _reverse_sql(sql: str) -> str:
             column_name = alter_match.group(2)
             return f"ALTER TABLE {table_name} DROP COLUMN {column_name};"
     elif upper.startswith("CREATE INDEX"):
-        match = re.search(r"CREATE INDEX\s+(?:IF NOT EXISTS\s+)?(\S+)", stripped, re.IGNORECASE)
+        match = re.search(
+            r"CREATE INDEX\s+(?:CONCURRENTLY\s+)?(?:IF NOT EXISTS\s+)?(\S+)",
+            stripped, re.IGNORECASE,
+        )
         if match:
             index_name = match.group(1)
             return f"DROP INDEX IF EXISTS {index_name};"
     elif upper.startswith("CREATE UNIQUE INDEX"):
-        match = re.search(r"CREATE UNIQUE INDEX\s+(?:IF NOT EXISTS\s+)?(\S+)", stripped, re.IGNORECASE)
+        match = re.search(
+            r"CREATE UNIQUE INDEX\s+(?:CONCURRENTLY\s+)?(?:IF NOT EXISTS\s+)?(\S+)",
+            stripped, re.IGNORECASE,
+        )
         if match:
             index_name = match.group(1)
             return f"DROP INDEX IF EXISTS {index_name};"

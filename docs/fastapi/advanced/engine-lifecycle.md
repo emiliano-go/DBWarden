@@ -1,3 +1,41 @@
+---
+seo:
+  title: Engine Lifecycle - DBWarden Documentation
+  description: 'Engine Lifecycle Learn how DBWarden manages database engines and connections.
+    How Engines Are Created When you first use a session annotation like primary.asyncsession:
+    1. First request arrives with...'
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/engine-lifecycle/
+  robots: index,follow
+  og:
+    type: website
+    title: Engine Lifecycle - DBWarden Documentation
+    description: 'Engine Lifecycle Learn how DBWarden manages database engines and
+      connections. How Engines Are Created When you first use a session annotation
+      like primary.asyncsession: 1. First request arrives with...'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/engine-lifecycle/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Engine Lifecycle - DBWarden Documentation
+    description: 'Engine Lifecycle Learn how DBWarden manages database engines and
+      connections. How Engines Are Created When you first use a session annotation
+      like primary.asyncsession: 1. First request arrives with...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Engine Lifecycle - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/engine-lifecycle/
+    description: 'Engine Lifecycle Learn how DBWarden manages database engines and
+      connections. How Engines Are Created When you first use a session annotation
+      like primary.asyncsession: 1. First request arrives with...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Engine Lifecycle
 
 Learn how DBWarden manages database engines and connections.

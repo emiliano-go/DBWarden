@@ -1,3 +1,41 @@
+---
+seo:
+  title: API Reference - DBWarden Documentation
+  description: API Reference Complete API documentation for DBWarden's FastAPI integration.
+    For most applications, use the DatabaseHandle pattern instead of getsession. Call
+    databaseconfig and use .asyncsession...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/reference/
+  robots: index,follow
+  og:
+    type: website
+    title: API Reference - DBWarden Documentation
+    description: API Reference Complete API documentation for DBWarden's FastAPI integration.
+      For most applications, use the DatabaseHandle pattern instead of getsession.
+      Call databaseconfig and use .asyncsession...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/reference/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: API Reference - DBWarden Documentation
+    description: API Reference Complete API documentation for DBWarden's FastAPI integration.
+      For most applications, use the DatabaseHandle pattern instead of getsession.
+      Call databaseconfig and use .asyncsession...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: API Reference - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/reference/
+    description: API Reference Complete API documentation for DBWarden's FastAPI integration.
+      For most applications, use the DatabaseHandle pattern instead of getsession.
+      Call databaseconfig and use .asyncsession...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # API Reference
 
 Complete API documentation for DBWarden's FastAPI integration.

@@ -1,3 +1,41 @@
+---
+seo:
+  title: Complete Application - DBWarden Documentation
+  description: 'Complete Application A full, productionready FastAPI application using
+    all of DBWarden''s features. Overview This example shows: Database configuration
+    Model definition Session dependencies CRUD...'
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/complete-application/
+  robots: index,follow
+  og:
+    type: website
+    title: Complete Application - DBWarden Documentation
+    description: 'Complete Application A full, productionready FastAPI application
+      using all of DBWarden''s features. Overview This example shows: Database configuration
+      Model definition Session dependencies CRUD...'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/complete-application/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Complete Application - DBWarden Documentation
+    description: 'Complete Application A full, productionready FastAPI application
+      using all of DBWarden''s features. Overview This example shows: Database configuration
+      Model definition Session dependencies CRUD...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Complete Application - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/complete-application/
+    description: 'Complete Application A full, productionready FastAPI application
+      using all of DBWarden''s features. Overview This example shows: Database configuration
+      Model definition Session dependencies CRUD...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Complete Application
 
 A full, production-ready FastAPI application using all of DBWarden's features.

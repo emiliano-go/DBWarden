@@ -1,3 +1,41 @@
+---
+seo:
+  title: Session Dependency - DBWarden Documentation
+  description: Session Dependency Learn how to get database sessions in your FastAPI
+    routes using DatabaseHandle. The Handle Pattern databaseconfig returns a DatabaseHandle.
+    Its .asyncsession and .syncsession...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/session-dependency/
+  robots: index,follow
+  og:
+    type: website
+    title: Session Dependency - DBWarden Documentation
+    description: Session Dependency Learn how to get database sessions in your FastAPI
+      routes using DatabaseHandle. The Handle Pattern databaseconfig returns a DatabaseHandle.
+      Its .asyncsession and .syncsession...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/session-dependency/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Session Dependency - DBWarden Documentation
+    description: Session Dependency Learn how to get database sessions in your FastAPI
+      routes using DatabaseHandle. The Handle Pattern databaseconfig returns a DatabaseHandle.
+      Its .asyncsession and .syncsession...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Session Dependency - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/session-dependency/
+    description: Session Dependency Learn how to get database sessions in your FastAPI
+      routes using DatabaseHandle. The Handle Pattern databaseconfig returns a DatabaseHandle.
+      Its .asyncsession and .syncsession...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Session Dependency
 
 Learn how to get database sessions in your FastAPI routes using `DatabaseHandle`.

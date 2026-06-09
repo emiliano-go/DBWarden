@@ -1,3 +1,41 @@
+---
+seo:
+  title: Checksum Integrity - DBWarden Documentation
+  description: Checksum Integrity DBWarden stores a SHA256 checksum of each migration
+    file at apply time. On subsequent runs, it recalculates the checksum and compares.
+    A mismatch means the file changed after it...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/checksum-integrity/
+  robots: index,follow
+  og:
+    type: website
+    title: Checksum Integrity - DBWarden Documentation
+    description: Checksum Integrity DBWarden stores a SHA256 checksum of each migration
+      file at apply time. On subsequent runs, it recalculates the checksum and compares.
+      A mismatch means the file changed after it...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/checksum-integrity/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Checksum Integrity - DBWarden Documentation
+    description: Checksum Integrity DBWarden stores a SHA256 checksum of each migration
+      file at apply time. On subsequent runs, it recalculates the checksum and compares.
+      A mismatch means the file changed after it...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Checksum Integrity - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/checksum-integrity/
+    description: Checksum Integrity DBWarden stores a SHA256 checksum of each migration
+      file at apply time. On subsequent runs, it recalculates the checksum and compares.
+      A mismatch means the file changed after it...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Checksum Integrity
 
 DBWarden stores a SHA-256 checksum of each migration file at apply time. On subsequent runs, it recalculates the checksum and compares. A mismatch means the file changed after it was applied.

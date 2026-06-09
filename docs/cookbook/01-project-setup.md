@@ -1,3 +1,41 @@
+---
+seo:
+  title: 1. Project Setup - DBWarden Documentation
+  description: 1. Project Setup What You'll Learn How to initialize a DBWarden project
+    with dbwarden init How configuration is structured via databaseconfig How to inspect
+    your loaded configuration Prerequisites...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/01-project-setup/
+  robots: index,follow
+  og:
+    type: website
+    title: 1. Project Setup - DBWarden Documentation
+    description: 1. Project Setup What You'll Learn How to initialize a DBWarden project
+      with dbwarden init How configuration is structured via databaseconfig How to
+      inspect your loaded configuration Prerequisites...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/01-project-setup/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: 1. Project Setup - DBWarden Documentation
+    description: 1. Project Setup What You'll Learn How to initialize a DBWarden project
+      with dbwarden init How configuration is structured via databaseconfig How to
+      inspect your loaded configuration Prerequisites...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: 1. Project Setup - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/01-project-setup/
+    description: 1. Project Setup What You'll Learn How to initialize a DBWarden project
+      with dbwarden init How configuration is structured via databaseconfig How to
+      inspect your loaded configuration Prerequisites...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # 1. Project Setup
 
 ## What You'll Learn

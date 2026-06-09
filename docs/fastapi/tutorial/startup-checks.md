@@ -1,3 +1,41 @@
+---
+seo:
+  title: Startup Checks - DBWarden Documentation
+  description: Startup Checks Learn how to validate your database before your FastAPI
+    app accepts traffic. What Are Startup Checks? Startup checks run when your app
+    boots, before it starts accepting requests. They...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/startup-checks/
+  robots: index,follow
+  og:
+    type: website
+    title: Startup Checks - DBWarden Documentation
+    description: Startup Checks Learn how to validate your database before your FastAPI
+      app accepts traffic. What Are Startup Checks? Startup checks run when your app
+      boots, before it starts accepting requests. They...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/startup-checks/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Startup Checks - DBWarden Documentation
+    description: Startup Checks Learn how to validate your database before your FastAPI
+      app accepts traffic. What Are Startup Checks? Startup checks run when your app
+      boots, before it starts accepting requests. They...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Startup Checks - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/startup-checks/
+    description: Startup Checks Learn how to validate your database before your FastAPI
+      app accepts traffic. What Are Startup Checks? Startup checks run when your app
+      boots, before it starts accepting requests. They...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Startup Checks
 
 Learn how to validate your database before your FastAPI app accepts traffic.

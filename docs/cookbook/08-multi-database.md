@@ -1,3 +1,41 @@
+---
+seo:
+  title: 8. Multi-Database & Configuration - DBWarden Documentation
+  description: 8. MultiDatabase & Configuration What You'll Learn How to configure
+    multiple databases in one project How to target specific databases with CLI flags
+    How to manage PostgreSQL + ClickHouse in the same...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/08-multi-database/
+  robots: index,follow
+  og:
+    type: website
+    title: 8. Multi-Database & Configuration - DBWarden Documentation
+    description: 8. MultiDatabase & Configuration What You'll Learn How to configure
+      multiple databases in one project How to target specific databases with CLI
+      flags How to manage PostgreSQL + ClickHouse in the same...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/08-multi-database/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: 8. Multi-Database & Configuration - DBWarden Documentation
+    description: 8. MultiDatabase & Configuration What You'll Learn How to configure
+      multiple databases in one project How to target specific databases with CLI
+      flags How to manage PostgreSQL + ClickHouse in the same...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: 8. Multi-Database & Configuration - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/08-multi-database/
+    description: 8. MultiDatabase & Configuration What You'll Learn How to configure
+      multiple databases in one project How to target specific databases with CLI
+      flags How to manage PostgreSQL + ClickHouse in the same...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # 8. Multi-Database & Configuration
 
 ## What You'll Learn

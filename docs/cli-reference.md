@@ -1,3 +1,41 @@
+---
+seo:
+  title: CLI Reference - DBWarden Documentation
+  description: CLI Reference Pure command lookup for DBWarden CLI. Syntax bash dbwarden
+    GLOBALOPTIONS COMMAND ARGS COMMANDOPTIONS Global options Option Description dev
+    Use devdatabaseurl and devdatabasetype for...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cli-reference/
+  robots: index,follow
+  og:
+    type: website
+    title: CLI Reference - DBWarden Documentation
+    description: CLI Reference Pure command lookup for DBWarden CLI. Syntax bash dbwarden
+      GLOBALOPTIONS COMMAND ARGS COMMANDOPTIONS Global options Option Description
+      dev Use devdatabaseurl and devdatabasetype for...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cli-reference/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: CLI Reference - DBWarden Documentation
+    description: CLI Reference Pure command lookup for DBWarden CLI. Syntax bash dbwarden
+      GLOBALOPTIONS COMMAND ARGS COMMANDOPTIONS Global options Option Description
+      dev Use devdatabaseurl and devdatabasetype for...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: CLI Reference - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cli-reference/
+    description: CLI Reference Pure command lookup for DBWarden CLI. Syntax bash dbwarden
+      GLOBALOPTIONS COMMAND ARGS COMMANDOPTIONS Global options Option Description
+      dev Use devdatabaseurl and devdatabasetype for...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # CLI Reference
 
 Pure command lookup for DBWarden CLI.

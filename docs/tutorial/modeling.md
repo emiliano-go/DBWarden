@@ -1,3 +1,41 @@
+---
+seo:
+  title: Modeling Guide - DBWarden Documentation
+  description: Modeling Guide This guide walks through the process of defining SQLAlchemy
+    models that DBWarden can read to generate migration SQL. For the complete reference
+    of all supported Meta attributes, see...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/modeling/
+  robots: index,follow
+  og:
+    type: website
+    title: Modeling Guide - DBWarden Documentation
+    description: Modeling Guide This guide walks through the process of defining SQLAlchemy
+      models that DBWarden can read to generate migration SQL. For the complete reference
+      of all supported Meta attributes, see...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/modeling/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Modeling Guide - DBWarden Documentation
+    description: Modeling Guide This guide walks through the process of defining SQLAlchemy
+      models that DBWarden can read to generate migration SQL. For the complete reference
+      of all supported Meta attributes, see...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Modeling Guide - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/modeling/
+    description: Modeling Guide This guide walks through the process of defining SQLAlchemy
+      models that DBWarden can read to generate migration SQL. For the complete reference
+      of all supported Meta attributes, see...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Modeling Guide
 
 This guide walks through the process of defining SQLAlchemy models that DBWarden can read to generate migration SQL. For the complete reference of all supported Meta attributes, see [SQLAlchemy Models Reference](../models.md).

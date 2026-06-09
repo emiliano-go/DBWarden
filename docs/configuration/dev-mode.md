@@ -1,3 +1,41 @@
+---
+seo:
+  title: Dev Mode - DBWarden Documentation
+  description: 'Dev Mode Use SQLite for local development and PostgreSQL in production
+    with the same codebase. What Is Dev Mode? Dev mode lets you configure two database
+    URLs: Production URL Used by default Dev URL...'
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/dev-mode/
+  robots: index,follow
+  og:
+    type: website
+    title: Dev Mode - DBWarden Documentation
+    description: 'Dev Mode Use SQLite for local development and PostgreSQL in production
+      with the same codebase. What Is Dev Mode? Dev mode lets you configure two database
+      URLs: Production URL Used by default Dev URL...'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/dev-mode/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Dev Mode - DBWarden Documentation
+    description: 'Dev Mode Use SQLite for local development and PostgreSQL in production
+      with the same codebase. What Is Dev Mode? Dev mode lets you configure two database
+      URLs: Production URL Used by default Dev URL...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Dev Mode - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/dev-mode/
+    description: 'Dev Mode Use SQLite for local development and PostgreSQL in production
+      with the same codebase. What Is Dev Mode? Dev mode lets you configure two database
+      URLs: Production URL Used by default Dev URL...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Dev Mode
 
 Use SQLite for local development and PostgreSQL in production with the same codebase.

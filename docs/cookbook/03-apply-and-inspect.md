@@ -1,3 +1,41 @@
+---
+seo:
+  title: 3. Applying and Inspecting Migrations - DBWarden Documentation
+  description: 3. Applying and Inspecting Migrations What You'll Learn How dbwarden
+    migrate applies pending SQL How to roll back and downgrade to specific versions
+    How to inspect migration history and status How to...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/03-apply-and-inspect/
+  robots: index,follow
+  og:
+    type: website
+    title: 3. Applying and Inspecting Migrations - DBWarden Documentation
+    description: 3. Applying and Inspecting Migrations What You'll Learn How dbwarden
+      migrate applies pending SQL How to roll back and downgrade to specific versions
+      How to inspect migration history and status How to...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/03-apply-and-inspect/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: 3. Applying and Inspecting Migrations - DBWarden Documentation
+    description: 3. Applying and Inspecting Migrations What You'll Learn How dbwarden
+      migrate applies pending SQL How to roll back and downgrade to specific versions
+      How to inspect migration history and status How to...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: 3. Applying and Inspecting Migrations - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/03-apply-and-inspect/
+    description: 3. Applying and Inspecting Migrations What You'll Learn How dbwarden
+      migrate applies pending SQL How to roll back and downgrade to specific versions
+      How to inspect migration history and status How to...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # 3. Applying and Inspecting Migrations
 
 ## What You'll Learn

@@ -2743,9 +2743,21 @@ def _build_foreign_key_sql(op: dict[str, Any], backend: str) -> list[MigrationSt
             ),
         ]
     else:  # drop_foreign_key
+        cols = ", ".join(columns)
+        ref_cols = ", ".join(ref_columns)
+        fk_sql = f"ALTER TABLE {table} ADD CONSTRAINT {fk_name} FOREIGN KEY ({cols}) REFERENCES {ref_table}({ref_cols})"
+        on_delete = op.get("on_delete")
+        on_update = op.get("on_update")
+        if on_delete and on_delete != "NO ACTION":
+            fk_sql += f" ON DELETE {on_delete}"
+        if on_update and on_update != "NO ACTION":
+            fk_sql += f" ON UPDATE {on_update}"
+        if backend == "postgresql" and op.get("deferrable"):
+            fk_sql += " DEFERRABLE INITIALLY DEFERRED"
+        fk_sql += ";"
+
         if backend in ("mysql", "mariadb"):
             upgrade = f"ALTER TABLE {table} DROP FOREIGN KEY {fk_name};"
-            rollback = f"-- ALTER TABLE {table} ADD CONSTRAINT {fk_name} FOREIGN KEY ..."
         elif backend == "sqlite":
             return [
                 MigrationStatement(
@@ -2759,12 +2771,11 @@ def _build_foreign_key_sql(op: dict[str, Any], backend: str) -> list[MigrationSt
             ]
         else:
             upgrade = f"ALTER TABLE {table} DROP CONSTRAINT {fk_name};"
-            rollback = f"-- ALTER TABLE {table} ADD CONSTRAINT {fk_name} FOREIGN KEY ..."
         return [
             MigrationStatement(
                 order=StatementOrder.ALTER_FOREIGN_KEY,
                 upgrade_sql=upgrade,
-                rollback_sql=rollback,
+                rollback_sql=fk_sql,
             ),
         ]
 
@@ -2859,6 +2870,23 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
             ),
         ]
     else:  # drop_index
+        if backend == "clickhouse":
+            upgrade = f"ALTER TABLE {table} DROP INDEX {idx_name};"
+            ch_type = using.upper() if using else "MINMAX"
+            ch_granularity = op.get("granularity", 1)
+            rollback = (
+                f"ALTER TABLE {table} ADD INDEX {idx_name} "
+                f"({', '.join(columns)}) "
+                f"TYPE {ch_type} "
+                f"GRANULARITY {ch_granularity};"
+            )
+            return [
+                MigrationStatement(
+                    order=StatementOrder.ALTER_INDEX,
+                    upgrade_sql=upgrade,
+                    rollback_sql=rollback,
+                ),
+            ]
         upgrade = f"DROP INDEX {idx_name};"
         unique_clause = "UNIQUE " if unique else ""
         cols_list = ", ".join(columns)

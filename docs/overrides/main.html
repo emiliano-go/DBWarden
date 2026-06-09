@@ -1,5 +1,28 @@
 {% extends "base.html" %}
 
-{% block extrahead %}
-<meta name="test-seo" content="{{ page.meta.seo.test }}">
+{% block site_meta %}
+{{ super() }}
+{% if page.meta and page.meta.seo %}
+<meta name="description" content="{{ page.meta.seo.description }}">
+<link rel="canonical" href="{{ page.meta.seo.canonical }}">
+<meta name="robots" content="{{ page.meta.seo.robots }}">
+
+<meta property="og:type" content="{{ page.meta.seo.og.type }}">
+<meta property="og:title" content="{{ page.meta.seo.og.title }}">
+<meta property="og:description" content="{{ page.meta.seo.og.description }}">
+<meta property="og:url" content="{{ page.meta.seo.og.url }}">
+<meta property="og:image" content="{{ page.meta.seo.og.image }}">
+<meta property="og:site_name" content="DBWarden Documentation">
+
+<meta name="twitter:card" content="{{ page.meta.seo.twitter.card }}">
+<meta name="twitter:title" content="{{ page.meta.seo.twitter.title }}">
+<meta name="twitter:description" content="{{ page.meta.seo.twitter.description }}">
+<meta name="twitter:image" content="{{ page.meta.seo.twitter.image }}">
+
+{% if page.meta.seo.schema_jsonld %}
+<script type="application/ld+json">
+{{ page.meta.seo.schema_jsonld | tojson }}
+</script>
+{% endif %}
+{% endif %}
 {% endblock %}

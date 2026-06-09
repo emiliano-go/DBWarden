@@ -1,3 +1,41 @@
+---
+seo:
+  title: Checking Status - DBWarden Documentation
+  description: Checking Status Use status, history, and checkdb to understand migration
+    state before and after changes. What you'll learn when to run status commands
+    how to read applied vs pending signals how to...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/checking-status/
+  robots: index,follow
+  og:
+    type: website
+    title: Checking Status - DBWarden Documentation
+    description: Checking Status Use status, history, and checkdb to understand migration
+      state before and after changes. What you'll learn when to run status commands
+      how to read applied vs pending signals how to...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/checking-status/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Checking Status - DBWarden Documentation
+    description: Checking Status Use status, history, and checkdb to understand migration
+      state before and after changes. What you'll learn when to run status commands
+      how to read applied vs pending signals how to...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Checking Status - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/checking-status/
+    description: Checking Status Use status, history, and checkdb to understand migration
+      state before and after changes. What you'll learn when to run status commands
+      how to read applied vs pending signals how to...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Checking Status
 
 Use `status`, `history`, and `check-db` to understand migration state before and after changes.

@@ -1,3 +1,41 @@
+---
+seo:
+  title: '`diff` - DBWarden Documentation'
+  description: diff Show structural differences between SQLAlchemy models and a live
+    database. Readonly — no files are written. Usage bash dbwarden diff database primary
+    dbwarden diff database primary out json...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/diff/
+  robots: index,follow
+  og:
+    type: website
+    title: '`diff` - DBWarden Documentation'
+    description: diff Show structural differences between SQLAlchemy models and a
+      live database. Readonly — no files are written. Usage bash dbwarden diff database
+      primary dbwarden diff database primary out json...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/diff/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: '`diff` - DBWarden Documentation'
+    description: diff Show structural differences between SQLAlchemy models and a
+      live database. Readonly — no files are written. Usage bash dbwarden diff database
+      primary dbwarden diff database primary out json...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: '`diff` - DBWarden Documentation'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/diff/
+    description: diff Show structural differences between SQLAlchemy models and a
+      live database. Readonly — no files are written. Usage bash dbwarden diff database
+      primary dbwarden diff database primary out json...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # `diff`
 
 Show structural differences between SQLAlchemy models and a live database.

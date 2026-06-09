@@ -1,3 +1,41 @@
+---
+seo:
+  title: SQL Translation - DBWarden Documentation
+  description: 'SQL Translation DBWarden includes a SQL translation layer to support
+    development workflows where your primary database differs from your development
+    database. The most common case is: Primary...'
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/sql-translation/
+  robots: index,follow
+  og:
+    type: website
+    title: SQL Translation - DBWarden Documentation
+    description: 'SQL Translation DBWarden includes a SQL translation layer to support
+      development workflows where your primary database differs from your development
+      database. The most common case is: Primary...'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/sql-translation/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: SQL Translation - DBWarden Documentation
+    description: 'SQL Translation DBWarden includes a SQL translation layer to support
+      development workflows where your primary database differs from your development
+      database. The most common case is: Primary...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: SQL Translation - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/sql-translation/
+    description: 'SQL Translation DBWarden includes a SQL translation layer to support
+      development workflows where your primary database differs from your development
+      database. The most common case is: Primary...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # SQL Translation
 
 DBWarden includes a SQL translation layer to support development workflows where your primary database differs from your development database.

@@ -1,3 +1,41 @@
+---
+seo:
+  title: Migrate from TOML - DBWarden Documentation
+  description: Migrate from TOML If your project currently uses warden.toml for DBWarden
+    configuration, this guide walks through transitioning to the Pythonbased databaseconfig...
+    approach. Why migrate The Python...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/reference/migrate-from-toml/
+  robots: index,follow
+  og:
+    type: website
+    title: Migrate from TOML - DBWarden Documentation
+    description: Migrate from TOML If your project currently uses warden.toml for
+      DBWarden configuration, this guide walks through transitioning to the Pythonbased
+      databaseconfig... approach. Why migrate The Python...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/reference/migrate-from-toml/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Migrate from TOML - DBWarden Documentation
+    description: Migrate from TOML If your project currently uses warden.toml for
+      DBWarden configuration, this guide walks through transitioning to the Pythonbased
+      databaseconfig... approach. Why migrate The Python...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Migrate from TOML - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/reference/migrate-from-toml/
+    description: Migrate from TOML If your project currently uses warden.toml for
+      DBWarden configuration, this guide walks through transitioning to the Pythonbased
+      databaseconfig... approach. Why migrate The Python...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Migrate from TOML
 
 If your project currently uses `warden.toml` for DBWarden configuration, this guide walks through transitioning to the Python-based `database_config(...)` approach.

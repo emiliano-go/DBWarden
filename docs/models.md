@@ -1,3 +1,41 @@
+---
+seo:
+  title: SQLAlchemy Models Reference - DBWarden Documentation
+  description: SQLAlchemy Models Reference This page is the reference for all supported
+    Meta attributes across every backend. For a stepbystep walkthrough of defining
+    models, see the Modeling...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/models/
+  robots: index,follow
+  og:
+    type: website
+    title: SQLAlchemy Models Reference - DBWarden Documentation
+    description: SQLAlchemy Models Reference This page is the reference for all supported
+      Meta attributes across every backend. For a stepbystep walkthrough of defining
+      models, see the Modeling...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/models/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: SQLAlchemy Models Reference - DBWarden Documentation
+    description: SQLAlchemy Models Reference This page is the reference for all supported
+      Meta attributes across every backend. For a stepbystep walkthrough of defining
+      models, see the Modeling...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: SQLAlchemy Models Reference - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/models/
+    description: SQLAlchemy Models Reference This page is the reference for all supported
+      Meta attributes across every backend. For a stepbystep walkthrough of defining
+      models, see the Modeling...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # SQLAlchemy Models Reference
 
 This page is the **reference** for all supported Meta attributes across every backend. For a step-by-step walkthrough of defining models, see the [Modeling Guide](tutorial/modeling.md).

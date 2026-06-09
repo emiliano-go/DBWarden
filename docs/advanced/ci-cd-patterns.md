@@ -1,3 +1,41 @@
+---
+seo:
+  title: CI/CD Patterns - DBWarden Documentation
+  description: CI/CD Patterns Patterns for running DBWarden migrations in automated
+    pipelines. Core principle Run migrations from exactly one job. Serialize migration
+    and deploy. Never run migrate in parallel...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/ci-cd-patterns/
+  robots: index,follow
+  og:
+    type: website
+    title: CI/CD Patterns - DBWarden Documentation
+    description: CI/CD Patterns Patterns for running DBWarden migrations in automated
+      pipelines. Core principle Run migrations from exactly one job. Serialize migration
+      and deploy. Never run migrate in parallel...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/ci-cd-patterns/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: CI/CD Patterns - DBWarden Documentation
+    description: CI/CD Patterns Patterns for running DBWarden migrations in automated
+      pipelines. Core principle Run migrations from exactly one job. Serialize migration
+      and deploy. Never run migrate in parallel...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: CI/CD Patterns - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/ci-cd-patterns/
+    description: CI/CD Patterns Patterns for running DBWarden migrations in automated
+      pipelines. Core principle Run migrations from exactly one job. Serialize migration
+      and deploy. Never run migrate in parallel...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # CI/CD Patterns
 
 Patterns for running DBWarden migrations in automated pipelines.

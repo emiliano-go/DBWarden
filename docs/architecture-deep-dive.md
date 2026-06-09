@@ -1,3 +1,41 @@
+---
+seo:
+  title: Architecture - DBWarden Documentation
+  description: Architecture This page explains DBWarden internals for contributors
+    and advanced debugging. Layered architecture text CLI Typer Commands layer Engine
+    layer planning/parsing/version/checksum/model...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/architecture-deep-dive/
+  robots: index,follow
+  og:
+    type: website
+    title: Architecture - DBWarden Documentation
+    description: Architecture This page explains DBWarden internals for contributors
+      and advanced debugging. Layered architecture text CLI Typer Commands layer Engine
+      layer planning/parsing/version/checksum/model...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/architecture-deep-dive/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Architecture - DBWarden Documentation
+    description: Architecture This page explains DBWarden internals for contributors
+      and advanced debugging. Layered architecture text CLI Typer Commands layer Engine
+      layer planning/parsing/version/checksum/model...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Architecture - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/architecture-deep-dive/
+    description: Architecture This page explains DBWarden internals for contributors
+      and advanced debugging. Layered architecture text CLI Typer Commands layer Engine
+      layer planning/parsing/version/checksum/model...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Architecture
 
 This page explains DBWarden internals for contributors and advanced debugging.

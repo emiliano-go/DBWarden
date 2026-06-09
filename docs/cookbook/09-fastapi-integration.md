@@ -1,3 +1,41 @@
+---
+seo:
+  title: 9. FastAPI Integration - DBWarden Documentation
+  description: 9. FastAPI Integration What You'll Learn How to wire DBWarden into
+    a FastAPI application lifecycle How to use primary.asyncsession as a dependency
+    injection How to expose health check and migration...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/09-fastapi-integration/
+  robots: index,follow
+  og:
+    type: website
+    title: 9. FastAPI Integration - DBWarden Documentation
+    description: 9. FastAPI Integration What You'll Learn How to wire DBWarden into
+      a FastAPI application lifecycle How to use primary.asyncsession as a dependency
+      injection How to expose health check and migration...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/09-fastapi-integration/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: 9. FastAPI Integration - DBWarden Documentation
+    description: 9. FastAPI Integration What You'll Learn How to wire DBWarden into
+      a FastAPI application lifecycle How to use primary.asyncsession as a dependency
+      injection How to expose health check and migration...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: 9. FastAPI Integration - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/09-fastapi-integration/
+    description: 9. FastAPI Integration What You'll Learn How to wire DBWarden into
+      a FastAPI application lifecycle How to use primary.asyncsession as a dependency
+      injection How to expose health check and migration...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # 9. FastAPI Integration
 
 ## What You'll Learn

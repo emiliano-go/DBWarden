@@ -1,3 +1,41 @@
+---
+seo:
+  title: Transaction Management - DBWarden Documentation
+  description: Transaction Management Learn how to manage database transactions in
+    FastAPI with DBWarden. In these examples, primary is a DatabaseHandle created
+    with databaseconfig. Use primary.asyncsession as the...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/transaction-management/
+  robots: index,follow
+  og:
+    type: website
+    title: Transaction Management - DBWarden Documentation
+    description: Transaction Management Learn how to manage database transactions
+      in FastAPI with DBWarden. In these examples, primary is a DatabaseHandle created
+      with databaseconfig. Use primary.asyncsession as the...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/transaction-management/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Transaction Management - DBWarden Documentation
+    description: Transaction Management Learn how to manage database transactions
+      in FastAPI with DBWarden. In these examples, primary is a DatabaseHandle created
+      with databaseconfig. Use primary.asyncsession as the...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Transaction Management - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/transaction-management/
+    description: Transaction Management Learn how to manage database transactions
+      in FastAPI with DBWarden. In these examples, primary is a DatabaseHandle created
+      with databaseconfig. Use primary.asyncsession as the...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Transaction Management
 
 Learn how to manage database transactions in FastAPI with DBWarden.

@@ -1,3 +1,41 @@
+---
+seo:
+  title: Multi-Database Setup - DBWarden Documentation
+  description: MultiDatabase Setup DBWarden supports multiple databases from one config
+    source. What you'll learn how to register more than one database required rules
+    for model paths and defaults command patterns...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/multi-database-setup/
+  robots: index,follow
+  og:
+    type: website
+    title: Multi-Database Setup - DBWarden Documentation
+    description: MultiDatabase Setup DBWarden supports multiple databases from one
+      config source. What you'll learn how to register more than one database required
+      rules for model paths and defaults command patterns...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/multi-database-setup/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Multi-Database Setup - DBWarden Documentation
+    description: MultiDatabase Setup DBWarden supports multiple databases from one
+      config source. What you'll learn how to register more than one database required
+      rules for model paths and defaults command patterns...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Multi-Database Setup - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/multi-database-setup/
+    description: MultiDatabase Setup DBWarden supports multiple databases from one
+      config source. What you'll learn how to register more than one database required
+      rules for model paths and defaults command patterns...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Multi-Database Setup
 
 DBWarden supports multiple databases from one config source.

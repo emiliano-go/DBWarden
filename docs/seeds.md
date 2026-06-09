@@ -1,3 +1,41 @@
+---
+seo:
+  title: Seed Management - DBWarden Documentation
+  description: Seed Management DBWarden provides builtin seed data management for
+    populating databases with initial or reference data. Seeds complement migrations
+    by handling data that belongs in version control....
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/seeds/
+  robots: index,follow
+  og:
+    type: website
+    title: Seed Management - DBWarden Documentation
+    description: Seed Management DBWarden provides builtin seed data management for
+      populating databases with initial or reference data. Seeds complement migrations
+      by handling data that belongs in version control....
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/seeds/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Seed Management - DBWarden Documentation
+    description: Seed Management DBWarden provides builtin seed data management for
+      populating databases with initial or reference data. Seeds complement migrations
+      by handling data that belongs in version control....
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Seed Management - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/seeds/
+    description: Seed Management DBWarden provides builtin seed data management for
+      populating databases with initial or reference data. Seeds complement migrations
+      by handling data that belongs in version control....
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Seed Management
 
 DBWarden provides built-in seed data management for populating databases with initial or reference data. Seeds complement migrations by handling data that belongs in version control.

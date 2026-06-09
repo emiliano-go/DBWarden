@@ -1,3 +1,41 @@
+---
+seo:
+  title: 7. Seeds - DBWarden Documentation
+  description: 7. Seeds What You'll Learn How to create and apply SQL seed files How
+    to create Python seed files with programmatic logic How to list, apply, and roll
+    back seeds How @seeddata works for incode seed...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/07-seeds/
+  robots: index,follow
+  og:
+    type: website
+    title: 7. Seeds - DBWarden Documentation
+    description: 7. Seeds What You'll Learn How to create and apply SQL seed files
+      How to create Python seed files with programmatic logic How to list, apply,
+      and roll back seeds How @seeddata works for incode seed...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/07-seeds/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: 7. Seeds - DBWarden Documentation
+    description: 7. Seeds What You'll Learn How to create and apply SQL seed files
+      How to create Python seed files with programmatic logic How to list, apply,
+      and roll back seeds How @seeddata works for incode seed...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: 7. Seeds - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/07-seeds/
+    description: 7. Seeds What You'll Learn How to create and apply SQL seed files
+      How to create Python seed files with programmatic logic How to list, apply,
+      and roll back seeds How @seeddata works for incode seed...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # 7. Seeds
 
 ## What You'll Learn

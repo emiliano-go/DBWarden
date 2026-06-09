@@ -52,6 +52,7 @@ dev = [
 ]
 docs = [
     "zensical",
+    "seoslug",
 ]
 fastapi = [
     "fastapi>=0.136.1",

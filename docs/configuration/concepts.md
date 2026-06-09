@@ -1,3 +1,41 @@
+---
+seo:
+  title: Configuration Concepts - DBWarden Documentation
+  description: 'Configuration Concepts Understand how DBWarden configuration works
+    under the hood. What is Configuration? Configuration tells DBWarden: Where your
+    databases are connection URLs What kind of databases...'
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/concepts/
+  robots: index,follow
+  og:
+    type: website
+    title: Configuration Concepts - DBWarden Documentation
+    description: 'Configuration Concepts Understand how DBWarden configuration works
+      under the hood. What is Configuration? Configuration tells DBWarden: Where your
+      databases are connection URLs What kind of databases...'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/concepts/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Configuration Concepts - DBWarden Documentation
+    description: 'Configuration Concepts Understand how DBWarden configuration works
+      under the hood. What is Configuration? Configuration tells DBWarden: Where your
+      databases are connection URLs What kind of databases...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Configuration Concepts - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/concepts/
+    description: 'Configuration Concepts Understand how DBWarden configuration works
+      under the hood. What is Configuration? Configuration tells DBWarden: Where your
+      databases are connection URLs What kind of databases...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Configuration Concepts
 
 Understand how DBWarden configuration works under the hood.

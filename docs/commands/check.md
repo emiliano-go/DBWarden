@@ -1,3 +1,41 @@
+---
+seo:
+  title: '`check` - DBWarden Documentation'
+  description: check Analyze schema differences between your SQLAlchemy models and
+    the live database. Usage bash dbwarden check database primary dbwarden check database
+    primary force dbwarden check database primary...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/check/
+  robots: index,follow
+  og:
+    type: website
+    title: '`check` - DBWarden Documentation'
+    description: check Analyze schema differences between your SQLAlchemy models and
+      the live database. Usage bash dbwarden check database primary dbwarden check
+      database primary force dbwarden check database primary...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/check/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: '`check` - DBWarden Documentation'
+    description: check Analyze schema differences between your SQLAlchemy models and
+      the live database. Usage bash dbwarden check database primary dbwarden check
+      database primary force dbwarden check database primary...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: '`check` - DBWarden Documentation'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/check/
+    description: check Analyze schema differences between your SQLAlchemy models and
+      the live database. Usage bash dbwarden check database primary dbwarden check
+      database primary force dbwarden check database primary...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # `check`
 
 Analyze schema differences between your SQLAlchemy models and the live database.

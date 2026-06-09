@@ -1,3 +1,41 @@
+---
+seo:
+  title: Schema Snapshots - DBWarden Documentation
+  description: Schema Snapshots Schema snapshots are JSON files that record the full
+    DDL state of a database at the point a migration was applied. They enable offline
+    migration generation, intelligent rename...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/schema-snapshots/
+  robots: index,follow
+  og:
+    type: website
+    title: Schema Snapshots - DBWarden Documentation
+    description: Schema Snapshots Schema snapshots are JSON files that record the
+      full DDL state of a database at the point a migration was applied. They enable
+      offline migration generation, intelligent rename...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/schema-snapshots/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Schema Snapshots - DBWarden Documentation
+    description: Schema Snapshots Schema snapshots are JSON files that record the
+      full DDL state of a database at the point a migration was applied. They enable
+      offline migration generation, intelligent rename...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Schema Snapshots - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/schema-snapshots/
+    description: Schema Snapshots Schema snapshots are JSON files that record the
+      full DDL state of a database at the point a migration was applied. They enable
+      offline migration generation, intelligent rename...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Schema Snapshots
 
 Schema snapshots are JSON files that record the full DDL state of a database at the point a migration was applied. They enable offline migration generation, intelligent rename detection, and column-level change detection (type, nullability, default).

@@ -1,3 +1,41 @@
+---
+seo:
+  title: PostgreSQL - DBWarden Documentation
+  description: 'PostgreSQL DBWarden treats PostgreSQL as a firstclass backend: every
+    natively supported feature is reverseengineered, diffed, and emitted as correct
+    DDL. FirstClass Features "Firstclass" means the...'
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/databases/postgresql/
+  robots: index,follow
+  og:
+    type: website
+    title: PostgreSQL - DBWarden Documentation
+    description: 'PostgreSQL DBWarden treats PostgreSQL as a firstclass backend: every
+      natively supported feature is reverseengineered, diffed, and emitted as correct
+      DDL. FirstClass Features "Firstclass" means the...'
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/databases/postgresql/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: PostgreSQL - DBWarden Documentation
+    description: 'PostgreSQL DBWarden treats PostgreSQL as a firstclass backend: every
+      natively supported feature is reverseengineered, diffed, and emitted as correct
+      DDL. FirstClass Features "Firstclass" means the...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: PostgreSQL - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/databases/postgresql/
+    description: 'PostgreSQL DBWarden treats PostgreSQL as a firstclass backend: every
+      natively supported feature is reverseengineered, diffed, and emitted as correct
+      DDL. FirstClass Features "Firstclass" means the...'
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # PostgreSQL
 
 DBWarden treats PostgreSQL as a **first-class backend**: every natively supported feature is reverse-engineered, diffed, and emitted as correct DDL.

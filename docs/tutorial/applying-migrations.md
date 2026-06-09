@@ -1,3 +1,41 @@
+---
+seo:
+  title: Applying Migrations - DBWarden Documentation
+  description: Applying Migrations Use migrate to apply pending migrations safely.
+    What you'll learn how DBWarden executes migration plans when to use all, count,
+    toversion, and baseline how to verify migration...
+  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/applying-migrations/
+  robots: index,follow
+  og:
+    type: website
+    title: Applying Migrations - DBWarden Documentation
+    description: Applying Migrations Use migrate to apply pending migrations safely.
+      What you'll learn how DBWarden executes migration plans when to use all, count,
+      toversion, and baseline how to verify migration...
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/applying-migrations/
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    site_name: DBWarden Documentation
+  twitter:
+    card: summary_large_image
+    title: Applying Migrations - DBWarden Documentation
+    description: Applying Migrations Use migrate to apply pending migrations safely.
+      What you'll learn how DBWarden executes migration plans when to use all, count,
+      toversion, and baseline how to verify migration...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+  schema_jsonld:
+    '@context': https://schema.org
+    '@type': WebPage
+    name: Applying Migrations - DBWarden Documentation
+    url: https://emiliano-gandini-outeda.github.io/DBWarden/tutorial/applying-migrations/
+    description: Applying Migrations Use migrate to apply pending migrations safely.
+      What you'll learn how DBWarden executes migration plans when to use all, count,
+      toversion, and baseline how to verify migration...
+    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+---
+
 # Applying Migrations
 
 Use `migrate` to apply pending migrations safely.
