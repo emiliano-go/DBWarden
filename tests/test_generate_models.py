@@ -302,9 +302,9 @@ def test_generate_models_with_tables_filter():
 
 
 class TestClickHouseGenerateModels:
-    def test_render_clickhouse_meta_simple(self):
-        from dbwarden.commands.generate_models import _render_clickhouse_meta
-        meta_lines = _render_clickhouse_meta(
+    def test_render_ch_meta_simple(self):
+        from dbwarden.commands.generate_models import _render_ch_meta
+        meta_lines = _render_ch_meta(
             columns=[],
             options={"ch_engine": "MergeTree", "ch_order_by": ["id"]},
             object_type="table",
@@ -312,20 +312,20 @@ class TestClickHouseGenerateModels:
         assert any("ch_engine = 'MergeTree'" in line for line in meta_lines)
         assert any("ch_order_by = ['id']" in line for line in meta_lines)
 
-    def test_render_clickhouse_meta_with_ch_settings(self):
-        from dbwarden.commands.generate_models import _render_clickhouse_meta
-        meta_lines = _render_clickhouse_meta(
+    def test_render_ch_meta_with_ch_settings(self):
+        from dbwarden.commands.generate_models import _render_ch_meta
+        meta_lines = _render_ch_meta(
             columns=[],
             options={"ch_engine": "MergeTree", "ch_order_by": ["id"], "ch_settings": {"allow_nullable_key": 1}},
             object_type="table",
         )
         assert any("ch_settings = {'allow_nullable_key': 1}" in line for line in meta_lines)
 
-    def test_render_clickhouse_meta_with_engine_spec(self):
-        from dbwarden.commands.generate_models import _render_clickhouse_meta
+    def test_render_ch_meta_with_engine_spec(self):
+        from dbwarden.commands.generate_models import _render_ch_meta
         from dbwarden.schema.engine import ChEngineSpec
         engine = ChEngineSpec(name="ReplicatedMergeTree", args=("/zk/path", "{replica}"))
-        meta_lines = _render_clickhouse_meta(
+        meta_lines = _render_ch_meta(
             columns=[],
             options={"ch_engine_raw": engine, "ch_order_by": ["id"]},
             object_type="table",
