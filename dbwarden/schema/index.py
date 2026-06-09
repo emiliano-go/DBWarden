@@ -30,6 +30,55 @@ class IndexSpec:
     clickhouse_type: str | None = None
     clickhouse_granularity: int | None = None
 
+    def to_dict(self) -> dict[str, Any]:
+        d: dict[str, Any] = {"columns": list(self.columns)}
+        if self.name is not None:
+            d["name"] = self.name
+        if self.unique:
+            d["unique"] = True
+        if self.using is not None:
+            d["using"] = self.using
+        if self.where is not None:
+            d["where"] = self.where
+        if self.include is not None:
+            d["include"] = list(self.include)
+        if self.with_params is not None:
+            d["with_params"] = dict(self.with_params)
+        if self.tablespace is not None:
+            d["tablespace"] = self.tablespace
+        if self.nulls_not_distinct:
+            d["nulls_not_distinct"] = True
+        if self.column_sorting is not None:
+            d["column_sorting"] = dict(self.column_sorting)
+        if self.comment is not None:
+            d["comment"] = self.comment
+        if not self.concurrently:
+            d["concurrently"] = False
+        if self.clickhouse_type is not None:
+            d["clickhouse_type"] = self.clickhouse_type
+        if self.clickhouse_granularity is not None:
+            d["clickhouse_granularity"] = self.clickhouse_granularity
+        return d
+
+    @classmethod
+    def from_dict(cls, d: dict) -> IndexSpec:
+        return cls(
+            columns=list(d.get("columns", [])),
+            name=d.get("name"),
+            unique=bool(d.get("unique", False)),
+            using=d.get("using"),
+            where=d.get("where"),
+            include=d.get("include"),
+            with_params=d.get("with_params"),
+            tablespace=d.get("tablespace"),
+            nulls_not_distinct=bool(d.get("nulls_not_distinct", False)),
+            column_sorting=d.get("column_sorting"),
+            comment=d.get("comment"),
+            concurrently=bool(d.get("concurrently", True)),
+            clickhouse_type=d.get("clickhouse_type"),
+            clickhouse_granularity=d.get("clickhouse_granularity"),
+        )
+
 
 def index(
     name: str,

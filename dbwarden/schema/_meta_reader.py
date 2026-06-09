@@ -14,7 +14,6 @@ _LIST_FIELDS = {
     "pg_checks",
     "pg_uniques",
     "pg_excludes",
-    "ch_indexes",
     "my_indexes",
     "sq_indexes",
     "pg_inherits",
@@ -113,7 +112,6 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
     meta.pg_checks = list(table_attrs.get("pg_checks", []))
     meta.pg_uniques = list(table_attrs.get("pg_uniques", []))
     meta.pg_excludes = list(table_attrs.get("pg_excludes", []))
-    meta.ch_indexes = list(table_attrs.get("ch_indexes", []))
     meta.my_indexes = list(table_attrs.get("my_indexes", []))
     meta.sq_indexes = list(table_attrs.get("sq_indexes", []))
     meta.table_attrs = dict(table_attrs)

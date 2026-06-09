@@ -12,6 +12,12 @@ class ChEngineSpec:
     replica_name: str | None = None
     settings: dict[str, str] | None = None
 
+    def __post_init__(self) -> None:
+        if isinstance(self.args, str):
+            self.args = (self.args,)
+        elif not isinstance(self.args, tuple):
+            self.args = tuple(self.args)
+
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"name": self.name}
         if self.args:

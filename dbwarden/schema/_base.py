@@ -16,7 +16,6 @@ class DBWardenMeta:
     pg_checks: list[Any] = dc_field(default_factory=list)
     pg_uniques: list[Any] = dc_field(default_factory=list)
     pg_excludes: list[Any] = dc_field(default_factory=list)
-    ch_indexes: list[Any] = dc_field(default_factory=list)
     my_indexes: list[Any] = dc_field(default_factory=list)
     sq_indexes: list[Any] = dc_field(default_factory=list)
     table_attrs: dict[str, Any] = dc_field(default_factory=dict)
@@ -36,7 +35,6 @@ def attach_meta(cls, incoming: DBWardenMeta) -> None:
         "pg_checks",
         "pg_uniques",
         "pg_excludes",
-        "ch_indexes",
         "my_indexes",
         "sq_indexes",
     ):
