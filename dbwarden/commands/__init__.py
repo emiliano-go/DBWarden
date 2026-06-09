@@ -281,6 +281,14 @@ def handle_generate_models(
     single_file: bool = False,
     database: str | None = None,
 ) -> None:
+    if not clickhouse_engines:
+        from dbwarden.config import get_database
+        try:
+            config = get_database(database)
+            if config.database_type == "clickhouse":
+                clickhouse_engines = True
+        except Exception:
+            pass
     generate_models_cmd(
         output=output,
         tables=tables,

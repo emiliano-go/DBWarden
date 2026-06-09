@@ -1335,7 +1335,7 @@ def generate_create_dictionary_sql(table: ModelTable) -> str:
     """Generate CREATE DICTIONARY SQL from a ModelTable."""
     options = table.clickhouse_options
     columns_sql = ",\n".join(
-        f"    {col.name} {col.type}"
+        f"    {col.name} {col.ch_meta.get('ch_type', col.type)}"
         for col in table.columns
     )
     pk = options.get("ch_dict_primary_key")

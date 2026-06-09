@@ -359,7 +359,21 @@ def extract_full_schema_snapshot(
 ) -> dict[str, Any]:
     from sqlalchemy import inspect, text
 
-    db_name = database or "default"
+    if database_type is None:
+        try:
+            from dbwarden.config import get_database
+            database_type = get_database(database).database_type
+        except Exception:
+            pass
+
+    if database is None:
+        try:
+            from dbwarden.config import get_multi_db_config
+            db_name = get_multi_db_config().default
+        except Exception:
+            db_name = "default"
+    else:
+        db_name = database
 
     if database_type == "clickhouse":
         if sqlalchemy_url is not None:
@@ -877,8 +891,8 @@ def _extract_clickhouse_schema_snapshot(connection: Any, db_name: str) -> dict[s
 
     column_rows = connection.execute(
         text(
-            "SELECT table, name, type, default_kind, default_expression, codec_expression, "
-            "ttl_expression, comment, is_in_primary_key, is_in_sorting_key, is_in_partition_key "
+            "SELECT table, name, type, default_kind, default_expression, compression_codec AS codec_expression, "
+            "NULL AS ttl_expression, comment, is_in_primary_key, is_in_sorting_key, is_in_partition_key "
             "FROM system.columns WHERE database = currentDatabase()"
         )
     ).fetchall()
@@ -1261,7 +1275,14 @@ def find_latest_snapshot(database: str | None = None) -> dict[str, Any] | None:
     if not os.path.isdir(schemas_dir):
         return None
 
-    db_name = database or "default"
+    if database is None:
+        try:
+            from dbwarden.config import get_multi_db_config
+            db_name = get_multi_db_config().default
+        except Exception:
+            db_name = "default"
+    else:
+        db_name = database
 
     prefix = f"{db_name}__"
     candidates: list[tuple[str, str]] = []
