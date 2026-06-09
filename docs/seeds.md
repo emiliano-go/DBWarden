@@ -89,6 +89,81 @@ def seed(connection, session):
     session.flush()
 ```
 
+## In-Code Seed Definitions
+
+DBWarden also supports seeds defined directly in your Python code alongside your models, using the `@seed_data` decorator. This keeps seed logic close to the model it populates.
+
+### Row-Based Seeds
+
+Define static rows with `SeedRow`:
+
+```python
+from dbwarden.schema import seed_data, SeedRow
+
+@seed_data(
+    database="primary",
+    version="0001",
+    description="initial countries",
+    on_conflict="update",
+    conflict_columns=["code"],
+)
+class CountrySeed:
+    model = Country
+    rows = [
+        SeedRow(code="UY", name="Uruguay"),
+        SeedRow(code="AR", name="Argentina"),
+    ]
+```
+
+`on_conflict` controls behavior when a row with matching `conflict_columns` already exists:
+
+| Value | Behavior |
+|-------|----------|
+| `"ignore"` (default) | Skips existing rows silently |
+| `"update"` | Updates existing rows with new values |
+| `"error"` | Raises an error on conflict |
+
+### Logic-Based Seeds
+
+Define a `generate(session)` static method for programmatic data:
+
+```python
+@seed_data(database="primary", version="0002", description="load permissions")
+class PermissionSeed:
+    model = Permission
+
+    @staticmethod
+    def generate(session):
+        for resource in ["users", "orders"]:
+            for action in ["read", "write", "delete"]:
+                session.add(Permission(name=f"{resource}:{action}"))
+```
+
+### Discovery and Tracking
+
+Code seeds are discovered through the same `model_paths` scan as models. They coexist with file-based seeds and are sorted together by `version` at apply time.
+
+| Aspect | Behavior |
+|--------|----------|
+| Discovery | Scanned via `model_paths` alongside models |
+| Versioning | Same `V0001__...` scheme as file seeds |
+| Ordering | Code seeds and file seeds interleave by version |
+| Duplicate versions | Raises error at `seed apply` |
+| Source hash | Computed from class source; hash change warns at apply time |
+
+### Mixing File and Code Seeds
+
+File seeds and code seeds are compatible. You can migrate gradually:
+
+```text
+seeds/
+  V0001__seed_initial_users.sql       # existing file seed
+  V0002__seed_lookup_tables.sql       # existing file seed
+
+# app/models/seeds.py                  # new code seeds
+# @seed_data(version="0003", ...)     # sorted after V0002
+```
+
 ## Applying seeds
 
 Apply all pending seeds:
@@ -119,7 +194,7 @@ dbwarden seed apply --database primary --dry-run
 
 ## Listing seeds
 
-View which seeds have been applied:
+View which seeds have been applied (includes both file and code seeds):
 
 ```bash
 dbwarden seed list --database primary
@@ -132,6 +207,7 @@ Seeds for database 'primary':
   V0001  seed_initial_users                   applied  2025-06-01 10:00:00
   V0002  seed_lookup_tables                   applied  2025-06-01 10:01:00
   V0003  generate_sample_data                 pending
+  V0004  initial countries                    pending   (code seed)
 ```
 
 List across all databases:

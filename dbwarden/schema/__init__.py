@@ -10,6 +10,7 @@ from dbwarden.schema.mariadb import MdbTableSpec
 from dbwarden.schema.mysql import MyTableSpec
 from dbwarden.schema.pgsql import PgIndexSpec, PgTableSpec, pg_index
 from dbwarden.schema.projection import ProjectionSpec
+from dbwarden.schema.seed import SeedRow, seed_data
 from dbwarden.schema.sqlite import SqTableSpec
 from dbwarden.schema.table_meta import (
     CHColumnMeta,
@@ -45,6 +46,8 @@ __all__ = [
     "ProjectionSpec",
     "read_meta",
     "SchemaConfig",
+    "seed_data",
+    "SeedRow",
     "SqTableSpec",
     "TableMeta",
     "UniqueSpec",
