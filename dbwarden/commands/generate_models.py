@@ -355,14 +355,14 @@ def _generate_table_code(
     if clickhouse_options:
         lines.append("")
         lines.append("    class Meta(CHTableMeta):")
-        lines.extend(_render_clickhouse_meta(columns, clickhouse_options, object_type))
+        lines.extend(_render_ch_meta(columns, clickhouse_options, object_type))
     if pg_meta or any(col.get("pg_meta") or col.get("comment") for col in columns):
         lines.append("")
         lines.extend(_render_postgresql_meta(columns, pg_meta))
     return "\n".join(lines) + "\n"
 
 
-def _render_clickhouse_meta(columns: list[dict], options: dict, object_type: str) -> list[str]:
+def _render_ch_meta(columns: list[dict], options: dict, object_type: str) -> list[str]:
     lines: list[str] = []
 
     engine_raw = options.get("ch_engine_raw")
@@ -994,7 +994,7 @@ def generate_models_cmd(
 
             ch_options: dict = {}
             if actual_dialect == "clickhouse" and clickhouse_engines:
-                ch_options = _extract_clickhouse_options(connection, table_name)
+                ch_options = _extract_ch_meta(connection, table_name)
                 # Merge column CH metadata into columns_info
                 ch_columns_map: dict[str, dict] = {}
                 for ch_col in ch_options.get("columns", []):
@@ -1089,7 +1089,7 @@ def _clean_engine_full(engine_full: str) -> str:
     return engine_full[:name_end]
 
 
-def _extract_clickhouse_options(connection, table_name: str) -> dict:
+def _extract_ch_meta(connection, table_name: str) -> dict:
     from sqlalchemy import text
 
     tables_result = connection.execute(
