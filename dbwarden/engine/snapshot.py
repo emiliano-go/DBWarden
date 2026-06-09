@@ -112,9 +112,31 @@ TYPE_NORMALIZATION_MAP: dict[str, str | None] = {
     "int4range": "int4range",
     "int8range": "int8range",
     "numrange": "numrange",
+    # ClickHouse native type mappings (non-conflicting with PG names)
+    "float64": "float",
+    "string": "varchar",
+    "fixedstring": "varchar",
+    "datetime64": "timestamp",
+    "date32": "date",
+    "ipv4": "varchar",
+    "ipv6": "varchar",
+    "map": "map",
+    "enum8": "enum",
+    "enum16": "enum",
+    "tuple": "tuple",
 }
 
 _RAW_TYPE_PATTERN = re.compile(r"^([a-zA-Z][a-zA-Z0-9_]*)(?:\((\d+)(?:\s*,\s*(\d+))?\))?\s*$")
+
+
+def _strip_ch_type_wrappers(raw_type: str) -> str:
+    """Strip Nullable() and LowCardinality() wrappers from a CH type string."""
+    result = raw_type.strip()
+    while result.startswith("Nullable(") and result.endswith(")"):
+        result = result[9:-1].strip()
+    while result.startswith("LowCardinality(") and result.endswith(")"):
+        result = result[15:-1].strip()
+    return result
 
 
 def normalize_type(raw_type: str) -> dict[str, Any]:
@@ -171,6 +193,9 @@ def _build_alter_type_sql(
             f"-- ALTER TABLE {table} ALTER COLUMN {column} TYPE {new_type}"
         )
         rollback = f"-- ALTER TABLE {table} ALTER COLUMN {column} TYPE <original_type>"
+    elif backend == "clickhouse":
+        upgrade = f"ALTER TABLE {table} MODIFY COLUMN {column} {new_type}"
+        rollback = f"-- ALTER TABLE {table} MODIFY COLUMN {column} <original_type>"
     else:
         upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {new_type}"
         rollback = f"-- ALTER TABLE {table} ALTER COLUMN {column} TYPE <original_type>"
@@ -1657,22 +1682,30 @@ def diff_models_against_snapshot(
                 continue
             snap_col = snap_columns[col_name]
             model_col = model_columns[col_name]
-            snap_type = normalize_type(snap_col.get("type", ""))["type"]
-            model_type = normalize_type(str(model_col.type))["type"]
+            snap_raw = snap_col.get("type", "")
+            if _get_backend(db_name) == "clickhouse":
+                snap_raw = _strip_ch_type_wrappers(snap_raw)
+                model_raw = model_col.ch_meta.get("ch_type", str(model_col.type))
+                model_raw = _strip_ch_type_wrappers(model_raw)
+            else:
+                model_raw = str(model_col.type)
+            snap_type = normalize_type(snap_raw)["type"]
+            model_type = normalize_type(model_raw)["type"]
             if snap_type != model_type:
+                op_model_type = model_col.ch_meta.get("ch_type", model_col.type) if _get_backend(db_name) == "clickhouse" else model_col.type
                 upgrade_ops.append({
                     "type": "alter_column_type",
                     "table": table.name,
                     "column": col_name,
                     "snap_type": snap_col.get("type", ""),
-                    "model_type": model_col.type,
+                    "model_type": op_model_type,
                 })
                 rollback_ops.append({
                     "type": "alter_column_type",
                     "table": table.name,
                     "column": col_name,
                     "snap_type": snap_col.get("type", ""),
-                    "model_type": model_col.type,
+                    "model_type": op_model_type,
                 })
             snap_nullable = snap_col.get("nullable", True)
             if snap_nullable != model_col.nullable:
