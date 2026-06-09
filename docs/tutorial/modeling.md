@@ -1,6 +1,6 @@
 # Modeling Guide
 
-This guide explains how to define SQLAlchemy models that DBWarden can read to generate migration SQL. It covers common attributes shared across all backends and backend-specific metadata for PostgreSQL and ClickHouse.
+This guide walks through the process of defining SQLAlchemy models that DBWarden can read to generate migration SQL. For the complete reference of all supported Meta attributes, see [SQLAlchemy Models Reference](../models.md).
 
 ## How DBWarden Reads Models
 
@@ -13,7 +13,7 @@ All backend-specific metadata uses the `class Meta` pattern. The `__table_args__
 
 ## Common Meta Attributes
 
-Every backend supports a core set of cross-database attributes via `class Meta(TableMeta)`.
+Every backend supports a core set of cross-database attributes. These work with any `database_type`.
 
 ### Table-Level
 
@@ -31,17 +31,9 @@ class User(Base):
         indexes = [
             {"name": "ix_users_email", "columns": ["email"]},
         ]
-        checks = [
-            {"name": "ck_users_email_not_empty", "expression": "email <> ''"},
-        ]
 ```
 
-| Attribute | Type | SQL | Backends |
-|-----------|------|-----|----------|
-| `comment` | `str` | `COMMENT ON TABLE t IS '...'` | All |
-| `indexes` | `list[dict]` or `list[IndexSpec]` | `CREATE INDEX ...` | All |
-| `checks` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` | All |
-| `uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` | All |
+Available table-level attributes: `comment`, `indexes`, `checks`, `uniques`. See [Common Meta Attributes](../models.md#common-meta-attributes) for details.
 
 ### Column-Level
 
@@ -52,35 +44,13 @@ class Meta(TableMeta):
         public = False
 ```
 
-| Attribute | Type | SQL | Backends |
-|-----------|------|-----|----------|
-| `comment` | `str` | `COMMENT ON COLUMN t.c IS '...'` | All |
-| `public` | `bool` | Controls field visibility in schemap auto-schema | All |
+Available column-level attributes: `comment`, `public`. Fields named with a leading `_` are implicitly `public=False`.
 
-These attributes work with any `database_type`. Backend-specific subclasses (`PGTableMeta`, `CHTableMeta`) inherit all common attributes and add their own.
+For the full list of backend-specific column attributes (`pg_*`, `ch_*`, `my_*`, `mdb_*`, `sq_*`), see [Column-Level Meta Base Class](../models.md#column-level-meta-base-class).
 
 ## PostgreSQL Models
 
 When `database_type="postgresql"`, use `class Meta(PGTableMeta)` for table-level metadata and `PGColumnMeta` inner classes for column-level metadata.
-
-### Table-Level
-
-```python
-from dbwarden import Base, PGTableMeta
-
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True)
-
-    class Meta(PGTableMeta):
-        pg_fillfactor = 80
-        pg_tablespace = "fastspace"
-```
-
-See [PostgreSQL Deep Dive](../databases/postgresql.md) for the full list of `PGTableMeta` attributes.
-
-### Column-Level
 
 ```python
 from dbwarden import Base, PGTableMeta, PGColumnMeta
@@ -92,6 +62,8 @@ class User(Base):
     bio = Column(Text)
 
     class Meta(PGTableMeta):
+        pg_fillfactor = 80
+
         class id(PGColumnMeta):
             pg_identity = "always"
             pg_identity_start = 100
@@ -101,16 +73,14 @@ class User(Base):
             pg_compression = "pglz"
 ```
 
-See [PostgreSQL Deep Dive](../databases/postgresql.md) for the full list of `PGColumnMeta` attributes.
+See the [reference](../models.md#postgresql-model-metadata) for the full list of `PGTableMeta` and `PGColumnMeta` attributes, or the [PostgreSQL Deep Dive](../databases/postgresql.md) for DDL behavior and snapshot format.
 
 ## ClickHouse Models
 
 When `database_type="clickhouse"`, use `class Meta(CHTableMeta)` for table-level metadata and `CHColumnMeta` inner classes for column-level metadata.
 
-### Table-Level
-
 ```python
-from dbwarden import Base, CHTableMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec
+from dbwarden import Base, CHTableMeta, CHColumnMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec
 
 class Event(Base):
     __tablename__ = "events"
@@ -118,6 +88,7 @@ class Event(Base):
     id = Column(Int64, primary_key=True)
     event_date = Column(Date)
     payload = Column(String)
+    tags = Column(ARRAY(String))
 
     class Meta(CHTableMeta):
         ch_engine = ChEngineSpec("MergeTree")
@@ -133,23 +104,6 @@ class Event(Base):
             ChIndexSpec("ix_payload", ["payload"],
                 type="bloom_filter", granularity=1),
         ]
-```
-
-### Column-Level
-
-```python
-from dbwarden import Base, CHTableMeta, CHColumnMeta, ChEngineSpec
-
-class Event(Base):
-    __tablename__ = "events"
-
-    id = Column(Int64, primary_key=True)
-    payload = Column(String)
-    tags = Column(ARRAY(String))
-
-    class Meta(CHTableMeta):
-        ch_engine = ChEngineSpec("MergeTree")
-        ch_order_by = "event_time"
 
         class payload(CHColumnMeta):
             ch_codec = "ZSTD(3)"
@@ -159,7 +113,7 @@ class Event(Base):
             ch_low_cardinality = True
 ```
 
-See [ClickHouse Deep Dive](../databases/clickhouse.md) for the full list of `CHTableMeta` and `CHColumnMeta` attributes.
+See the [reference](../models.md#clickhouse-model-metadata) for the full list of `CHTableMeta` and `CHColumnMeta` attributes, or the [ClickHouse Deep Dive](../databases/clickhouse.md) for DDL behavior, materialized views, and dictionaries.
 
 ## Using `generate-models` as a Starting Point
 

@@ -504,5 +504,6 @@ dbwarden make-migrations --database primary --plan
 - Schema snapshots are written to `dbwarden/schemas/` after each successful `migrate`: see [Schema Snapshots](schema-snapshots.md).
 - Column-level diff (type/null/default changes) only works with a schema snapshot.
 - Without a snapshot, `make-migrations` falls back to live-DB diffing which only detects new/dropped columns.
+- For authoring guidelines and the review checklist, see [Migration File Format](../migration-files.md).
 
 See also: [Migration File Format](../migration-files.md), [Schema Snapshots](schema-snapshots.md)

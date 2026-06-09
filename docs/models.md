@@ -1,10 +1,8 @@
-# SQLAlchemy Models
+# SQLAlchemy Models Reference
 
-DBWarden reads SQLAlchemy model metadata to generate migration SQL.
+This page is the **reference** for all supported Meta attributes across every backend. For a step-by-step walkthrough of defining models, see the [Modeling Guide](tutorial/modeling.md).
 
-Use `model_paths` in your `database_config(...)` entries to control discovery.
-
-Example:
+DBWarden reads SQLAlchemy model metadata to generate migration SQL. Use `model_paths` in your `database_config(...)` entries to control discovery.
 
 ```python
 primary = database_config(
@@ -15,11 +13,6 @@ primary = database_config(
     model_paths=["app/models"],
 )
 ```
-
-Related docs:
-
-- [Configuration](configuration/index.md)
-- [Your First Migration](tutorial/your-first-migration.md)
 
 ## Common Meta Attributes
 
@@ -58,16 +51,10 @@ class User(Base):
 | `public` | `bool` | Controls field visibility in schemap auto-schema | All |
 
 ```python
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True)
-    internal_note = Column(Text)
-
-    class Meta(TableMeta):
-        class internal_note:
-            comment = "Internal system note"
-            public = False
+class Meta(TableMeta):
+    class internal_note:
+        comment = "Internal system note"
+        public = False
 ```
 
 These attributes work with any `database_type`. Backend-specific subclasses (`PGTableMeta`, `CHTableMeta`) inherit all common attributes and add their own.
@@ -89,7 +76,7 @@ from dbwarden import FieldMeta
 #   sq_generated, sq_generated_mode
 ```
 
-You do not need to inherit from `FieldMeta` directly — `PGColumnMeta` and `CHColumnMeta` already do.
+You do not need to inherit from `FieldMeta` directly -- `PGColumnMeta` and `CHColumnMeta` already do.
 
 ### Backend Subpackages
 
@@ -265,7 +252,6 @@ class Meta(CHTableMeta):
 ```
 
 Current behavior:
-
 - projection definitions are rendered into generated ClickHouse DDL
 - safety checks classify added projections as `INFO`
 - removed projections are classified as `WARNING`

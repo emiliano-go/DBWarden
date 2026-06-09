@@ -16,6 +16,10 @@ It is built for teams that want migration changes to stay explicit, reviewable, 
 - A hidden auto-migration engine that mutates schema silently
 - A deployment platform
 
+## Who Uses DBWarden
+
+Teams that value SQL review as part of their deployment flow, projects with multiple databases needing consistent migration execution.
+
 ## Key Features
 
 - Explicit `--upgrade` and `--rollback` SQL sections in every migration
@@ -106,7 +110,7 @@ With one `database_config(...)` definition and one migration command loop, you g
 
 ## Where to Go Next
 
-- Start here: [Getting Started](getting-started/introduction.md)
-- Learn the workflow: [User Guide](tutorial/your-first-migration.md)
-- Go deeper: [Advanced User Guide](migration-files.md)
-- Lookup details: [Reference](cli-reference.md)
+- Start here: [Getting Started](getting-started/first-steps.md)
+- Learn the workflow: [Your First Migration](tutorial/your-first-migration.md)
+- Go deeper: [Migration Files](migration-files.md)
+- Lookup details: [CLI Reference](cli-reference.md)
