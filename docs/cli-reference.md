@@ -101,6 +101,7 @@ Options:
 
 - `--database`/`-d`: Target database
 - `--plan`: Print migration plan JSON without writing files
+- `--offline`: Use model state file instead of live database (run `export-models` first)
 - `--verbose`/`-v`: Verbose output
 - `--rename`: Repeatable. Declare a column rename in format `table.old_name:new_name`.
 - `--rename-table`: Repeatable. Declare a table rename in format `old_table:new_table`.
@@ -127,6 +128,17 @@ dbwarden generate-models --database primary --exclude-tables logs,audit
 ```
 
 Options: `--output`/`-o` (default `models`), `--tables`, `--exclude-tables`, `--clickhouse-engines`, `--relationships`, `--dialect`, `--single-file`, `--database`/`-d`
+
+### `export-models`
+
+```bash
+dbwarden export-models --database primary
+dbwarden export-models --database primary --output .dbwarden/model_state.json
+```
+
+Exports current model definitions to a JSON state file for offline migration diffs. The generated file is consumed by `make-migrations --offline`.
+
+Options: `--output`/`-o` (default `.dbwarden/model_state.json`), `--database`/`-d`
 
 ### `squash`
 

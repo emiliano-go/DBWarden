@@ -11,6 +11,7 @@ from dbwarden.commands import (
     handle_database_remove,
     handle_diff,
     handle_downgrade,
+    handle_export_models,
     handle_generate_models,
     handle_history,
     handle_init,
@@ -268,6 +269,21 @@ def generate_models(
 
 
 @app.command()
+def export_models(
+    output: str = typer.Option(
+        ".dbwarden/model_state.json", "--output", "-o",
+        help="Output path for the model state JSON file",
+    ),
+    database: str | None = typer.Option(
+        None, "--database", "-d", help="Target database name"
+    ),
+):
+    """Export current model definitions to a JSON state file for offline diffs."""
+    validate_directory()
+    handle_export_models(output=output, database=database)
+
+
+@app.command()
 def make_migrations(
     description: str = typer.Argument(None, help="Description for the migration"),
     verbose: bool = typer.Option(
@@ -301,6 +317,11 @@ def make_migrations(
         "--concurrent/--no-concurrent",
         help="Use CREATE INDEX CONCURRENTLY on PostgreSQL (disable inside transactions)",
     ),
+    offline: bool = typer.Option(
+        False,
+        "--offline",
+        help="Use model state file instead of live database (requires export-models first)",
+    ),
 ):
     """Auto-generate SQL migration from SQLAlchemy models."""
     validate_directory()
@@ -313,6 +334,7 @@ def make_migrations(
         safe_type_change=safe_type_change,
         rename_table_flags=rename_table,
         concurrent=concurrent,
+        offline=offline,
     )
 
 

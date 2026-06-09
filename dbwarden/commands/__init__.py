@@ -1,6 +1,7 @@
 from dbwarden.commands.check import check_cmd
 from dbwarden.commands.check_db import check_db_cmd
 from dbwarden.commands.downgrade import downgrade_cmd
+from dbwarden.commands.export_models import export_models_cmd
 from dbwarden.commands.extra import diff_cmd, lock_status_cmd, squash_cmd, unlock_cmd
 from dbwarden.commands.generate_models import generate_models_cmd
 from dbwarden.commands.history import history_cmd
@@ -81,6 +82,7 @@ def handle_make_migrations(
     safe_type_change: bool = False,
     rename_table_flags: list[str] | None = None,
     concurrent: bool = True,
+    offline: bool = False,
 ) -> None:
     """Handle make-migrations command."""
     make_migrations_cmd(
@@ -92,6 +94,7 @@ def handle_make_migrations(
         safe_type_change=safe_type_change,
         rename_table_flags=rename_table_flags,
         concurrent=concurrent,
+        offline=offline,
     )
 
 
@@ -299,6 +302,14 @@ def handle_generate_models(
         single_file=single_file,
         database=database,
     )
+
+
+def handle_export_models(
+    output: str = ".dbwarden/model_state.json",
+    database: str | None = None,
+) -> None:
+    """Handle export-models command."""
+    export_models_cmd(output=output, database=database)
 
 
 def handle_seed_create(

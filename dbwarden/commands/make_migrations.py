@@ -248,6 +248,107 @@ def get_pending_migration_statements(migrations_dir: str) -> set[str]:
     return all_statements
 
 
+def _run_offline_migrations(description: str | None = None, database: str | None = None) -> None:
+    import json
+    import os
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    from dbwarden.config import get_database, get_multi_db_config
+    from dbwarden.engine.model_discovery import get_all_model_tables
+    from dbwarden.engine.offline import diff_model_states, model_state_to_dict
+    from dbwarden.engine.snapshot import snapshot_diff_to_sql
+    from dbwarden.engine.version import get_migrations_directory, get_migration_filepaths_by_version
+
+    config = get_database(database)
+    multi_config = get_multi_db_config()
+    db_name = database or multi_config.default
+    model_paths = config.model_paths
+
+    if not model_paths:
+        model_paths = auto_discover_model_paths()
+
+    if not model_paths:
+        logger = get_logger()
+        logger.warning("No model paths found. Please set model_paths in dbwarden config")
+        console.print("No SQLAlchemy models found. Please:", style="yellow")
+        console.print("  1. Create models/ directory with your SQLAlchemy models", style="white")
+        console.print("  2. Or set model_paths in dbwarden config", style="white")
+        return
+
+    state_path = Path(".dbwarden/model_state.json")
+
+    if not state_path.exists():
+        console.print("Error: .dbwarden/model_state.json not found.", style="red")
+        console.print("Run 'dbwarden export-models' first to establish a baseline.", style="yellow")
+        return
+
+    prev_state = json.loads(state_path.read_text())
+    current_tables = get_all_model_tables(model_paths, db_name=database)
+    current_state = model_state_to_dict(current_tables)
+
+    upgrade_ops, rollback_ops = diff_model_states(prev_state, current_state)
+
+    if not upgrade_ops:
+        console.print("No new migrations to generate - all models already covered by existing migrations.", style="cyan")
+        return
+
+    from dbwarden.engine.snapshot import snapshot_diff_to_sql, Change
+    from dbwarden.engine.version import get_migration_filepaths_by_version
+
+    upgrade_sql, rollback_sql, changes = snapshot_diff_to_sql(
+        upgrade_ops, rollback_ops, database=database, db_name=db_name,
+    )
+
+    if not upgrade_sql.strip():
+        console.print("No new migrations to generate - all models already covered by existing migrations.", style="cyan")
+        return
+
+    migrations_dir = get_migrations_directory(database)
+    existing_statements = get_pending_migration_statements(migrations_dir)
+
+    filtered_statements = []
+    filtered_rollback = []
+    for u_sql, r_sql in zip(upgrade_sql.strip().split("\n\n"), rollback_sql.strip().split("\n\n")):
+        if u_sql.strip() and u_sql.strip() not in existing_statements:
+            filtered_statements.append(u_sql.strip())
+            filtered_rollback.append(r_sql.strip())
+
+    if not filtered_statements:
+        console.print("No new migrations to generate - all models already covered by existing migrations.", style="cyan")
+        return
+
+    existing_versions = get_migration_filepaths_by_version(migrations_dir)
+    next_version = f"{int(max(existing_versions.keys(), default='0000')) + 1:04d}"
+    safe_desc = (description or "offline migration").replace(" ", "_").lower()[:60]
+    filename = f"{db_name}__{next_version}_{safe_desc}.sql"
+
+    header = f"-- upgrade\n\n"
+    header += "\n\n".join(filtered_statements)
+    header += "\n\n-- rollback\n\n"
+    header += "\n\n".join(reversed(filtered_rollback))
+    header += "\n"
+
+    filepath = os.path.join(migrations_dir, filename)
+    with open(filepath, "w") as f:
+        f.write(header)
+
+    # Write plan
+    migration_id = f"{db_name}__{next_version}_{safe_desc}"
+    plan = build_migration_plan(migration_id, changes, "\n\n".join(filtered_statements))
+    plan_path = filepath.replace(".sql", ".plan.json")
+    with open(plan_path, "w") as f:
+        json.dump(plan, f, indent=2, default=str)
+
+    console.print(f"Created migration file: {filepath}", style="green")
+    console.print(f"Created migration plan: {plan_path}", style="green")
+    console.print(f"Tables included: {', '.join(sorted(set(c.table for c in changes if hasattr(c, 'table') and c.table)))}", style="cyan")
+
+    state_path.write_text(json.dumps(current_state, indent=2, default=str) + "\n")
+    logger = get_logger()
+    logger.info(f"Updated model state: {state_path}")
+
+
 def make_migrations_cmd(
     description: str | None = None,
     verbose: bool = False,
@@ -257,6 +358,7 @@ def make_migrations_cmd(
     safe_type_change: bool = False,
     rename_table_flags: list[str] | None = None,
     concurrent: bool = True,
+    offline: bool = False,
 ) -> None:
     """
     Auto-generate SQL migration from SQLAlchemy models.
@@ -270,8 +372,13 @@ def make_migrations_cmd(
         safe_type_change: Use multi-step safe type change strategy.
         rename_table_flags: List of user-supplied --rename-table flag strings.
         concurrent: Use CREATE INDEX CONCURRENTLY on PostgreSQL.
+        offline: Use model state file instead of live database.
     """
     logger = get_logger()
+
+    if offline:
+        _run_offline_migrations(description=description, database=database)
+        return
 
     config = get_database(database)
     multi_config = get_multi_db_config()
