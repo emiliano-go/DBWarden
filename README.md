@@ -1,10 +1,8 @@
-# DBWarden
-
 <p align="center">
   <img src="https://raw.githubusercontent.com/emiliano-gandini-outeda/DBWarden/refs/heads/main/assets/icon.png" alt="DBWarden" width="128"/>
 </p>
 <p align="center">
-  <strong style="font-size: 1.5em;">DBWarden</strong>
+  <strong style="font-size: 2.5em;">DBWarden</strong>
 </p>
 <p align="center">
     <em>The SQL-first database toolkit for SQLAlchemy.</em>
