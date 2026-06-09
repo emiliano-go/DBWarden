@@ -25,7 +25,7 @@ class PGTableMeta(TableMeta):
     pg_checks: list[dict[str, Any]] = []
     pg_uniques: list[dict[str, Any]] = []
     pg_excludes: list[dict[str, Any]] = []
-    pg_indexes: list[dict[str, Any]] = []
+    pg_indexes: list[Any] = []
     pg_partition: dict[str, Any] | None = None
 
 
@@ -57,23 +57,26 @@ class CHTableMeta(TableMeta):
     """ClickHouse table-level metadata; inherit in ``class Meta``.
 
     All table options use ``ch_*`` typed attributes. Skip indexes use the
-    common ``indexes`` field with ``clickhouse_type`` / ``clickhouse_granularity``
-    on ``IndexSpec``.
+    dedicated ``ch_indexes`` field with ``ChIndexSpec``.
 
     Example::
+
+        from dbwarden import ChIndexSpec
 
         class Meta(CHTableMeta):
             ch_engine = ChEngineSpec("MergeTree")
             ch_order_by = ["id", "created_at"]
             ch_partition_by = "toYYYYMM(created_at)"
-            indexes = [index("ix_payload", ["payload"],
-                            clickhouse_type="bloom_filter",
-                            clickhouse_granularity=1)]
+            ch_indexes = [
+                ChIndexSpec("ix_payload", ["payload"],
+                    type="bloom_filter", granularity=1),
+            ]
     """
     comment: str | None = None
     indexes: list[Any] = []
     checks: list[Any] = []
     uniques: list[Any] = []
+    ch_indexes: list[Any] = []
 
     ch_engine: Any = None
     ch_order_by: str | list[str] | None = None
