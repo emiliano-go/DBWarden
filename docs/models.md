@@ -124,110 +124,107 @@ For the full list of supported attributes, see [PostgreSQL Deep Dive](databases/
 
 ## ClickHouse Model Metadata
 
-When `database_type="clickhouse"`, DBWarden can read ClickHouse-specific options from `__table_args__` and column `info` metadata.
+When `database_type="clickhouse"`, DBWarden supports first-class ClickHouse metadata via `class Meta(CHTableMeta)` inner classes. This is the **only** supported surface. Pass options via `mapped_column(info=...)` raises `DBWardenConfigError`.
 
-### Table options
+### Table-Level Meta
 
-Supported keys:
-
-- `clickhouse_engine`
-- `clickhouse_order_by`
-- `clickhouse_primary_key`
-- `clickhouse_partition_by`
-- `clickhouse_sample_by`
-- `clickhouse_ttl`
-- `clickhouse_mv`
-- `clickhouse_mv_query`
-- `clickhouse_mv_engine`
-- `clickhouse_mv_order_by`
-- `clickhouse_mv_populate`
-- `clickhouse_projections`
-- `clickhouse_zookeeper_path`
-- `clickhouse_replica_name`
-
-Example:
+Inherit from `CHTableMeta` on your `class Meta`:
 
 ```python
+from dbwarden import Base, CHTableMeta, ChEngineSpec
+
 class Event(Base):
     __tablename__ = "events"
-    __table_args__ = {
-        "clickhouse_engine": ("ReplacingMergeTree", "version_column"),
-        "clickhouse_order_by": ["region", "event_time"],
-        "clickhouse_primary_key": "region",
-        "clickhouse_partition_by": "toYYYYMM(event_time)",
-        "clickhouse_sample_by": "intHash64(user_id)",
-        "clickhouse_ttl": [
+
+    id = Column(Int64, primary_key=True)
+    event_date = Column(Date)
+    payload = Column(String)
+
+    class Meta(CHTableMeta):
+        ch_engine = ChEngineSpec("ReplacingMergeTree", args=("version_column",))
+        ch_order_by = ["region", "event_time"]
+        ch_primary_key = "region"
+        ch_partition_by = "toYYYYMM(event_time)"
+        ch_sample_by = "intHash64(user_id)"
+        ch_ttl = [
             "event_time + INTERVAL 1 MONTH DELETE",
             "event_time + INTERVAL 1 YEAR TO DISK 'cold'",
-        ],
-    }
+        ]
+        ch_settings = {"index_granularity": "8192"}
 ```
 
-Notes:
+`CHTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds ClickHouse-specific ones (`ch_engine`, `ch_order_by`, `ch_primary_key`, `ch_partition_by`, `ch_sample_by`, `ch_ttl`, `ch_settings`, `ch_object_type`, `ch_select_statement`, `ch_to_table`, `ch_dictionary`, `ch_dict_layout`, `ch_dict_source`, `ch_dict_lifetime`, `ch_dict_primary_key`, `ch_projections`, `ch_zookeeper_path`, `ch_replica_name`).
 
-- `clickhouse_engine="SummingMergeTree"` renders as `ENGINE = SummingMergeTree()`
-- tuple/list engine values render positional arguments, for example `("ReplacingMergeTree", "version_column")`
-- `clickhouse_primary_key` may be a string or ordered list/tuple, but it must be a prefix of `clickhouse_order_by`
-- if no ClickHouse engine is configured, DBWarden currently falls back to `ENGINE = MergeTree()`
+For the full list of supported attributes, see [ClickHouse Deep Dive](databases/clickhouse.md).
 
-### Replicated engines
+### Column-Level Meta
 
-For Replicated\* engine tables, use `clickhouse_zookeeper_path` and `clickhouse_replica_name` alongside `clickhouse_engine`:
+Use `CHColumnMeta` inner classes named after the column:
 
 ```python
-class ReplicatedEvent(Base):
-    __tablename__ = "replicated_events"
-    __table_args__ = {
-        "clickhouse_engine": "ReplicatedMergeTree",
-        "clickhouse_zookeeper_path": "'/clickhouse/tables/shard1'",
-        "clickhouse_replica_name": "'{replica}'",
-        "clickhouse_order_by": ["event_time"],
-        "clickhouse_partition_by": "toYYYYMM(event_time)",
-    }
+from dbwarden import Base, CHTableMeta, CHColumnMeta, ChEngineSpec
+
+class Event(Base):
+    __tablename__ = "events"
+
+    id = Column(Int64, primary_key=True)
+    payload = Column(String)
+    tags = Column(ARRAY(String))
+
+    class Meta(CHTableMeta):
+        ch_engine = ChEngineSpec("MergeTree")
+        ch_order_by = "event_time"
+
+        class payload(CHColumnMeta):
+            ch_codec = "ZSTD(3)"
+            ch_nullable = False
+
+        class tags(CHColumnMeta):
+            ch_low_cardinality = True
 ```
 
-This renders as:
+`CHColumnMeta` includes the common `comment` and `public` attributes plus ClickHouse-specific ones (`ch_codec`, `ch_default_expression`, `ch_materialized`, `ch_alias`, `ch_ttl`, `ch_low_cardinality`, `ch_nullable`).
 
-```sql
-ENGINE = ReplicatedMergeTree('/clickhouse/tables/shard1', '{replica}')
-```
+### Engine Spec
 
-`clickhouse_zookeeper_path` and `clickhouse_replica_name` are injected as the first two engine arguments. If the engine value is a tuple form like `("ReplicatedReplacingMergeTree", "ver_col")`, they are inserted before the existing positional arguments.
-
-### Materialized views
-
-Use `clickhouse_mv=True` to render a materialized view instead of a regular table:
+Use `ChEngineSpec` for the table engine:
 
 ```python
-class EventRollup(Base):
-    __tablename__ = "event_rollup_mv"
-    __table_args__ = {
-        "clickhouse_mv": True,
-        "clickhouse_mv_query": "SELECT region, count() AS total FROM events GROUP BY region",
-        "clickhouse_mv_engine": "SummingMergeTree",
-        "clickhouse_mv_order_by": ["region"],
-        "clickhouse_mv_populate": False,
-    }
+from dbwarden import ChEngineSpec
+
+# Simple engine
+ch_engine = ChEngineSpec("MergeTree")
+
+# Engine with arguments
+ch_engine = ChEngineSpec("ReplacingMergeTree", args=("version_column",))
+
+# Replicated engine
+ch_engine = ChEngineSpec("ReplicatedMergeTree",
+    zookeeper_path="/clickhouse/tables/shard1/events",
+    replica_name="{replica}")
+
+# Distributed engine with settings
+ch_engine = ChEngineSpec("Distributed",
+    args=("cluster", "db", "events", "rand()"),
+    settings={"insert_distributed_sync": "1"})
 ```
 
-Notes:
-
-- `clickhouse_mv_query` is required when `clickhouse_mv=True`
-- `clickhouse_mv_populate=True` is supported but should be used cautiously
-- materialized view SQL is rendered as `CREATE MATERIALIZED VIEW ... AS SELECT ...`
+For replicated engines, `ch_zookeeper_path` and `ch_replica_name` are injected as the first two engine arguments. If `args` contains existing positional arguments, they come after the ZooKeeper path and replica name.
 
 ### Projections
 
-Attach projections directly to a ClickHouse table:
+Use `ProjectionSpec` in `ch_projections`:
 
 ```python
-__table_args__ = {
-    "clickhouse_order_by": ["author", "created_at"],
-    "clickhouse_projections": [
-        {"name": "by_author", "query": "SELECT * ORDER BY author"},
-        {"name": "daily_stats", "query": "SELECT toDate(created_at) AS day, count() GROUP BY day"},
-    ],
-}
+from dbwarden import ProjectionSpec
+
+class Meta(CHTableMeta):
+    ch_order_by = ["author", "created_at"]
+    ch_projections = [
+        ProjectionSpec("by_author", "SELECT * ORDER BY author"),
+        ProjectionSpec("daily_stats",
+            "SELECT toDate(created_at) AS day, count() GROUP BY day"),
+    ]
 ```
 
 Current behavior:
@@ -236,78 +233,100 @@ Current behavior:
 - safety checks classify added projections as `INFO`
 - removed projections are classified as `WARNING`
 
+### Skip Indexes
+
+Use the `index()` factory with `clickhouse_type` and `clickhouse_granularity`:
+
+```python
+from dbwarden import index
+
+class Meta(CHTableMeta):
+    indexes = [
+        index("ix_payload", "payload",
+            clickhouse_type="bloom_filter",
+            clickhouse_granularity=1),
+    ]
+```
+
+### Materialized Views
+
+Materialized views use `ch_select_statement` and optionally `ch_to_table`:
+
+```python
+class EventRollup(Base):
+    __tablename__ = "event_rollup_mv"
+
+    event_date = Column(Date)
+    total = Column(Int64)
+
+    class Meta(CHTableMeta):
+        ch_object_type = "materialized_view"
+        ch_select_statement = (
+            "SELECT toDate(event_time) AS event_date, count() AS total "
+            "FROM events GROUP BY event_date"
+        )
+        ch_to_table = "mv_target"
+```
+
+When `ch_to_table` is set, the `ENGINE` clause is omitted (ClickHouse rejects `ENGINE` with `TO`).
+
 ### Dictionaries
 
-ClickHouse dictionaries are defined as model classes with `clickhouse_dictionary=True` in `__table_args__`:
+ClickHouse dictionaries use `ch_dictionary = True` with related `ch_dict_*` fields:
 
 ```python
 class CountryCode(Base):
     __tablename__ = "country_codes"
-    __table_args__ = {
-        "clickhouse_dictionary": True,
-        "clickhouse_dict_layout": "FLAT()",
-        "clickhouse_dict_source": "CLICKHOUSE(HOST 'localhost' TABLE 'countries')",
-        "clickhouse_dict_lifetime": "MIN 0 MAX 3600",
-        "clickhouse_dict_primary_key": "code",
-    }
+
+    code = Column(String)
+    name = Column(String)
+
+    class Meta(CHTableMeta):
+        ch_dictionary = True
+        ch_dict_layout = "FLAT()"
+        ch_dict_source = "CLICKHOUSE(HOST 'localhost' TABLE 'countries')"
+        ch_dict_lifetime = "MIN 0 MAX 3600"
+        ch_dict_primary_key = "code"
 ```
 
-Required keys when `clickhouse_dictionary=True`:
+Required fields when `ch_dictionary = True`:
 
-| Key | Description | Example |
-|-----|-------------|---------|
-| `clickhouse_dict_layout` | Dictionary layout | `"FLAT()"`, `"COMPLEX_KEY_HASHED()"` |
-| `clickhouse_dict_source` | Source configuration | `"CLICKHOUSE(HOST '...' TABLE '...')"` |
-| `clickhouse_dict_lifetime` | Cache lifetime | `"MIN 0 MAX 3600"` or `3600` |
+| Field | Description | Example |
+|-------|-------------|---------|
+| `ch_dict_layout` | Dictionary layout | `"FLAT()"`, `"COMPLEX_KEY_HASHED()"` |
+| `ch_dict_source` | Source configuration | `"CLICKHOUSE(HOST '...' TABLE '...')"` |
+| `ch_dict_lifetime` | Cache lifetime | `"MIN 0 MAX 3600"` or `3600` |
 
-Optional key:
+Optional field:
 
-| Key | Description | Default |
-|-----|-------------|---------|
-| `clickhouse_dict_primary_key` | Primary key expression | First column |
+| Field | Description | Default |
+|-------|-------------|---------|
+| `ch_dict_primary_key` | Primary key expression | First column |
 
-Generated SQL:
+Column types render as CH-native types (`Int64`, `String`).
 
-```sql
-CREATE DICTIONARY IF NOT EXISTS country_codes (
-    code String,
-    name String
-)
-PRIMARY KEY code
-SOURCE(CLICKHOUSE(HOST 'localhost' TABLE 'countries'))
-LIFETIME(MIN 0 MAX 3600)
-LAYOUT(FLAT())
-```
+### Column Hints
 
-Current behavior:
-
-- dictionary columns are defined like regular model columns; the first column is the default primary key
-- safety checks classify new dictionaries as `INFO`
-- dictionary source, layout, and lifetime changes are classified as `WARNING` (requires `--force`)
-
-### Column hints
-
-Use column `info` to attach ClickHouse-specific metadata:
+Use `CHColumnMeta` inner classes for per-column hints instead of `info={}`:
 
 ```python
-from sqlalchemy import Column, String
-
-payload = Column(
-    String,
-    info={
-        "clickhouse_type": "LowCardinality(String)",
-        "clickhouse_codec": "ZSTD(3)",
-    },
-)
+class Meta(CHTableMeta):
+    class payload(CHColumnMeta):
+        ch_codec = "ZSTD(3)"
+        ch_low_cardinality = True
+        ch_nullable = False
 ```
 
-Supported column hints:
+Supported `CHColumnMeta` fields:
 
-- `clickhouse_type`: explicit rendered type string
-- `clickhouse_codec`: rendered as `CODEC(...)`
-
-This is useful when:
-
-- you are using a custom SQLAlchemy type that should render as a ClickHouse-specific SQL type
-- you want explicit control over wrapper types like `LowCardinality(...)`, `Array(...)`, `Map(...)`, or `Tuple(...)`
-- you need per-column compression settings
+| Field | Description | Example |
+|-------|-------------|---------|
+| `ch_codec` | Compression codec | `"ZSTD(3)"` |
+| `ch_default_expression` | Default value expression | `"now()"` |
+| `ch_materialized` | Materialized expression | `"lower(name)"` |
+| `ch_alias` | Alias expression | `"concat(a, b)"` |
+| `ch_ttl` | Column TTL expression | `"event_time + INTERVAL 1 YEAR"` |
+| `ch_low_cardinality` | Wrap type in LowCardinality | `True` |
+| `ch_nullable` | Wrap type in Nullable | `True` |
+| `comment` | Column comment | `"User payload"` |
+| `public` | Schema visibility | `False` |
