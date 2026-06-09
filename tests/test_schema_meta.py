@@ -103,7 +103,7 @@ class TestMetaReader:
 
         assert created_info["dw_comment"] == "Record creation timestamp"
         assert email_info["dw_comment"] == "Primary contact email"
-        assert "dw_public" not in email_info
+        assert email_info["dw_public"] is False
         assert meta is not None
         assert meta.comment == "Child user accounts"
 

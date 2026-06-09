@@ -121,12 +121,14 @@ def _merge_meta_class(
 
 def _write_column_info(col, attrs: dict[str, Any]) -> None:
     for attr, value in attrs.items():
-        if value is None or value is False:
+        if value is None:
             continue
         if attr == "comment":
             col.info["dw_comment"] = value
         elif attr == "public":
-            col.info["dw_public"] = value
+            col.info["dw_public"] = True if value else False
+        elif value is False:
+            continue
         else:
             col.info[attr] = value
 

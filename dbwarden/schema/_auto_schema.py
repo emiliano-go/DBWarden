@@ -5,8 +5,7 @@ from typing import Any, Callable, TypeVar, overload
 from dbwarden.schema._meta_reader import apply_meta
 
 try:
-    from schemap.auto_schema import auto_schema as _schemap_auto_schema
-    from schemap.config import SchemaConfig as _SchemaConfig
+    from schemap import SchemaConfig as _SchemaConfig, auto_schema as _schemap_auto_schema
 except ImportError:
     _schemap_auto_schema = None
     _SchemaConfig = None
@@ -67,12 +66,13 @@ def auto_schema(cls=None, *, config=None):
 
 def _infer_schema_config(cls: type) -> SchemaConfig:
     exclude_public = []
+    exclude_always = []
     for col in cls.__table__.columns:
-        if col.info.get("dw_public") is False:
+        if col.name.startswith("_"):
+            exclude_always.append(col.name)
+        elif col.info.get("dw_public") is False:
             exclude_public.append(col.name)
-        elif col.name.startswith("_"):
-            exclude_public.append(col.name)
-    return SchemaConfig(exclude_public=exclude_public)
+    return SchemaConfig(exclude_public=exclude_public, exclude_always=exclude_always)
 
 
 def _merge_dbwarden_into_schemas(cls: type) -> None:
