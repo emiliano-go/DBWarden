@@ -1,4 +1,5 @@
 from dbwarden.commands.check import check_cmd
+from dbwarden.commands.check_impact import check_impact_cmd
 from dbwarden.commands.check_db import check_db_cmd
 from dbwarden.commands.downgrade import downgrade_cmd
 from dbwarden.commands.export_models import export_models_cmd
@@ -164,6 +165,21 @@ def handle_check(
 ) -> None:
     """Handle safety check command."""
     check_cmd(output_format=output_format, database=database, force=force)
+
+
+def handle_check_impact(
+    migration: str,
+    out: str = "text",
+    scan_path: str = ".",
+    deep: bool = False,
+    verbose: bool = False,
+    database: str | None = None,
+) -> None:
+    """Handle check-impact command."""
+    check_impact_cmd(
+        migration=migration, out=out, scan_path=scan_path,
+        deep=deep, verbose=verbose, database=database,
+    )
 
 
 def handle_diff(diff_type: str, verbose: bool, database: str | None = None) -> None:

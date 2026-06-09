@@ -140,6 +140,26 @@ Exports current model definitions to a JSON state file for offline migration dif
 
 Options: `--output`/`-o` (default `.dbwarden/model_state.json`), `--database`/`-d`
 
+### `check-impact`
+
+```bash
+dbwarden check-impact 0042 --database primary
+dbwarden check-impact 0042 --database primary --out json
+dbwarden check-impact 0042 --database primary --scan-path app/
+dbwarden check-impact path/to/primary__0042_add_bio.plan.json
+```
+
+Scans your codebase for references to schema elements affected by a migration. Reads the `.plan.json` for the migration, searches `.py` files for matching table/column names, and reports files and line numbers.
+
+| Option | Description |
+|--------|-------------|
+| `migration` | Migration version (e.g. `0042`) or plan file path (required) |
+| `--out`/`-o` | Output format: `text` (default) or `json` |
+| `--scan-path` | Directory to scan for affected code (default: `.`) |
+| `--deep` | Enable deep introspection (imports models live) |
+| `--verbose`/`-v` | Include INFO-level operations in the scan |
+| `--database`/`-d` | Target database name |
+
 ### `squash`
 
 ```bash

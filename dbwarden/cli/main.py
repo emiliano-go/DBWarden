@@ -5,6 +5,7 @@ from dbwarden.config import set_dev_mode, set_strict_translation
 from dbwarden.commands import (
     handle_check_db,
     handle_check,
+    handle_check_impact,
     handle_config,
     handle_database_add,
     handle_database_list,
@@ -519,6 +520,35 @@ def check_db(
     """Inspect the live database schema."""
     validate_directory()
     handle_check_db(output_format=output, database=database)
+
+
+@app.command()
+def check_impact(
+    migration: str = typer.Argument(
+        ..., help="Migration version or plan file path"
+    ),
+    out: str = typer.Option(
+        "text", "--out", "-o", help="Output format: text (default) or json"
+    ),
+    scan_path: str = typer.Option(
+        ".", "--scan-path", help="Directory to scan for affected code"
+    ),
+    deep: bool = typer.Option(
+        False, "--deep", help="Enable deep introspection (imports models live)"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show INFO-level operations in scan"
+    ),
+    database: str | None = typer.Option(
+        None, "--database", "-d", help="Target database name"
+    ),
+):
+    """Analyze impact of a migration on your codebase."""
+    validate_directory()
+    handle_check_impact(
+        migration=migration, out=out, scan_path=scan_path,
+        deep=deep, verbose=verbose, database=database,
+    )
 
 
 @app.command()
