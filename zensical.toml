@@ -11,6 +11,7 @@ extra_css = ["stylesheets/extra.css"]
 
 [project.theme]
 variant = "modern"
+custom_dir = "docs/overrides"
 
 font.text = "Ubuntu"
 font.code = "JetBrains Mono"

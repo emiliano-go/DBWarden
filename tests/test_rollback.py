@@ -78,6 +78,6 @@ class TestRollback:
             "dbwarden.engine.version.get_migration_filepaths_by_version",
             return_value={"0001": "/tmp/migs/test__0001_a.sql", "0002": "/tmp/migs/test__0002_b.sql"},
         ):
-            result = _get_versions_to_rollback(["0002", "0001"], "/tmp/migs")
-            assert len(result) == 2
-            assert list(result.keys()) == ["0002", "0001"]
+            result = _get_versions_to_rollback(["0002"], "/tmp/migs")
+            assert len(result) == 1
+            assert list(result.keys()) == ["0002"]

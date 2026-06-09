@@ -127,8 +127,11 @@ def _get_versions_to_rollback(
 
     filepaths = get_migration_filepaths_by_version(
         directory=migrations_dir,
-        version_to_start_from=None,
-        end_version=latest_versions[-1],
     )
 
-    return dict(reversed(list(filepaths.items())))
+    result: dict[str, str] = {}
+    for v in latest_versions:
+        if v in filepaths:
+            result[v] = filepaths[v]
+
+    return dict(reversed(list(result.items())))

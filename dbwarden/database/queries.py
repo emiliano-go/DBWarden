@@ -151,7 +151,7 @@ SQLITE_QUERIES = {
         SELECT DISTINCT checksum FROM {migration_table} WHERE checksum IS NOT NULL
     """,
     QueryMethod.GET_LATEST_VERSIONS_LIMIT: """
-        SELECT version FROM {migration_table} WHERE version IS NOT NULL ORDER BY applied_at DESC LIMIT :limit
+        SELECT version FROM {migration_table} WHERE version IS NOT NULL ORDER BY applied_at DESC, version DESC LIMIT :limit
     """,
     QueryMethod.GET_LATEST_VERSIONS_FROM: """
         SELECT version FROM {migration_table} WHERE version > :starting_version AND version IS NOT NULL ORDER BY applied_at ASC
@@ -545,7 +545,7 @@ CLICKHOUSE_QUERIES = {
         SELECT DISTINCT checksum FROM {migration_table} WHERE checksum IS NOT NULL
     """,
     QueryMethod.GET_LATEST_VERSIONS_LIMIT: """
-        SELECT version FROM {migration_table} WHERE version IS NOT NULL ORDER BY applied_at DESC LIMIT :limit
+        SELECT version FROM {migration_table} WHERE version IS NOT NULL ORDER BY applied_at DESC, version DESC LIMIT :limit
     """,
     QueryMethod.GET_LATEST_VERSIONS_FROM: """
         SELECT version FROM {migration_table} WHERE version > :starting_version AND version IS NOT NULL ORDER BY applied_at ASC

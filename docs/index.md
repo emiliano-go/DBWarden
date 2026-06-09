@@ -1,3 +1,9 @@
+---
+description: Test description from frontmatter
+seo:
+  test: hello
+---
+
 # DBWarden
 
 DBWarden is a SQL-first migration system for Python + SQLAlchemy projects.

@@ -1621,7 +1621,11 @@ def diff_models_against_snapshot(
     snapshot_tables = snapshot.get("tables", {})
     model_by_name = {t.name: t for t in model_tables}
 
+    _SYSTEM_TABLE_PREFIXES = ("_dbwarden_", "dbwarden_lock")
+
     for table in model_tables:
+        if table.name.startswith(_SYSTEM_TABLE_PREFIXES):
+            continue
         if table.name not in snapshot_tables:
             upgrade_ops.append({
                 "type": "create_table",
@@ -1635,7 +1639,9 @@ def diff_models_against_snapshot(
                 "object_type": table.object_type,
             })
 
-    for snap_table_name in snapshot_tables:
+    for snap_table_name in list(snapshot_tables.keys()):
+        if snap_table_name.startswith(_SYSTEM_TABLE_PREFIXES):
+            continue
         if snap_table_name not in model_by_name:
             snap_object_type = snapshot_tables[snap_table_name].get("object_type", "table")
             upgrade_ops.append({
@@ -1651,6 +1657,8 @@ def diff_models_against_snapshot(
             })
 
     for table in model_tables:
+        if table.name.startswith(_SYSTEM_TABLE_PREFIXES):
+            continue
         if table.name not in snapshot_tables:
             continue
 
