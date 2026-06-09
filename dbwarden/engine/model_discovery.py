@@ -900,8 +900,16 @@ def extract_table_from_model(
             excludes = list(getattr(dw_meta, "pg_excludes", []))
             indexes_meta = getattr(dw_meta, "indexes", []) or []
             pg_indexes_meta = getattr(dw_meta, "pg_indexes", []) or []
+            ch_indexes_meta = getattr(dw_meta, "ch_indexes", []) or []
             if not indexes:
-                for idx_entry in list(indexes_meta) + list(pg_indexes_meta):
+                for idx_entry in list(indexes_meta) + list(pg_indexes_meta) + list(ch_indexes_meta):
+                    if hasattr(idx_entry, "to_dict"):
+                        idx_entry = idx_entry.to_dict()
+                    if not isinstance(idx_entry, dict):
+                        raise TypeError(
+                            f"Index entries must be dicts or typed spec objects, "
+                            f"got {type(idx_entry).__name__}"
+                        )
                     idx_info = IndexInfo(
                         name=idx_entry.get("name"),
                         columns=list(idx_entry.get("columns", [])),

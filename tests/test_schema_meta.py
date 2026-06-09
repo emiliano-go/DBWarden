@@ -556,3 +556,90 @@ class TestProjectionSpec:
         p = ProjectionSpec.from_dict({"name": "by_date"})
         assert p.name == "by_date"
         assert p.query == ""
+
+
+class TestChIndexSpec:
+    def test_basic_construction(self):
+        from dbwarden.schema.index import ChIndexSpec
+        spec = ChIndexSpec("ix_payload", ["payload"], type="bloom_filter")
+        assert spec.name == "ix_payload"
+        assert spec.columns == ["payload"]
+        assert spec.type == "bloom_filter"
+        assert spec.granularity == 1
+        assert spec.expr is None
+
+    def test_with_granularity(self):
+        from dbwarden.schema.index import ChIndexSpec
+        spec = ChIndexSpec("ix_url", ["url"], type="minmax", granularity=3)
+        assert spec.granularity == 3
+
+    def test_with_expr(self):
+        from dbwarden.schema.index import ChIndexSpec
+        spec = ChIndexSpec("ix_lower", ["url"], type="bloom_filter", expr="lower(url)")
+        assert spec.expr == "lower(url)"
+
+    def test_to_dict_roundtrip(self):
+        from dbwarden.schema.index import ChIndexSpec
+        spec = ChIndexSpec("ix_payload", ["payload"], type="bloom_filter", granularity=1)
+        d = spec.to_dict()
+        restored = ChIndexSpec.from_dict(d)
+        assert restored.name == spec.name
+        assert restored.columns == spec.columns
+        assert restored.type == spec.type
+        assert restored.granularity == spec.granularity
+        assert d["clickhouse_type"] == "bloom_filter"
+        assert d["clickhouse_granularity"] == 1
+
+    def test_from_dict_with_clickhouse_keys(self):
+        from dbwarden.schema.index import ChIndexSpec
+        spec = ChIndexSpec.from_dict({
+            "name": "ix_sk", "columns": ["a"],
+            "clickhouse_type": "set(100)", "clickhouse_granularity": 2,
+        })
+        assert spec.type == "set(100)"
+        assert spec.granularity == 2
+
+    def test_to_dict_includes_expr(self):
+        from dbwarden.schema.index import ChIndexSpec
+        d = ChIndexSpec("ix_expr", ["url"], type="bloom_filter", expr="lower(url)").to_dict()
+        assert d["expr"] == "lower(url)"
+
+
+class TestPgIndexSpec:
+    def test_basic_construction(self):
+        from dbwarden.schema.index import PgIndexSpec
+        spec = PgIndexSpec("ix_email", ["email"])
+        assert spec.name == "ix_email"
+        assert spec.columns == ["email"]
+        assert spec.unique is False
+
+    def test_full_construction(self):
+        from dbwarden.schema.index import PgIndexSpec
+        spec = PgIndexSpec("ix_ab", ["a", "b"],
+            unique=True, using="gin", where="status = 'active'",
+            include=["c"], tablespace="fast_ts", nulls_not_distinct=True)
+        assert spec.unique is True
+        assert spec.using == "gin"
+        assert spec.where == "status = 'active'"
+        assert spec.include == ["c"]
+        assert spec.tablespace == "fast_ts"
+        assert spec.nulls_not_distinct is True
+
+    def test_to_dict_roundtrip(self):
+        from dbwarden.schema.index import PgIndexSpec
+        spec = PgIndexSpec("ix_ab", ["a", "b"],
+            unique=True, using="gin", where="status = 'active'")
+        d = spec.to_dict()
+        restored = PgIndexSpec.from_dict(d)
+        assert restored.name == spec.name
+        assert restored.columns == spec.columns
+        assert restored.unique == spec.unique
+        assert restored.using == spec.using
+        assert restored.where == spec.where
+
+    def test_to_dict_omits_defaults(self):
+        from dbwarden.schema.index import PgIndexSpec
+        d = PgIndexSpec("ix_email", ["email"]).to_dict()
+        assert "unique" not in d
+        assert "using" not in d
+        assert "where" not in d

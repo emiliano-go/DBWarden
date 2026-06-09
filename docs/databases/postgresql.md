@@ -82,7 +82,7 @@ PostgreSQL-specific `PGTableMeta` attributes:
 | `pg_partition` | `dict` | `PARTITION BY RANGE / LIST / HASH (columns)` |
 | `pg_inherits` | `str \| list[str]` | `ALTER TABLE t INHERIT parent` |
 | `pg_excludes` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... EXCLUDE USING ...` |
-| `pg_indexes` | `list[dict]` | `CREATE INDEX ...` (with `USING`, `WHERE`, `INCLUDE`, `NULLS NOT DISTINCT`, column sorting) |
+| `pg_indexes` | `list[PgIndexSpec]` | `CREATE INDEX ...` (with `USING`, `WHERE`, `INCLUDE`, `NULLS NOT DISTINCT`, column sorting) |
 | `pg_checks` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` (with `NO INHERIT`) |
 | `pg_uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` (with `DEFERRABLE`, `NULLS NOT DISTINCT`, `INCLUDE`) |
 

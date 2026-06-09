@@ -110,7 +110,7 @@ When `database_type="clickhouse"`, use `class Meta(CHTableMeta)` for table-level
 ### Table-Level
 
 ```python
-from dbwarden import Base, CHTableMeta, ChEngineSpec, ProjectionSpec, index
+from dbwarden import Base, CHTableMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec
 
 class Event(Base):
     __tablename__ = "events"
@@ -129,10 +129,9 @@ class Event(Base):
             ProjectionSpec("by_date",
                 "SELECT event_date, sum(amount) GROUP BY event_date"),
         ]
-        indexes = [
-            index("ix_payload", "payload",
-                clickhouse_type="bloom_filter",
-                clickhouse_granularity=1),
+        ch_indexes = [
+            ChIndexSpec("ix_payload", ["payload"],
+                type="bloom_filter", granularity=1),
         ]
 ```
 

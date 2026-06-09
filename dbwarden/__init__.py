@@ -2,6 +2,7 @@ from importlib.metadata import version
 
 from dbwarden.config_registry import database_config
 from dbwarden.schema.engine import ChEngineSpec
+from dbwarden.schema.index import ChIndexSpec, PgIndexSpec
 from dbwarden.schema.projection import ProjectionSpec
 from dbwarden.schema.table_meta import (
     CHColumnMeta,
@@ -18,9 +19,11 @@ __all__ = [
     "CHColumnMeta",
     "CHTableMeta",
     "ChEngineSpec",
+    "ChIndexSpec",
     "database_config",
     "PGColumnMeta",
     "PGTableMeta",
+    "PgIndexSpec",
     "ProjectionSpec",
     "TableMeta",
 ]
