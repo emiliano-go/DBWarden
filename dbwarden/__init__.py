@@ -20,7 +20,6 @@ from dbwarden.schema import (
     TableMeta,
 )
 from dbwarden.schema.engine import ChEngineSpec
-from dbwarden.schema.index import ChIndexSpec, PgIndexSpec
 from dbwarden.schema.projection import ProjectionSpec
 from dbwarden.schema.table_meta import (
     CHColumnMeta,
