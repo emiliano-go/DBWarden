@@ -98,6 +98,20 @@ ClickHouse-specific `CHTableMeta` attributes:
 | `ch_zookeeper_path` | `str` | ZooKeeper path for replicated engines |
 | `ch_replica_name` | `str` | Replica name for replicated engines |
 
+The `ChTableSpec` dataclass (from `dbwarden.schema.clickhouse` or `dbwarden`) mirrors these attributes for programmatic access:
+
+```python
+from dbwarden import ChTableSpec
+
+spec = ChTableSpec(
+    engine="MergeTree",
+    order_by=["event_date", "id"],
+    partition_by="toYYYYMM(event_date)",
+    ttl="event_date + toIntervalYear(1)",
+    settings={"index_granularity": "8192"},
+)
+```
+
 ### Engine Spec
 
 Use `ChEngineSpec` to define the table engine:
@@ -445,6 +459,27 @@ class Event(Base):
 ```
 
 ## Safety Classification
+
+DBWarden classifies migration changes using the `Safety` enum:
+
+```python
+from dbwarden.engine.safety import Safety
+
+assert Safety.SAFE == "SAFE"
+assert Safety.INFO == "INFO"
+assert Safety.WARN == "WARN"
+assert Safety.CRITICAL == "CRITICAL"
+```
+
+The following ClickHouse-specific safety classifiers are available for custom analysis:
+
+```python
+from dbwarden.engine.safety import (
+    classify_ch_column_change,
+    classify_ch_options_change,
+    classify_ch_safety,
+)
+```
 
 | Change Type | Severity | Flag Required |
 |-------------|----------|---------------|

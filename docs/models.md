@@ -72,7 +72,42 @@ class User(Base):
 
 These attributes work with any `database_type`. Backend-specific subclasses (`PGTableMeta`, `CHTableMeta`) inherit all common attributes and add their own.
 
-For IDE autocomplete on column-level inner classes, use `PGColumnMeta` for PostgreSQL or `CHColumnMeta` for ClickHouse. The unified `FieldMeta` class contains all backend-specific column attributes (`pg_*`, `ch_*`, `my_*`, `mdb_*`, `sq_*`) for cross-backend projects.
+### Column-Level Meta Base Class
+
+For IDE autocomplete on column-level inner classes, use `PGColumnMeta` for PostgreSQL or `CHColumnMeta` for ClickHouse. Both inherit from `FieldMeta`, which contains all backend-specific column attributes (`pg_*`, `ch_*`, `my_*`, `mdb_*`, `sq_*`):
+
+```python
+from dbwarden import FieldMeta
+
+# FieldMeta provides autocomplete for ALL backend attributes:
+#   comment, public
+#   pg_collation, pg_storage, pg_compression, pg_generated, pg_identity*
+#   ch_codec, ch_default_expression, ch_materialized, ch_alias, ch_ttl,
+#     ch_low_cardinality, ch_nullable
+#   my_charset, my_collate, my_unsigned, my_on_update
+#   mdb_invisible, mdb_without_overlaps, mdb_sequence
+#   sq_generated, sq_generated_mode
+```
+
+You do not need to inherit from `FieldMeta` directly — `PGColumnMeta` and `CHColumnMeta` already do.
+
+### Backend Subpackages
+
+DBWarden organizes backend-specific types into subpackages under `dbwarden.schema`:
+
+| Subpackage | Key types |
+|------------|-----------|
+| `dbwarden.schema.pgsql` | `PgIndexSpec`, `PgTableSpec` |
+| `dbwarden.schema.clickhouse` | `ChIndexSpec`, `ChTableSpec` |
+| `dbwarden.schema.mysql` | `MyTableSpec` |
+| `dbwarden.schema.mariadb` | `MdbTableSpec` |
+| `dbwarden.schema.sqlite` | `SqTableSpec` |
+
+These types are also re-exported from `dbwarden` for convenience:
+
+```python
+from dbwarden import PgIndexSpec, ChIndexSpec, PgTableSpec, ChTableSpec
+```
 
 ## PostgreSQL Model Metadata
 

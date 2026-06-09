@@ -143,6 +143,8 @@ class PermissionSeed:
 
 Code seeds are discovered through the same `model_paths` scan as models. They coexist with file-based seeds and are sorted together by `version` at apply time.
 
+Internally, each decorated class receives a `DBWardenSeed` instance as `cls.__dbwarden_seed__` containing the metadata (database, version, description, on_conflict, conflict_columns, source_hash).
+
 | Aspect | Behavior |
 |--------|----------|
 | Discovery | Scanned via `model_paths` alongside models |

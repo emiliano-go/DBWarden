@@ -560,6 +560,73 @@ This closes async and sync session factories, connection pools, and ClickHouse c
 
 ---
 
+## `dbwarden_lifespan`
+
+Async context manager that handles the full FastAPI engine lifecycle: startup schema validation (or auto-migration), readiness gate, seed application, connection pool warmup, and cleanup on shutdown.
+
+### Signature
+
+```python
+async def dbwarden_lifespan(
+    app=None,
+    *,
+    mode: str = "check",           # "check" | "migrate" | "none"
+    database: str | None = None,
+    all_databases: bool = False,
+    dev: bool = False,
+    strict_translation: bool = False,
+    with_backup: bool = False,
+    backup_dir: str | None = None,
+    verbose: bool = False,
+    allow_in_production: bool = False,
+    fail_fast: bool = True,
+    only_dev: bool = False,
+    readiness_gate: bool = False,
+    apply_seeds: bool = False,
+    pool_warmup: bool = False,
+    pool_warmup_size: int = 3,
+)
+```
+
+### Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `app` | `FastAPI` | `None` | FastAPI application instance (optional, for router registration) |
+| `mode` | `str` | `"check"` | Startup mode: `"check"` (read-only), `"migrate"` (auto-apply), `"none"` (skip) |
+| `database` | `str` | `None` | Target a single database by name |
+| `all_databases` | `bool` | `False` | Target all configured databases |
+| `readiness_gate` | `bool` | `False` | Raise if any database is unreachable after startup checks |
+| `apply_seeds` | `bool` | `False` | Apply pending seed data after migrations |
+| `pool_warmup` | `bool` | `False` | Acquire connections before yielding to reduce cold-start latency |
+| `pool_warmup_size` | `int` | `3` | Number of connections to acquire during warmup |
+
+The remaining parameters (`dev`, `strict_translation`, `with_backup`, etc.) are identical to
+`migration_context()` and control startup check/migration behavior.
+
+### Usage
+
+```python
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from dbwarden.fastapi import dbwarden_lifespan
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with dbwarden_lifespan(
+        app,
+        mode="check",
+        readiness_gate=True,
+        pool_warmup=True,
+        pool_warmup_size=5,
+    ):
+        yield
+
+app = FastAPI(lifespan=lifespan)
+```
+
+---
+
 ## `QueryTracingMiddleware`
 
 ASGI middleware that emits per-request structured query tracing logs. Tracks query count, total duration, slowest query, and slow query threshold breaches.

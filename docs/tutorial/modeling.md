@@ -219,6 +219,28 @@ The decorator reads `class Meta` to infer `SchemaConfig`, then calls `schemap` t
 
 `@auto_schema` requires the `schemap` dependency (included with `pip install dbwarden`).
 
+To customize schema generation, pass a `SchemaConfig` explicitly:
+
+```python
+from dbwarden.schema import auto_schema, SchemaConfig
+
+@auto_schema(config=SchemaConfig(exclude_public=["internal_note"]))
+class Order(Base):
+    ...
+```
+
+`SchemaConfig` supports the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `exclude_always` | `list[str]` | Excluded from all schemas |
+| `exclude_create` | `list[str]` | Excluded from CreateSchema only |
+| `exclude_update` | `list[str]` | Excluded from UpdateSchema only |
+| `exclude_public` | `list[str]` | Excluded from PublicSchema only |
+| `field_overrides` | `dict` | Override field types in generated schemas |
+| `required_always` | `list[str]` | Fields that are always required |
+| `optional_always` | `list[str]` | Fields that are always optional |
+
 ## When to Use Manual Migrations
 
 Auto-generated migrations handle most cases, but some schema changes require a manual migration via `dbwarden new`:

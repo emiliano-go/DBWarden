@@ -86,6 +86,18 @@ PostgreSQL-specific `PGTableMeta` attributes:
 | `pg_checks` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` (with `NO INHERIT`) |
 | `pg_uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` (with `DEFERRABLE`, `NULLS NOT DISTINCT`, `INCLUDE`) |
 
+The `pg_indexes` list uses `PgIndexSpec` objects (from `dbwarden.schema.pgsql` or `dbwarden`):
+
+```python
+from dbwarden import PgIndexSpec
+
+class Meta(PGTableMeta):
+    pg_indexes = [
+        PgIndexSpec("ix_users_email", ["email"],
+            unique=True, using="gin"),
+    ]
+```
+
 ### Column-Level Meta
 
 Use `PGColumnMeta` inner classes for per-column metadata. The inner class must be named after the column:
@@ -284,6 +296,17 @@ class Event(Base):
 Unlogged tables, `NO INHERIT` check constraints, deferred unique constraints, and `ALTER TYPE ... ADD VALUE` for enums are all detected and emitted automatically.
 
 ## Safety Classification
+
+DBWarden classifies migration changes using the `Safety` enum:
+
+```python
+from dbwarden.engine.safety import Safety
+
+assert Safety.SAFE == "SAFE"
+assert Safety.INFO == "INFO"
+assert Safety.WARN == "WARN"
+assert Safety.CRITICAL == "CRITICAL"
+```
 
 | Change Type | Severity | Flag Required |
 |-------------|----------|---------------|
