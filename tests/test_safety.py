@@ -409,3 +409,91 @@ def test_ch_add_column_no_safety_issue():
     assert len(issues) == 1
     assert issues[0].change_type == "add_column"
     assert issues[0].severity == "INFO"
+
+
+class TestCHSafetyClassifiers:
+    def test_classify_ch_column_change_critical(self):
+        from dbwarden.engine.safety import classify_ch_column_change
+        assert classify_ch_column_change("ch_type") == "CRITICAL"
+        assert classify_ch_column_change("ch_low_cardinality") == "CRITICAL"
+        assert classify_ch_column_change("ch_nullable") == "CRITICAL"
+
+    def test_classify_ch_column_change_warn(self):
+        from dbwarden.engine.safety import classify_ch_column_change
+        assert classify_ch_column_change("ch_codec") == "WARN"
+        assert classify_ch_column_change("ch_default_expression") == "WARN"
+        assert classify_ch_column_change("ch_materialized") == "WARN"
+        assert classify_ch_column_change("ch_alias") == "WARN"
+        assert classify_ch_column_change("ch_ttl") == "WARN"
+
+    def test_classify_ch_column_change_info(self):
+        from dbwarden.engine.safety import classify_ch_column_change
+        assert classify_ch_column_change("comment") == "INFO"
+        assert classify_ch_column_change("unknown_key") == "INFO"
+
+    def test_classify_ch_options_change_critical(self):
+        from dbwarden.engine.safety import classify_ch_options_change
+        assert classify_ch_options_change("ch_engine_raw") == "CRITICAL"
+        assert classify_ch_options_change("ch_order_by") == "CRITICAL"
+        assert classify_ch_options_change("ch_object_type") == "CRITICAL"
+        assert classify_ch_options_change("ch_select_statement") == "CRITICAL"
+        assert classify_ch_options_change("ch_to_table") == "CRITICAL"
+        assert classify_ch_options_change("ch_dictionary") == "CRITICAL"
+
+    def test_classify_ch_options_change_warn(self):
+        from dbwarden.engine.safety import classify_ch_options_change
+        assert classify_ch_options_change("ch_partition_by") == "WARN"
+        assert classify_ch_options_change("ch_settings") == "WARN"
+        assert classify_ch_options_change("ch_zookeeper_path") == "WARN"
+        assert classify_ch_options_change("ch_replica_name") == "WARN"
+        assert classify_ch_options_change("ch_dict_layout") == "WARN"
+        assert classify_ch_options_change("ch_dict_source") == "WARN"
+        assert classify_ch_options_change("ch_dict_lifetime") == "WARN"
+        assert classify_ch_options_change("ch_dict_primary_key") == "WARN"
+
+    def test_classify_ch_options_change_info(self):
+        from dbwarden.engine.safety import classify_ch_options_change
+        assert classify_ch_options_change("ch_sample_by") == "INFO"
+        assert classify_ch_options_change("ch_ttl") == "INFO"
+        assert classify_ch_options_change("unknown") == "INFO"
+
+    def test_classify_ch_safety_alter_ch_column(self):
+        from dbwarden.engine.safety import classify_ch_safety
+        op = {
+            "type": "alter_ch_column",
+            "table": "events",
+            "column": "payload",
+            "ch_options": {
+                "ch_codec": {"from": None, "to": "ZSTD(3)"},
+                "ch_type": {"from": "String", "to": "Int64"},
+            },
+        }
+        issues = classify_ch_safety(op)
+        assert len(issues) == 2
+        severities = {i.change_type: i.severity for i in issues}
+        assert severities["change_ch_column"] in ("WARN", "CRITICAL")
+
+    def test_classify_ch_safety_alter_ch_options(self):
+        from dbwarden.engine.safety import classify_ch_safety
+        op = {
+            "type": "alter_ch_options",
+            "table": "events",
+            "ch_options": {
+                "ch_engine_raw": {"from": {"name": "MergeTree"}, "to": {"name": "ReplicatedMergeTree"}},
+                "ch_settings": {"from": None, "to": {"a": "1"}},
+            },
+        }
+        issues = classify_ch_safety(op)
+        assert len(issues) == 2
+
+    def test_classify_ch_safety_drop_materialized_view(self):
+        from dbwarden.engine.safety import classify_ch_safety
+        op = {
+            "type": "drop_table",
+            "table": "daily_mv",
+            "object_type": "materialized_view",
+        }
+        issues = classify_ch_safety(op)
+        assert len(issues) == 1
+        assert issues[0].severity == "CRITICAL"
+        assert issues[0].change_type == "drop_materialized_view"
