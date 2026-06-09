@@ -1,4 +1,4 @@
-from dbwarden.schema._auto_schema import auto_schema
+from dbwarden.schema._auto_schema import auto_schema, SchemaConfig
 from dbwarden.schema._base import DBWardenMeta, attach_meta, read_meta
 from dbwarden.schema._meta import FieldMeta
 from dbwarden.schema._meta_reader import apply_meta
@@ -44,6 +44,7 @@ __all__ = [
     "pg_index",
     "ProjectionSpec",
     "read_meta",
+    "SchemaConfig",
     "SqTableSpec",
     "TableMeta",
     "UniqueSpec",
