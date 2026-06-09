@@ -14,6 +14,7 @@ _LIST_FIELDS = {
     "pg_checks",
     "pg_uniques",
     "pg_excludes",
+    "ch_indexes",
     "my_indexes",
     "sq_indexes",
     "pg_inherits",
@@ -101,14 +102,20 @@ def _write_column_info(col, attrs: dict[str, Any]) -> None:
             col.info[attr] = value
 
 
+def _to_dict(value: Any) -> Any:
+    if hasattr(value, "to_dict"):
+        return value.to_dict()
+    return value
+
+
 def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
     meta = DBWardenMeta()
     meta.comment = table_attrs.get("comment")
-    meta.indexes = list(table_attrs.get("indexes", []))
+    meta.indexes = [_to_dict(i) for i in table_attrs.get("indexes", [])]
     meta.checks = list(table_attrs.get("checks", []))
     meta.uniques = list(table_attrs.get("uniques", []))
     meta.partition = table_attrs.get("partition") or table_attrs.get("pg_partition")
-    meta.pg_indexes = list(table_attrs.get("pg_indexes", []))
+    meta.pg_indexes = [_to_dict(i) for i in table_attrs.get("pg_indexes", [])]
     meta.pg_checks = list(table_attrs.get("pg_checks", []))
     meta.pg_uniques = list(table_attrs.get("pg_uniques", []))
     meta.pg_excludes = list(table_attrs.get("pg_excludes", []))
