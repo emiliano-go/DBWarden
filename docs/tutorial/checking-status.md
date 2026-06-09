@@ -50,4 +50,5 @@ dbwarden history --database primary
 
 Reference: [CLI Reference](../cli-reference.md)
 
+See also: [Cookbook: Apply & Inspect](../cookbook/03-apply-and-inspect.md)
 

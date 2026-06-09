@@ -132,4 +132,4 @@ dbwarden check-db --database primary
 
 `check-db` inspects the live database schema and reports what tables and columns exist. Use this to confirm the schema matches what your application expects.
 
-See also: [Migration Locking](migration-locking.md) | [CI/CD Patterns](ci-cd-patterns.md) | [`rollback` command](../commands/rollback.md)
+See also: [Migration Locking](migration-locking.md) | [CI/CD Patterns](ci-cd-patterns.md) | [`rollback` command](../commands/rollback.md) | [Cookbook: Safety & Impact](../cookbook/06-safety-impact.md)

@@ -190,4 +190,5 @@ app = FastAPI(lifespan=lifespan)
 
 **Result:** Less boilerplate, fewer bugs, easier maintenance.
 
+See also: [Cookbook: FastAPI Integration](../cookbook/09-fastapi-integration.md)
 

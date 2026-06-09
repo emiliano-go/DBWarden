@@ -38,4 +38,5 @@ When rollback is risky, prefer a forward-fix migration.
 
 Reference: [Safe Deployment](../advanced/safe-deployment.md)
 
+See also: [Cookbook: Apply & Inspect](../cookbook/03-apply-and-inspect.md)
 

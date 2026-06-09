@@ -138,6 +138,10 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# Example project generated artifacts
+examples/**/*.db
+examples/**/.dbwarden/
+
 # mypy
 .mypy_cache/
 .dmypy.json

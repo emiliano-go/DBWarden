@@ -52,4 +52,5 @@ dbwarden rollback --database primary --count 1
 dbwarden migrate --database primary
 ```
 
+See also: [Cookbook: Models & Migrations](../cookbook/02-models-and-migrations.md)
 

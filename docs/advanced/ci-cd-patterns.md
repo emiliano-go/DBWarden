@@ -225,4 +225,4 @@ CI pipelines treat non-zero as job failure by default. No extra configuration ne
 - Use `dbwarden history` output as a post-migration artifact
 - Run `dbwarden status` before and after `migrate`; before confirms what will run, after confirms nothing is pending
 
-See also: [Safe Deployment](safe-deployment.md) | [Credentials and Secrets](../configuration/credentials.md) | [Migration Locking](migration-locking.md)
+See also: [Safe Deployment](safe-deployment.md) | [Credentials and Secrets](../configuration/credentials.md) | [Migration Locking](migration-locking.md) | [Cookbook: Offline & CI](../cookbook/04-offline-ci.md)

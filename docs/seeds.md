@@ -290,4 +290,5 @@ The `DBWardenRouter` includes seed status in its `GET /status` response:
 
 See [FastAPI Reference](fastapi/reference.md) for details.
 
+See also: [Cookbook: Seeds](../cookbook/07-seeds.md)
 

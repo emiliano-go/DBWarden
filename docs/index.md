@@ -35,6 +35,7 @@ Teams that value SQL review as part of their deployment flow, projects with mult
 - Dry-run mode to preview changes without applying
 - Sync and async URL split for CLI and FastAPI sessions
 - Schema snapshots for offline migration generation and intelligent column rename detection
+- [Cookbook of real-world examples](cookbook/index.md) with runnable code and tested commands
 
 ## Requirements
 
@@ -113,4 +114,5 @@ With one `database_config(...)` definition and one migration command loop, you g
 - Start here: [Getting Started](getting-started/first-steps.md)
 - Learn the workflow: [Your First Migration](tutorial/your-first-migration.md)
 - Go deeper: [Migration Files](migration-files.md)
+- Work through examples: [Cookbook & Examples](cookbook/index.md)
 - Lookup details: [CLI Reference](cli-reference.md)

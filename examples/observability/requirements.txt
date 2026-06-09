@@ -1,0 +1,7 @@
+dbwarden>=0.9
+dbwarden[metrics]>=0.9
+sqlalchemy>=2.0
+fastapi>=0.110
+uvicorn[standard]>=0.29
+asyncpg>=0.29
+prometheus-client>=0.19

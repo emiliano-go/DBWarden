@@ -694,3 +694,4 @@ Take your app further:
 - **[Testing](../advanced/testing.md)** - Advanced testing patterns
 - **[Transaction Management](../advanced/transaction-management.md)** - Complex transactions
 - **[Production Patterns](../advanced/production-patterns.md)** - CI/CD and monitoring
+- **[Cookbook: FastAPI Integration](../cookbook/09-fastapi-integration.md)** - Standalone FastAPI example

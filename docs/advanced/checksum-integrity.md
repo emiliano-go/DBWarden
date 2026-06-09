@@ -125,4 +125,4 @@ dbwarden check --database primary
 
 `dbwarden check` compares models to the live schema. While not a direct checksum check, it surfaces drift that often accompanies unintended migration file edits.
 
-See also: [Migration Locking](migration-locking.md) | [Migration Files](../migration-files.md)
+See also: [Migration Locking](migration-locking.md) | [Migration Files](../migration-files.md) | [Cookbook: Schema Inspection](../cookbook/05-schema-inspection.md)

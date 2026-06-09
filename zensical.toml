@@ -69,6 +69,22 @@ name = "DBWarden on PyPI"
 ]
 
 [[project.nav]]
+"Cookbook & Examples" = [
+  {Overview = "cookbook/index.md"},
+  {"1. Project Setup" = "cookbook/01-project-setup.md"},
+  {"2. Models & Migrations" = "cookbook/02-models-and-migrations.md"},
+  {"3. Apply & Inspect" = "cookbook/03-apply-and-inspect.md"},
+  {"4. Offline & CI" = "cookbook/04-offline-ci.md"},
+  {"5. Schema Inspection" = "cookbook/05-schema-inspection.md"},
+  {"6. Safety & Impact" = "cookbook/06-safety-impact.md"},
+  {"7. Seeds" = "cookbook/07-seeds.md"},
+  {"8. Multi-Database" = "cookbook/08-multi-database.md"},
+  {"9. FastAPI Integration" = "cookbook/09-fastapi-integration.md"},
+  {"10. Auto Schemas" = "cookbook/10-auto-schemas.md"},
+  {"11. Observability" = "cookbook/11-observability.md"}
+]
+
+[[project.nav]]
 "Configuration" = [
   {Overview = "configuration/index.md"},
   {"Quick Start" = "configuration/quick-start.md"},

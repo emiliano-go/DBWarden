@@ -115,4 +115,6 @@ When enabled, all DBWarden log output uses newline-delimited JSON format:
 | `DBWARDEN_MIGRATE_AUTH` | API key string | Require `X-API-Key` header for `POST /migrate` endpoint |
 | `DBWARDEN_HEALTH_AUTH` | API key string | Require `X-API-Key` header for health endpoints |
 
+See also: [Cookbook: Observability](../cookbook/11-observability.md)
+
 

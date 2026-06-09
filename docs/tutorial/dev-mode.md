@@ -50,4 +50,5 @@ dbwarden --dev --strict-translation make-migrations "validate" --database primar
 
 Reference: [SQL Translation](../sql-translation.md)
 
+See also: [Cookbook: Project Setup](../cookbook/01-project-setup.md)
 

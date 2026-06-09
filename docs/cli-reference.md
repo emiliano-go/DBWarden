@@ -350,4 +350,5 @@ dbwarden database remove analytics
 
 Prefer `settings` commands for new workflows.
 
+For worked command examples, see the [Cookbook & Examples](cookbook/index.md).
 

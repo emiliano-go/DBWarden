@@ -51,4 +51,5 @@ dbwarden status --all
 - keep model boundaries clear per database
 - use `overlap_models=True` only when overlap is intentional
 
+See also: [Cookbook: Multi-Database](../cookbook/08-multi-database.md)
 

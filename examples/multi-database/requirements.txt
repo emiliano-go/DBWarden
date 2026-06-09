@@ -1,0 +1,4 @@
+dbwarden>=0.9
+sqlalchemy>=2.0
+asyncpg>=0.29
+clickhouse-connect>=0.7

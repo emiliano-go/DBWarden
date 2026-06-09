@@ -214,3 +214,5 @@ DBWarden emits SQL comment placeholders for unsupported operations with instruct
 - **Use `--dev` for local development**: configure a `dev_database_url` (SQLite works well) and use `dbwarden --dev` to iterate quickly without touching your real database.
 - **Keep Meta classes minimal**: only set attributes that differ from the default. Default values are omitted from generated migrations, reducing noise.
 - **Use `@auto_schema` for API projects**: generates Pydantic schemas from your model annotations. Fields with `public=False` or a leading `_` are excluded from `PublicSchema`.
+
+See also: [Cookbook: Models & Migrations](../cookbook/02-models-and-migrations.md)
