@@ -18,7 +18,7 @@
 
 ---
 
-DBWarden is a SQL-first migration system for SQLAlchemy. It reads your models, generates plain SQL migration files with rollback included, and tracks schema state through checksummed snapshots — no DSL, no live database required to generate migrations. FastAPI integration, async sessions, observability, seed management, and migration impact analysis are built in.
+DBWarden is a SQL-first migration system for SQLAlchemy. It reads your models, generates plain SQL migration files with rollback included, and tracks schema state through checksummed snapshots. No DSL, no live database required to generate migrations. FastAPI integration, async sessions, observability, seed management, and migration impact analysis are built in.
 
 ## Key Features
 
@@ -28,9 +28,9 @@ DBWarden is a SQL-first migration system for SQLAlchemy. It reads your models, g
 - **Offline migrations**: Export model state to a JSON file with `export-models`, then run `make-migrations --offline` in CI pipelines with no database service.
 - **Column-level diffing**: Type, nullable, default, and comment changes generate precise `ALTER COLUMN` statements.
 - **Rich index metadata**: Partial indexes (`WHERE`), covering indexes (`INCLUDE`), `USING` methods, `NULLS NOT DISTINCT`, column sort order, storage parameters, and ClickHouse skip indexes via typed `PgIndexSpec` and `ChIndexSpec` dataclasses.
-- **PostgreSQL first-class**: Full round-trip fidelity — reverse-engineer a live database, feed into `make-migrations`, zero diff. Identity columns, generated columns, collation, storage, compression, partitioning, exclusion constraints, deferrable FKs.
-- **ClickHouse first-class**: `ChEngineSpec`, `ProjectionSpec`, `ChIndexSpec` — table options, replicated engines, dictionaries, materialized views, projections, skip indexes, codecs, LowCardinality/Nullable.
-- **FastAPI-native sessions**: `session=primary.async_session` as a route annotation — no `Depends`, no `Annotated`, no `SessionDep`.
+- **PostgreSQL first-class**: Full round-trip fidelity: reverse-engineer a live database, feed into `make-migrations`, zero diff. Identity columns, generated columns, collation, storage, compression, partitioning, exclusion constraints, deferrable FKs.
+- **ClickHouse first-class**: `ChEngineSpec`, `ProjectionSpec`, `ChIndexSpec` for table options, replicated engines, dictionaries, materialized views, projections, skip indexes, codecs, LowCardinality/Nullable.
+- **FastAPI-native sessions**: `session=primary.async_session` as a route annotation: no `Depends`, no `Annotated`, no `SessionDep`.
 - **Single config source**: `database_config(...)` drives migrations, sessions, health checks, and seeds.
 - **Multi-database**: One project, multiple databases, full isolation.
 - **Dev mode**: Run SQLite locally against a PostgreSQL production schema with automatic SQL translation.
@@ -160,7 +160,7 @@ dbwarden make-migrations
 # → No changes detected
 ```
 
-The round-trip is confirmed — your generated models match the database schema exactly. The following PostgreSQL features are fully supported:
+The round-trip is confirmed: your generated models match the database schema exactly. The following PostgreSQL features are fully supported:
 
 - Identity columns with sequence options
 - Generated columns (`GENERATED ALWAYS AS (...) STORED`)
@@ -169,7 +169,7 @@ The round-trip is confirmed — your generated models match the database schema 
 - Table inheritance and exclusion constraints
 - Deferrable foreign keys and check constraints with `NO INHERIT`
 - Deferred unique constraints with `NULLS NOT DISTINCT` and `INCLUDE`
-- Index options: `USING`, `WHERE`, `INCLUDE`, `WITH`, `NULLS NOT DISTINCT`, column sort order — via `PgIndexSpec`
+- Index options: `USING`, `WHERE`, `INCLUDE`, `WITH`, `NULLS NOT DISTINCT`, column sort order via `PgIndexSpec`
 - Named enum types with `ALTER TYPE ... ADD VALUE`
 - Type normalization: `SERIAL`, `TIMESTAMPTZ`, `NUMERIC(p,s)`, `VARCHAR(n)`, `JSONB`, `UUID`, `ARRAY`, `TSTZRANGE`
 
@@ -289,7 +289,7 @@ user = User.from_schema(data)
 session.add(user)
 await session.commit()
 
-api_result = user.to_schema()  # PublicSchema — excludes password_hash
+api_result = user.to_schema()  # PublicSchema excludes password_hash
 ```
 
 `CreateSchema` derives required fields from nullable columns. `PublicSchema` omits fields with `public = False` or names starting with `_`. No separate schema definitions to maintain.

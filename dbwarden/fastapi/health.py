@@ -7,6 +7,7 @@ from typing import Callable
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
+from pydantic import BaseModel
 
 from dbwarden.config import get_multi_db_config
 from dbwarden.fastapi.runtime import check_database_health, check_startup
@@ -34,6 +35,18 @@ def _status_to_code(status: str) -> int:
     return 503
 
 
+from pydantic import BaseModel
+
+
+class LivenessResponse(BaseModel):
+    status: str = "alive"
+
+
+class ReadinessResponse(BaseModel):
+    status: str
+    databases: list[DatabaseHealth]
+
+
 def DBWardenHealthRouter(
     auth_mode: str = "open",
     api_key: str | None = None,
@@ -56,15 +69,6 @@ def DBWardenHealthRouter(
     For production, set ``auth_mode="authenticated"`` or
     ``DBWARDEN_HEALTH_AUTH=authenticated``.
     """
-    from pydantic import BaseModel
-
-    class LivenessResponse(BaseModel):
-        status: str = "alive"
-
-    class ReadinessResponse(BaseModel):
-        status: str
-        databases: list[DatabaseHealth]
-
     router = APIRouter()
     mode = os.environ.get("DBWARDEN_HEALTH_AUTH", auth_mode)
     

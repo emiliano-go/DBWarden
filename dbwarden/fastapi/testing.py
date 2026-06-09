@@ -35,10 +35,10 @@ async def override_database(
 
     config = get_database(database)
     original_sync = config.sqlalchemy_url_sync
-    original_async = config.sqlalchemy_url
+    original_async = config.sqlalchemy_url_async
 
     config.sqlalchemy_url_sync = url
-    config.sqlalchemy_url = url
+    config.sqlalchemy_url_async = url
 
     try:
         if run_migrations:
@@ -48,7 +48,7 @@ async def override_database(
         yield config
     finally:
         config.sqlalchemy_url_sync = original_sync
-        config.sqlalchemy_url = original_async
+        config.sqlalchemy_url_async = original_async
 
 
 @asynccontextmanager

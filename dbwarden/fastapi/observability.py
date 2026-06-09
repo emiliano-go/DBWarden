@@ -122,27 +122,34 @@ class PoolMetricsCollector:
 
 
 def _patch_engine_for_tracing(qc, tqt, sqt, sq, threshold_ms):
-    """Monkey-patch SQLAlchemy engine execution to count queries.
+    """Wrap SQLAlchemy Connection.execute to count queries.
 
     This is a lightweight approach. For production tracing, integrate
     with OpenTelemetry or similar.
     """
     import sqlalchemy as sa
 
-    original_execute = sa.engine.Engine.execute
+    original_connect = sa.engine.Engine.connect
 
-    def traced_execute(self, statement, *args, **kwargs):
-        nonlocal qc, tqt, sqt, sq
-        qc += 1
-        start = time.time()
-        try:
-            return original_execute(self, statement, *args, **kwargs)
-        finally:
-            elapsed = time.time() - start
-            tqt += elapsed
-            if elapsed > sqt:
-                sqt = elapsed
-            if elapsed * 1000 > threshold_ms:
-                sq += 1
+    def traced_connect(self, *args, **kwargs):
+        connection = original_connect(self, *args, **kwargs)
+        original_conn_execute = connection.execute
 
-    sa.engine.Engine.execute = traced_execute
+        def traced_conn_execute(statement, *parameters, **kwargs):
+            nonlocal qc, tqt, sqt, sq
+            qc += 1
+            start = time.time()
+            try:
+                return original_conn_execute(statement, *parameters, **kwargs)
+            finally:
+                elapsed = time.time() - start
+                tqt += elapsed
+                if elapsed > sqt:
+                    sqt = elapsed
+                if elapsed * 1000 > threshold_ms:
+                    sq += 1
+
+        connection.execute = traced_conn_execute
+        return connection
+
+    sa.engine.Engine.connect = traced_connect
