@@ -91,7 +91,8 @@ class TestMetaReader:
         assert meta is not None
         assert meta.comment == "Core user accounts"
         assert meta.table_attrs["pg_fillfactor"] == 80
-        assert meta.backend_table["pg_fillfactor"] == 80
+        assert meta.backend_table is not None
+        assert meta.backend_table.fillfactor == 80
 
     def test_apply_meta_merges_inherited_meta(self):
         apply_meta(ChildUser)

@@ -289,32 +289,77 @@ def _extract_table_args_dict(model_class: type) -> dict:
 
 
 def _ch_options_from_meta(model_class: type) -> dict:
+    from dbwarden.schema.clickhouse import ChTableSpec
+
     dw_meta = read_meta(model_class)
-    if not dw_meta or not isinstance(dw_meta.backend_table, dict):
+    if not dw_meta:
         return {}
 
     raw = dw_meta.backend_table
+    if raw is None:
+        return {}
+
     options: dict[str, Any] = {}
 
-    ch_engine = raw.get("ch_engine")
-    if ch_engine is not None:
-        options["ch_engine_raw"] = ch_engine
-        options["ch_engine"] = _serialize_ch_engine(ch_engine)
+    if isinstance(raw, dict):
+        # Legacy path: plain dict (backward compat for direct __table_args__ usage)
+        for key in (
+            "ch_engine", "ch_order_by", "ch_primary_key", "ch_partition_by",
+            "ch_sample_by", "ch_ttl", "ch_object_type", "ch_select_statement",
+            "ch_to_table", "ch_dictionary", "ch_dict_layout", "ch_dict_source",
+            "ch_dict_lifetime", "ch_dict_primary_key", "ch_zookeeper_path",
+            "ch_replica_name", "ch_settings",
+        ):
+            if key in raw:
+                options[key] = raw[key]
+        ch_projections = raw.get("ch_projections") or []
+        options["ch_projections"] = [
+            p.to_dict() if isinstance(p, ProjectionSpec) else p
+            for p in ch_projections
+        ]
+        _validate_ch_options(options)
+        return options
 
-    for key in (
-        "ch_order_by", "ch_primary_key", "ch_partition_by", "ch_sample_by",
-        "ch_ttl", "ch_object_type", "ch_select_statement", "ch_to_table",
-        "ch_dictionary", "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime",
-        "ch_dict_primary_key", "ch_zookeeper_path", "ch_replica_name",
-        "ch_settings",
-    ):
-        if key in raw:
-            options[key] = raw[key]
+    if not isinstance(raw, ChTableSpec):
+        return {}
 
-    ch_projections = raw.get("ch_projections") or []
+    if raw.engine:
+        options["ch_engine_raw"] = raw.engine
+        options["ch_engine"] = _serialize_ch_engine(raw.engine)
+    if raw.order_by is not None:
+        options["ch_order_by"] = raw.order_by
+    if raw.primary_key is not None:
+        options["ch_primary_key"] = raw.primary_key
+    if raw.partition_by is not None:
+        options["ch_partition_by"] = raw.partition_by
+    if raw.sample_by is not None:
+        options["ch_sample_by"] = raw.sample_by
+    if raw.ttl is not None:
+        options["ch_ttl"] = raw.ttl
+    if raw.settings is not None:
+        options["ch_settings"] = raw.settings
+    if raw.zookeeper_path is not None:
+        options["ch_zookeeper_path"] = raw.zookeeper_path
+    if raw.replica_name is not None:
+        options["ch_replica_name"] = raw.replica_name
+    if raw.object_type is not None:
+        options["ch_object_type"] = raw.object_type
+    if raw.select_statement is not None:
+        options["ch_select_statement"] = raw.select_statement
+    if raw.to_table is not None:
+        options["ch_to_table"] = raw.to_table
+
+    # Extra attrs not on ChTableSpec: stored in table_attrs
+    attrs = dw_meta.table_attrs
+    if attrs.get("ch_dictionary"):
+        options["ch_dictionary"] = True
+    for key in ("ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key"):
+        if key in attrs:
+            options[key] = attrs[key]
+    projections = attrs.get("ch_projections") or []
     options["ch_projections"] = [
         p.to_dict() if isinstance(p, ProjectionSpec) else p
-        for p in ch_projections
+        for p in projections
     ]
 
     _validate_ch_options(options)

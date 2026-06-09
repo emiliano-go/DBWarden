@@ -29,7 +29,10 @@ class PGTableMeta(TableMeta):
     pg_partition: dict[str, Any] | None = None
 
 
-class PGColumnMeta:
+from dbwarden.schema._meta import FieldMeta
+
+
+class PGColumnMeta(FieldMeta):
     """PostgreSQL column-level metadata; inherit in ``Meta`` inner classes for autocomplete.
 
     Example::
@@ -40,17 +43,6 @@ class PGColumnMeta:
                 pg_identity = "always"
                 pg_storage = "PLAIN"
     """
-    comment: str | None = None
-    public: bool | None = None
-    pg_collation: str | None = None
-    pg_storage: str | None = None
-    pg_compression: str | None = None
-    pg_generated: str | None = None
-    pg_identity: str | None = None
-    pg_identity_start: int | None = None
-    pg_identity_increment: int | None = None
-    pg_identity_min: int | None = None
-    pg_identity_max: int | None = None
 
 
 class CHTableMeta(TableMeta):
@@ -103,7 +95,7 @@ class CHTableMeta(TableMeta):
     ch_replica_name: str | None = None
 
 
-class CHColumnMeta:
+class CHColumnMeta(FieldMeta):
     """ClickHouse column-level metadata; inherit in ``Meta`` inner classes for autocomplete.
 
     Example::
@@ -114,12 +106,3 @@ class CHColumnMeta:
                 ch_codec = "ZSTD(3)"
                 ch_nullable = True
     """
-    comment: str | None = None
-    public: bool | None = None
-    ch_codec: str | None = None
-    ch_default_expression: str | None = None
-    ch_materialized: str | None = None
-    ch_alias: str | None = None
-    ch_ttl: str | None = None
-    ch_low_cardinality: bool = False
-    ch_nullable: bool = False

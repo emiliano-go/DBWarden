@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import asdict
+from enum import Enum
 from typing import Any
 
 from sqlalchemy import text
@@ -10,6 +11,13 @@ from sqlalchemy import text
 from dbwarden.database.connection import get_db_connection
 from dbwarden.engine.model_discovery import ModelTable, get_all_model_tables
 from dbwarden.models import SafetyIssue
+
+
+class Safety(str, Enum):
+    SAFE = "SAFE"
+    INFO = "INFO"
+    WARN = "WARN"
+    CRITICAL = "CRITICAL"
 
 
 def classify_pg_type_change(from_type: dict[str, Any], to_type: dict[str, Any]) -> str:
@@ -518,12 +526,12 @@ CH_COLUMN_CRITICAL = frozenset({"ch_type", "ch_low_cardinality", "ch_nullable"})
 CH_COLUMN_WARN = frozenset({"ch_codec", "ch_default_expression", "ch_materialized", "ch_alias", "ch_ttl"})
 
 
-def classify_ch_column_change(key: str) -> str:
+def classify_ch_column_change(key: str) -> Safety:
     if key in CH_COLUMN_CRITICAL:
-        return "CRITICAL"
+        return Safety.CRITICAL
     if key in CH_COLUMN_WARN:
-        return "WARN"
-    return "INFO"
+        return Safety.WARN
+    return Safety.INFO
 
 
 CH_OPTION_CRITICAL = frozenset({
@@ -536,12 +544,12 @@ CH_OPTION_WARN = frozenset({
 })
 
 
-def classify_ch_options_change(key: str) -> str:
+def classify_ch_options_change(key: str) -> Safety:
     if key in CH_OPTION_CRITICAL:
-        return "CRITICAL"
+        return Safety.CRITICAL
     if key in CH_OPTION_WARN:
-        return "WARN"
-    return "INFO"
+        return Safety.WARN
+    return Safety.INFO
 
 
 def classify_ch_safety(
