@@ -18,7 +18,7 @@ dbwarden generate-models --database primary --exclude-tables logs,audit
 | `--output`, `-o` | Output directory (default: `models`) |
 | `--tables` | Comma-separated list of tables to include |
 | `--exclude-tables` | Comma-separated list of tables to exclude |
-| `--clickhouse-engines` | Include ClickHouse engine metadata in `__table_args__` |
+| `--clickhouse-engines` | Include ClickHouse engine metadata. Auto-detected when `database_type="clickhouse"` |
 | `--relationships` | Generate `relationship()` attributes for foreign keys |
 | `--dialect` | SQL dialect for type mapping (auto-detected from database type) |
 | `--single-file` | Generate a single `models.py` instead of one file per table |
@@ -90,6 +90,48 @@ The following metadata is reverse-engineered:
 
 For the complete feature reference, see [PostgreSQL Deep Dive](../databases/postgresql.md).
 
+## ClickHouse First-Class Output
+
+For ClickHouse databases, `generate-models` reverse-engineers all supported metadata and emits it as `class Meta` inner classes with `CHTableMeta`, `CHColumnMeta`, `ChEngineSpec`, and `ProjectionSpec`. Engine metadata is included automatically when `database_type="clickhouse"` (no `--clickhouse-engines` flag required).
+
+```python
+from dbwarden import Base, CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
+
+class Event(Base):
+    __tablename__ = "events"
+
+    id:    Mapped[int] = mapped_column(Int64, primary_key=True)
+    event_date: Mapped[date] = mapped_column(Date)
+    payload: Mapped[str] = mapped_column(String)
+
+    class Meta(CHTableMeta):
+        ch_engine = ChEngineSpec("MergeTree")
+        ch_order_by = ["event_date", "id"]
+        ch_partition_by = "toYYYYMM(event_date)"
+        ch_ttl = ["event_date + toIntervalYear(1)"]
+        ch_settings = {"index_granularity": "8192"}
+        ch_projections = [
+            ProjectionSpec("by_date", "SELECT event_date, sum(amount) GROUP BY event_date"),
+        ]
+
+        class payload(CHColumnMeta):
+            ch_codec = "ZSTD(3)"
+```
+
+The following metadata is reverse-engineered:
+
+- **Engine spec**: engine name, arguments, ZooKeeper path, replica name, settings via `ChEngineSpec`
+- **Ordering and partitioning**: `ch_order_by`, `ch_primary_key`, `ch_partition_by`, `ch_sample_by`
+- **TTL**: table-level TTL expressions
+- **Projections**: named projections via `ProjectionSpec`
+- **Materialized views**: `ch_select_statement`, `ch_to_table`
+- **Dictionaries**: `ch_dictionary`, `ch_dict_layout`, `ch_dict_source`, `ch_dict_lifetime`, `ch_dict_primary_key`
+- **Column metadata**: codec, default expression, LowCardinality/Nullable wrappers via `CHColumnMeta`
+- **Skip indexes**: `index()` with `clickhouse_type`, `clickhouse_granularity`
+- **Table and column comments**
+
+For the complete feature reference, see [ClickHouse Deep Dive](../databases/clickhouse.md).
+
 ## Use cases
 
 - **Bootstrapping**: start a new project from an existing database
@@ -99,4 +141,4 @@ For the complete feature reference, see [PostgreSQL Deep Dive](../databases/post
 ## Warnings
 
 - Generated code requires manual review and cleanup
-- ClickHouse engine metadata may be incomplete without `--clickhouse-engines`
+- ClickHouse engine metadata is auto-detected; review the generated `ChEngineSpec` to ensure correctness

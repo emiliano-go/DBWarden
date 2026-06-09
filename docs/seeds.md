@@ -177,7 +177,7 @@ primary = database_config(
 | `checksum` | SHA-256 of file content |
 | `applied_at` | timestamp of application |
 
-The tracking table is created automatically on first seed apply. Seeds are idempotent by tracking -- each version can only be applied once until rolled back.
+The tracking table is created automatically on first seed apply. Seeds are idempotent by tracking: each version can only be applied once until rolled back.
 
 ## Seeds and migrations
 
