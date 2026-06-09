@@ -21,6 +21,35 @@ _LIST_FIELDS = {
 }
 
 
+_KNOWN_FIELD_ATTRS = frozenset({
+    "comment", "public",
+    "pg_collation", "pg_storage", "pg_compression", "pg_generated",
+    "pg_identity", "pg_identity_start", "pg_identity_increment",
+    "pg_identity_min", "pg_identity_max",
+    "ch_codec", "ch_default_expression", "ch_materialized", "ch_alias",
+    "ch_ttl", "ch_low_cardinality", "ch_nullable",
+    "my_charset", "my_collate", "my_unsigned", "my_on_update",
+    "mdb_invisible", "mdb_without_overlaps", "mdb_sequence",
+    "sq_generated", "sq_generated_mode",
+})
+
+_KNOWN_TABLE_ATTRS = frozenset({
+    "comment", "indexes", "checks", "uniques", "partition",
+    "pg_tablespace", "pg_fillfactor", "pg_unlogged", "pg_inherits",
+    "pg_indexes", "pg_checks", "pg_uniques", "pg_excludes", "pg_partition",
+    "ch_engine", "ch_order_by", "ch_primary_key", "ch_partition_by",
+    "ch_sample_by", "ch_ttl", "ch_settings", "ch_zookeeper_path",
+    "ch_replica_name", "ch_object_type", "ch_select_statement",
+    "ch_to_table", "ch_indexes", "ch_dictionary", "ch_dict_layout",
+    "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key",
+    "ch_projections",
+    "my_engine", "my_charset", "my_collate", "my_row_format",
+    "my_auto_increment", "my_indexes",
+    "mdb_page_compressed", "mdb_page_compression_level",
+    "sq_without_rowid", "sq_strict", "sq_indexes",
+})
+
+
 def apply_meta(cls: type) -> None:
     """Read ``class Meta`` from a mapped model and populate DBWarden metadata."""
     if getattr(cls, "__dbwarden_meta_applied__", False):
@@ -109,6 +138,12 @@ def _to_dict(value: Any) -> Any:
 
 
 def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
+    from dbwarden.schema.pgsql import PgTableSpec
+    from dbwarden.schema.clickhouse import ChTableSpec
+    from dbwarden.schema.mysql import MyTableSpec
+    from dbwarden.schema.mariadb import MdbTableSpec
+    from dbwarden.schema.sqlite import SqTableSpec
+
     meta = DBWardenMeta()
     meta.comment = table_attrs.get("comment")
     meta.indexes = [_to_dict(i) for i in table_attrs.get("indexes", [])]
@@ -119,16 +154,52 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
     meta.pg_checks = list(table_attrs.get("pg_checks", []))
     meta.pg_uniques = list(table_attrs.get("pg_uniques", []))
     meta.pg_excludes = list(table_attrs.get("pg_excludes", []))
+    meta.ch_indexes = [_to_dict(i) for i in table_attrs.get("ch_indexes", [])]
     meta.my_indexes = list(table_attrs.get("my_indexes", []))
     meta.sq_indexes = list(table_attrs.get("sq_indexes", []))
     meta.table_attrs = dict(table_attrs)
 
-    backend_table: dict[str, Any] = {}
-    for key, value in table_attrs.items():
-        if key.startswith(("pg_", "ch_", "my_", "mdb_", "sq_")):
-            backend_table[key] = value
-
-    if backend_table:
-        meta.backend_table = backend_table
+    # Build typed backend_table spec
+    if any(k.startswith("pg_") and k not in ("pg_indexes", "pg_checks", "pg_uniques", "pg_excludes", "pg_partition") for k in table_attrs):
+        meta.backend_table = PgTableSpec(
+            tablespace=table_attrs.get("pg_tablespace"),
+            fillfactor=table_attrs.get("pg_fillfactor"),
+            unlogged=table_attrs.get("pg_unlogged", False),
+            inherits=list(table_attrs.get("pg_inherits", [])) if table_attrs.get("pg_inherits") else None,
+        )
+    elif any(k.startswith("ch_") and k not in ("ch_indexes", "ch_projections", "ch_settings", "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key") for k in table_attrs):
+        meta.backend_table = ChTableSpec(
+            engine=table_attrs.get("ch_engine", "MergeTree"),
+            order_by=list(table_attrs.get("ch_order_by", [])) if table_attrs.get("ch_order_by") else None,
+            primary_key=table_attrs.get("ch_primary_key"),
+            partition_by=table_attrs.get("ch_partition_by"),
+            sample_by=table_attrs.get("ch_sample_by"),
+            ttl=table_attrs.get("ch_ttl"),
+            settings=dict(table_attrs.get("ch_settings", {})) if table_attrs.get("ch_settings") else None,
+            zookeeper_path=table_attrs.get("ch_zookeeper_path"),
+            replica_name=table_attrs.get("ch_replica_name"),
+            object_type=table_attrs.get("ch_object_type", "table"),
+            select_statement=table_attrs.get("ch_select_statement"),
+            to_table=table_attrs.get("ch_to_table"),
+        )
+    elif any(k.startswith("mdb_") and k not in ("mdb_page_compressed", "mdb_page_compression_level") or k.startswith("my_") and k not in ("my_indexes",) for k in table_attrs):
+        is_mariadb = any(k.startswith("mdb_") for k in table_attrs)
+        cls = MdbTableSpec if is_mariadb else MyTableSpec
+        meta.backend_table = cls(
+            engine=table_attrs.get("my_engine", "InnoDB"),
+            charset=table_attrs.get("my_charset", "utf8mb4"),
+            collate=table_attrs.get("my_collate", "utf8mb4_unicode_ci"),
+            row_format=table_attrs.get("my_row_format"),
+            auto_increment=table_attrs.get("my_auto_increment"),
+            **({
+                "page_compressed": table_attrs.get("mdb_page_compressed", False),
+                "page_compression_level": table_attrs.get("mdb_page_compression_level"),
+            } if is_mariadb else {}),
+        )
+    elif any(k.startswith("sq_") and k not in ("sq_indexes",) for k in table_attrs):
+        meta.backend_table = SqTableSpec(
+            without_rowid=table_attrs.get("sq_without_rowid", False),
+            strict=table_attrs.get("sq_strict", False),
+        )
 
     return meta
