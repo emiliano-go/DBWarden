@@ -293,7 +293,7 @@ def _run_offline_migrations(description: str | None = None, database: str | None
         console.print("No new migrations to generate - all models already covered by existing migrations.", style="cyan")
         return
 
-    from dbwarden.engine.snapshot import snapshot_diff_to_sql, Change
+    from dbwarden.engine.migration_name import Change
     from dbwarden.engine.version import get_migration_filepaths_by_version
 
     upgrade_sql, rollback_sql, changes = snapshot_diff_to_sql(

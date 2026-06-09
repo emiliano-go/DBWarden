@@ -116,30 +116,87 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
             curr_col = curr_cols.get(col_name)
 
             if prev_col is None and curr_col is not None:
-                upgrade_ops.append({"type": "add_column", "table": table_name, "target": col_name, "severity": "INFO"})
-                rollback_ops.insert(0, {"type": "drop_column", "table": table_name, "target": col_name, "severity": "WARNING"})
+                col_type = (curr_col.get("type") or "???")
+                upgrade_ops.append({
+                    "type": "add_column", "table": table_name, "column": col_name,
+                    "definition": {"type": col_type, "nullable": curr_col.get("nullable", True), "default": curr_col.get("default")},
+                    "severity": "INFO",
+                })
+                rollback_ops.insert(0, {
+                    "type": "drop_column", "table": table_name, "column": col_name,
+                    "definition": {"type": col_type},
+                    "severity": "WARNING",
+                })
                 continue
 
             if curr_col is None and prev_col is not None:
-                upgrade_ops.append({"type": "drop_column", "table": table_name, "target": col_name, "severity": "WARNING"})
-                rollback_ops.insert(0, {"type": "add_column", "table": table_name, "target": col_name, "severity": "INFO"})
+                col_type = (prev_col.get("type") or "???")
+                upgrade_ops.append({
+                    "type": "drop_column", "table": table_name, "column": col_name,
+                    "definition": {"type": col_type},
+                    "severity": "WARNING",
+                })
+                rollback_ops.insert(0, {
+                    "type": "add_column", "table": table_name, "column": col_name,
+                    "definition": {"type": col_type, "nullable": prev_col.get("nullable", True), "default": prev_col.get("default")},
+                    "severity": "INFO",
+                })
                 continue
 
             if _normalize_type(prev_col.get("type")) != _normalize_type(curr_col.get("type")):
-                upgrade_ops.append({"type": "alter_column_type", "table": table_name, "target": col_name, "severity": "WARNING"})
-                rollback_ops.insert(0, {"type": "alter_column_type", "table": table_name, "target": col_name, "severity": "WARNING"})
+                model_type = (curr_col.get("type") or "")
+                prev_model_type = (prev_col.get("type") or "")
+                upgrade_ops.append({
+                    "type": "alter_column_type", "table": table_name, "column": col_name,
+                    "model_type": model_type,
+                    "severity": "WARNING",
+                })
+                rollback_ops.insert(0, {
+                    "type": "alter_column_type", "table": table_name, "column": col_name,
+                    "model_type": prev_model_type,
+                    "severity": "WARNING",
+                })
 
             if prev_col.get("nullable") != curr_col.get("nullable"):
-                upgrade_ops.append({"type": "alter_column_nullable", "table": table_name, "target": col_name, "severity": "WARNING"})
-                rollback_ops.insert(0, {"type": "alter_column_nullable", "table": table_name, "target": col_name, "severity": "WARNING"})
+                upgrade_ops.append({
+                    "type": "alter_column_nullable", "table": table_name, "column": col_name,
+                    "nullable": curr_col.get("nullable", True),
+                    "col_type": (curr_col.get("type") or ""),
+                    "severity": "WARNING",
+                })
+                rollback_ops.insert(0, {
+                    "type": "alter_column_nullable", "table": table_name, "column": col_name,
+                    "nullable": prev_col.get("nullable", True),
+                    "col_type": (prev_col.get("type") or ""),
+                    "severity": "WARNING",
+                })
 
             if prev_col.get("default") != curr_col.get("default"):
-                upgrade_ops.append({"type": "alter_column_default", "table": table_name, "target": col_name, "severity": "INFO"})
-                rollback_ops.insert(0, {"type": "alter_column_default", "table": table_name, "target": col_name, "severity": "INFO"})
+                upgrade_ops.append({
+                    "type": "alter_column_default", "table": table_name, "column": col_name,
+                    "default": curr_col.get("default"),
+                    "severity": "INFO",
+                })
+                rollback_ops.insert(0, {
+                    "type": "alter_column_default", "table": table_name, "column": col_name,
+                    "default": prev_col.get("default"),
+                    "severity": "INFO",
+                })
 
+            # Column comment diff — uses alter_column_comment type
             if prev_col.get("comment") != curr_col.get("comment"):
-                upgrade_ops.append({"type": "alter_comment", "table": table_name, "target": col_name, "severity": "INFO"})
-                rollback_ops.insert(0, {"type": "alter_comment", "table": table_name, "target": col_name, "severity": "INFO"})
+                upgrade_ops.append({
+                    "type": "alter_column_comment", "table": table_name, "column": col_name,
+                    "comment": (curr_col.get("comment") or ""),
+                    "previous_comment": (prev_col.get("comment") or ""),
+                    "severity": "INFO",
+                })
+                rollback_ops.insert(0, {
+                    "type": "alter_column_comment", "table": table_name, "column": col_name,
+                    "comment": (prev_col.get("comment") or ""),
+                    "previous_comment": (curr_col.get("comment") or ""),
+                    "severity": "INFO",
+                })
 
         # Index diff
         prev_idxs = {idx.get("name", ""): idx for idx in prev_entry.get("indexes", []) if idx.get("name")}
@@ -152,9 +209,19 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
                 upgrade_ops.append({"type": "drop_index", "table": table_name, "target": name, "severity": "WARNING"})
                 rollback_ops.insert(0, {"type": "add_index", "table": table_name, "target": name, "severity": "INFO"})
 
-        # Comment diff
+        # Table comment diff — uses alter_table_comment type
         if prev_entry.get("comment") != curr_entry.get("comment"):
-            upgrade_ops.append({"type": "alter_comment", "table": table_name, "severity": "INFO"})
-            rollback_ops.insert(0, {"type": "alter_comment", "table": table_name, "severity": "INFO"})
+            upgrade_ops.append({
+                "type": "alter_table_comment", "table": table_name,
+                "comment": (curr_entry.get("comment") or ""),
+                "previous_comment": (prev_entry.get("comment") or ""),
+                "severity": "INFO",
+            })
+            rollback_ops.insert(0, {
+                "type": "alter_table_comment", "table": table_name,
+                "comment": (prev_entry.get("comment") or ""),
+                "previous_comment": (curr_entry.get("comment") or ""),
+                "severity": "INFO",
+            })
 
     return upgrade_ops, rollback_ops
