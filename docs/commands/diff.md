@@ -1,24 +1,17 @@
-# `diff`
+# `diff` [NOT YET IMPLEMENTED]
 
-Show structural diff helpers (models/migrations/database).
+> **Status: stub.** The `diff` command currently prints a placeholder message.
+> Full model-vs-database and migration-vs-database comparison is planned.
 
 ## Usage
 
 ```bash
 dbwarden diff all --database primary
-dbwarden diff models --database primary
-dbwarden diff migrations --database primary
 ```
 
-## Arguments and options
+## Options
 
-- positional `diff_type`: `all`, `models`, or `migrations`
 - `--database`, `-d`
 - `--verbose`, `-v`
 
-## Notes
-
-- intended for schema comparison workflows
-- model path configuration affects model-based diffs
-
-See also: [Configuration](../configuration/index.md)
+For live schema inspection today use [`check-db`](./check-db.md) instead.

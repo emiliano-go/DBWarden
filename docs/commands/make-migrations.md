@@ -38,6 +38,7 @@ dbwarden make-migrations --database primary --safe-type-change
 - `--safe-type-change`: Use a multi-step strategy for type changes: add a temporary column, data migration comment, verification step, then drop-and-rename. Useful for databases where `ALTER COLUMN TYPE` would lock the table.
 - `--concurrent` / `--no-concurrent`: Enable or disable `CREATE INDEX CONCURRENTLY` for PostgreSQL (default: `--concurrent`). Use `--no-concurrent` when the migration runs inside a transaction block.
 - `--offline`: Use a model state file (`.dbwarden/model_state.json`) instead of a live database or schema snapshot. Run `dbwarden export-models` first to establish a baseline. Useful for CI pipelines without a database service.
+- `--type`, `-t`: Output prefix for the generated migration file — `versioned` (default), `ra` / `runs_always`, or `roc` / `runs_on_change`. Use `ra` for SQL that should run every migration cycle (e.g. grants, materialized view refreshes) and `roc` for SQL that should re-run when the file changes (e.g. stored procedures, triggers).
 
 ## Schema Snapshots
 

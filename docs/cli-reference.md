@@ -106,6 +106,7 @@ Options:
 - `--rename`: Repeatable. Declare a column rename in format `table.old_name:new_name`.
 - `--rename-table`: Repeatable. Declare a table rename in format `old_table:new_table`.
 - `--safe-type-change`: Multi-step safe type change strategy.
+- `--type`/`-t`: Output prefix — `versioned` (default), `ra`/`runs_always`, or `roc`/`runs_on_change`.
 
 See [make-migrations](commands/make-migrations.md) for full documentation including rename detection, column-level changes, schema snapshots, and plan format.
 
@@ -114,9 +115,10 @@ See [make-migrations](commands/make-migrations.md) for full documentation includ
 ```bash
 dbwarden new "manual hotfix" --database primary
 dbwarden new "backfill" --database primary --version 0042
+dbwarden new "seed data" --database primary --type ra
 ```
 
-Options: `--database`, `--version`
+Options: `--database`, `--version`, `--type`/`-t`
 
 ### `generate-models`
 

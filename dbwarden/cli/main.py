@@ -323,6 +323,10 @@ def make_migrations(
         "--offline",
         help="Use model state file instead of live database (requires export-models first)",
     ),
+    migration_type: str = typer.Option(
+        "versioned", "--type", "-t",
+        help="Output prefix: versioned (default), runs_always/ra, runs_on_change/roc",
+    ),
 ):
     """Auto-generate SQL migration from SQLAlchemy models."""
     validate_directory()
@@ -336,6 +340,7 @@ def make_migrations(
         rename_table_flags=rename_table,
         concurrent=concurrent,
         offline=offline,
+        migration_type=migration_type,
     )
 
 
@@ -348,10 +353,17 @@ def new(
     database: str | None = typer.Option(
         None, "--database", "-d", help="Target database name"
     ),
+    migration_type: str = typer.Option(
+        "versioned", "--type", "-t",
+        help="Migration type: versioned (default), runs_always/ra, runs_on_change/roc",
+    ),
 ):
     """Create a new manual migration file."""
     validate_directory()
-    handle_new(description=description, version=version, database=database)
+    handle_new(
+        description=description, version=version, database=database,
+        migration_type=migration_type,
+    )
 
 
 @app.command()

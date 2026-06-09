@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from dbwarden.config import get_database, get_multi_db_config
+from dbwarden.constants import RUNS_ALWAYS_FILE_PREFIX, RUNS_ON_CHANGE_FILE_PREFIX
 from dbwarden.engine.checksum import calculate_checksum
 from dbwarden.engine.file_parser import parse_upgrade_statements
 from dbwarden.engine.model_discovery import (
@@ -25,6 +26,7 @@ from dbwarden.engine.version import (
     get_migrations_directory,
     get_next_migration_number,
     generate_migration_filename,
+    generate_repeatable_filename,
 )
 from dbwarden.logging import get_logger
 from dbwarden.output import console
@@ -248,17 +250,18 @@ def get_pending_migration_statements(migrations_dir: str) -> set[str]:
     return all_statements
 
 
-def _run_offline_migrations(description: str | None = None, database: str | None = None) -> None:
+def _run_offline_migrations(
+    description: str | None = None, database: str | None = None, migration_type: str = "versioned",
+) -> None:
     import json
     import os
     from datetime import datetime, timezone
     from pathlib import Path
 
-    from dbwarden.config import get_database, get_multi_db_config
     from dbwarden.engine.model_discovery import get_all_model_tables
     from dbwarden.engine.offline import diff_model_states, model_state_to_dict
     from dbwarden.engine.snapshot import snapshot_diff_to_sql
-    from dbwarden.engine.version import get_migrations_directory, get_migration_filepaths_by_version
+    from dbwarden.engine.version import get_migrations_directory, get_migration_filepaths_by_version, generate_repeatable_filename, generate_migration_filename
 
     config = get_database(database)
     multi_config = get_multi_db_config()
@@ -323,10 +326,15 @@ def _run_offline_migrations(description: str | None = None, database: str | None
         console.print("No new migrations to generate - all models already covered by existing migrations.", style="cyan")
         return
 
-    existing_versions = get_migration_filepaths_by_version(migrations_dir)
-    next_version = f"{int(max(existing_versions.keys(), default='0000')) + 1:04d}"
     safe_desc = (description or "offline migration").replace(" ", "_").lower()[:60]
-    filename = f"{db_name}__{next_version}_{safe_desc}.sql"
+    if migration_type in ("runs_always", "ra"):
+        filename = generate_repeatable_filename(db_name, safe_desc, RUNS_ALWAYS_FILE_PREFIX)
+    elif migration_type in ("runs_on_change", "roc"):
+        filename = generate_repeatable_filename(db_name, safe_desc, RUNS_ON_CHANGE_FILE_PREFIX)
+    else:
+        existing_versions = get_migration_filepaths_by_version(migrations_dir)
+        next_version = f"{int(max(existing_versions.keys(), default='0000')) + 1:04d}"
+        filename = generate_migration_filename(db_name, safe_desc, next_version)
 
     header = f"-- upgrade\n\n"
     header += "\n\n".join(filtered_statements)
@@ -364,6 +372,7 @@ def make_migrations_cmd(
     rename_table_flags: list[str] | None = None,
     concurrent: bool = True,
     offline: bool = False,
+    migration_type: str = "versioned",
 ) -> None:
     """
     Auto-generate SQL migration from SQLAlchemy models.
@@ -378,11 +387,14 @@ def make_migrations_cmd(
         rename_table_flags: List of user-supplied --rename-table flag strings.
         concurrent: Use CREATE INDEX CONCURRENTLY on PostgreSQL.
         offline: Use model state file instead of live database.
+        migration_type: Output prefix: 'versioned' (default), 'runs_always'/'ra', or 'runs_on_change'/'roc'.
     """
     logger = get_logger()
 
     if offline:
-        _run_offline_migrations(description=description, database=database)
+        _run_offline_migrations(
+            description=description, database=database, migration_type=migration_type,
+        )
         return
 
     config = get_database(database)
@@ -552,7 +564,12 @@ def make_migrations_cmd(
     )
 
     safe_desc = _resolve_migration_description(description, changes)
-    filename = generate_migration_filename(db_name, safe_desc, next_number)
+    if migration_type in ("runs_always", "ra"):
+        filename = generate_repeatable_filename(db_name, safe_desc, RUNS_ALWAYS_FILE_PREFIX)
+    elif migration_type in ("runs_on_change", "roc"):
+        filename = generate_repeatable_filename(db_name, safe_desc, RUNS_ON_CHANGE_FILE_PREFIX)
+    else:
+        filename = generate_migration_filename(db_name, safe_desc, next_number)
     plan = build_migration_plan(
         migration_id=Path(filename).stem,
         changes=changes,
@@ -852,6 +869,7 @@ def new_migration_cmd(
     description: str,
     version: str | None = None,
     database: str | None = None,
+    migration_type: str = "versioned",
 ) -> None:
     """
     Create a new manual migration file.
@@ -860,6 +878,7 @@ def new_migration_cmd(
         description: Description of the migration.
         version: Version number for the migration.
         database: Target database name.
+        migration_type: 'versioned' (default), 'runs_always'/'ra', or 'runs_on_change'/'roc'.
     """
     logger = get_logger()
 
@@ -869,11 +888,24 @@ def new_migration_cmd(
 
     migrations_dir = get_migrations_directory(database)
 
-    if version is None:
-        version = get_next_migration_number(migrations_dir)
-
     safe_description = re.sub(r"[^a-zA-Z0-9]", "_", description).lower()
-    filename = generate_migration_filename(db_name, safe_description, version)
+
+    if migration_type in ("runs_always", "ra"):
+        migration_type = "runs_always"
+        filename = generate_repeatable_filename(
+            db_name, safe_description, RUNS_ALWAYS_FILE_PREFIX
+        )
+    elif migration_type in ("runs_on_change", "roc"):
+        migration_type = "runs_on_change"
+        filename = generate_repeatable_filename(
+            db_name, safe_description, RUNS_ON_CHANGE_FILE_PREFIX
+        )
+    else:
+        migration_type = "versioned"
+        if version is None:
+            version = get_next_migration_number(migrations_dir)
+        filename = generate_migration_filename(db_name, safe_description, version)
+
     filepath = os.path.join(migrations_dir, filename)
 
     # Validate the final path stays within migrations directory
@@ -897,5 +929,5 @@ def new_migration_cmd(
     with open(filepath, "w") as f:
         f.write(content)
 
-    logger.info(f"Created migration file: {filename}")
+    logger.info(f"Created migration file ({migration_type}): {filename}")
     console.print(f"Created migration file: {filepath}", style="green")

@@ -138,9 +138,11 @@ DROP FUNCTION IF EXISTS update_updated_at();
 
 ## Metadata headers
 
-Headers are parsed before SQL execution and can influence ordering/behavior.
+Headers are parsed from migration file comments. The `-- seed` marker is recognised
+by tools; `-- depends_on` parsing is implemented but **not yet enforced** during
+migration execution (migrations run in filesystem-sort order by version).
 
-Dependency header:
+Dependency header (parsed but not enforced):
 
 ```sql
 -- depends_on: ["0004", "0005"]

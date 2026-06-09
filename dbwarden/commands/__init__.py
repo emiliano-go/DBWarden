@@ -84,6 +84,7 @@ def handle_make_migrations(
     rename_table_flags: list[str] | None = None,
     concurrent: bool = True,
     offline: bool = False,
+    migration_type: str = "versioned",
 ) -> None:
     """Handle make-migrations command."""
     make_migrations_cmd(
@@ -96,14 +97,17 @@ def handle_make_migrations(
         rename_table_flags=rename_table_flags,
         concurrent=concurrent,
         offline=offline,
+        migration_type=migration_type,
     )
 
 
 def handle_new(
-    description: str, version: str | None, database: str | None = None
+    description: str, version: str | None, database: str | None = None, migration_type: str = "versioned"
 ) -> None:
     """Handle new command."""
-    new_migration_cmd(description=description, version=version, database=database)
+    new_migration_cmd(
+        description=description, version=version, database=database, migration_type=migration_type,
+    )
 
 
 def handle_migrate(

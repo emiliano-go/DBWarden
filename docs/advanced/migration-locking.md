@@ -15,8 +15,8 @@ The lock is stored in the target database itself: no external service (Redis, fi
 If a second `migrate` invocation starts while the first holds the lock, it fails immediately with:
 
 ```
-MigrationLockError: Database 'primary' is locked by another migration process.
-Use 'dbwarden lock-status --database primary' to inspect the lock.
+LockError: Migration lock is already held. Another migration process may be running.
+Use 'dbwarden unlock' to release the lock if necessary.
 ```
 
 DBWarden does not retry on lock failure. The calling process (CI job, deploy script) must decide whether to retry or abort.
@@ -30,19 +30,17 @@ dbwarden lock-status --database primary
 Output when unlocked:
 
 ```
-primary: unlocked
+Migration lock: INACTIVE
 ```
 
 Output when locked:
 
 ```
-primary: LOCKED
-  locked_at: 2026-06-06 14:32:11 UTC
-  locked_by: migrate
-  pid: 84921
+Migration lock: ACTIVE
+Another migration process may be running.
 ```
 
-The `locked_at` timestamp and `pid` are recorded at acquisition time. Use these to determine whether the lock is held by a live process or is stale.
+Use the `locked_at` timestamp in the lock table to determine whether the lock is held by a live process or is stale.
 
 ## When a migration fails mid-run
 
