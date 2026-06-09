@@ -60,6 +60,11 @@ _CLICKHOUSE_MAP: dict[str, str] = {
 }
 
 
+def _strip_codec_wrapper(codec_expr: str) -> str:
+    m = re.match(r"^CODEC\((.+)\)$", codec_expr.strip(), re.IGNORECASE)
+    return m.group(1) if m else codec_expr.strip()
+
+
 def _parse_type(raw: str, dialect: str | None = None) -> str:
     raw_stripped = raw.strip()
     upper = raw_stripped.upper()
@@ -245,6 +250,7 @@ def _resolve_imports(columns: list[dict], has_relationships: bool) -> set[str]:
         elif base_type == "ENUM":
             imports.add("Enum")
         elif base_type == "ARRAY":
+            imports.add("ARRAY")
             inner = sa_type[6:-1]
             if inner.startswith("Text"):
                 imports.add("Text")
@@ -362,29 +368,41 @@ def _render_clickhouse_meta(columns: list[dict], options: dict, object_type: str
     engine_raw = options.get("ch_engine_raw")
     if engine_raw is not None:
         if hasattr(engine_raw, "name"):
-            args = [repr(getattr(engine_raw, "name"))]
-            if getattr(engine_raw, "args", None):
-                args.extend(f"{arg!r}" for arg in getattr(engine_raw, "args", ()))
-            if getattr(engine_raw, "zookeeper_path", None) is not None:
-                args.append(f"zookeeper_path={getattr(engine_raw, 'zookeeper_path')!r}")
-            if getattr(engine_raw, "replica_name", None) is not None:
-                args.append(f"replica_name={getattr(engine_raw, 'replica_name')!r}")
-            if getattr(engine_raw, "settings", None) is not None:
-                args.append(f"settings={getattr(engine_raw, 'settings')!r}")
-            lines.append(f"        ch_engine = ChEngineSpec({', '.join(args)})")
+            eng_name = repr(getattr(engine_raw, "name"))
+            eng_args = getattr(engine_raw, "args", None)
+            zk = getattr(engine_raw, "zookeeper_path", None)
+            replica = getattr(engine_raw, "replica_name", None)
+            settings = getattr(engine_raw, "settings", None)
+            parts = [f"        ch_engine = ChEngineSpec({eng_name}"]
+            if eng_args:
+                parts.append(f"args=({', '.join(repr(a) for a in eng_args)},)")
+            if zk is not None:
+                parts.append(f"zookeeper_path={zk!r}")
+            if replica is not None:
+                parts.append(f"replica_name={replica!r}")
+            if settings is not None:
+                parts.append(f"settings={settings!r}")
+            lines.append(", ".join(parts) + ")")
         elif isinstance(engine_raw, dict) and engine_raw.get("name"):
-            args = [repr(engine_raw["name"])]
-            if engine_raw.get("args"):
-                args.extend(repr(arg) for arg in engine_raw.get("args", []))
-            if engine_raw.get("zookeeper_path") is not None:
-                args.append(f"zookeeper_path={engine_raw['zookeeper_path']!r}")
-            if engine_raw.get("replica_name") is not None:
-                args.append(f"replica_name={engine_raw['replica_name']!r}")
-            if engine_raw.get("settings") is not None:
-                args.append(f"settings={engine_raw['settings']!r}")
-            lines.append(f"        ch_engine = ChEngineSpec({', '.join(args)})")
+            eng_name = repr(engine_raw["name"])
+            eng_args = engine_raw.get("args")
+            zk = engine_raw.get("zookeeper_path")
+            replica = engine_raw.get("replica_name")
+            settings = engine_raw.get("settings")
+            parts = [f"        ch_engine = ChEngineSpec({eng_name}"]
+            if eng_args:
+                parts.append(f"args=({', '.join(repr(a) for a in eng_args)},)")
+            if zk is not None:
+                parts.append(f"zookeeper_path={zk!r}")
+            if replica is not None:
+                parts.append(f"replica_name={replica!r}")
+            if settings is not None:
+                parts.append(f"settings={settings!r}")
+            lines.append(", ".join(parts) + ")")
         else:
-            lines.append(f"        ch_engine = {options.get('ch_engine')!r}")
+            lines.append(f"        ch_engine = {engine_raw!r}")
+    elif options.get("ch_engine"):
+        lines.append(f"        ch_engine = {options['ch_engine']!r}")
 
     for key in (
         "ch_order_by",
@@ -430,15 +448,22 @@ def _render_clickhouse_meta(columns: list[dict], options: dict, object_type: str
             continue
         lines.append("")
         lines.append(f"        class {col['name']}(CHColumnMeta):")
+        has_content = False
         if col.get("comment"):
             lines.append(f"            comment = {col['comment']!r}")
+            has_content = True
         for key in ("ch_codec", "ch_default_expression", "ch_materialized", "ch_alias", "ch_ttl"):
             if ch_meta.get(key) is not None:
                 lines.append(f"            {key} = {ch_meta[key]!r}")
+                has_content = True
         if ch_meta.get("ch_low_cardinality"):
             lines.append("            ch_low_cardinality = True")
+            has_content = True
         if ch_meta.get("ch_nullable"):
             lines.append("            ch_nullable = True")
+            has_content = True
+        if not has_content:
+            lines.append("            pass")
 
     return lines
 
@@ -477,50 +502,6 @@ def _format_column(col: dict) -> str:
         col_args.append("autoincrement=False")
     col_args.append(")")
     return ",\n        ".join(col_args)
-
-
-def _format_clickhouse_args(options: dict) -> str:
-    parts: list[str] = []
-    for key in (
-        "clickhouse_engine",
-        "clickhouse_order_by",
-        "clickhouse_primary_key",
-        "clickhouse_partition_by",
-        "clickhouse_sample_by",
-        "clickhouse_ttl",
-        "clickhouse_mv",
-        "clickhouse_mv_query",
-        "clickhouse_mv_engine",
-        "clickhouse_mv_order_by",
-        "clickhouse_mv_populate",
-        "clickhouse_projections",
-        "clickhouse_zookeeper_path",
-        "clickhouse_replica_name",
-        "clickhouse_dictionary",
-        "clickhouse_dict_layout",
-        "clickhouse_dict_source",
-        "clickhouse_dict_lifetime",
-        "clickhouse_dict_primary_key",
-    ):
-        if key in options and options[key] is not None:
-            value = options[key]
-            if isinstance(value, str):
-                parts.append(f"    {key!r}: {value!r},")
-            elif isinstance(value, bool):
-                parts.append(f"    {key!r}: {str(value)},")
-            elif isinstance(value, list):
-                items = ", ".join(repr(v) for v in value)
-                parts.append(f"    {key!r}: [{items}],")
-            elif isinstance(value, tuple):
-                items = ", ".join(repr(v) for v in value)
-                parts.append(f"    {key!r}: ({items}),")
-            elif isinstance(value, int):
-                parts.append(f"    {key!r}: {value!r},")
-            else:
-                parts.append(f"    {key!r}: {value!r},")
-    if not parts:
-        return ""
-    return "{\n" + "\n".join(parts) + "\n}"
 
 
 def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> None:
@@ -897,7 +878,7 @@ def generate_models_cmd(
         inspector = inspect(connection)
         all_table_names = inspector.get_table_names()
 
-        target_tables = all_table_names
+        target_tables = [t for t in all_table_names if not t.startswith(".")]
         if table_filter:
             target_tables = [t for t in target_tables if t in table_filter]
         target_tables = [t for t in target_tables if t not in exclude_set]
@@ -1014,12 +995,45 @@ def generate_models_cmd(
             ch_options: dict = {}
             if actual_dialect == "clickhouse" and clickhouse_engines:
                 ch_options = _extract_clickhouse_options(connection, table_name)
+                # Merge column CH metadata into columns_info
+                ch_columns_map: dict[str, dict] = {}
+                for ch_col in ch_options.get("columns", []):
+                    ch_columns_map[ch_col["name"]] = ch_col
+                for col_entry in columns_info:
+                    cname = col_entry["name"]
+                    if cname in ch_columns_map:
+                        ch_col = ch_columns_map[cname]
+                        if ch_col.get("ch_meta"):
+                            col_entry["ch_meta"] = ch_col["ch_meta"]
+                        if ch_col.get("comment"):
+                            col_entry["comment"] = col_entry.get("comment") or ch_col["comment"]
+                # Mark primary key columns from CH metadata for ORM compatibility
+                ch_pk_cols = set()
+                for key in ("ch_primary_key", "ch_order_by"):
+                    pk_list = ch_options.get(key, [])
+                    if pk_list:
+                        if isinstance(pk_list, list):
+                            ch_pk_cols.update(pk_list)
+                        else:
+                            ch_pk_cols.add(pk_list)
+                if ch_pk_cols:
+                    for col_entry in columns_info:
+                        if col_entry["name"] in ch_pk_cols:
+                            col_entry["primary_key"] = True
+                elif actual_dialect == "clickhouse":
+                    # CH tables may have no PK at all (MV, dict). Use first col
+                    # as PK for SQLAlchemy ORM compatibility.
+                    for col_entry in columns_info:
+                        col_entry["primary_key"] = True
+                        break
+                # Remove raw columns list from options (already merged above)
+                ch_options.pop("columns", None)
 
             tables_data.append({
                 "name": table_name,
                 "columns": columns_info,
                 "clickhouse_options": ch_options if ch_options else None,
-                "object_type": "table",
+                "object_type": ch_options.get("ch_object_type", "table") if ch_options else "table",
                 "dialect": actual_dialect,
                 "pg_meta": pg_meta,
             })
@@ -1034,27 +1048,59 @@ def generate_models_cmd(
     if actual_dialect == "clickhouse":
         for t in tables_data:
             if t.get("clickhouse_options"):
-                for key in ("ch_engine", "ch_select_statement"):
-                    if key in t["clickhouse_options"]:
-                        break
-                else:
+                has_engine = bool(t["clickhouse_options"].get("ch_engine") or t["clickhouse_options"].get("ch_engine_raw"))
+                if not has_engine:
                     console.print(
                         f"  WARNING: ClickHouse engine metadata for '{t['name']}' may be incomplete.",
                         style="yellow",
                     )
 
 
+def _clean_engine_full(engine_full: str) -> str:
+    """Strip DDL clauses (ORDER BY, PARTITION BY, etc.) from engine_full,
+    keeping only the engine name and its direct arguments (e.g. 'MergeTree'
+    or 'ReplacingMergeTree(version)')."""
+    engine_full = engine_full.strip()
+    # Find the engine name boundary
+    # Engine name is alphanumeric/underscore chars at the start
+    name_end = 0
+    for ch in engine_full:
+        if ch.isalnum() or ch == '_':
+            name_end += 1
+        else:
+            break
+    if name_end == 0:
+        return engine_full
+    # Check if engine has parenthesized arguments directly after name
+    rest = engine_full[name_end:]
+    if rest.startswith("("):
+        depth = 1
+        for i, ch in enumerate(rest[1:], start=1):
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+                if depth == 0:
+                    end = name_end + i + 1
+                    return engine_full[:end]
+        # unbalanced parens — return as-is
+        return engine_full
+    # No args: engine name only
+    return engine_full[:name_end]
+
+
 def _extract_clickhouse_options(connection, table_name: str) -> dict:
     from sqlalchemy import text
 
-    result = connection.execute(
+    tables_result = connection.execute(
         text(
-            "SELECT engine, sorting_key, primary_key, partition_key, sampling_key, create_table_query "
+            "SELECT engine, engine_full, sorting_key, primary_key, partition_key, "
+            "sampling_key, create_table_query "
             "FROM system.tables WHERE database = currentDatabase() AND name = :name"
         ),
         parameters={"name": table_name},
     )
-    row = result.fetchone()
+    row = tables_result.fetchone()
     if not row:
         return {}
 
@@ -1067,11 +1113,22 @@ def _extract_clickhouse_options(connection, table_name: str) -> dict:
         _parse_zookeeper_path,
         _parse_replica_name,
     )
+    from dbwarden.schema.engine import ChEngineSpec
 
     options: dict = {}
     engine = getattr(row, "engine", "") or ""
-    if engine:
-        options["ch_engine"] = engine
+    engine_full = getattr(row, "engine_full", "") or ""
+    create_query = getattr(row, "create_table_query", "") or ""
+
+    # Build ch_engine_raw for ChEngineSpec emission
+    if engine_full:
+        options["ch_engine_raw"] = ChEngineSpec.from_engine_string(
+            _clean_engine_full(engine_full)
+        )
+    elif engine:
+        options["ch_engine_raw"] = ChEngineSpec.from_engine_string(engine)
+    options["ch_engine"] = engine
+
     sorting_key = _parse_tuple_expression(getattr(row, "sorting_key", None))
     if sorting_key:
         options["ch_order_by"] = sorting_key if isinstance(sorting_key, list) else [sorting_key]
@@ -1085,7 +1142,6 @@ def _extract_clickhouse_options(connection, table_name: str) -> dict:
     if sampling_key:
         options["ch_sample_by"] = sampling_key
 
-    create_query = getattr(row, "create_table_query", "") or ""
     ttl = _parse_ttl_expressions(create_query)
     if ttl:
         options["ch_ttl"] = ttl
@@ -1109,5 +1165,108 @@ def _extract_clickhouse_options(connection, table_name: str) -> dict:
 
     if create_query.strip().upper().startswith("CREATE MATERIALIZED VIEW"):
         options["ch_object_type"] = "materialized_view"
+
+    # Parse SETTINGS, dict options, MV TO table from CREATE TABLE query
+    from dbwarden.engine.snapshot import (
+        _parse_clickhouse_settings,
+        _parse_clickhouse_dict_layout,
+        _parse_clickhouse_dict_source,
+        _parse_clickhouse_dict_lifetime,
+        _parse_clickhouse_dict_primary_key,
+        _parse_clickhouse_mv_to_table,
+    )
+    settings = _parse_clickhouse_settings(create_query)
+    if settings:
+        options["ch_settings"] = settings
+
+    if engine.upper() == "DICTIONARY":
+        layout = _parse_clickhouse_dict_layout(create_query)
+        if layout:
+            options["ch_dict_layout"] = layout
+        source = _parse_clickhouse_dict_source(create_query)
+        if source:
+            options["ch_dict_source"] = source
+        lifetime = _parse_clickhouse_dict_lifetime(create_query)
+        if lifetime:
+            options["ch_dict_lifetime"] = lifetime
+        dict_pk = _parse_clickhouse_dict_primary_key(create_query)
+        if dict_pk:
+            options["ch_dict_primary_key"] = dict_pk
+
+    if options.get("ch_object_type") == "materialized_view":
+        to_table = _parse_clickhouse_mv_to_table(create_query)
+        if to_table:
+            options["ch_to_table"] = to_table
+
+    # --- Column metadata ---
+    columns_result = connection.execute(
+        text(
+            "SELECT name, type, default_kind, default_expression, compression_codec, "
+            "comment, is_in_primary_key, is_in_sorting_key "
+            "FROM system.columns "
+            "WHERE database = currentDatabase() AND table = :tname "
+            "ORDER BY position ASC"
+        ),
+        parameters={"tname": table_name},
+    )
+    ch_columns: list[dict] = []
+    for c in columns_result.fetchall():
+        cname = getattr(c, "name", "")
+        raw_type = getattr(c, "type", "") or ""
+        default_kind = getattr(c, "default_kind", None) or None
+        default_expr = getattr(c, "default_expression", None) or None
+        codec_expr = getattr(c, "compression_codec", None) or None
+        col_comment = getattr(c, "comment", None) or None
+
+        ch_nullable = raw_type.startswith("Nullable(")
+        ch_low_cardinality = raw_type.startswith("LowCardinality(")
+
+        ch_materialized = None
+        ch_alias = None
+        if default_kind == "MATERIALIZED":
+            ch_materialized = default_expr
+        elif default_kind == "ALIAS":
+            ch_alias = default_expr
+
+        codec = _strip_codec_wrapper(codec_expr) if codec_expr else None
+
+        ch_col: dict = {
+            "name": cname,
+            "ch_meta": {
+                "ch_codec": codec,
+                "ch_default_expression": default_expr if default_kind == "DEFAULT" else None,
+                "ch_materialized": ch_materialized,
+                "ch_alias": ch_alias,
+                "ch_low_cardinality": ch_low_cardinality,
+                "ch_nullable": ch_nullable,
+                "ch_type": raw_type.strip(),
+            },
+        }
+        if col_comment:
+            ch_col["comment"] = col_comment
+        ch_columns.append(ch_col)
+
+    if ch_columns:
+        options["columns"] = ch_columns
+
+    # --- Skip indexes ---
+    indices_result = connection.execute(
+        text(
+            "SELECT name, type, expr, granularity "
+            "FROM system.data_skipping_indices "
+            "WHERE database = currentDatabase() AND table = :tname"
+        ),
+        parameters={"tname": table_name},
+    )
+    skip_indexes: list[dict] = []
+    for idx in indices_result.fetchall():
+        skip_indexes.append({
+            "name": getattr(idx, "name", ""),
+            "columns": [getattr(idx, "expr", "")],
+            "clickhouse_type": getattr(idx, "type", ""),
+            "clickhouse_granularity": getattr(idx, "granularity", 1),
+        })
+    if skip_indexes:
+        options["indexes"] = skip_indexes
 
     return options
