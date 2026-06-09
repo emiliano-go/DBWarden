@@ -928,10 +928,7 @@ def _extract_clickhouse_schema_snapshot(connection: Any, db_name: str) -> dict[s
             "ch_dict_source": _parse_clickhouse_dict_source(create_query),
             "ch_dict_lifetime": _parse_clickhouse_dict_lifetime(create_query),
             "ch_dict_primary_key": _parse_clickhouse_dict_primary_key(create_query),
-            "ch_projections": [
-                {"name": proj, "query": ""}
-                for proj in _parse_clickhouse_projection_names(create_query)
-            ],
+            "ch_projections": _parse_clickhouse_projection_queries(create_query),
             "ch_zookeeper_path": _parse_clickhouse_zookeeper_path(create_query, engine_name),
             "ch_replica_name": _parse_clickhouse_replica_name(create_query, engine_name),
         }
@@ -1046,8 +1043,23 @@ def _parse_clickhouse_ttl_expressions(create_query: str) -> list[str]:
     return [part.strip() for part in ttl_body.split(",") if part.strip()]
 
 
+def _parse_clickhouse_projection_queries(create_query: str) -> list[dict[str, str]]:
+    results: list[dict[str, str]] = []
+    pattern = re.compile(r"PROJECTION\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", re.IGNORECASE)
+    pos = 0
+    while True:
+        match = pattern.search(create_query, pos)
+        if not match:
+            break
+        name = match.group(1)
+        query = _extract_balanced_parens(match)
+        results.append({"name": name, "query": (query or "").strip()})
+        pos = match.end()
+    return results
+
+
 def _parse_clickhouse_projection_names(create_query: str) -> list[str]:
-    return re.findall(r"PROJECTION\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", create_query, re.IGNORECASE)
+    return [p["name"] for p in _parse_clickhouse_projection_queries(create_query)]
 
 
 def _parse_clickhouse_mv_query(create_query: str) -> str | None:

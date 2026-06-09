@@ -166,8 +166,24 @@ def _parse_ttl_expressions(create_query: str) -> list[str]:
     return [part.strip() for part in ttl_body.split(",") if part.strip()]
 
 
+def _parse_projection_queries(create_query: str) -> list[dict[str, str]]:
+    from dbwarden.engine.snapshot import _extract_balanced_parens
+    results: list[dict[str, str]] = []
+    pattern = re.compile(r"PROJECTION\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", re.IGNORECASE)
+    pos = 0
+    while True:
+        match = pattern.search(create_query, pos)
+        if not match:
+            break
+        name = match.group(1)
+        query = _extract_balanced_parens(match)
+        results.append({"name": name, "query": (query or "").strip()})
+        pos = match.end()
+    return results
+
+
 def _parse_projection_names(create_query: str) -> list[str]:
-    return re.findall(r"PROJECTION\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(", create_query, re.IGNORECASE)
+    return [p["name"] for p in _parse_projection_queries(create_query)]
 
 
 def _parse_mv_query(create_query: str) -> str | None:

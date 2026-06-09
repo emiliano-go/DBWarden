@@ -1108,7 +1108,7 @@ def _extract_clickhouse_options(connection, table_name: str) -> dict:
         _parse_tuple_expression,
         _clean_expression,
         _parse_ttl_expressions,
-        _parse_projection_names,
+        _parse_projection_queries,
         _parse_mv_query,
         _parse_zookeeper_path,
         _parse_replica_name,
@@ -1145,9 +1145,9 @@ def _extract_clickhouse_options(connection, table_name: str) -> dict:
     ttl = _parse_ttl_expressions(create_query)
     if ttl:
         options["ch_ttl"] = ttl
-    projections = _parse_projection_names(create_query)
+    projections = _parse_projection_queries(create_query)
     if projections:
-        options["ch_projections"] = [{"name": p, "query": ""} for p in projections]
+        options["ch_projections"] = projections
     mv_query = _parse_mv_query(create_query)
     if mv_query:
         options["ch_select_statement"] = mv_query
