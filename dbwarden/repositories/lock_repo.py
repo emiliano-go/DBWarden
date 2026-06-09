@@ -44,7 +44,7 @@ def check_lock(db_name: str | None = None) -> bool:
                 text(get_query(QueryMethod.CHECK_LOCK, db_name))
             )
             locked = result.scalar_one_or_none()
-            return locked is True
+            return bool(locked)
     except Exception as exc:
         logger.debug("Lock check failed (table may not exist yet): %s", exc)
         return False

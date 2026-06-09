@@ -12,36 +12,41 @@ from dbwarden.exceptions import LockError
 class TestLockRepo:
     """Tests for repositories/lock_repo.py functions."""
 
+    def _mock_config(self):
+        return patch("dbwarden.database.queries.get_database", return_value=MagicMock(
+            database_type="sqlite", migration_table="_dbwarden_migrations"
+        ))
+
     def test_acquire_lock_success(self):
-        with patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
+        with self._mock_config(), patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
             from dbwarden.repositories.lock_repo import acquire_lock
             result = acquire_lock("test_db")
             assert result is True
             mock_conn.assert_called_once_with("test_db")
 
     def test_acquire_lock_failure(self):
-        with patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
+        with self._mock_config(), patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
             mock_conn.side_effect = RuntimeError("Connection failed")
             from dbwarden.repositories.lock_repo import acquire_lock
             result = acquire_lock()
             assert result is False
 
     def test_release_lock_success(self):
-        with patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
+        with self._mock_config(), patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
             from dbwarden.repositories.lock_repo import release_lock
             result = release_lock("test_db")
             assert result is True
             mock_conn.assert_called_once_with("test_db")
 
     def test_release_lock_failure(self):
-        with patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
+        with self._mock_config(), patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
             mock_conn.side_effect = RuntimeError("Release failed")
             from dbwarden.repositories.lock_repo import release_lock
             result = release_lock()
             assert result is False
 
     def test_check_lock_held(self):
-        with patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
+        with self._mock_config(), patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
             mock_execute = MagicMock()
             mock_execute.scalar_one_or_none.return_value = True
             mock_conn.return_value.__enter__.return_value.execute.return_value = mock_execute
@@ -50,7 +55,7 @@ class TestLockRepo:
             assert result is True
 
     def test_check_lock_not_held(self):
-        with patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
+        with self._mock_config(), patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
             mock_execute = MagicMock()
             mock_execute.scalar_one_or_none.return_value = False
             mock_conn.return_value.__enter__.return_value.execute.return_value = mock_execute
@@ -59,14 +64,14 @@ class TestLockRepo:
             assert result is False
 
     def test_check_lock_table_missing(self):
-        with patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
+        with self._mock_config(), patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
             mock_conn.side_effect = RuntimeError("No such table")
             from dbwarden.repositories.lock_repo import check_lock
             result = check_lock()
             assert result is False
 
     def test_create_lock_table(self):
-        with patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
+        with self._mock_config(), patch("dbwarden.repositories.lock_repo.get_db_connection") as mock_conn:
             from dbwarden.repositories.lock_repo import create_lock_table_if_not_exists
             create_lock_table_if_not_exists("test_db")
             mock_conn.assert_called_once_with("test_db")

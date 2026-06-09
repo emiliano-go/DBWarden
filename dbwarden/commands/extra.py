@@ -97,10 +97,13 @@ def lock_status_cmd(database: str | None = None) -> None:
 
 def unlock_cmd(database: str | None = None) -> None:
     """Release the migration lock."""
-    from dbwarden.repositories import release_lock
+    from dbwarden.repositories import release_lock, check_lock
 
-    success = release_lock(database)
-    if success:
+    if not check_lock(database):
+        console.print("Migration lock is not currently held.", style="yellow")
+        return
+
+    if release_lock(database):
         console.print("Migration lock released successfully.", style="green")
     else:
-        console.print("Failed to release lock. Lock may not be held.", style="bold red")
+        console.print("Failed to release migration lock.", style="bold red")

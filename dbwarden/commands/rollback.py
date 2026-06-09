@@ -1,8 +1,10 @@
+import os
 import time
 
 from dbwarden.config import get_database
 from dbwarden.engine.file_parser import parse_rollback_statements
 from dbwarden.engine.version import get_migrations_directory
+from dbwarden.exceptions import LockError
 from dbwarden.logging import get_logger
 from dbwarden.output import console
 from dbwarden.repositories import (
@@ -11,6 +13,7 @@ from dbwarden.repositories import (
     get_latest_versions,
     run_migration,
 )
+from dbwarden.repositories.lock_repo import acquire_lock, check_lock, release_lock
 
 
 def rollback_cmd(
@@ -42,47 +45,74 @@ def rollback_cmd(
     create_migrations_table_if_not_exists(database)
     create_lock_table_if_not_exists(database)
 
-    if count is None and to_version is None:
-        count = 1
+    lock_acquired = False
+    try:
+        if check_lock(database):
+            raise LockError(
+                "Migration lock is already held. Another migration process may be running. "
+                "Use 'dbwarden unlock' to release the lock if necessary."
+            )
+        if not acquire_lock(database):
+            raise LockError("Could not acquire migration lock.")
+        lock_acquired = True
 
-    latest_versions = get_latest_versions(
-        database, limit=count, starting_version=to_version
-    )
+        if count is None and to_version is None:
+            count = 1
 
-    if not latest_versions:
-        console.print("Nothing to rollback.", style="cyan")
-        return
-
-    versions_to_rollback = _get_versions_to_rollback(
-        latest_versions=latest_versions,
-        migrations_dir=migrations_dir,
-    )
-
-    for version, filepath in reversed(list(versions_to_rollback.items())):
-        filename = filepath.split("/")[-1]
-        sql_statements = parse_rollback_statements(filepath)
-
-        for sql in sql_statements:
-            logger.log_sql_statement(sql)
-
-        start_time = time.time()
-        logger.info(f"Rolling back migration: {filename} (version: {version})")
-
-        run_migration(
-            sql_statements=sql_statements,
-            version=version,
-            migration_operation="rollback",
-            filename=filename,
-            db_name=database,
+        latest_versions = get_latest_versions(
+            database, limit=count, starting_version=to_version
         )
 
-        duration = time.time() - start_time
-        logger.info(f"Rollback completed: {filename} in {duration:.2f}s")
+        if not latest_versions:
+            console.print("Nothing to rollback.", style="cyan")
+            return
 
-    console.print(
-        f"Rollback completed successfully: {len(versions_to_rollback)} migrations reverted.",
-        style="green",
-    )
+        versions_to_rollback = _get_versions_to_rollback(
+            latest_versions=latest_versions,
+            migrations_dir=migrations_dir,
+        )
+
+        reverted = 0
+        missing = 0
+        for version, filepath in reversed(list(versions_to_rollback.items())):
+            filename = filepath.split("/")[-1]
+            if not os.path.exists(filepath):
+                console.print(f"  [red]Migration file not found: {filename}[/red]")
+                missing += 1
+                continue
+            sql_statements = parse_rollback_statements(filepath)
+
+            for sql in sql_statements:
+                logger.log_sql_statement(sql)
+
+            start_time = time.time()
+            logger.info(f"Rolling back migration: {filename} (version: {version})")
+
+            run_migration(
+                sql_statements=sql_statements,
+                version=version,
+                migration_operation="rollback",
+                filename=filename,
+                db_name=database,
+            )
+
+            duration = time.time() - start_time
+            logger.info(f"Rollback completed: {filename} in {duration:.2f}s")
+            reverted += 1
+
+        if reverted:
+            console.print(
+                f"Rollback completed successfully: {reverted} migration(s) reverted.",
+                style="green",
+            )
+        if missing:
+            console.print(
+                f"Warning: {missing} migration file(s) not found. Skipped.",
+                style="yellow",
+            )
+    finally:
+        if lock_acquired:
+            release_lock(database)
 
 
 def _get_versions_to_rollback(

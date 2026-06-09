@@ -712,6 +712,9 @@ def seed_rollback(
     database: str | None = typer.Option(
         None, "--database", "-d", help="Target database name"
     ),
+    all_databases: bool = typer.Option(
+        False, "--all", "-a", help="Rollback seeds in all databases"
+    ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
     ),
@@ -722,6 +725,7 @@ def seed_rollback(
         count=count,
         to_version=to_version,
         database=database,
+        all_databases=all_databases,
         verbose=verbose,
     )
 

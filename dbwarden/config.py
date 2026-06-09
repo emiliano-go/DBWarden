@@ -131,15 +131,21 @@ def _infer_database_type(sqlalchemy_url: str) -> DatabaseType:
         return "mariadb"
     if url_lower.startswith("clickhouse"):
         return "clickhouse"
-    return "sqlite"
+    raise ConfigurationError(
+        f"Cannot infer database type from URL '{sqlalchemy_url}'. "
+        "Set 'database_type' explicitly in your config."
+    )
 
 
 def _normalized_url(url: str) -> str:
     try:
         parsed = make_url(url)
         return parsed.render_as_string(hide_password=False)
-    except Exception:
-        return url.strip()
+    except Exception as exc:
+        raise ConfigurationError(
+            f"Invalid database URL: '{url}'. "
+            "Check the 'database_url_sync' or 'database_url_async' setting in your config."
+        ) from exc
 
 
 def _build_database_target_key(url: str, db_type: str, base_dir: Path) -> str:

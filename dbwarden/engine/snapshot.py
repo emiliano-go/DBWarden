@@ -142,6 +142,7 @@ def _strip_ch_type_wrappers(raw_type: str) -> str:
 def normalize_type(raw_type: str) -> dict[str, Any]:
     # Strip COLLATE clause for normalization purposes
     raw_type = re.sub(r'\s+COLLATE\s+"[^"]*"', "", raw_type, flags=re.IGNORECASE)
+    raw_type = re.sub(r"\s+COLLATE\s+'[^']*'", "", raw_type, flags=re.IGNORECASE)
     raw_clean = raw_type.strip().lower()
     raw_no_parens = re.sub(r"\(.*?\)", "", raw_clean).strip()
     raw_no_parens_clean = re.sub(r"\s+", " ", raw_no_parens).strip()
@@ -334,8 +335,6 @@ def _is_autoincrement(column: dict[str, Any]) -> bool:
     if any(kw in type_str for kw in ("serial", "bigserial", "smallserial")):
         return True
     if column.get("autoincrement"):
-        return True
-    if column.get("primary_key") and type_str in ("integer", "bigint", "int", "smallint"):
         return True
     return False
 
@@ -557,8 +556,8 @@ def extract_full_schema_snapshot(
             except Exception:
                 pass
 
+            _conn = engine.connect() if own_engine and engine is not None else connection
             try:
-                _conn = engine.connect() if own_engine and engine is not None else connection
                 pg_table: dict[str, Any] = {}
 
                 try:
@@ -687,14 +686,14 @@ def extract_full_schema_snapshot(
 
                 if pg_table:
                     table_entry["pg_table"] = pg_table
-
+            except Exception:
+                pass
+            finally:
                 if own_engine and _conn is not None:
                     try:
                         _conn.close()
                     except Exception:
                         pass
-            except Exception:
-                pass
 
         tables[table_name] = table_entry
 
@@ -1218,9 +1217,14 @@ def write_snapshot(
     migration_id: str = "",
 ) -> str:
     from dbwarden.config import get_database
+    from sqlalchemy.engine import make_url
 
     config = get_database(database)
-    db_name = database or config.sqlalchemy_url.split("/")[-1].split("?")[0]
+    if database:
+        db_name = database
+    else:
+        parsed = make_url(config.sqlalchemy_url)
+        db_name = parsed.database or "default"
 
     snapshot["migration_id"] = migration_id
     snapshot["database_name"] = db_name
@@ -1262,6 +1266,11 @@ def read_snapshot(filepath: str) -> dict[str, Any] | None:
         actual = compute_checksum(snapshot)
         snapshot["checksum"] = stored_checksum
         if actual != stored_checksum:
+            import logging
+            logging.getLogger("dbwarden.snapshot").warning(
+                "Snapshot checksum mismatch for %s (expected %s, got %s)",
+                filepath, stored_checksum, actual,
+            )
             return None
     else:
         snapshot["checksum"] = ""
@@ -2001,7 +2010,8 @@ def diff_models_against_snapshot(
 
         for fk in model_fks:
             if _fk_sig(fk) not in snap_fk_sigs:
-                snap_tbl = snapshot.get("tables", {}).get(fk["referred_table"])
+                ref_table = fk.get("referred_table") or fk.get("referenced_table", "")
+                snap_tbl = snapshot.get("tables", {}).get(ref_table)
                 if snap_tbl is None:
                     continue
                 snap_ref_cols = snap_tbl.get("columns", {})
@@ -2169,6 +2179,7 @@ def _apply_rename_intents(
     for table, old, new in sorted(confirmed_set, key=lambda x: (x[0], x[1], x[2])):
         key = (table, old, new)
         if key not in rename_ops_by_key:
+            found = False
             for drop_i, drop_col in table_drops.get(table, []):
                 if drop_i in dropped_used or drop_col != old:
                     continue
@@ -2188,8 +2199,16 @@ def _apply_rename_intents(
                     rollback_ops[add_i] = None
                     added_used.add(add_i)
                     dropped_used.add(drop_i)
+                    found = True
                     break
                 break
+            if not found:
+                import logging
+                logging.getLogger("dbwarden.snapshot").warning(
+                    "Confirmed rename %s.%s -> %s could not be applied: "
+                    "no matching drop+add pair found.",
+                    table, old, new,
+                )
 
     for key, op_i in rename_ops_by_key.items():
         table, old, new = key
@@ -2930,6 +2949,15 @@ def _filter_duplicates_from_snapshot_diff(
     upgrade_parts = [s.strip() for s in upgrade_sql.split("\n\n") if s.strip()]
     rollback_parts = [s.strip() for s in rollback_sql.split("\n\n") if s.strip()]
 
+    if len(upgrade_parts) != len(changes) or len(rollback_parts) != len(changes):
+        import logging
+        logging.getLogger("dbwarden.snapshot").warning(
+            "Snapshot diff part count mismatch: %d upgrade, %d rollback, %d changes. "
+            "Skipping duplicate filter to avoid misalignment.",
+            len(upgrade_parts), len(rollback_parts), len(changes),
+        )
+        return upgrade_sql, rollback_sql, changes
+
     filtered_upgrade = []
     filtered_rollback = []
     filtered_changes = []
@@ -2939,8 +2967,7 @@ def _filter_duplicates_from_snapshot_diff(
             continue
         filtered_upgrade.append(up_sql)
         filtered_rollback.append(rb_sql)
-        if i < len(changes):
-            filtered_changes.append(changes[i])
+        filtered_changes.append(changes[i])
 
     return "\n\n".join(filtered_upgrade), "\n\n".join(filtered_rollback), filtered_changes
 

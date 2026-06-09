@@ -305,12 +305,12 @@ def handle_generate_models(
     database: str | None = None,
 ) -> None:
     if not clickhouse_engines:
-        from dbwarden.config import get_database
+        from dbwarden.config import get_database, ConfigurationError
         try:
             config = get_database(database)
             if config.database_type == "clickhouse":
                 clickhouse_engines = True
-        except Exception:
+        except ConfigurationError:
             pass
     generate_models_cmd(
         output=output,
@@ -378,11 +378,13 @@ def handle_seed_rollback(
     count: int | None = None,
     to_version: str | None = None,
     database: str | None = None,
+    all_databases: bool = False,
     verbose: bool = False,
 ) -> None:
     seed_rollback_cmd(
         count=count,
         to_version=to_version,
         database=database,
+        all_databases=all_databases,
         verbose=verbose,
     )

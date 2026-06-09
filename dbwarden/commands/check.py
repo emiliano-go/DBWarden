@@ -20,8 +20,8 @@ def check_cmd(
     else:
         raise ValueError(f"Unknown output format: {output_format}")
 
-    errors = [issue for issue in issues if issue.severity == "ERROR"]
-    warnings = [issue for issue in issues if issue.severity == "WARNING"]
+    errors = [issue for issue in issues if issue.severity.upper() == "ERROR"]
+    warnings = [issue for issue in issues if issue.severity.upper() == "WARNING"]
     if errors:
         raise RuntimeError("Safety check failed: blocking changes detected.")
     if warnings and not force:

@@ -39,13 +39,13 @@ class TestCreateSandboxProvider:
         provider = create_sandbox_provider("sqlite")
         assert isinstance(provider, SQLiteSandboxProvider)
 
-    def test_unknown_type_returns_sqlite_fallback(self):
-        provider = create_sandbox_provider("unknown")
-        assert isinstance(provider, SQLiteSandboxProvider)
+    def test_unknown_type_raises_error(self):
+        with pytest.raises(ImportError, match="testcontainers"):
+            create_sandbox_provider("unknown")
 
-    def test_clickhouse_without_testcontainers_returns_sqlite(self):
-        provider = create_sandbox_provider("clickhouse")
-        assert isinstance(provider, SQLiteSandboxProvider)
+    def test_clickhouse_without_testcontainers_raises_error(self):
+        with pytest.raises(ImportError, match="testcontainers"):
+            create_sandbox_provider("clickhouse")
 
     def test_provider_start_and_stop(self):
         provider = create_sandbox_provider("sqlite")

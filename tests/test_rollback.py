@@ -31,6 +31,8 @@ class TestRollback:
             patch("dbwarden.commands.rollback.get_migrations_directory"),
             patch("dbwarden.commands.rollback.create_migrations_table_if_not_exists"),
             patch("dbwarden.commands.rollback.create_lock_table_if_not_exists"),
+            patch("dbwarden.commands.rollback.check_lock", return_value=False),
+            patch("dbwarden.commands.rollback.acquire_lock", return_value=True),
             patch("dbwarden.commands.rollback.get_latest_versions", return_value=[]),
             patch("dbwarden.commands.rollback.console.print") as mock_print,
         ):
@@ -49,6 +51,8 @@ class TestRollback:
             patch("dbwarden.commands.rollback.get_migrations_directory", return_value="/tmp/migrations"),
             patch("dbwarden.commands.rollback.create_migrations_table_if_not_exists"),
             patch("dbwarden.commands.rollback.create_lock_table_if_not_exists"),
+            patch("dbwarden.commands.rollback.check_lock", return_value=False),
+            patch("dbwarden.commands.rollback.acquire_lock", return_value=True),
             patch("dbwarden.commands.rollback.get_latest_versions", return_value=["0002"]),
             patch("dbwarden.commands.rollback._get_versions_to_rollback", return_value={"0002": "/tmp/migrations/test__0002_roll.sql"}),
             patch("dbwarden.commands.rollback.parse_rollback_statements", return_value=["DROP TABLE users"]),

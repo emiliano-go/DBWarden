@@ -2,10 +2,9 @@ import os
 import re
 import sys
 import json
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from dbwarden.config import get_database, get_multi_db_config
 from dbwarden.constants import RUNS_ALWAYS_FILE_PREFIX, RUNS_ON_CHANGE_FILE_PREFIX
@@ -19,7 +18,6 @@ from dbwarden.engine.model_discovery import (
     generate_add_column_sql,
     extract_tables_from_migrations,
     extract_tables_from_database,
-    ModelTable,
 )
 from dbwarden.engine.migration_name import Change, autogenerate_migration_name
 from dbwarden.engine.version import (
@@ -253,15 +251,8 @@ def get_pending_migration_statements(migrations_dir: str) -> set[str]:
 def _run_offline_migrations(
     description: str | None = None, database: str | None = None, migration_type: str = "versioned",
 ) -> None:
-    import json
-    import os
-    from datetime import datetime, timezone
-    from pathlib import Path
-
-    from dbwarden.engine.model_discovery import get_all_model_tables
     from dbwarden.engine.offline import diff_model_states, model_state_to_dict
     from dbwarden.engine.snapshot import snapshot_diff_to_sql
-    from dbwarden.engine.version import get_migrations_directory, get_migration_filepaths_by_version, generate_repeatable_filename, generate_migration_filename
 
     config = get_database(database)
     multi_config = get_multi_db_config()
@@ -301,7 +292,6 @@ def _run_offline_migrations(
         console.print("No new migrations to generate - all models already covered by existing migrations.", style="cyan")
         return
 
-    from dbwarden.engine.migration_name import Change
     from dbwarden.engine.version import get_migration_filepaths_by_version
 
     upgrade_sql, rollback_sql, changes = snapshot_diff_to_sql(
@@ -326,7 +316,10 @@ def _run_offline_migrations(
         console.print("No new migrations to generate - all models already covered by existing migrations.", style="cyan")
         return
 
-    safe_desc = (description or "offline migration").replace(" ", "_").lower()[:60]
+    safe_desc = re.sub(r"[^a-zA-Z0-9]", "_", (description or "offline_migration")).lower()
+    safe_desc = re.sub(r"_+", "_", safe_desc).strip("_")[:60]
+    if not safe_desc:
+        safe_desc = "offline_migration"
     if migration_type in ("runs_always", "ra"):
         filename = generate_repeatable_filename(db_name, safe_desc, RUNS_ALWAYS_FILE_PREFIX)
     elif migration_type in ("runs_on_change", "roc"):
@@ -336,7 +329,7 @@ def _run_offline_migrations(
         next_version = f"{int(max(existing_versions.keys(), default='0000')) + 1:04d}"
         filename = generate_migration_filename(db_name, safe_desc, next_version)
 
-    header = f"-- upgrade\n\n"
+    header = "-- upgrade\n\n"
     header += "\n\n".join(filtered_statements)
     header += "\n\n-- rollback\n\n"
     header += "\n\n".join(reversed(filtered_rollback))
@@ -347,7 +340,7 @@ def _run_offline_migrations(
         f.write(header)
 
     # Write plan
-    migration_id = f"{db_name}__{next_version}_{safe_desc}"
+    migration_id = Path(filename).stem
     plan = build_migration_plan(migration_id, changes, "\n\n".join(filtered_statements))
     plan_path = filepath.replace(".sql", ".plan.json")
     with open(plan_path, "w") as f:
@@ -882,13 +875,19 @@ def new_migration_cmd(
     """
     logger = get_logger()
 
-    config = get_database(database)
     multi_config = get_multi_db_config()
     db_name = database or multi_config.default
 
     migrations_dir = get_migrations_directory(database)
 
     safe_description = re.sub(r"[^a-zA-Z0-9]", "_", description).lower()
+    safe_description = re.sub(r"_+", "_", safe_description).strip("_")
+    if not safe_description:
+        raise ValueError("Migration description cannot be empty or contain only special characters.")
+
+    is_repeatable = migration_type in ("runs_always", "ra", "runs_on_change", "roc")
+    if is_repeatable and version is not None:
+        logger.warning("--version is ignored for repeatable migrations (RA/ROC).")
 
     if migration_type in ("runs_always", "ra"):
         migration_type = "runs_always"

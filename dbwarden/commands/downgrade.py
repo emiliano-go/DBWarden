@@ -5,6 +5,7 @@ import time
 from dbwarden.config import get_database
 from dbwarden.engine.file_parser import parse_rollback_statements
 from dbwarden.engine.version import get_migration_filepaths_by_version, get_migrations_directory
+from dbwarden.exceptions import LockError
 from dbwarden.logging import get_logger
 from dbwarden.output import console
 from dbwarden.repositories import (
@@ -13,6 +14,7 @@ from dbwarden.repositories import (
     get_migrated_versions,
     run_migration,
 )
+from dbwarden.repositories.lock_repo import acquire_lock, check_lock, release_lock
 
 
 def downgrade_cmd(
@@ -31,67 +33,81 @@ def downgrade_cmd(
     create_migrations_table_if_not_exists(database)
     create_lock_table_if_not_exists(database)
 
-    applied_versions = get_migrated_versions(database)
-    if not applied_versions:
-        console.print("Nothing to downgrade.", style="cyan")
-        return
-
-    if to_version not in applied_versions:
-        console.print(
-            f"Target version {to_version} has not been applied. Cannot downgrade.",
-            style="red",
-        )
-        return
-
-    versions_to_revert = [v for v in applied_versions if v > to_version]
-    if not versions_to_revert:
-        console.print(f"Already at version {to_version}. Nothing to downgrade.", style="cyan")
-        return
-
-    filepaths = get_migration_filepaths_by_version(
-        directory=migrations_dir,
-        version_to_start_from=to_version,
-        end_version=versions_to_revert[-1],
-    )
-
-    reverted = []
-    for version in reversed(versions_to_revert):
-        if version not in filepaths:
-            console.print(
-                f"Migration file for version {version} not found.", style="red"
+    lock_acquired = False
+    try:
+        if check_lock(database):
+            raise LockError(
+                "Migration lock is already held. Another migration process may be running. "
+                "Use 'dbwarden unlock' to release the lock if necessary."
             )
-            continue
+        if not acquire_lock(database):
+            raise LockError("Could not acquire migration lock.")
+        lock_acquired = True
 
-        filepath = filepaths[version]
-        filename = filepath.split("/")[-1]
-        sql_statements = parse_rollback_statements(filepath)
+        applied_versions = get_migrated_versions(database)
+        if not applied_versions:
+            console.print("Nothing to downgrade.", style="cyan")
+            return
 
-        if not sql_statements:
-            logger.info(f"No rollback statements found for {filename}, skipping.")
-            continue
+        if to_version not in applied_versions:
+            console.print(
+                f"Target version {to_version} has not been applied. Cannot downgrade.",
+                style="red",
+            )
+            raise SystemExit(1)
 
-        for sql in sql_statements:
-            logger.log_sql_statement(sql)
+        versions_to_revert = [v for v in applied_versions if v > to_version]
+        if not versions_to_revert:
+            console.print(f"Already at version {to_version}. Nothing to downgrade.", style="cyan")
+            return
 
-        start_time = time.time()
-        logger.info(f"Downgrading migration: {filename} (version: {version})")
-
-        run_migration(
-            sql_statements=sql_statements,
-            version=version,
-            migration_operation="rollback",
-            filename=filename,
-            db_name=database,
+        filepaths = get_migration_filepaths_by_version(
+            directory=migrations_dir,
+            version_to_start_from=to_version,
+            end_version=versions_to_revert[-1],
         )
 
-        duration = time.time() - start_time
-        logger.info(f"Downgrade completed: {filename} in {duration:.2f}s")
-        reverted.append(version)
+        reverted = []
+        for version in reversed(versions_to_revert):
+            if version not in filepaths:
+                console.print(
+                    f"Migration file for version {version} not found.", style="red"
+                )
+                continue
 
-    if reverted:
-        console.print(
-            f"Downgrade completed: {len(reverted)} migration(s) reverted to version {to_version}.",
-            style="green",
-        )
-    else:
-        console.print("No migrations were downgraded.", style="yellow")
+            filepath = filepaths[version]
+            filename = filepath.split("/")[-1]
+            sql_statements = parse_rollback_statements(filepath)
+
+            if not sql_statements:
+                logger.info(f"No rollback statements found for {filename}, skipping.")
+                continue
+
+            for sql in sql_statements:
+                logger.log_sql_statement(sql)
+
+            start_time = time.time()
+            logger.info(f"Downgrading migration: {filename} (version: {version})")
+
+            run_migration(
+                sql_statements=sql_statements,
+                version=version,
+                migration_operation="rollback",
+                filename=filename,
+                db_name=database,
+            )
+
+            duration = time.time() - start_time
+            logger.info(f"Downgrade completed: {filename} in {duration:.2f}s")
+            reverted.append(version)
+
+        if reverted:
+            console.print(
+                f"Downgrade completed: {len(reverted)} migration(s) reverted to version {to_version}.",
+                style="green",
+            )
+        else:
+            console.print("No migrations were downgraded.", style="yellow")
+    finally:
+        if lock_acquired:
+            release_lock(database)

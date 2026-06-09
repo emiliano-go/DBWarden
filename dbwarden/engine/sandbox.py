@@ -46,14 +46,16 @@ def create_sandbox_provider(database_type: str) -> SandboxProvider:
     """Create the right sandbox provider for the given database type.
 
     For ClickHouse, PostgreSQL, and MySQL this requires Docker and the
-    ``testcontainers`` package.  Falls back to :class:`SQLiteSandboxProvider`
-    when testcontainers is not installed.
+    ``testcontainers`` package.
     """
     if database_type == "sqlite":
         return SQLiteSandboxProvider()
 
     if not _HAS_TESTCONTAINERS:
-        return SQLiteSandboxProvider()
+        raise ImportError(
+            f"Sandbox for {database_type} requires the 'testcontainers' package. "
+            "Install it with: pip install dbwarden[sandbox]"
+        )
 
     return _create_testcontainers_provider(database_type)
 
@@ -65,13 +67,14 @@ def _create_testcontainers_provider(database_type: str) -> SandboxProvider:
         return PostgresTestcontainersProvider()
     if database_type == "mysql":
         return MySQLTestcontainersProvider()
-    return SQLiteSandboxProvider()
+    raise ValueError(f"Unsupported sandbox database type: {database_type}")
 
 
 class _TestcontainersProvider(SandboxProvider):
     """Base for providers backed by testcontainers."""
 
     CONTAINER_CLS = None
+    CONTAINER_MODULE = ""
     DB_DRIVER: str = ""
     DB_TYPE: str = ""
 
@@ -79,18 +82,25 @@ class _TestcontainersProvider(SandboxProvider):
         self._container = None
 
     def start(self) -> str:
-        if self.CONTAINER_CLS is None:
-            return SQLiteSandboxProvider().start()
+        if self._container is not None:
+            raise RuntimeError("Sandbox already started. Call stop() first.")
 
-        tc = __import__("testcontainers", fromlist=[self.CONTAINER_CLS])
-        cls = getattr(tc, self.CONTAINER_CLS)
+        if self.CONTAINER_CLS is None:
+            raise RuntimeError("CONTAINER_CLS not set for this provider.")
+
+        import importlib
+        module = importlib.import_module(self.CONTAINER_MODULE)
+        cls = getattr(module, self.CONTAINER_CLS)
         self._container = cls()
         self._container.start()
         return self._build_url()
 
     def stop(self) -> None:
         if self._container is not None:
-            self._container.stop()
+            try:
+                self._container.stop()
+            except Exception:
+                pass
             self._container = None
 
     def get_database_type(self) -> str:
@@ -102,6 +112,7 @@ class _TestcontainersProvider(SandboxProvider):
 
 class ClickHouseTestcontainersProvider(_TestcontainersProvider):
     CONTAINER_CLS = "ClickHouseContainer"
+    CONTAINER_MODULE = "testcontainers.clickhouse"
     DB_DRIVER = "clickhousedb"
     DB_TYPE = "clickhouse"
 
@@ -113,6 +124,7 @@ class ClickHouseTestcontainersProvider(_TestcontainersProvider):
 
 class PostgresTestcontainersProvider(_TestcontainersProvider):
     CONTAINER_CLS = "PostgresContainer"
+    CONTAINER_MODULE = "testcontainers.postgres"
     DB_DRIVER = "postgresql"
     DB_TYPE = "postgresql"
 
@@ -122,6 +134,7 @@ class PostgresTestcontainersProvider(_TestcontainersProvider):
 
 class MySQLTestcontainersProvider(_TestcontainersProvider):
     CONTAINER_CLS = "MySQLContainer"
+    CONTAINER_MODULE = "testcontainers.mysql"
     DB_DRIVER = "mysql"
     DB_TYPE = "mysql"
 

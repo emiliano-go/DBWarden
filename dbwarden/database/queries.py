@@ -33,6 +33,12 @@ class QueryMethod(Enum):
     GET_ALL_SEEDS = "get_all_seeds"
     GET_APPLIED_SEED_VERSIONS = "get_applied_seed_versions"
     DELETE_SEED = "delete_seed"
+    GET_DISTINCT_CHECKSUMS = "get_distinct_checksums"
+    GET_LATEST_VERSIONS_LIMIT = "get_latest_versions_limit"
+    GET_LATEST_VERSIONS_FROM = "get_latest_versions_from"
+    OPTIMIZE_MIGRATIONS_TABLE = "optimize_migrations_table"
+    OPTIMIZE_LOCK_TABLE = "optimize_lock_table"
+    OPTIMIZE_SEEDS_TABLE = "optimize_seeds_table"
 
 
 SQLITE_QUERIES = {
@@ -140,6 +146,15 @@ SQLITE_QUERIES = {
     """,
     QueryMethod.DELETE_SEED: """
         DELETE FROM {seed_table} WHERE version = :version
+    """,
+    QueryMethod.GET_DISTINCT_CHECKSUMS: """
+        SELECT DISTINCT checksum FROM {migration_table} WHERE checksum IS NOT NULL
+    """,
+    QueryMethod.GET_LATEST_VERSIONS_LIMIT: """
+        SELECT version FROM {migration_table} WHERE version IS NOT NULL ORDER BY applied_at DESC LIMIT :limit
+    """,
+    QueryMethod.GET_LATEST_VERSIONS_FROM: """
+        SELECT version FROM {migration_table} WHERE version > :starting_version AND version IS NOT NULL ORDER BY applied_at ASC
     """,
 }
 
@@ -261,6 +276,15 @@ POSTGRES_QUERIES = {
     QueryMethod.DELETE_SEED: SQLITE_QUERIES[
         QueryMethod.DELETE_SEED
     ],
+    QueryMethod.GET_DISTINCT_CHECKSUMS: SQLITE_QUERIES[
+        QueryMethod.GET_DISTINCT_CHECKSUMS
+    ],
+    QueryMethod.GET_LATEST_VERSIONS_LIMIT: SQLITE_QUERIES[
+        QueryMethod.GET_LATEST_VERSIONS_LIMIT
+    ],
+    QueryMethod.GET_LATEST_VERSIONS_FROM: SQLITE_QUERIES[
+        QueryMethod.GET_LATEST_VERSIONS_FROM
+    ],
 }
 
 
@@ -377,6 +401,15 @@ MYSQL_QUERIES = {
     QueryMethod.DELETE_SEED: SQLITE_QUERIES[
         QueryMethod.DELETE_SEED
     ],
+    QueryMethod.GET_DISTINCT_CHECKSUMS: SQLITE_QUERIES[
+        QueryMethod.GET_DISTINCT_CHECKSUMS
+    ],
+    QueryMethod.GET_LATEST_VERSIONS_LIMIT: SQLITE_QUERIES[
+        QueryMethod.GET_LATEST_VERSIONS_LIMIT
+    ],
+    QueryMethod.GET_LATEST_VERSIONS_FROM: SQLITE_QUERIES[
+        QueryMethod.GET_LATEST_VERSIONS_FROM
+    ],
 }
 
 
@@ -406,6 +439,15 @@ CLICKHOUSE_QUERIES = {
     """,
     QueryMethod.DELETE_VERSION: """
         ALTER TABLE {migration_table} DELETE WHERE version = :version
+    """,
+    QueryMethod.OPTIMIZE_MIGRATIONS_TABLE: """
+        OPTIMIZE TABLE {migration_table} FINAL
+    """,
+    QueryMethod.OPTIMIZE_LOCK_TABLE: """
+        OPTIMIZE TABLE dbwarden_lock FINAL
+    """,
+    QueryMethod.OPTIMIZE_SEEDS_TABLE: """
+        OPTIMIZE TABLE {seed_table} FINAL
     """,
     QueryMethod.GET_ALL_MIGRATIONS: """
         SELECT version, description, filename, migration_type, applied_at, checksum
@@ -499,15 +541,21 @@ CLICKHOUSE_QUERIES = {
     QueryMethod.DELETE_SEED: """
         ALTER TABLE {seed_table} DELETE WHERE version = :version
     """,
+    QueryMethod.GET_DISTINCT_CHECKSUMS: """
+        SELECT DISTINCT checksum FROM {migration_table} WHERE checksum IS NOT NULL
+    """,
+    QueryMethod.GET_LATEST_VERSIONS_LIMIT: """
+        SELECT version FROM {migration_table} WHERE version IS NOT NULL ORDER BY applied_at DESC LIMIT :limit
+    """,
+    QueryMethod.GET_LATEST_VERSIONS_FROM: """
+        SELECT version FROM {migration_table} WHERE version > :starting_version AND version IS NOT NULL ORDER BY applied_at ASC
+    """,
 }
 
 
 def _get_backend_name(db_name: str | None = None) -> str:
-    try:
-        config = get_database(db_name)
-        return config.database_type
-    except Exception:
-        return "sqlite"
+    config = get_database(db_name)
+    return config.database_type
 
 
 def _get_queries_for_backend(db_name: str | None = None) -> dict:
@@ -533,7 +581,8 @@ def get_query(method: QueryMethod, db_name: str | None = None, **kwargs) -> str:
     query = _get_queries_for_backend(db_name).get(method, "")
     if not query:
         return ""
-    return query.format(migration_table=get_migration_table_name(db_name), **kwargs)
+    safe_kwargs = {k: v for k, v in kwargs.items() if k not in ("migration_table", "seed_table")}
+    return query.format(migration_table=get_migration_table_name(db_name), **safe_kwargs)
 
 
 def get_seed_table_name(db_name: str | None = None) -> str:
@@ -548,4 +597,5 @@ def get_seed_query(method: QueryMethod, db_name: str | None = None, **kwargs) ->
     query = _get_queries_for_backend(db_name).get(method, "")
     if not query:
         return ""
-    return query.format(seed_table=get_seed_table_name(db_name), **kwargs)
+    safe_kwargs = {k: v for k, v in kwargs.items() if k not in ("migration_table", "seed_table")}
+    return query.format(seed_table=get_seed_table_name(db_name), **safe_kwargs)

@@ -57,8 +57,10 @@ class MigrateResponse(BaseModel):
 def _compute_pending_seeds(db_name: str | None) -> int:
     try:
         from dbwarden.engine.seeds import get_pending_seeds
+        from dbwarden.repositories.seeds_repo import get_seeds_directory
 
-        return len(get_pending_seeds(db_name))
+        seeds_dir = get_seeds_directory(db_name)
+        return len(get_pending_seeds(seeds_dir, db_name=db_name))
     except Exception:
         return 0
 

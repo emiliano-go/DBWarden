@@ -4,7 +4,6 @@ from sqlalchemy import inspect
 
 from dbwarden.config import get_database
 from dbwarden.database.connection import get_db_connection
-from dbwarden.engine.version import get_migrations_directory
 from dbwarden.logging import get_logger
 from dbwarden.output import console
 

@@ -119,7 +119,7 @@ def get_seeds_to_rollback(
     if count is not None:
         target = applied_in_order[-count:] if count > 0 else []
     elif to_version is not None:
-        target = [v for v in applied_in_order if v >= to_version]
+        target = [v for v in applied_in_order if int(v) >= int(to_version)]
     else:
         target = applied_in_order[-1:] if applied_in_order else []
     return {v: all_seeds[v] for v in target if v in all_seeds}
@@ -129,6 +129,78 @@ def read_sql_seed(filepath: str) -> str:
     with open(filepath, "r") as f:
         content = f.read()
     return content.strip()
+
+
+def _split_sql_statements(sql: str) -> list[str]:
+    """Split SQL by semicolons, respecting string literals and comments."""
+    statements = []
+    current = []
+    in_single_quote = False
+    in_double_quote = False
+    in_line_comment = False
+    in_block_comment = False
+    i = 0
+    while i < len(sql):
+        ch = sql[i]
+        next_ch = sql[i + 1] if i + 1 < len(sql) else ""
+
+        if in_line_comment:
+            if ch == "\n":
+                in_line_comment = False
+                current.append(ch)
+            else:
+                current.append(ch)
+        elif in_block_comment:
+            if ch == "*" and next_ch == "/":
+                in_block_comment = False
+                current.append("*/")
+                i += 1
+            else:
+                current.append(ch)
+        elif in_single_quote:
+            if ch == "'" and next_ch == "'":
+                current.append("''")
+                i += 1
+            elif ch == "'":
+                in_single_quote = False
+                current.append(ch)
+            else:
+                current.append(ch)
+        elif in_double_quote:
+            if ch == '"' and next_ch == '"':
+                current.append('""')
+                i += 1
+            elif ch == '"':
+                in_double_quote = False
+                current.append(ch)
+            else:
+                current.append(ch)
+        elif ch == "-" and next_ch == "-":
+            in_line_comment = True
+            current.append("--")
+            i += 1
+        elif ch == "/" and next_ch == "*":
+            in_block_comment = True
+            current.append("/*")
+            i += 1
+        elif ch == "'":
+            in_single_quote = True
+            current.append(ch)
+        elif ch == '"':
+            in_double_quote = True
+            current.append(ch)
+        elif ch == ";" and not (in_single_quote or in_double_quote or in_block_comment or in_line_comment):
+            statement = "".join(current).strip()
+            if statement:
+                statements.append(statement)
+            current = []
+        else:
+            current.append(ch)
+        i += 1
+    statement = "".join(current).strip()
+    if statement:
+        statements.append(statement)
+    return statements
 
 
 def load_python_seed(filepath: str):
@@ -183,7 +255,7 @@ def apply_single_seed(
     with get_db_connection(db_name) as connection:
         if seed_type == "sql":
             sql_content = read_sql_seed(filepath)
-            statements = [s.strip() for s in sql_content.split(";") if s.strip()]
+            statements = _split_sql_statements(sql_content)
             for statement in statements:
                 connection.execute(text(statement))
         elif seed_type == "python":

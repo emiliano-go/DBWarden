@@ -1,14 +1,13 @@
-from rich.console import Console
 from rich.table import Table
 
 from dbwarden.logging import get_logger
+from dbwarden.output import console
 from dbwarden.repositories import get_migration_records, migrations_table_exists
 
 
 def history_cmd(database: str | None = None) -> None:
     """Display the migration history in a formatted table."""
     logger = get_logger()
-    console = Console()
 
     db_name = database or "default"
 

@@ -6,13 +6,13 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from dbwarden.constants import RUNS_ALWAYS_FILE_PREFIX, RUNS_ON_CHANGE_FILE_PREFIX
+from dbwarden.constants import RUNS_ALWAYS_FILE_PREFIX
 from dbwarden.engine.file_parser import parse_upgrade_statements
+from dbwarden.exceptions import LockError
 from dbwarden.engine.version import (
     get_migrations_directory,
     get_runs_always_filepaths,
     get_runs_on_change_filepaths,
-    resolve_migration_order,
 )
 from dbwarden.logging import get_logger
 from dbwarden.metrics import (
@@ -27,14 +27,13 @@ from dbwarden.output import console
 from dbwarden.repositories import (
     create_migrations_table_if_not_exists,
     create_lock_table_if_not_exists,
-    fetch_latest_versioned_migration,
     get_existing_runs_always_filenames,
-    get_existing_runs_on_change_filenames_to_checksums,
     get_applied_checksums,
     get_migrated_versions,
     run_migration,
     run_repeatable_migration,
 )
+from dbwarden.repositories.lock_repo import acquire_lock, check_lock, release_lock
 
 
 def create_backup(sqlalchemy_url: str, backup_dir: str) -> str:
@@ -177,6 +176,7 @@ def migrate_single(
         console.print(f"\n=== Migrating database: {db_name} ===", style="bold cyan")
 
     sandbox_provider = None
+    _sandbox_cm = None
     if sandbox:
         from dbwarden.engine.sandbox import create_sandbox_provider
         from dbwarden.database.connection import sandbox_override as _sandbox_ctx
@@ -190,9 +190,8 @@ def migrate_single(
         )
         _sandbox_cm = _sandbox_ctx(sandbox_url, sandbox_db_type)
         _sandbox_cm.__enter__()
-    else:
-        _sandbox_cm = None
 
+    lock_acquired = False
     try:
         if with_backup and not sandbox:
             backup_directory = backup_dir or os.path.join(os.getcwd(), "backups")
@@ -204,6 +203,15 @@ def migrate_single(
         if not dry_run:
             create_migrations_table_if_not_exists(db_name)
             create_lock_table_if_not_exists(db_name)
+
+            if check_lock(db_name):
+                raise LockError(
+                    "Migration lock is already held. Another migration process may be running. "
+                    "Use 'dbwarden unlock' to release the lock if necessary."
+                )
+            if not acquire_lock(db_name):
+                raise LockError("Could not acquire migration lock.")
+            lock_acquired = True
 
         applied_versions = set()
         applied_checksums = set()
@@ -317,9 +325,6 @@ def migrate_single(
             return
 
         existing_runs_always = get_existing_runs_always_filenames(db_name)
-        existing_runs_on_change = get_existing_runs_on_change_filenames_to_checksums(
-            db_name
-        )
 
         for filepath in runs_always_filepaths:
             filename = filepath.split("/")[-1]
@@ -379,6 +384,8 @@ def migrate_single(
             increment_migration_errors(actual_db_name)
         raise
     finally:
+        if lock_acquired:
+            release_lock(db_name)
         if sandbox_provider:
             sandbox_provider.stop()
             console.print("Sandbox stopped.", style="yellow")

@@ -339,6 +339,8 @@ def generate_migration_filename(db_name: str, description: str, version: str) ->
     safe_description = re.sub(r"[^a-zA-Z0-9_]", "_", description.lower())
     safe_description = re.sub(r"_+", "_", safe_description)
     safe_description = safe_description.strip("_")
+    if not safe_description:
+        safe_description = "untitled"
     return f"{db_name}__{version}_{safe_description}.sql"
 
 
@@ -357,4 +359,6 @@ def generate_repeatable_filename(db_name: str, description: str, prefix: str) ->
     safe_description = re.sub(r"[^a-zA-Z0-9_]", "_", description.lower())
     safe_description = re.sub(r"_+", "_", safe_description)
     safe_description = safe_description.strip("_")
+    if not safe_description:
+        safe_description = "untitled"
     return f"{db_name}__{prefix}{safe_description}.sql"

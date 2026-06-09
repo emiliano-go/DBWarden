@@ -2,6 +2,8 @@ import os
 import re
 from typing import Optional
 
+from dbwarden.constants import RUNS_ALWAYS_FILE_PREFIX, RUNS_ON_CHANGE_FILE_PREFIX
+
 
 class MigrationMetadata:
     """Metadata parsed from a migration file header."""
@@ -30,7 +32,11 @@ def get_description_from_filename(filename: str) -> str:
     name = filename.replace(".sql", "")
     if "__" in name:
         parts = name.split("__", 1)
-        return parts[1].replace("_", " ").strip()
+        desc = parts[1]
+        for prefix in (RUNS_ALWAYS_FILE_PREFIX, RUNS_ON_CHANGE_FILE_PREFIX):
+            if desc.startswith(prefix):
+                desc = desc.removeprefix(prefix)
+        return desc.replace("_", " ").strip()
     elif name[0:4].isdigit() and "_" in name:
         parts = name.split("_", 1)
         return parts[1].replace("_", " ").strip()

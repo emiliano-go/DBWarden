@@ -1,5 +1,6 @@
 import logging
 from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any, Generator
 
 from sqlalchemy import create_engine, text
@@ -30,6 +31,17 @@ def _convert_url_to_clickhouse_dialect(url: str) -> str:
 _engine_cache: dict[tuple[str, str], Engine] = {}
 
 
+def dispose_engine(url: str, db_type: str = "postgresql") -> None:
+    """Dispose of a cached engine, releasing its connection pool."""
+    key = (url, db_type)
+    engine = _engine_cache.pop(key, None)
+    if engine is not None:
+        try:
+            engine.dispose()
+        except Exception:
+            pass
+
+
 def _get_engine(url: str, db_type: str = "postgresql") -> Engine:
     """Create SQLAlchemy engine with dialect-specific URL handling."""
     key = (url, db_type)
@@ -40,7 +52,10 @@ def _get_engine(url: str, db_type: str = "postgresql") -> Engine:
     if db_type == "clickhouse":
         final_url = _convert_url_to_clickhouse_dialect(url)
 
-    engine = create_engine(url=final_url)
+    connect_args = {}
+    if db_type == "sqlite":
+        connect_args["check_same_thread"] = False
+    engine = create_engine(url=final_url, connect_args=connect_args)
     _engine_cache[key] = engine
     return engine
 
@@ -54,32 +69,36 @@ def reset_connection_logging() -> None:
     _connection_init_logged = False
 
 
-_SANDBOX_URL: str | None = None
-_SANDBOX_DB_TYPE: str | None = None
+_sandbox_url_var: ContextVar[str | None] = ContextVar("_sandbox_url", default=None)
+_sandbox_db_type_var: ContextVar[str | None] = ContextVar("_sandbox_db_type", default=None)
 
 
 def set_sandbox_override(url: str, db_type: str) -> None:
-    """Set the sandbox database URL override for the current process."""
-    global _SANDBOX_URL, _SANDBOX_DB_TYPE
-    _SANDBOX_URL = url
-    _SANDBOX_DB_TYPE = db_type
+    """Set the sandbox database URL override for the current context."""
+    _sandbox_url_var.set(url)
+    _sandbox_db_type_var.set(db_type)
 
 
 def clear_sandbox_override() -> None:
-    """Clear the sandbox database URL override."""
-    global _SANDBOX_URL, _SANDBOX_DB_TYPE
-    _SANDBOX_URL = None
-    _SANDBOX_DB_TYPE = None
+    """Clear the sandbox database URL override for the current context."""
+    url = _sandbox_url_var.get()
+    db_type = _sandbox_db_type_var.get()
+    if url is not None:
+        dispose_engine(url, db_type or "sqlite")
+    _sandbox_url_var.set(None)
+    _sandbox_db_type_var.set(None)
 
 
 @contextmanager
 def sandbox_override(url: str, db_type: str):
     """Context manager that temporarily sets the sandbox override."""
-    set_sandbox_override(url, db_type)
+    token_url = _sandbox_url_var.set(url)
+    token_type = _sandbox_db_type_var.set(db_type)
     try:
         yield
     finally:
-        clear_sandbox_override()
+        _sandbox_url_var.reset(token_url)
+        _sandbox_db_type_var.reset(token_type)
 
 
 @contextmanager
@@ -93,8 +112,10 @@ def get_db_connection(db_name: str | None = None) -> Generator[Any, None, None]:
     global _connection_init_logged
     config = get_database(db_name)
 
-    url = _SANDBOX_URL if _SANDBOX_URL is not None else config.sqlalchemy_url
-    db_type = _SANDBOX_DB_TYPE if _SANDBOX_DB_TYPE is not None else config.database_type
+    sandbox_url = _sandbox_url_var.get()
+    sandbox_db_type = _sandbox_db_type_var.get()
+    url = sandbox_url if sandbox_url is not None else config.sqlalchemy_url
+    db_type = sandbox_db_type if sandbox_db_type is not None else config.database_type
 
     from sqlalchemy.engine import make_url
     parsed = make_url(url)

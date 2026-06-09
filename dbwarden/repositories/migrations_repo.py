@@ -4,7 +4,7 @@ from sqlalchemy import Result, Row, text
 from sqlalchemy.orm import Session
 
 from dbwarden.database.connection import get_db_connection
-from dbwarden.database.queries import QueryMethod, get_migration_table_name, get_query
+from dbwarden.database.queries import QueryMethod, get_query
 from dbwarden.models import MigrationRecord
 
 
@@ -23,6 +23,7 @@ def run_migration(
     """
     from dbwarden.engine.checksum import calculate_checksum
     from dbwarden.engine.file_parser import get_description_from_filename
+    from dbwarden.logging import get_logger
 
     with get_db_connection(db_name) as connection:
         # Use savepoint for all-or-nothing behavior (not supported by ClickHouse)
@@ -31,6 +32,11 @@ def run_migration(
             has_savepoint = True
         except Exception:
             has_savepoint = False
+            if sql_statements and len(sql_statements) > 1:
+                get_logger(db_name=db_name).warning(
+                    "Database does not support savepoints. "
+                    "Multi-statement migrations may leave partial changes on failure."
+                )
         try:
             for statement in sql_statements:
                 connection.execute(text(statement))
@@ -54,6 +60,9 @@ def run_migration(
                     text(get_query(QueryMethod.DELETE_VERSION, db_name)),
                     parameters={"version": version},
                 )
+                optimize_sql = get_query(QueryMethod.OPTIMIZE_MIGRATIONS_TABLE, db_name)
+                if optimize_sql:
+                    connection.execute(text(optimize_sql))
 
             # All statements succeeded - commit the savepoint
             if has_savepoint:
@@ -148,11 +157,8 @@ def get_applied_checksums(db_name: str | None = None) -> set[str]:
         return set()
 
     with get_db_connection(db_name) as connection:
-        migration_table = get_migration_table_name(db_name)
         results = connection.execute(
-            text(
-                f"SELECT DISTINCT checksum FROM {migration_table} WHERE checksum IS NOT NULL"
-            )
+            text(get_query(QueryMethod.GET_DISTINCT_CHECKSUMS, db_name))
         )
         return {row.checksum for row in results.fetchall()}
 
@@ -165,21 +171,15 @@ def get_latest_versions(
     """Get recent migration versions."""
     if limit:
         with get_db_connection(db_name) as connection:
-            migration_table = get_migration_table_name(db_name)
             result = connection.execute(
-                text(
-                    f"SELECT version FROM {migration_table} WHERE version IS NOT NULL ORDER BY applied_at DESC LIMIT :limit"
-                ),
+                text(get_query(QueryMethod.GET_LATEST_VERSIONS_LIMIT, db_name)),
                 parameters={"limit": limit},
             )
             return [row.version for row in result.fetchall()]
     elif starting_version:
         with get_db_connection(db_name) as connection:
-            migration_table = get_migration_table_name(db_name)
             result = connection.execute(
-                text(
-                    f"SELECT version FROM {migration_table} WHERE version > :starting_version AND version IS NOT NULL ORDER BY applied_at ASC"
-                ),
+                text(get_query(QueryMethod.GET_LATEST_VERSIONS_FROM, db_name)),
                 parameters={"starting_version": starting_version},
             )
             return [row.version for row in result.fetchall()]

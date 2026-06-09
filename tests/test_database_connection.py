@@ -89,14 +89,33 @@ class TestGetEngine:
 
 class TestSandboxOverride:
     def test_sandbox_override_context_manager(self):
+        from unittest.mock import patch, MagicMock
         import dbwarden.database.connection as conn_mod
 
-        with conn_mod.sandbox_override("sqlite:///sandbox.db", "sqlite"):
-            assert conn_mod._SANDBOX_URL == "sqlite:///sandbox.db"
-            assert conn_mod._SANDBOX_DB_TYPE == "sqlite"
+        with (
+            patch("dbwarden.database.connection.get_database") as mock_get_db,
+            patch("dbwarden.database.connection._get_engine") as mock_get_engine,
+        ):
+            mock_config = MagicMock()
+            mock_config.sqlalchemy_url = "sqlite:///real.db"
+            mock_config.database_type = "sqlite"
+            mock_get_db.return_value = mock_config
 
-        assert conn_mod._SANDBOX_URL is None
-        assert conn_mod._SANDBOX_DB_TYPE is None
+            # Without sandbox, get_db_connection uses config URL
+            with conn_mod.get_db_connection("test") as conn:
+                mock_get_engine.assert_called_with("sqlite:///real.db", "sqlite")
+
+            mock_get_engine.reset_mock()
+
+            # With sandbox override, get_db_connection uses sandbox URL
+            with conn_mod.sandbox_override("sqlite:///sandbox.db", "sqlite"):
+                with conn_mod.get_db_connection("test") as conn:
+                    mock_get_engine.assert_called_with("sqlite:///sandbox.db", "sqlite")
+
+            # After sandbox ends, back to config URL
+            mock_get_engine.reset_mock()
+            with conn_mod.get_db_connection("test") as conn:
+                mock_get_engine.assert_called_with("sqlite:///real.db", "sqlite")
 
 
 class TestConvertUrl:

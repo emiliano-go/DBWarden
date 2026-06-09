@@ -12,9 +12,7 @@ class TestHistory:
 
         from dbwarden.commands.history import history_cmd
 
-        with patch("dbwarden.commands.history.Console") as mock_console_cls:
-            mock_console = MagicMock()
-            mock_console_cls.return_value = mock_console
+        with patch("dbwarden.commands.history.console") as mock_console:
             history_cmd("test_db")
             mock_console.print.assert_called_once()
 
@@ -26,9 +24,7 @@ class TestHistory:
 
         from dbwarden.commands.history import history_cmd
 
-        with patch("dbwarden.commands.history.Console") as mock_console_cls:
-            mock_console = MagicMock()
-            mock_console_cls.return_value = mock_console
+        with patch("dbwarden.commands.history.console") as mock_console:
             history_cmd("test_db")
             mock_console.print.assert_called_once()
 
@@ -46,8 +42,6 @@ class TestHistory:
 
         from dbwarden.commands.history import history_cmd
 
-        with patch("dbwarden.commands.history.Console") as mock_console_cls:
-            mock_console = MagicMock()
-            mock_console_cls.return_value = mock_console
+        with patch("dbwarden.commands.history.console") as mock_console:
             history_cmd("test_db")
             mock_console.print.assert_called_once()

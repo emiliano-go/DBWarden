@@ -107,7 +107,7 @@ def _apply_seeds_single(
         all_seeds = _get_seed_filepaths_by_version(seeds_dir)
         if version not in all_seeds:
             console.print(f"Seed V{version} not found in seeds directory.", style="red")
-            return
+            raise SystemExit(1)
         apply_single_seed(
             version=version,
             filepath=all_seeds[version][0],
@@ -190,10 +190,40 @@ def seed_rollback_cmd(
     count: int | None = None,
     to_version: str | None = None,
     database: str | None = None,
+    all_databases: bool = False,
     verbose: bool = False,
 ) -> None:
     """Rollback seed tracking records."""
-    logger = get_logger(verbose=verbose, db_name=database)
+    if all_databases:
+        config = get_multi_db_config()
+        for db_name in config.databases:
+            try:
+                _rollback_seeds_single(
+                    count=count,
+                    to_version=to_version,
+                    db_name=db_name,
+                    verbose=verbose,
+                )
+            except Exception as e:
+                console.print(f"Error rolling back seeds for database '{db_name}': {e}", style="bold red")
+                continue
+    else:
+        _rollback_seeds_single(
+            count=count,
+            to_version=to_version,
+            db_name=database,
+            verbose=verbose,
+        )
+
+
+def _rollback_seeds_single(
+    count: int | None = None,
+    to_version: str | None = None,
+    db_name: str | None = None,
+    verbose: bool = False,
+) -> None:
+    """Rollback seed tracking records for a single database."""
+    logger = get_logger(verbose=verbose, db_name=db_name)
 
     if count is not None and to_version is not None:
         raise ValueError("Cannot specify both 'count' and 'to-version'.")
@@ -201,16 +231,18 @@ def seed_rollback_cmd(
     if count is None and to_version is None:
         count = 1
 
-    from dbwarden.repositories.seeds_repo import get_seeds_directory
+    from dbwarden.repositories.seeds_repo import create_seeds_table_if_not_exists, get_seeds_directory
+
+    create_seeds_table_if_not_exists(db_name)
 
     try:
-        seeds_dir = get_seeds_directory(database)
+        seeds_dir = get_seeds_directory(db_name)
     except DirectoryNotFoundError:
         console.print("No seeds directory found. Nothing to rollback.", style="cyan")
         return
 
     to_rollback = get_seeds_to_rollback(
-        seeds_dir, count=count, to_version=to_version, db_name=database
+        seeds_dir, count=count, to_version=to_version, db_name=db_name
     )
 
     if not to_rollback:
@@ -218,7 +250,7 @@ def seed_rollback_cmd(
         return
 
     for version in sorted(to_rollback.keys(), reverse=True):
-        rollback_single_seed(version, db_name=database)
+        rollback_single_seed(version, db_name=db_name)
 
     console.print(
         f"Rollback completed: {len(to_rollback)} seed record(s) removed.",
