@@ -1,3 +1,5 @@
+# DBWarden
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/emiliano-gandini-outeda/DBWarden/refs/heads/main/assets/icon.png" alt="DBWarden" width="128"/>
 </p>
@@ -8,6 +10,9 @@
   <a href="https://www.python.org/downloads/">
     <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white&style=for-the-badge" alt="Python">
   </a>
+  <a href="https://pypi.org/project/dbwarden">
+    <img src="https://img.shields.io/badge/PyPI-0.9.2-34D058?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
+  </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
   </a>
@@ -17,39 +22,53 @@
 </p>
 
 <p align="center">
-  <strong><a href="https://emiliano-gandini-outeda.me/DBWarden/">→ Full documentation</a></strong>
+  <strong><a href="https://emiliano-gandini-outeda.me/DBWarden/">Full documentation</a></strong>
   &nbsp;|&nbsp;
   <strong><a href="https://github.com/emiliano-gandini-outeda/DBWarden">Source Code</a></strong>
 </p>
 
 ---
 
-DBWarden is a SQL-first migration system for SQLAlchemy. It reads your models, generates plain SQL migration files with rollback included, and tracks schema state through checksummed snapshots. No DSL, no live database required to generate migrations. FastAPI integration, async sessions, observability, seed management, and migration impact analysis are built in.
+DBWarden is a SQL-first migration system for SQLAlchemy that replaces Python-based migration workflows with explicit, reviewable SQL generated directly from your models.
 
-## Key Features
+Unlike script-based migration tools, DBWarden does not introduce a migration runtime or require executing generated Python migration code. It produces plain SQL files that can be reviewed, versioned, and executed directly against any environment.
 
-- **SQL-first**: Migrations are plain SQL. No DSL, no generated abstraction layer.
-- **Rollback included**: Every migration carries both upgrade and rollback SQL.
-- **Schema snapshots**: After every migration, a checksummed JSON snapshot is written. These snapshots power rename detection, offline migration generation, and column-level diffing without querying the live database.
-- **Offline migrations**: Export model state to a JSON file with `export-models`, then run `make-migrations --offline` in CI pipelines with no database service.
-- **Column-level diffing**: Type, nullable, default, and comment changes generate precise `ALTER COLUMN` statements.
-- **Rich index metadata**: Partial indexes (`WHERE`), covering indexes (`INCLUDE`), `USING` methods, `NULLS NOT DISTINCT`, column sort order, storage parameters, and ClickHouse skip indexes via typed `PgIndexSpec` and `ChIndexSpec` dataclasses.
-- **PostgreSQL first-class**: Full round-trip fidelity: reverse-engineer a live database, feed into `make-migrations`, zero diff. Identity columns, generated columns, collation, storage, compression, partitioning, exclusion constraints, deferrable FKs.
-- **ClickHouse first-class**: `ChEngineSpec`, `ProjectionSpec`, `ChIndexSpec` for table options, replicated engines, dictionaries, materialized views, projections, skip indexes, codecs, LowCardinality/Nullable.
-- **FastAPI-native sessions**: `session=primary.async_session` as a route annotation: no `Depends`, no `Annotated`, no `SessionDep`.
-- **Single config source**: `database_config(...)` drives migrations, sessions, health checks, and seeds.
-- **Multi-database**: One project, multiple databases, full isolation.
-- **Dev mode**: Run SQLite locally against a PostgreSQL production schema with automatic SQL translation.
-- **Sandbox and dry-run**: Test migrations in a temporary database or preview SQL without touching anything.
-- **Migration impact analysis**: `dbwarden check-impact` scans your codebase for references to affected schema elements before applying destructive migrations.
-- **Observability**: Prometheus metrics (6 families), JSON logging, FastAPI routers for `/metrics`, `/status`, `/migrate`, `/health/liveness`, `/health/readiness`.
-- **Versioned seeds**: SQL and Python seed files with checksummed idempotent application. In-code seeds via `@seed_data` decorate classes alongside models.
-- **Auto-generated Pydantic schemas**: `@auto_schema` generates `CreateSchema`, `UpdateSchema`, `PublicSchema` from your model annotations.
+All migrations are generated as plain SQL and can be reviewed before execution.
 
-## Requirements
+FastAPI integration, offline generation, and migration safety tooling are built around that core model.
 
-- Python 3.12.7+
-- SQLAlchemy 2.0+
+## At a glance
+
+- SQL-first migrations from SQLAlchemy models
+- No migration runtime required
+- Offline CI migration generation
+- Built-in rollback in every migration
+- Schema snapshots for deterministic diffing
+- Pre-deploy impact analysis for code safety
+
+## Why DBWarden?
+
+Most migration systems rely on one of two approaches:
+
+- Python-based migration scripts generated and executed at runtime
+- Manual SQL migrations written and maintained by hand
+
+Both introduce friction: migrations are tied to a runtime, changes are hard to audit in CI without a database, and schema drift is only discovered at deploy time.
+
+DBWarden removes this entire class of problems. It generates plain SQL migrations directly from SQLAlchemy models, with:
+
+- no migration runtime required
+- no generated Python migration scripts
+- full rollback included in every migration file
+- schema snapshots for deterministic diffs over time
+
+This enables:
+
+- CI migration generation without a database
+- deterministic schema history via snapshots
+- pre-deploy detection of destructive or breaking changes
+
+DBWarden is designed as a drop-in replacement for migration workflows built around Alembic or hand-written SQL, without introducing a migration runtime or script execution layer.
 
 ## Installation
 
@@ -59,6 +78,8 @@ pip install "dbwarden[fastapi]"   # FastAPI integration
 pip install "dbwarden[metrics]"   # Prometheus metrics
 pip install "dbwarden[sandbox]"   # Docker-backed test databases
 ```
+
+Requirements: Python 3.12.7+, SQLAlchemy 2.0+.
 
 ## Quickstart
 
@@ -81,7 +102,7 @@ primary = database_config(
 ```python
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import declarative_base
-from dbwarden import TableMeta, index
+from dbwarden import TableMeta, IndexSpec
 
 Base = declarative_base()
 
@@ -107,7 +128,7 @@ class Post(Base):
 
     class Meta(TableMeta):
         indexes = [
-            index("ix_posts_created_at", ["created_at"]),
+            IndexSpec(name="ix_posts_created_at", columns=["created_at"]),
         ]
 ```
 
@@ -116,6 +137,8 @@ class Post(Base):
 ```bash
 dbwarden make-migrations
 ```
+
+Every migration includes both upgrade and rollback SQL by default.
 
 Output:
 
@@ -154,76 +177,142 @@ dbwarden migrate
 dbwarden status
 ```
 
+## Typical workflow
+
+1. Define your SQLAlchemy models with `class Meta` annotations
+2. Run `dbwarden make-migrations` to generate SQL
+3. Review the generated `.sql` file and its rollback section
+4. Run `dbwarden migrate` to apply
+5. Verify with `dbwarden status`
+
+## From zero to production
+
+Typical adoption path in an existing project:
+
+1. Point DBWarden at your existing SQLAlchemy models
+2. Run initial `make-migrations` to generate a baseline schema
+3. Commit generated migrations as your source of truth
+4. Replace your current migration workflow with the DBWarden CLI
+5. Optionally enable:
+   - migration impact analysis for safer deploys
+   - offline mode for CI pipelines without a database service
+   - FastAPI integration for startup validation and health checks
+
 ---
 
-## PostgreSQL First-Class
+## Migration engine
 
-Reverse-engineer a live PostgreSQL database with `generate-models`, feed the output back into `make-migrations`, and get **zero diff**:
+- **SQL-first**: Migrations are plain SQL files. No migration runtime required.
+- **Rollback included**: Every migration carries both upgrade and rollback SQL in the same file.
+- **Schema snapshots**: After every migration, a checksummed JSON snapshot is written. Snapshots power rename detection, offline diffing, and column-level comparisons without querying the live database.
+- **Column-level diffing**: Type, nullability, default, and comment changes generate precise `ALTER COLUMN` statements.
+- **Rich index support**: Advanced index features for PostgreSQL and ClickHouse use cases.
+
+<details>
+<summary>Supported index features</summary>
+
+- Partial indexes (`WHERE` clause)
+- Covering indexes (`INCLUDE` columns)
+- `USING` access methods
+- `NULLS NOT DISTINCT` (PostgreSQL 15+)
+- Per-column sort order
+- Storage parameters (`WITH (fillfactor=...)`)
+- ClickHouse skip indexes via `ChIndexSpec`
+
+</details>
+
+## What will break if this ships?
+
+Before applying schema changes, DBWarden can scan your codebase to identify what will be affected. It uses AST analysis with a grep fallback, so results reflect actual code structure rather than text matches.
+
+```bash
+dbwarden check-impact 0042 --database primary
+```
+
+Output:
+
+```
+drop_column on users.username
+  Affects:
+    app/routes/users.py:34 (attribute access)
+    app/templates/profile.jinja2:12 (template usage)
+```
+
+Run this before any destructive deploy to surface breaking changes before they reach production.
+
+## Offline migrations
+
+Export model state once, then generate migrations on any machine without a database connection. Useful for CI pipelines and local development without a running database.
+
+```bash
+dbwarden export-models --database primary
+git add .dbwarden/model_state.json
+```
+
+Then on any machine, with no database required:
+
+```bash
+dbwarden make-migrations "add bio column" --offline
+```
+
+The model state file is updated in place after each migration.
+
+---
+
+## PostgreSQL (primary backend)
+
+First-class support with full round-trip schema fidelity. Reverse-engineer a live database, feed the output back into `make-migrations`, and get zero diff.
 
 ```bash
 dbwarden generate-models -d primary --tables users
 dbwarden make-migrations
-# → No changes detected
+# No changes detected
 ```
 
-The round-trip is confirmed: your generated models match the database schema exactly. The following PostgreSQL features are fully supported:
+Supported features:
 
-- Identity columns with sequence options
-- Generated columns (`GENERATED ALWAYS AS (...) STORED`)
-- Per-column collation, storage, and compression
-- Table fillfactor, tablespace, unlogged tables, and partitioning
-- Table inheritance and exclusion constraints
-- Deferrable foreign keys and check constraints with `NO INHERIT`
-- Deferred unique constraints with `NULLS NOT DISTINCT` and `INCLUDE`
-- Index options: `USING`, `WHERE`, `INCLUDE`, `WITH`, `NULLS NOT DISTINCT`, column sort order via `PgIndexSpec`
-- Named enum types with `ALTER TYPE ... ADD VALUE`
-- Type normalization: `SERIAL`, `TIMESTAMPTZ`, `NUMERIC(p,s)`, `VARCHAR(n)`, `JSONB`, `UUID`, `ARRAY`, `TSTZRANGE`
+- Identity columns and generated columns
+- Partitioning and table inheritance
+- Exclusion constraints and deferrable constraints
+- Advanced indexes via `PgIndexSpec` (INCLUDE, WHERE, USING, NULLS NOT DISTINCT, column sort order)
+- Per-column storage, compression, and collation
+- Enum type creation and value addition
+- Full type normalization: SERIAL, TIMESTAMPTZ, NUMERIC, VARCHAR, JSONB, UUID, ARRAY, TSTZRANGE
 
----
+## ClickHouse (analytics backend)
 
-## ClickHouse First-Class
+First-class support for ClickHouse analytics workloads, including schema generation and round-trip validation for supported features.
 
 ```bash
 dbwarden generate-models -d analytics
-# Auto-detects ClickHouse, generates CHTableMeta + ChEngineSpec + ChIndexSpec
 dbwarden make-migrations
-# → Zero diff with live database
+# No changes detected
 ```
 
-Metadata is declared in `class Meta(CHTableMeta)` with typed specs:
+Supported features:
 
-```python
-from dbwarden import CHTableMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec, CHColumnMeta
-
-class Event(Base):
-    __tablename__ = "events"
-
-    id = Column(Int64, primary_key=True)
-    event_date = Column(Date)
-    payload = Column(String)
-
-    class Meta(CHTableMeta):
-        ch_engine = ChEngineSpec("MergeTree")
-        ch_order_by = ["event_date", "id"]
-        ch_partition_by = "toYYYYMM(event_date)"
-        ch_ttl = ["event_date + toIntervalYear(1)"]
-        ch_settings = {"index_granularity": "8192"}
-        ch_indexes = [
-            ChIndexSpec("ix_payload", ["payload"],
-                type="bloom_filter", granularity=1),
-        ]
-        ch_projections = [
-            ProjectionSpec("by_date",
-                "SELECT event_date, sum(amount) GROUP BY event_date"),
-        ]
-
-        class payload(CHColumnMeta):
-            ch_codec = "ZSTD(3)"
-```
+- MergeTree engine family via `ChEngineSpec`
+- Replicated engines with ZooKeeper path configuration
+- Projections via `ProjectionSpec`
+- Dictionaries and materialized views
+- Skip indexes via `ChIndexSpec`
+- Column codecs
+- `LowCardinality` and `Nullable` type wrappers
 
 ---
 
-## FastAPI Integration
+## FastAPI integration
+
+### Sessions
+
+DBWarden exposes database sessions directly from the configuration object, keeping route handlers declarative while avoiding dependency boilerplate.
+
+```python
+@app.get("/users")
+async def list_users(session=primary.async_session):
+    result = await session.execute(select(User))
+    return result.scalars().all()
+```
 
 ### Lifespan
 
@@ -234,26 +323,13 @@ from dbwarden.fastapi import dbwarden_lifespan
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with dbwarden_lifespan(
-        app, mode="check", readiness_gate=True, pool_warmup=True,
-    ):
+    async with dbwarden_lifespan(app, mode="check"):
         yield
 
 app = FastAPI(lifespan=lifespan)
 ```
 
-On startup, `dbwarden_lifespan` validates the schema, checks database readiness, and warms connection pools. On shutdown, it disposes all engine pools.
-
-### Per-Request Sessions
-
-```python
-@app.get("/users")
-async def list_users(session=primary.async_session):
-    result = await session.execute(select(User))
-    return result.scalars().all()
-```
-
-The handle from your config becomes a FastAPI dependency annotation. No `Depends()`, no `Annotated`, no `SessionDep` type alias.
+On startup: schema validation or auto-migration, readiness gate, connection pool warmup, and optional seed application. On shutdown: all engine pools and ClickHouse clients disposed.
 
 ### Routers
 
@@ -264,13 +340,11 @@ app.include_router(DBWardenHealthRouter(), prefix="/health")
 app.include_router(DBWardenRouter(), prefix="/db")
 ```
 
-Health router exposes `/liveness`, `/readiness`, and per-database health endpoints. DBWardenRouter exposes `GET /status` and `POST /migrate`.
+`DBWardenHealthRouter` exposes `/liveness`, `/readiness`, and per-database status endpoints. `DBWardenRouter` exposes `GET /status` and `POST /migrate`.
 
----
+## Auto-generated Pydantic schemas
 
-## Auto-Generated Pydantic Schemas
-
-Decorate a model with `@auto_schema` to get Pydantic `Schema`, `CreateSchema`, `UpdateSchema`, and `PublicSchema` for request validation and API responses:
+DBWarden can generate request and response schemas directly from model annotations, eliminating duplicated definitions between your ORM layer and your API layer. This keeps API schemas and ORM models in sync without duplication.
 
 ```python
 from dbwarden.schema import auto_schema
@@ -289,207 +363,43 @@ class User(Base):
 ```
 
 ```python
-# In a route:
-data = User.CreateSchema(email="a@b.com", password_hash="secret")
-user = User.from_schema(data)
-session.add(user)
-await session.commit()
-
-api_result = user.to_schema()  # PublicSchema excludes password_hash
+user = User.CreateSchema(email="a@b.com", password_hash="secret")
+user.to_schema()  # PublicSchema excludes password_hash automatically
 ```
 
-`CreateSchema` derives required fields from nullable columns. `PublicSchema` omits fields with `public = False` or names starting with `_`. No separate schema definitions to maintain.
+`@auto_schema` generates `CreateSchema`, `UpdateSchema`, and `PublicSchema` from model annotations. Fields marked `public = False` are excluded from `PublicSchema` without any additional filtering logic in your routes.
+
+Optional but powerful: derive your entire API schema layer directly from your SQLAlchemy models.
 
 ---
 
-## Observability
+## Developer experience
 
-```python
-from dbwarden.fastapi import MetricsRouter, MetricsMiddleware, QueryTracingMiddleware
-
-app.include_router(MetricsRouter())
-app.add_middleware(MetricsMiddleware)
-app.add_middleware(QueryTracingMiddleware, slow_query_threshold_ms=100)
-```
-
-| Metric | Type | What it tracks |
-|---|---|---|
-| `dbwarden_migrations_total` | Counter | Migrations applied, by database and version |
-| `dbwarden_migration_duration_seconds` | Histogram | Duration per migration |
-| `dbwarden_schema_version` | Gauge | Current schema version per database |
-| `dbwarden_seed_version` | Gauge | Current seed version per database |
-| `dbwarden_migrations_pending` | Gauge | Pending migration count |
-| `dbwarden_migration_errors_total` | Counter | Migration errors by type |
-
-`QueryTracingMiddleware` logs per-request query count, total duration, slowest query, and slow query threshold breaches.
+- **Dev mode**: Run SQLite locally against a PostgreSQL production schema with automatic SQL translation.
+- **Sandbox and dry-run**: Test migrations in a temporary database or preview SQL without touching anything.
+- **Multi-database**: One project, multiple databases, full isolation between them.
+- **Versioned seeds**: SQL, Python, and in-code seeds with checksummed idempotent application via `@seed_data`.
+- **Observability**: Prometheus metrics (6 families), structured JSON logging, FastAPI routers for `/metrics`, `/status`, `/migrate`, `/health/liveness`, `/health/readiness`.
+- **Generate models**: Reverse-engineer a live database into SQLAlchemy models with `dbwarden generate-models`.
 
 ---
 
-## Offline Migrations
+## Supported databases
 
-Export model state for CI pipelines with no database:
-
-```bash
-dbwarden export-models --database primary
-git add .dbwarden/model_state.json
-```
-
-Then on any machine without database access:
-
-```bash
-dbwarden make-migrations "add bio column" --offline
-```
-
-The model state file is updated in place after each migration.
-
----
-
-## Migration Impact Analysis
-
-Before applying a destructive migration, scan your codebase for affected references:
-
-```bash
-dbwarden check-impact 0042 --database primary
-```
-
-Output:
-
-```
-Migration: primary__0042_drop_username
-Impact detected: 1 operation(s) affect code
-
-drop_column on users.username
-  References: 2
-    app/routes/users.py:34  attribute_access
-      .username
-    app/templates/profile.jinja2:12  grep
-      user.username
-```
-
-Supports AST analysis (default), grep (fallback), and deep introspection (`--deep`).
-
----
-
-## In-Code Seeds
-
-Define seeds alongside your models using `@seed_data`:
-
-```python
-from dbwarden.schema import seed_data, SeedRow
-
-@seed_data(database="primary", version="0001", description="initial countries")
-class CountrySeed:
-    model = Country
-    rows = [SeedRow(code="UY", name="Uruguay")]
-```
-
-Or with programmatic logic:
-
-```python
-@seed_data(database="primary", version="0002", description="load permissions")
-class PermissionSeed:
-    model = Permission
-
-    @staticmethod
-    def generate(session):
-        for resource in ["users", "orders"]:
-            for action in ["read", "write"]:
-                session.add(Permission(name=f"{resource}:{action}"))
-```
-
-Coexists with file-based seeds and sorts by version at apply time.
-
----
-
-## Sandbox and Dry-Run
-
-```bash
-dbwarden migrate --dry-run          # Preview SQL without execution
-dbwarden migrate --sandbox          # Apply in a temporary in-memory SQLite database
-dbwarden migrate --sandbox -d pg    # Apply in a Docker-backed PostgreSQL sandbox
-```
-
----
-
-## Versioned Seeds
-
-```bash
-dbwarden seed create "Initial Countries"
-dbwarden seed apply
-dbwarden seed list
-dbwarden seed rollback
-```
-
-Seeds are tracked in a `_dbwarden_seeds` table with checksums, making them idempotent. Both file seeds (`V0001__*.sql`, `V0001__*.py`) and in-code seeds (`@seed_data`) are supported.
-
----
-
-## Generate Models
-
-```bash
-# One file per table:
-dbwarden generate-models -d primary --tables users,orders
-
-# Single file with ClickHouse engine metadata (auto-detected):
-dbwarden generate-models -d analytics --single-file
-```
-
----
-
-## Multi-Database
-
-```python
-primary = database_config(
-    database_name="primary",
-    default=True,
-    database_type="postgresql",
-    database_url_sync="postgresql://user:pass@localhost:5432/main",
-    database_url_async="postgresql+asyncpg://user:pass@localhost:5432/main",
-    model_paths=["models/primary"],
-)
-
-analytics = database_config(
-    database_name="analytics",
-    database_type="clickhouse",
-    database_url_sync="clickhouse://user:pass@localhost:8123/analytics",
-    model_paths=["models/analytics"],
-)
-```
-
-```bash
-dbwarden migrate --all
-```
-
----
-
-## Dev Mode
-
-```python
-primary = database_config(
-    ...
-    dev_database_type="sqlite",
-    dev_database_url="sqlite:///./dev.db",
-)
-```
-
-```bash
-dbwarden --dev migrate
-```
-
----
-
-## Supported Databases
-
-| Database   | `database_type` value |
-|------------|-----------------------|
-| PostgreSQL | `postgresql`          |
-| MySQL      | `mysql`               |
-| MariaDB    | `mariadb`             |
-| SQLite     | `sqlite`              |
-| ClickHouse | `clickhouse`          |
+| Database   | Role                          | Notes                            |
+|------------|-------------------------------|----------------------------------|
+| PostgreSQL | Primary transactional backend | Full round-trip fidelity         |
+| ClickHouse | Analytics backend             | Full schema support              |
+| MySQL      | General support               | DDL parity focus                 |
+| MariaDB    | General support               | MySQL-compatible mode            |
+| SQLite     | Dev and testing               | Used in dev mode SQL translation |
 
 ---
 
 ## License
 
 MIT
+
+---
+
+DBWarden is designed for teams that want explicit, reviewable, and reproducible database changes without relying on a migration runtime.
