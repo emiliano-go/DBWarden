@@ -457,3 +457,102 @@ class TestIndexSpecExtensions:
         restored = IndexSpec.from_dict(d)
         assert restored.clickhouse_type == "set(100)"
         assert restored.clickhouse_granularity == 2
+
+
+class TestChEngineSpec:
+    def test_basic_construction(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("MergeTree")
+        assert spec.name == "MergeTree"
+        assert spec.args == ()
+        assert spec.zookeeper_path is None
+        assert spec.replica_name is None
+        assert spec.settings is None
+
+    def test_with_args(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("ReplacingMergeTree", args=("version_col",))
+        assert spec.name == "ReplacingMergeTree"
+        assert spec.args == ("version_col",)
+
+    def test_with_zk_and_replica(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("ReplicatedMergeTree",
+            zookeeper_path="/zk/path", replica_name="{replica}")
+        assert spec.zookeeper_path == "/zk/path"
+        assert spec.replica_name == "{replica}"
+
+    def test_with_settings(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("MergeTree",
+            settings={"index_granularity": "8192"})
+        assert spec.settings == {"index_granularity": "8192"}
+
+    def test_to_dict_roundtrip(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("ReplicatedMergeTree",
+            args=("ver",), zookeeper_path="/zk", replica_name="{r}",
+            settings={"s": "1"})
+        d = spec.to_dict()
+        restored = ChEngineSpec.from_dict(d)
+        assert restored.name == spec.name
+        assert restored.args == spec.args
+        assert restored.zookeeper_path == spec.zookeeper_path
+        assert restored.replica_name == spec.replica_name
+        assert restored.settings == spec.settings
+
+    def test_to_dict_omits_defaults(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        d = ChEngineSpec("MergeTree").to_dict()
+        assert "args" not in d
+        assert "zookeeper_path" not in d
+        assert "replica_name" not in d
+        assert "settings" not in d
+
+    def test_from_engine_string_simple(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string("MergeTree")
+        assert spec.name == "MergeTree"
+        assert spec.args == ()
+
+    def test_from_engine_string_with_args(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string("SummingMergeTree(col1, col2)")
+        assert spec.name == "SummingMergeTree"
+        assert spec.args == ("col1", "col2")
+
+    def test_from_engine_string_replicated(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec.from_engine_string(
+            "ReplicatedMergeTree('/zk/path', '{replica}', ver)")
+        assert spec.name == "ReplicatedMergeTree"
+        assert spec.zookeeper_path == "/zk/path"
+        assert spec.replica_name == "{replica}"
+        assert spec.args == ("ver",)
+
+    def test_post_init_coerces_string_to_tuple(self):
+        from dbwarden.schema.engine import ChEngineSpec
+        spec = ChEngineSpec("CollapsingMergeTree", args="sign")
+        assert spec.args == ("sign",)
+
+
+class TestProjectionSpec:
+    def test_basic_construction(self):
+        from dbwarden.schema.projection import ProjectionSpec
+        p = ProjectionSpec("by_date", "SELECT date, count() GROUP BY date")
+        assert p.name == "by_date"
+        assert p.query == "SELECT date, count() GROUP BY date"
+
+    def test_to_dict_roundtrip(self):
+        from dbwarden.schema.projection import ProjectionSpec
+        p = ProjectionSpec("by_date", "SELECT date, count() GROUP BY date")
+        d = p.to_dict()
+        restored = ProjectionSpec.from_dict(d)
+        assert restored.name == p.name
+        assert restored.query == p.query
+
+    def test_from_dict_with_empty_query(self):
+        from dbwarden.schema.projection import ProjectionSpec
+        p = ProjectionSpec.from_dict({"name": "by_date"})
+        assert p.name == "by_date"
+        assert p.query == ""
