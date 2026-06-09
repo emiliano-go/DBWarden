@@ -283,7 +283,12 @@ def _run_offline_migrations(description: str | None = None, database: str | None
         console.print("Run 'dbwarden export-models' first to establish a baseline.", style="yellow")
         return
 
-    prev_state = json.loads(state_path.read_text())
+    try:
+        prev_state = json.loads(state_path.read_text())
+    except json.JSONDecodeError:
+        console.print("Error: .dbwarden/model_state.json contains invalid JSON.", style="red")
+        console.print("Run 'dbwarden export-models' again to regenerate the state file.", style="yellow")
+        return
     current_tables = get_all_model_tables(model_paths, db_name=database)
     current_state = model_state_to_dict(current_tables)
 
