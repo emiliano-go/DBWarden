@@ -94,7 +94,10 @@ class RestrictedModuleFinder(MetaPathFinder):
         if not self._is_allowed(fullname):
             raise SecurityError(
                 f"Import '{fullname}' not allowed. "
-                f"Only dbwarden imports are permitted in config files."
+                f"Only dbwarden imports are permitted in isolated config files.\n\n"
+                f"This file was loaded as an isolated config module (sandboxed). "
+                f"If it is part of your application package, move the database_config() "
+                f"call into a package module instead -- dbwarden will import it normally."
             )
         return None
 

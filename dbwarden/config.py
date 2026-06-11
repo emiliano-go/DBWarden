@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import importlib
 import os
+import sys
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Literal
@@ -68,6 +69,9 @@ class MultiDbConfig:
 class _ResolvedSource:
     kind: Literal["file", "module"]
     value: str
+    classification: Literal["isolated", "in_package"] | None = None
+    import_root: str | None = None
+    module_name: str | None = None
 
 
 _USE_DEV_DATABASE = False
@@ -217,6 +221,61 @@ def _full_scan_database_config_calls(root: Path) -> list[Path]:
     return sorted(matches)
 
 
+_IMPORT_ROOTS: tuple[str, ...] = ("src", "")
+"""Candidate import-roots relative to the project root, tried in order.
+
+``"src"`` is tried first because PEP 517/518 projects often use a ``src/``
+layout (setuptools, poetry).  ``""`` means the project root itself.
+"""
+
+
+def _resolve_import_root(path: Path, project_root: Path) -> tuple[str, str] | None:
+    """Resolve a config file to an importable module path.
+
+    Tries each candidate in ``_IMPORT_ROOTS``.  The first candidate that
+    contains the file is selected as the import root.
+
+    Returns ``(import_root, dotted_module_name)``, or ``None`` if the file
+    cannot be mapped to any known import root.
+
+    An ``isolated`` file directly at the project root is not resolved here
+    because it gets the sandbox treatment regardless.
+    """
+    path = path.resolve()
+    root = project_root.resolve()
+
+    for rel_root in _IMPORT_ROOTS:
+        candidate = root / rel_root if rel_root else root
+        try:
+            rel = path.relative_to(candidate)
+        except ValueError:
+            continue
+        dotted = rel.with_suffix("").as_posix().replace("/", ".")
+        return (str(candidate), dotted)
+
+    return None
+
+
+def _import_as_package_module(module_name: str, import_root: str) -> Path:
+    """Import a config module normally (no sandbox).
+
+    Ensures the import root is on ``sys.path``, ejects the module from
+    ``sys.modules`` so repeated config loads re-execute the module and
+    re-register ``database_config(...)`` calls, then delegates to
+    ``importlib.import_module``.
+    """
+    root = Path(import_root).resolve()
+    root_str = str(root)
+    if root_str not in sys.path:
+        sys.path.insert(0, root_str)
+
+    if module_name in sys.modules:
+        del sys.modules[module_name]
+
+    importlib.import_module(module_name)
+    return root
+
+
 def _is_literal_node(node: ast.AST) -> bool:
     if isinstance(node, ast.Constant):
         return True
@@ -265,34 +324,56 @@ def _resolve_source() -> _ResolvedSource:
         return _RESOLVED_SOURCE_CACHE
 
     root = _workspace_root()
+
+    # 1. Explicit top-level dbwarden.py (always sandboxed)
     dbwarden_files = _discover_dbwarden_files(root)
     if len(dbwarden_files) > 1:
-        # Use relative paths to avoid leaking directory structure
         rel_paths = [str(p.relative_to(root)) for p in dbwarden_files]
         paths = "\n".join(rel_paths)
         raise ConfigurationError(
             "Multiple dbwarden.py files found. Keep exactly one.\n" + paths
         )
     if len(dbwarden_files) == 1:
-        _RESOLVED_SOURCE_CACHE = _ResolvedSource("file", str(dbwarden_files[0]))
+        _RESOLVED_SOURCE_CACHE = _ResolvedSource("file", str(dbwarden_files[0]), classification="isolated")
         return _RESOLVED_SOURCE_CACHE
 
-    callsite_files = _full_scan_database_config_calls(root)
-    if len(callsite_files) > 1:
-        # Use relative paths to avoid leaking directory structure
-        rel_paths = [str(p.relative_to(root)) for p in callsite_files]
-        paths = "\n".join(rel_paths)
-        raise ConfigurationError(
-            "Multiple database_config(...) call sites found. Keep exactly one source or set DBWARDEN_CONFIG_MODULE.\n"
-            + paths
-        )
-    if len(callsite_files) == 1:
-        _RESOLVED_SOURCE_CACHE = _ResolvedSource("file", str(callsite_files[0]))
-        return _RESOLVED_SOURCE_CACHE
-
+    # 2. DBWARDEN_CONFIG_MODULE (explicit user override, unsandboxed)
     module_name = os.getenv("DBWARDEN_CONFIG_MODULE")
     if module_name:
         _RESOLVED_SOURCE_CACHE = _ResolvedSource("module", module_name)
+        return _RESOLVED_SOURCE_CACHE
+
+    # 3. Full-scan fallback (explicit env var not set, no dbwarden.py)
+    callsite_files = _full_scan_database_config_calls(root)
+    if len(callsite_files) > 1:
+        rel_paths = [str(p.relative_to(root)) for p in callsite_files]
+        paths = "\n".join(rel_paths)
+        raise ConfigurationError(
+            "Multiple database_config(...) call sites found. "
+            "Keep exactly one source, or set DBWARDEN_CONFIG_MODULE to choose explicitly.\n"
+            + paths
+        )
+    if len(callsite_files) == 1:
+        discovered = callsite_files[0]
+        # Files directly at the project root are always isolated (no package context).
+        if discovered.parent == root:
+            _RESOLVED_SOURCE_CACHE = _ResolvedSource(
+                "file", str(discovered), classification="isolated",
+            )
+        else:
+            import_info = _resolve_import_root(discovered, root)
+            if import_info is not None:
+                import_root, module_name = import_info
+                _RESOLVED_SOURCE_CACHE = _ResolvedSource(
+                    "file", str(discovered),
+                    classification="in_package",
+                    import_root=import_root,
+                    module_name=module_name,
+                )
+            else:
+                _RESOLVED_SOURCE_CACHE = _ResolvedSource(
+                    "file", str(discovered), classification="isolated",
+                )
         return _RESOLVED_SOURCE_CACHE
 
     raise ConfigurationError(
@@ -318,10 +399,14 @@ def _import_source(source: _ResolvedSource) -> Path:
         return Path.cwd().resolve()
 
     path = Path(source.value)
-    base_dir = path.parent.resolve()
 
+    if source.classification == "in_package":
+        return _import_as_package_module(source.module_name, source.import_root)
+
+    # isolated file -- sandbox it (dbwarden-only imports)
     from dbwarden.sandbox import load_config_module
 
+    base_dir = path.parent.resolve()
     load_config_module(path, base_dir)
     return base_dir
 

@@ -174,22 +174,45 @@ Error: Duplicate database_name 'primary'
 
 Validation happens **before** any commands execute.
 
+### Config Source Precedence
+
+When looking for config, DBWarden uses this precedence:
+
+1. **Top-level `dbwarden.py`** — the conventional standalone config file at your project root. Always sandboxed (only `dbwarden` imports allowed).
+
+2. **`DBWARDEN_CONFIG_MODULE`** — an explicit environment variable override. Always imported normally as a Python module (no sandbox). This is the escape hatch for projects with ambiguous full-scan results or non-standard layouts.
+
+3. **Full-scan discovery** — if neither of the above produces a config source, DBWarden walks your project tree looking for any `database_config(...)` call. Files directly at the project root are sandboxed; files inside subdirectories are imported normally.
+
 ### Config Loading Security (Sandbox)
 
-When DBWarden imports your config file, it applies **path-level security**:
+DBWarden applies import restrictions only to config files that are **isolated** (sandboxed) vs **in-package** (normal import):
 
-- **Path validation**  Config files must be within the project tree. Paths with `..` traversal sequences are rejected.
-- **Model path validation**  Model discovery paths are also checked for path traversal attacks.
+| Mode | Import behavior | Applies to |
+|------|----------------|------------|
+| `isolated` | Sandboxed: only `dbwarden.*` imports allowed | Top-level `dbwarden.py`; any full-scan-discovered file at the project root |
+| `in-package` | Normal Python import | Full-scan-discovered files inside subdirectories; `DBWARDEN_CONFIG_MODULE` modules |
 
-This ensures an attacker cannot trick DBWarden into loading config files from outside your project.
+An isolated config file runs in a sandbox that prevents accidental escalation of file-read access to arbitrary code execution. Only `dbwarden` and its submodules can be imported.
 
-For debugging, set the `DBWARDEN_DISABLE_SANDBOX` environment variable to skip all path validation:
+An in-package config file is imported as a normal Python module, with full access to `app.*` and any other project imports. This is the correct path when your `database_config(...)` call lives in an application package that imports other project modules.
+
+**Import root detection.** For full-scan-discovered files, DBWarden tries to resolve the dotted module path. It checks two common import roots in order:
+
+- `src/` (PEP 517/518, setuptools, poetry)
+- The project root itself
+
+For example, `src/myapp/databases.py` resolves as `myapp.databases` with import root `src/`. If neither root produces an importable path, the file falls back to `isolated` (sandboxed). Projects with other layouts should set `DBWARDEN_CONFIG_MODULE` explicitly.
+
+**Path validation** (path traversal blocking) applies to all file-based sources regardless of mode.
+
+For debugging, set `DBWARDEN_DISABLE_SANDBOX=1` to disable the sandbox for isolated files:
 
 ```bash
 DBWARDEN_DISABLE_SANDBOX=1 dbwarden status  # Skip sandbox (debug only)
 ```
 
-Keep the sandbox enabled in production. Disabling it (`DBWARDEN_DISABLE_SANDBOX=1`) removes path traversal protection.
+Disabling the sandbox also removes import restrictions for isolated config files, which can be useful in development.  Keep it enabled in production.
 
 ## The `default` Database
 
