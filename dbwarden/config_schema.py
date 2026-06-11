@@ -96,6 +96,7 @@ class DatabaseEntry:
     migrations_dir: str | None = None
     migration_table: str | None = field(default=None, validator=_validate_migration_table)
     model_paths: list[str] | None = None
+    model_tables: list[str] | None = None
     dev_database_type: DatabaseType | None = None
     dev_database_url: str | None = None
     overlap_models: bool = False
@@ -118,6 +119,20 @@ def structure_database_entry(kwargs: dict) -> DatabaseEntry:
         raise ConfigurationError(
             "At least one of database_url_sync or database_url_async must be provided."
         )
+    model_tables = kwargs.get("model_tables")
+    if model_tables is not None:
+        if not isinstance(model_tables, list):
+            raise ConfigurationError("model_tables must be a list of strings or None")
+        if len(model_tables) > MAX_PATH_COUNT:
+            raise ConfigurationError(f"Too many model_tables: max {MAX_PATH_COUNT}")
+        for name in model_tables:
+            if not isinstance(name, str):
+                raise ConfigurationError("model_tables must contain strings")
+            if not IDENTIFIER_RE.match(name):
+                raise ConfigurationError(
+                    f"Invalid table name '{name}' in model_tables. "
+                    "Must start with letter/underscore and contain only alphanumeric or underscore."
+                )
     try:
         return _CONVERTER.structure(kwargs, DatabaseEntry)
     except Exception as exc:

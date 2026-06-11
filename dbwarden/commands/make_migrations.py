@@ -13,6 +13,8 @@ from dbwarden.engine.file_parser import parse_upgrade_statements
 from dbwarden.engine.model_discovery import (
     get_all_model_tables,
     auto_discover_model_paths,
+    filter_model_tables_by_name,
+    validate_model_tables_exist,
     generate_create_table_sql,
     generate_drop_object_sql,
     generate_add_column_sql,
@@ -283,8 +285,12 @@ def _run_offline_migrations(
         console.print("Error: .dbwarden/model_state.json contains invalid JSON.", style="red")
         console.print("Run 'dbwarden export-models' again to regenerate the state file.", style="yellow")
         return
+    from dbwarden import __version__ as _dw_version
+
     current_tables = get_all_model_tables(model_paths, db_name=database)
-    current_state = model_state_to_dict(current_tables)
+    validate_model_tables_exist(current_tables, config.model_tables, db_name)
+    current_tables = filter_model_tables_by_name(current_tables, config.model_tables)
+    current_state = model_state_to_dict(current_tables, dbwarden_version=_dw_version)
 
     upgrade_ops, rollback_ops = diff_model_states(prev_state, current_state)
 
@@ -302,7 +308,13 @@ def _run_offline_migrations(
         console.print("No new migrations to generate - all models already covered by existing migrations.", style="cyan")
         return
 
-    migrations_dir = get_migrations_directory(database)
+    from dbwarden.engine.version import get_migrations_directory as _get_migrations_dir
+    try:
+        migrations_dir = _get_migrations_dir(database)
+    except Exception:
+        config = get_database(database)
+        migrations_dir = str(Path.cwd() / config.migrations_dir)
+        Path(migrations_dir).mkdir(parents=True, exist_ok=True)
     existing_statements = get_pending_migration_statements(migrations_dir)
 
     filtered_statements = []
@@ -408,6 +420,8 @@ def make_migrations_cmd(
     logger.log_model_paths(model_paths)
     logger.info(f"Discovering models in: {model_paths}")
     tables = get_all_model_tables(model_paths, db_name=database)
+    validate_model_tables_exist(tables, config.model_tables, db_name)
+    tables = filter_model_tables_by_name(tables, config.model_tables)
 
     if not tables:
         logger.warning("No tables found in models")

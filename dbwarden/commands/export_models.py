@@ -4,8 +4,13 @@ import json
 import os
 from pathlib import Path
 
+from dbwarden import __version__
 from dbwarden.config import get_database
-from dbwarden.engine.model_discovery import get_all_model_tables
+from dbwarden.engine.model_discovery import (
+    get_all_model_tables,
+    filter_model_tables_by_name,
+    validate_model_tables_exist,
+)
 from dbwarden.engine.offline import model_state_to_dict
 
 
@@ -31,7 +36,9 @@ def export_models_cmd(
         raise ValueError(msg)
 
     tables = get_all_model_tables(model_paths, db_name=database)
-    state = model_state_to_dict(tables)
+    validate_model_tables_exist(tables, config.model_tables, database or "default")
+    tables = filter_model_tables_by_name(tables, config.model_tables)
+    state = model_state_to_dict(tables, dbwarden_version=__version__)
 
     out_path = Path(output)
     out_path.parent.mkdir(parents=True, exist_ok=True)

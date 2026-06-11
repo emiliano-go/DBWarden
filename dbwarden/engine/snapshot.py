@@ -3083,9 +3083,13 @@ def _find_model_table(table_name: str, db_name: str | None = None) -> ModelTable
         model_paths = auto_discover_model_paths()
     if not model_paths:
         return None
-    from dbwarden.engine.model_discovery import get_all_model_tables
+    from dbwarden.engine.model_discovery import (
+        get_all_model_tables,
+        filter_model_tables_by_name,
+    )
 
     tables = get_all_model_tables(model_paths, db_name=db_name)
+    tables = filter_model_tables_by_name(tables, config.model_tables)
     for t in tables:
         if t.name == table_name:
             return t

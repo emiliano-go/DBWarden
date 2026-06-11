@@ -50,6 +50,7 @@ def database_config(
     migration_table: str | None = None,
     seed_table: str | None = None,
     model_paths: list[str] | None = None,
+    model_tables: list[str] | None = None,
     dev_database_type: str | None = None,
     dev_database_url: str | None = None,
     overlap_models: bool = False,
@@ -78,6 +79,7 @@ At least one of `database_url_sync` or `database_url_async` must be provided.
 | `migration_table` | `str | None` | `None` | custom migration tracking table name (defaults to `_dbwarden_migrations`) |
 | `seed_table` | `str | None` | `None` | custom seed tracking table name (defaults to `_dbwarden_seeds`) |
 | `model_paths` | `list[str] | None` | `None` | list of Python import paths containing SQLAlchemy models for this database |
+| `model_tables` | `list[str] | None` | `None` | optional filter: only these table names are owned by this database |
 | `dev_database_type` | `str | None` | `None` | backend type for local development (used with `--dev`) |
 | `dev_database_url` | `str | None` | `None` | connection URL for local development (used with `--dev`) |
 | `overlap_models` | `bool` | `False` | if `True`, allow model path overlap with other databases |
@@ -195,6 +197,51 @@ model_paths=["app.models.api.v1", "app.models.api.v2"]
 Specifying `model_paths` makes discovery faster and more predictable, even for single-database projects.
 
 See [Multi-Database Guide](../configuration/multi-database.md) for organizing models across databases.
+
+### `model_tables`
+
+A downstream filter applied after model discovery. Only tables whose string
+name appears in this list are owned by this database. All other discovered
+tables are ignored.
+
+**When to use:**
+- **Multi-database shared `model_paths`:** Two databases share the same
+  import path but own different subsets of tables.
+- **Selective deployment:** A microservice owns only a few tables from a
+  shared models package.
+
+**How it works:**
+1. DBWarden discovers all models via `model_paths`
+2. If `model_tables` is set, it validates every name exists among the
+   discovered tables
+3. Only the matching tables participate in migrations, diffs, and exports
+
+**Example:**
+```python
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://localhost/myapp",
+    model_paths=["app.models"],
+    model_tables=["users", "posts", "comments"],
+)
+
+audit = database_config(
+    database_name="audit",
+    database_type="postgresql",
+    database_url_sync="postgresql://localhost/audit",
+    model_paths=["app.models"],
+    model_tables=["audit_logs"],
+)
+```
+
+**Overlap validation:** If two databases both set `model_tables` with
+overlapping names, DBWarden raises an error (same behavior as
+`model_paths` overlap). Set `overlap_models=True` to allow it.
+
+**Must be valid SQL identifiers.** Dotted (schema-qualified) names are not
+supported in the initial release.
 
 ### `migration_table`
 
@@ -381,6 +428,7 @@ DBWarden validates your config to prevent dangerous misconfigurations:
 | Unique physical target (even across credentials) | `Duplicate database target detected` |
 | Required `model_paths` when multiple databases | `model_paths is required when more than one database is configured` |
 | Explicit `overlap_models` when paths overlap | `model_paths overlap detected` |
+| `model_tables` (if set) must not overlap across databases | `model_tables overlap detected` |
 | If `dev_database_type` set, `dev_database_url` also required | `dev_database_url is required when dev_database_type is set` |
 
 ## Loading and resolution
@@ -465,6 +513,7 @@ analytics = database_config(
 | `migrations_dir` |  No | `migrations/<name>` | Custom migration directory |
 | `seed_table` |  No | `_dbwarden_seeds` | Custom seed tracking table |
 | `model_paths` |  Conditional | `None` | Multi-database or explicit discovery |
+| `model_tables` |  No | `None` | Filter discovered tables by name |
 | `dev_database_type` |  No | `None` | Local development |
 | `dev_database_url` |  No | `None` | Local development |
 | `overlap_models` |  No | `False` | Shared models (read replicas) |

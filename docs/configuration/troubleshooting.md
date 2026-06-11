@@ -345,6 +345,61 @@ replica = database_config(
 )
 ```
 
+## "model_tables overlap detected"
+
+### Symptom
+
+```
+ConfigurationError: model_tables overlap detected: table 'users' in 'primary' is also in 'analytics'
+```
+
+### Cause
+
+Two databases have `model_tables` lists that share table names:
+
+```python
+#  Wrong
+primary = database_config(
+    database_name="primary",
+    model_paths=["app.models"],
+    model_tables=["users", "posts"],
+    ...
+)
+analytics = database_config(
+    database_name="analytics",
+    model_paths=["other_models"],
+    model_tables=["users"],  # 'users' already owned by primary
+    ...
+)
+```
+
+### Solutions
+
+**Solution 1: Remove duplicate table name**
+
+```python
+#  Correct
+analytics = database_config(
+    database_name="analytics",
+    model_paths=["other_models"],
+    model_tables=["analytics_events"],  # No overlap with primary
+    ...
+)
+```
+
+**Solution 2: Allow overlap (if intentional)**
+
+```python
+#  Correct for shared tables
+analytics = database_config(
+    database_name="analytics",
+    model_paths=["other_models"],
+    model_tables=["users", "analytics_events"],
+    overlap_models=True,  # Allow overlap
+    ...
+)
+```
+
 ## "dev_database_url is required"
 
 ### Symptom

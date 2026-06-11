@@ -32,13 +32,19 @@ def diff_cmd(
         verbose=verbose, db_name=actual_db_name, db_type=config.database_type
     )
 
-    from dbwarden.engine.model_discovery import get_all_model_tables
+    from dbwarden.engine.model_discovery import (
+        get_all_model_tables,
+        filter_model_tables_by_name,
+        validate_model_tables_exist,
+    )
 
     if not config.model_paths:
         console.print("No model paths configured. Add model_paths to your dbwarden.py config.", style="yellow")
         return
 
     tables = get_all_model_tables(config.model_paths, db_name=database)
+    validate_model_tables_exist(tables, config.model_tables, actual_db_name)
+    tables = filter_model_tables_by_name(tables, config.model_tables)
     if not tables:
         console.print("No SQLAlchemy models found in the configured model paths.", style="yellow")
         return

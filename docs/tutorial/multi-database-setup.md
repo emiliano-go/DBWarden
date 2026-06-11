@@ -80,6 +80,7 @@ dbwarden status --all
 - run per-database migrations in explicit order if dependencies exist
 - keep model boundaries clear per database
 - use `overlap_models=True` only when overlap is intentional
+- when all models share one package, use `model_tables` to assign specific tables per database
 
 See also: [Cookbook: Multi-Database](../cookbook/08-multi-database.md)
 

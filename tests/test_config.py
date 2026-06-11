@@ -14,7 +14,9 @@ from dbwarden.config import (
     get_toml_path,
     list_databases,
     set_dev_mode,
+    _finalize_entries,
 )
+from dbwarden.config_schema import DatabaseEntry, structure_database_entry
 from dbwarden.exceptions import ConfigurationError
 from dbwarden.logging import DBWardenLogger, get_logger
 
@@ -121,6 +123,42 @@ class TestConfig:
                 )
                 config = get_config()
                 assert config.model_paths == ["./models/user.py"]
+            finally:
+                os.chdir(old)
+
+    def test_get_config_with_model_tables(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                _write_settings(
+                    Path("dbwarden.py"),
+                    [
+                        "from dbwarden import database_config",
+                        "",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./test.db', model_tables=['users', 'posts'])",
+                    ],
+                )
+                config = get_config()
+                assert config.model_tables == ["users", "posts"]
+            finally:
+                os.chdir(old)
+
+    def test_get_config_model_tables_none_by_default(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                _write_settings(
+                    Path("dbwarden.py"),
+                    [
+                        "from dbwarden import database_config",
+                        "",
+                        "database_config(database_name='primary', default=True, database_type='sqlite', database_url_sync='sqlite:///./test.db')",
+                    ],
+                )
+                config = get_config()
+                assert config.model_tables is None
             finally:
                 os.chdir(old)
 
@@ -653,3 +691,106 @@ class TestLogger:
         reset_logger()
         logger2 = get_logger()
         assert logger1 is not logger2
+
+
+class TestModelTablesConfig:
+    def test_model_tables_overlap_detected(self):
+        from pathlib import Path
+        entries = [
+            DatabaseEntry(
+                database_name="db1", database_type="sqlite",
+                database_url_sync="sqlite:///./db1.db", default=True,
+                model_paths=["models"], model_tables=["users", "posts"],
+            ),
+            DatabaseEntry(
+                database_name="db2", database_type="sqlite",
+                database_url_sync="sqlite:///./db2.db",
+                model_paths=["other_models"], model_tables=["posts", "comments"],
+            ),
+        ]
+        with pytest.raises(ConfigurationError, match="model_tables overlap"):
+            _finalize_entries(entries, Path.cwd())
+
+    def test_model_tables_overlap_allowed_with_overlap_models(self):
+        from pathlib import Path
+        entries = [
+            DatabaseEntry(
+                database_name="db1", database_type="sqlite",
+                database_url_sync="sqlite:///./db1.db", default=True,
+                model_paths=["models"], model_tables=["users", "posts"],
+            ),
+            DatabaseEntry(
+                database_name="db2", database_type="sqlite",
+                database_url_sync="sqlite:///./db2.db",
+                model_paths=["other_models"], model_tables=["posts", "comments"],
+                overlap_models=True,
+            ),
+        ]
+        result = _finalize_entries(entries, Path.cwd())
+        assert "db1" in result.databases
+        assert "db2" in result.databases
+
+    def test_model_tables_overlap_skipped_when_one_side_none(self):
+        from pathlib import Path
+        entries = [
+            DatabaseEntry(
+                database_name="db1", database_type="sqlite",
+                database_url_sync="sqlite:///./db1.db", default=True,
+                model_paths=["models"], model_tables=["users"],
+            ),
+            DatabaseEntry(
+                database_name="db2", database_type="sqlite",
+                database_url_sync="sqlite:///./db2.db",
+                model_paths=["other_models"],
+            ),
+        ]
+        result = _finalize_entries(entries, Path.cwd())
+        assert "db1" in result.databases
+        assert "db2" in result.databases
+
+    def test_model_tables_invalid_name_rejected(self):
+        with pytest.raises(ConfigurationError, match="Invalid table name"):
+            structure_database_entry(dict(
+                database_name="primary", database_type="sqlite",
+                database_url_sync="sqlite:///./test.db", default=True,
+                model_tables=["bad-name!"],
+            ))
+
+    def test_model_tables_invalid_type_rejected(self):
+        with pytest.raises(ConfigurationError, match="model_tables must be a list"):
+            structure_database_entry(dict(
+                database_name="primary", database_type="sqlite",
+                database_url_sync="sqlite:///./test.db", default=True,
+                model_tables="not-a-list",
+            ))
+
+    def test_filter_none_returns_same(self):
+        from dbwarden.engine.model_discovery import filter_model_tables_by_name, ModelTable, ModelColumn
+        table1 = ModelTable(name="users", columns=[ModelColumn(name="id", type="integer", nullable=False, primary_key=True, unique=False, default=None, foreign_key=None)])
+        table2 = ModelTable(name="posts", columns=[ModelColumn(name="id", type="integer", nullable=False, primary_key=True, unique=False, default=None, foreign_key=None)])
+        result = filter_model_tables_by_name([table1, table2], None)
+        assert len(result) == 2
+
+    def test_filter_picks_named_tables(self):
+        from dbwarden.engine.model_discovery import filter_model_tables_by_name, ModelTable, ModelColumn
+        table1 = ModelTable(name="users", columns=[ModelColumn(name="id", type="integer", nullable=False, primary_key=True, unique=False, default=None, foreign_key=None)])
+        table2 = ModelTable(name="posts", columns=[ModelColumn(name="id", type="integer", nullable=False, primary_key=True, unique=False, default=None, foreign_key=None)])
+        result = filter_model_tables_by_name([table1, table2], ["users"])
+        assert len(result) == 1
+        assert result[0].name == "users"
+
+    def test_validate_all_exist_passes(self):
+        from dbwarden.engine.model_discovery import validate_model_tables_exist, ModelTable, ModelColumn
+        table1 = ModelTable(name="users", columns=[ModelColumn(name="id", type="integer", nullable=False, primary_key=True, unique=False, default=None, foreign_key=None)])
+        validate_model_tables_exist([table1], ["users"], "test_db")
+
+    def test_validate_missing_raises(self):
+        from dbwarden.engine.model_discovery import validate_model_tables_exist, ModelTable, ModelColumn, DBWardenConfigError
+        table1 = ModelTable(name="users", columns=[ModelColumn(name="id", type="integer", nullable=False, primary_key=True, unique=False, default=None, foreign_key=None)])
+        with pytest.raises(DBWardenConfigError, match="unknown"):
+            validate_model_tables_exist([table1], ["users", "nonexistent"], "test_db")
+
+    def test_validate_none_skips(self):
+        from dbwarden.engine.model_discovery import validate_model_tables_exist, ModelTable, ModelColumn
+        table1 = ModelTable(name="users", columns=[ModelColumn(name="id", type="integer", nullable=False, primary_key=True, unique=False, default=None, foreign_key=None)])
+        validate_model_tables_exist([table1], None, "test_db")

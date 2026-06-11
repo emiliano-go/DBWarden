@@ -9,7 +9,12 @@ from typing import Any
 from sqlalchemy import text
 
 from dbwarden.database.connection import get_db_connection
-from dbwarden.engine.model_discovery import ModelTable, get_all_model_tables
+from dbwarden.engine.model_discovery import (
+    ModelTable,
+    get_all_model_tables,
+    filter_model_tables_by_name,
+    validate_model_tables_exist,
+)
 from dbwarden.models import SafetyIssue
 
 
@@ -514,6 +519,8 @@ def load_issues(database: str | None = None) -> list[SafetyIssue]:
 
     config = get_database(database)
     model_tables = get_all_model_tables(config.model_paths, db_name=database)
+    validate_model_tables_exist(model_tables, config.model_tables, database or "default")
+    model_tables = filter_model_tables_by_name(model_tables, config.model_tables)
     schema_snapshot = extract_schema_snapshot(database=database)
     return analyze_schema(model_tables, schema_snapshot)
 

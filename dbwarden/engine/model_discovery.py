@@ -1498,6 +1498,41 @@ def _extract_create_table_columns(create_stmt: str) -> tuple[str | None, set[str
     return table_name, column_names
 
 
+def filter_model_tables_by_name(
+    tables: list[ModelTable],
+    allowed_names: list[str] | None,
+) -> list[ModelTable]:
+    """Filter a list of ModelTable objects to only those whose ``__tablename__``
+    is in the configured ``allowed_names`` list.
+
+    Returns the original list unchanged when ``allowed_names`` is ``None``.
+    """
+    if allowed_names is None:
+        return tables
+    allowed = set(allowed_names)
+    return [t for t in tables if t.name in allowed]
+
+
+def validate_model_tables_exist(
+    discovered_tables: list[ModelTable],
+    configured_names: list[str] | None,
+    db_name: str,
+) -> None:
+    """Raise ``ConfigurationError`` if any name in ``configured_names`` does
+    not appear in ``discovered_tables`` (pre-filter)."""
+    if configured_names is None:
+        return
+    discovered = {t.name for t in discovered_tables}
+    unknown = [n for n in configured_names if n not in discovered]
+    if unknown:
+        unknown_str = ", ".join(sorted(unknown))
+        discovered_str = ", ".join(sorted(discovered)) if discovered else "(none)"
+        raise DBWardenConfigError(
+            f"Configured model_tables for database '{db_name}' contain unknown tables: "
+            f"{unknown_str}. Discovered tables: {discovered_str}"
+        )
+
+
 def extract_tables_from_migrations(migrations_dir: str) -> dict[str, set[str]]:
     """
     Extract table names and their columns from existing migrations.

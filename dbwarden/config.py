@@ -41,6 +41,7 @@ class DatabaseConfig:
     secure_values: bool = False
     secure_display_values: dict[str, str] = field(default_factory=dict)
     model_paths: list[str] | None = None
+    model_tables: list[str] | None = None
     migrations_dir: str = "migrations"
     migration_table: str = DEFAULT_MIGRATION_TABLE
     seed_table: str = DEFAULT_SEEDS_TABLE
@@ -534,6 +535,7 @@ def _finalize_entries(
             secure_values=entry.secure_values,
             secure_display_values=secure_display_values,
             model_paths=entry.model_paths,
+            model_tables=entry.model_tables,
             migrations_dir=migrations_dir,
             migration_table=entry.migration_table or DEFAULT_MIGRATION_TABLE,
             seed_table=entry.seed_table or DEFAULT_SEEDS_TABLE,
@@ -554,6 +556,24 @@ def _finalize_entries(
                 raise ConfigurationError(
                     "model_paths overlap detected: "
                     f"path '{overlap_path}' from '{right.database_name}' is also defined in '{left.database_name}'; "
+                    "set overlap_models=True to allow"
+                )
+
+    # model_tables overlap validation
+    for i, left in enumerate(entries):
+        for right in entries[i + 1 :]:
+            if left.overlap_models or right.overlap_models:
+                continue
+            left_tables = set(left.model_tables or [])
+            right_tables = set(right.model_tables or [])
+            if not left_tables or not right_tables:
+                continue
+            overlap = left_tables.intersection(right_tables)
+            if overlap:
+                overlap_name = sorted(overlap)[0]
+                raise ConfigurationError(
+                    "model_tables overlap detected: "
+                    f"table '{overlap_name}' in '{left.database_name}' is also in '{right.database_name}'; "
                     "set overlap_models=True to allow"
                 )
 

@@ -282,6 +282,35 @@ primary = database_config(
 4. Build internal representation for migration generation
 ```
 
+### Filtering by Table Name
+
+When two databases share the same `model_paths` but should own different
+subsets of tables, use `model_tables`:
+
+```python
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://localhost/main",
+    model_paths=["app.models"],
+    model_tables=["users", "posts", "comments"],
+)
+
+analytics = database_config(
+    database_name="analytics",
+    database_type="clickhouse",
+    database_url_sync="http://clickhouse-host:8123/analytics",
+    model_paths=["app.models"],
+    model_tables=["analytics_events", "analytics_sessions"],
+)
+```
+
+This is useful when all models live under one shared package but each
+database only owns a subset.  DBWarden validates every name in
+`model_tables` exists among the discovered tables and prevents overlap
+between databases (unless `overlap_models=True`).
+
 ### When Is It Required?
 
 **Single database:** Optional (DBWarden scans entire codebase)
