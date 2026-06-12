@@ -56,15 +56,10 @@ primary = database_config(
 
 Run local commands against the development target:
 
-```bash
-dbwarden --dev make-migrations "test local change" --database primary
-dbwarden --dev migrate --database primary
-```
-
-Typical output:
-
 ```text
+$ dbwarden --dev make-migrations "test local change" --database primary
 Created migration: migrations/primary/primary__0002_test_local_change.sql
+$ dbwarden --dev migrate --database primary
 Applying migration: primary__0002_test_local_change.sql
 Migration applied successfully
 ```
@@ -89,13 +84,8 @@ dbwarden diff --database primary
 
 Use `check` when you want a safety classification:
 
-```bash
-dbwarden check --database primary
-```
-
-Example output:
-
 ```text
+$ dbwarden check --database primary
 SAFE      add column users.bio
 WARN      shrink varchar users.email
 CRITICAL  drop table audit_log
@@ -105,13 +95,8 @@ CRITICAL  drop table audit_log
 
 If you are adopting DBWarden on an existing project, or documenting a live schema, use `generate-models`.
 
-```bash
-dbwarden generate-models --database primary --tables users,posts
-```
-
-Typical output:
-
 ```text
+$ dbwarden generate-models --database primary --tables users,posts
 Generated models/users.py
 Generated models/posts.py
 ```

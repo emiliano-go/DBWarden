@@ -87,13 +87,8 @@ The return value `primary` is a `DatabaseHandle` object. It's also used later fo
 
 ## Step 3: Viewing the Configuration
 
-```bash
-dbwarden config
-```
-
-Expected output:
-
-```
+```text
+$ dbwarden config
 Configuration:
   Databases:
     primary (default):

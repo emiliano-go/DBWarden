@@ -155,39 +155,23 @@ class Post(Base):
 
 ### Step 3: Generate a migration
 
-```bash
-dbwarden make-migrations "create core tables" --database primary
-```
-
-Typical output:
-
 ```text
+$ dbwarden make-migrations "create core tables" --database primary
 Created migration: migrations/primary/primary__0001_create_core_tables.sql
 ```
 
 ### Step 4: Apply it
 
-```bash
-dbwarden migrate --database primary
-```
-
-Typical output:
-
 ```text
+$ dbwarden migrate --database primary
 Applying migration: primary__0001_create_core_tables.sql
 Migration applied successfully
 ```
 
 ### Step 5: Verify the state
 
-```bash
-dbwarden status --database primary
-dbwarden history --database primary
-```
-
-Typical status output:
-
 ```text
+$ dbwarden status --database primary
 Database: primary
 Applied migrations: 1
 Pending migrations: 0

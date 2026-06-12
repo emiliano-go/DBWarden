@@ -183,13 +183,8 @@ This is optional, but recommended. It lets you run commands locally with `--dev`
 
 Run:
 
-```bash
-dbwarden settings show --all
-```
-
-Typical output:
-
 ```text
+$ dbwarden settings show --all
 Database: primary
 Type: postgresql
 Default: true

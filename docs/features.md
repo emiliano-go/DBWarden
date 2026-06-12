@@ -80,13 +80,8 @@ Each entry is validated before use, including database names, table names, `mode
 
 DBWarden reads SQLAlchemy models, diffs them against the live schema or an offline model state, and emits SQL.
 
-```bash
-dbwarden make-migrations "add posts table" --database primary
-```
-
-Typical output:
-
 ```text
+$ dbwarden make-migrations "add posts table" --database primary
 Created migration: migrations/primary/primary__0002_add_posts_table.sql
 ```
 
@@ -125,13 +120,8 @@ class Meta(CHTableMeta):
 
 Use `check` to classify changes before generating or applying SQL.
 
-```bash
-dbwarden check --database primary
-```
-
-Example output:
-
 ```text
+$ dbwarden check --database primary
 SAFE      add column users.bio
 WARN      shrink varchar users.email
 CRITICAL  drop table audit_log

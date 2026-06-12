@@ -77,13 +77,8 @@ class Post(Base):
 
 Run:
 
-```bash
-dbwarden make-migrations "create core tables" --database primary
-```
-
-Typical output:
-
 ```text
+$ dbwarden make-migrations "create core tables" --database primary
 Created migration: migrations/primary/primary__0001_create_core_tables.sql
 ```
 
@@ -128,13 +123,8 @@ The exact SQL depends on the backend, but the structure is always the same:
 
 Run:
 
-```bash
-dbwarden migrate --database primary
-```
-
-Typical output:
-
 ```text
+$ dbwarden migrate --database primary
 Applying migration: primary__0001_create_core_tables.sql
 Migration applied successfully
 ```
@@ -145,22 +135,12 @@ Internally, DBWarden resolves the config, acquires the migration lock, executes 
 
 Run:
 
-```bash
-dbwarden status --database primary
-dbwarden history --database primary
-```
-
-Typical `status` output:
-
 ```text
+$ dbwarden status --database primary
 Database: primary
 Applied migrations: 1
 Pending migrations: 0
-```
-
-Typical `history` output:
-
-```text
+$ dbwarden history --database primary
 1  primary__0001_create_core_tables.sql  applied
 ```
 
@@ -178,13 +158,8 @@ This is useful when you want a read-only view of what the database currently con
 
 Run:
 
-```bash
-dbwarden rollback --count 1 --database primary
-```
-
-Typical output:
-
 ```text
+$ dbwarden rollback --count 1 --database primary
 Rolling back migration: primary__0001_create_core_tables.sql
 Rollback completed successfully
 ```
