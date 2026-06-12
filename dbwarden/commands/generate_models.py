@@ -319,6 +319,18 @@ def _render_postgresql_meta(columns: list[dict], pg_meta: dict | None = None) ->
                 lines.append(f"        {key} = {rendered[0].strip()}")
                 lines.extend(rendered[1:])
 
+    _PG_FLAT_TO_SPEC: dict[str, str] = {
+        "pg_collation": "collation",
+        "pg_storage": "storage",
+        "pg_compression": "compression",
+        "pg_generated": "generated",
+        "pg_identity": "identity",
+        "pg_identity_start": "identity_start",
+        "pg_identity_increment": "identity_increment",
+        "pg_identity_min": "identity_min",
+        "pg_identity_max": "identity_max",
+    }
+
     for col in columns:
         field_meta: dict[str, Any] = {}
         if col.get("comment"):
@@ -328,8 +340,16 @@ def _render_postgresql_meta(columns: list[dict], pg_meta: dict | None = None) ->
             continue
         lines.append("")
         lines.append(f"        class {col['name']}(PGColumnMeta):")
-        for key, value in field_meta.items():
-            lines.append(f"            {key} = {value!r}")
+        comment_val = field_meta.pop("comment", None)
+        if comment_val is not None:
+            lines.append(f"            comment = {comment_val!r}")
+        pg_kwargs = {}
+        for flat_key, spec_key in _PG_FLAT_TO_SPEC.items():
+            if flat_key in field_meta:
+                pg_kwargs[spec_key] = field_meta[flat_key]
+        if pg_kwargs:
+            kwargs_repr = ", ".join(f"{k}={v!r}" for k, v in pg_kwargs.items())
+            lines.append(f"            pg = pg.field({kwargs_repr})")
 
     return lines
 
@@ -442,6 +462,16 @@ def _render_ch_meta(columns: list[dict], options: dict, object_type: str) -> lis
                 lines.append(f"            ProjectionSpec({getattr(projection, 'name', '')!r}, {getattr(projection, 'query', '')!r}),")
         lines.append("        ]")
 
+    _CH_FLAT_TO_SPEC: dict[str, str] = {
+        "ch_codec": "codec",
+        "ch_default_expression": "default_expression",
+        "ch_materialized": "materialized",
+        "ch_alias": "alias",
+        "ch_ttl": "ttl",
+        "ch_low_cardinality": "low_cardinality",
+        "ch_nullable": "nullable",
+    }
+
     for col in columns:
         ch_meta = col.get("ch_meta") or {}
         if not ch_meta and not col.get("comment"):
@@ -452,15 +482,19 @@ def _render_ch_meta(columns: list[dict], options: dict, object_type: str) -> lis
         if col.get("comment"):
             lines.append(f"            comment = {col['comment']!r}")
             has_content = True
-        for key in ("ch_codec", "ch_default_expression", "ch_materialized", "ch_alias", "ch_ttl"):
-            if ch_meta.get(key) is not None:
-                lines.append(f"            {key} = {ch_meta[key]!r}")
-                has_content = True
-        if ch_meta.get("ch_low_cardinality"):
-            lines.append("            ch_low_cardinality = True")
-            has_content = True
-        if ch_meta.get("ch_nullable"):
-            lines.append("            ch_nullable = True")
+        ch_kwargs = {}
+        for flat_key, spec_key in _CH_FLAT_TO_SPEC.items():
+            if flat_key not in ch_meta:
+                continue
+            val = ch_meta[flat_key]
+            if spec_key in ("low_cardinality", "nullable"):
+                if val:
+                    ch_kwargs[spec_key] = val
+            elif val is not None:
+                ch_kwargs[spec_key] = val
+        if ch_kwargs:
+            kwargs_repr = ", ".join(f"{k}={v!r}" for k, v in ch_kwargs.items())
+            lines.append(f"            ch = ch.field({kwargs_repr})")
             has_content = True
         if not has_content:
             lines.append("            pass")
@@ -535,9 +569,14 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
 
         imports = _render_imports(all_imports)
         pg_meta_imports: set[str] = set()
+        needs_pg_spec = False
+        needs_ch_spec = False
         for table in tables:
             if any(col.get("pg_meta") for col in table["columns"]):
                 pg_meta_imports.add("PGColumnMeta")
+                needs_pg_spec = True
+            if any(col.get("ch_meta") for col in table["columns"]):
+                needs_ch_spec = True
         if any(table.get("pg_meta") for table in tables):
             pg_meta_imports.add("PGTableMeta")
 
@@ -553,9 +592,17 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
             "Base = declarative_base()\n\n\n"
         )
         if pg_meta_imports:
-            content += "from dbwarden import " + ", ".join(sorted(pg_meta_imports)) + "\n\n\n"
+            content += "from dbwarden import " + ", ".join(sorted(pg_meta_imports)) + "\n"
+        if needs_pg_spec:
+            content += "from dbwarden.schema import pg\n"
+        if pg_meta_imports or needs_pg_spec:
+            content += "\n"
         if ch_meta_imports:
-            content += "from dbwarden import " + ", ".join(sorted(ch_meta_imports)) + "\n\n\n"
+            content += "from dbwarden import " + ", ".join(sorted(ch_meta_imports)) + "\n"
+        if needs_ch_spec:
+            content += "from dbwarden.schema import ch\n"
+        if ch_meta_imports or needs_ch_spec:
+            content += "\n"
         content += "\n\n".join(all_classes)
         (out_path / "models.py").write_text(content, encoding="utf-8")
         return
@@ -572,14 +619,24 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
         content_lines.append("from sqlalchemy.ext.declarative import declarative_base\n\n\n")
         content_lines.append("Base = declarative_base()\n\n\n")
         needs_pg_base: set[str] = set()
+        needs_pg_spec = False
+        needs_ch_spec = False
         if any(col.get("pg_meta") for col in table["columns"]):
             needs_pg_base.add("PGColumnMeta")
+            needs_pg_spec = True
         if table.get("pg_meta"):
             needs_pg_base.add("PGTableMeta")
         if needs_pg_base:
-            content_lines.append("from dbwarden import " + ", ".join(sorted(needs_pg_base)) + "\n\n\n")
+            content_lines.append("from dbwarden import " + ", ".join(sorted(needs_pg_base)) + "\n")
+        if needs_pg_spec:
+            content_lines.append("from dbwarden.schema import pg\n")
+        if needs_pg_base or needs_pg_spec:
+            content_lines.append("\n")
         if table.get("clickhouse_options"):
-            content_lines.append("from dbwarden import CHColumnMeta, CHTableMeta, ChEngineSpec, ProjectionSpec\n\n\n")
+            content_lines.append("from dbwarden import CHColumnMeta, CHTableMeta, ChEngineSpec, ProjectionSpec\n")
+            if any(col.get("ch_meta") for col in table["columns"]):
+                content_lines.append("from dbwarden.schema import ch\n")
+            content_lines.append("\n")
         content_lines.append(
             _generate_table_code(
                 table["name"],

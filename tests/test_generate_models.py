@@ -103,7 +103,7 @@ def test_generate_table_code_with_postgresql_meta():
     assert "class Meta(PGTableMeta):" in code
     assert "comment = 'Core user accounts'" in code
     assert "class email(PGColumnMeta):" in code
-    assert "pg_collation = 'en_US.UTF-8'" in code
+    assert "pg = pg.field(collation='en_US.UTF-8')" in code
 
 
 def test_write_models_postgresql_emits_dialect_imports_and_meta():
@@ -150,6 +150,8 @@ def test_write_models_postgresql_emits_dialect_imports_and_meta():
         assert "from sqlalchemy.dialects.postgresql import JSONB, UUID" in content
         assert "class Meta(PGTableMeta):" in content
         assert "comment = 'Users table'" in content
+        assert "from dbwarden.schema import pg" in content
+        assert 'pg = pg.field(collation=' in content
 
 
 def test_write_models_single_file():
@@ -375,7 +377,7 @@ class TestClickHouseGenerateModels:
                 "ch_order_by": ["id"],
             },
         )
-        assert "ch_codec = 'ZSTD(3)'" in code
+        assert "ch = ch.field(codec='ZSTD(3)')" in code
 
     def test_parse_clickhouse_nullable_type(self):
         assert _parse_type("Nullable(String)") == "String"
