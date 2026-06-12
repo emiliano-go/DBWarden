@@ -241,6 +241,9 @@ fastapi = [
 metrics = [
     { name = "prometheus-client", marker = "sys_platform == 'linux'" },
 ]
+mysql = [
+    { name = "pymysql", marker = "sys_platform == 'linux'" },
+]
 postgres = [
     { name = "psycopg2-binary", marker = "sys_platform == 'linux'" },
 ]
@@ -252,6 +255,9 @@ sandbox = [
 dev = [
     { name = "pytest", marker = "sys_platform == 'linux'" },
     { name = "typer", marker = "sys_platform == 'linux'" },
+]
+mysql = [
+    { name = "pymysql", marker = "sys_platform == 'linux'" },
 ]
 
 [package.metadata]
@@ -266,6 +272,7 @@ requires-dist = [
     { name = "prometheus-client", marker = "extra == 'metrics'", specifier = ">=0.21.0" },
     { name = "psycopg2-binary", marker = "extra == 'postgres'", specifier = ">=2.9.11" },
     { name = "pydantic", marker = "extra == 'fastapi'", specifier = ">=2.0.0" },
+    { name = "pymysql", marker = "extra == 'mysql'", specifier = ">=1.1.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.2" },
     { name = "rich", specifier = ">=12.2.0" },
     { name = "schemap", specifier = ">=0.5.2" },
@@ -275,13 +282,14 @@ requires-dist = [
     { name = "typer", specifier = ">=0.12.3" },
     { name = "zensical", marker = "extra == 'dev'" },
 ]
-provides-extras = ["dev", "fastapi", "postgres", "sqlite", "clickhouse", "sandbox", "metrics"]
+provides-extras = ["dev", "fastapi", "postgres", "sqlite", "clickhouse", "mysql", "sandbox", "metrics"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "pytest" },
     { name = "typer" },
 ]
+mysql = [{ name = "pymysql", specifier = ">=1.1.0" }]
 
 [[package]]
 name = "deepmerge"
@@ -693,6 +701,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9e/26/d1015444da4d952a1ca487a236b522eb979766f0295a0bd0c5fc089989a9/pymdown_extensions-10.21.3.tar.gz", hash = "sha256:72cfcf55f07aea0d4af2c4f11dd4e52466ddfb1bb819673146398e0bd3a77354", size = 854140, upload-time = "2026-05-13T12:57:32.267Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7e/85/545a951eecc270fcd688288c600017e2050a1aacb56c711d208586d3e470/pymdown_extensions-10.21.3-py3-none-any.whl", hash = "sha256:d7a5d08014fc571e80ca21dd6f854e31f94c489800350564d55d15b3c41e76b6", size = 269002, upload-time = "2026-05-13T12:57:30.296Z" },
+]
+
+[[package]]
+name = "pymysql"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c9/bc/1c6a92f385940f727daeecf3bacaf186e03875dff57197801046c583bcf0/pymysql-1.2.0.tar.gz", hash = "sha256:6c7b17ca686988104d7426c27895b455cdeea3e9d3ceb1270f0c3704fead8c33", size = 49021, upload-time = "2026-05-19T08:26:22.302Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c4/bd/2534e130295c8cfd4f0a2e31623baab7502278f1e97bcfe61db75656a77f/pymysql-1.2.0-py3-none-any.whl", hash = "sha256:62169ce6d5510f08e140c5e7990ee884a9764024e4a9a27b2cc11f1099322ae0", size = 45716, upload-time = "2026-05-19T08:26:20.974Z" },
 ]
 
 [[package]]

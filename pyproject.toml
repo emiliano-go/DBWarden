@@ -66,6 +66,9 @@ sqlite = [
 clickhouse = [
     "clickhouse-connect>=0.7.15",
 ]
+mysql = [
+    "pymysql>=1.1.0",
+]
 sandbox = [
     "testcontainers>=4.0.0",
 ]
@@ -87,4 +90,7 @@ environments = ["sys_platform == 'linux'"]
 dev = [
     "pytest",
     "typer",
+]
+mysql = [
+    "pymysql>=1.1.0",
 ]
