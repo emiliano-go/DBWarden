@@ -11,10 +11,16 @@ from dbwarden.schema import (
     CHColumnMeta,
     CHTableMeta,
     CheckSpec,
+    FieldMeta,
+    PGColumnMeta,
+    PGTableMeta,
+    TableMeta,
     UniqueSpec,
     apply_meta,
     check,
+    ch,
     index,
+    pg,
     read_meta,
     unique,
 )
@@ -47,13 +53,13 @@ class UserFields(Timestamped):
         comment = "Core user accounts"
         pg_fillfactor = 80
 
-        class email:
+        class email(PGColumnMeta):
             comment = "Primary contact email"
             public = True
-            pg_collation = "en_US.UTF-8"
+            pg = pg.field(collation="en_US.UTF-8")
 
-        class bio:
-            ch_codec = "ZSTD(3)"
+        class bio(CHColumnMeta):
+            ch = ch.field(codec="ZSTD(3)")
 
 
 class User(UserFields):
@@ -70,7 +76,7 @@ class ChildUser(UserFields):
     class Meta:
         comment = "Child user accounts"
 
-        class email:
+        class email(PGColumnMeta):
             public = False
 
 
@@ -115,7 +121,7 @@ class TestMetaReader:
             email: Mapped[str] = mapped_column(String(255), info={"legacy": True})
 
             class Meta:
-                class email:
+                class email(PGColumnMeta):
                     comment = "Primary contact email"
 
         with pytest.raises(DBWardenConfigError, match=r"Do not use mapped_column\(info="):
@@ -132,8 +138,8 @@ class TestMetaReader:
                 ch_engine = "MergeTree"
                 ch_order_by = ["id"]
 
-                class payload:
-                    ch_codec = "ZSTD(3)"
+                class payload(CHColumnMeta):
+                    ch = ch.field(codec="ZSTD(3)")
 
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
 
@@ -144,7 +150,7 @@ class TestMetaReader:
         assert table.clickhouse_options["ch_order_by"] == ["id"]
         assert table.columns[1].codec == "ZSTD(3)"
 
-    def test_extract_table_from_model_allows_wrong_backend_keys(self, monkeypatch):
+    def test_extract_table_from_model_allows_cross_backend_keys(self, monkeypatch):
         class Report(Base):
             __tablename__ = "reports"
 
@@ -152,8 +158,8 @@ class TestMetaReader:
             title: Mapped[str] = mapped_column(String(255))
 
             class Meta:
-                class title:
-                    pg_storage = "extended"
+                class title(PGColumnMeta):
+                    pg = pg.field(storage="extended")
 
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "sqlite")
 
@@ -161,6 +167,18 @@ class TestMetaReader:
 
         assert table is not None
         assert Report.__table__.c.title.info["pg_storage"] == "extended"
+
+    def test_flat_backend_attrs_rejected(self):
+        with pytest.raises(DBWardenConfigError, match=r"Unknown attribute 'pg_collation'"):
+            class BadModel(Base):
+                __tablename__ = "bad_models"
+
+                id: Mapped[int] = mapped_column(Integer, primary_key=True)
+                name: Mapped[str] = mapped_column(String(255))
+
+                class Meta:
+                    class name(PGColumnMeta):
+                        pg_collation = "en_US.UTF-8"
 
 
 class TestIndexSpec:
@@ -266,14 +284,12 @@ class TestMetaIndexes:
 
         table = extract_table_from_model(BlogPost)
         assert table is not None
-        # SQLAlchemy indexes take precedence
         assert len(table.indexes) == 1
         assert table.indexes[0].name == "ix_sa_title"
 
 
 class TestCHTableMeta:
     def test_ch_table_meta_all_fields_accessible(self):
-        """CHTableMeta class attributes are defined."""
         assert hasattr(CHTableMeta, "ch_engine")
         assert hasattr(CHTableMeta, "ch_order_by")
         assert hasattr(CHTableMeta, "ch_primary_key")
@@ -294,14 +310,8 @@ class TestCHTableMeta:
         assert hasattr(CHTableMeta, "ch_dictionary")
         assert hasattr(CHTableMeta, "comment")
 
-    def test_ch_column_meta_all_fields_accessible(self):
-        assert hasattr(CHColumnMeta, "ch_codec")
-        assert hasattr(CHColumnMeta, "ch_default_expression")
-        assert hasattr(CHColumnMeta, "ch_materialized")
-        assert hasattr(CHColumnMeta, "ch_alias")
-        assert hasattr(CHColumnMeta, "ch_ttl")
-        assert hasattr(CHColumnMeta, "ch_low_cardinality")
-        assert hasattr(CHColumnMeta, "ch_nullable")
+    def test_ch_column_meta_has_ch_field(self):
+        assert hasattr(CHColumnMeta, "ch")
 
     def test_ch_engine_spec_in_meta(self, monkeypatch):
         class Event(Base):
@@ -318,7 +328,6 @@ class TestCHTableMeta:
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         table = extract_table_from_model(Event)
-        # ch_engine_raw holds the original ChEngineSpec object
         engine_raw = table.clickhouse_options["ch_engine_raw"]
         assert isinstance(engine_raw, ChEngineSpec)
         assert engine_raw.name == "ReplicatedMergeTree"
@@ -385,21 +394,18 @@ class TestCHTableMeta:
                 ch_engine = "MergeTree"
                 ch_order_by = ["id"]
 
-                class payload:
-                    ch_codec = "ZSTD(3)"
+                class payload(CHColumnMeta):
+                    ch = ch.field(codec="ZSTD(3)")
 
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         table = extract_table_from_model(NoCompat)
-        # No clickhouse_* keys should exist in column ch_meta
         for col in table.columns:
             for key in col.ch_meta:
                 assert not key.startswith("clickhouse_"), f"Backward compat key {key} found"
-        # ch_* keys should be in clickhouse_options
         assert "ch_engine" in table.clickhouse_options
 
     def test_ch_meta_apply_meta(self):
-        """apply_meta should propagate CH column metadata to column.info."""
         class CHModel(Base):
             __tablename__ = "ch_models"
 
@@ -410,16 +416,14 @@ class TestCHTableMeta:
                 ch_engine = "MergeTree"
                 ch_order_by = ["id"]
 
-                class body:
-                    ch_codec = "ZSTD(3)"
-                    ch_compression_codec = "LZ4HC(1)"
-                    ch_comment = "body column"
+                class body(CHColumnMeta):
+                    ch = ch.field(codec="ZSTD(3)")
+                    comment = "body column"
 
         apply_meta(CHModel)
         body_info = CHModel.__table__.c.body.info
         assert body_info["ch_codec"] == "ZSTD(3)"
-        assert body_info["ch_compression_codec"] == "LZ4HC(1)"
-        assert body_info["ch_comment"] == "body column"
+        assert body_info["dw_comment"] == "body column"
 
 
 class TestIndexSpecExtensions:
@@ -644,3 +648,124 @@ class TestPgIndexSpec:
         assert "unique" not in d
         assert "using" not in d
         assert "where" not in d
+
+
+class TestMetaValidator:
+    def test_unknown_table_attr_rejected(self):
+        with pytest.raises(DBWardenConfigError, match=r"Unknown attribute 'zzz_top_level"):
+            class _(PGTableMeta):
+                zzz_top_level = "bad"
+
+    def test_unknown_field_attr_rejected(self):
+        with pytest.raises(DBWardenConfigError, match=r"Unknown attribute 'zzz_field_attr"):
+            class _(PGColumnMeta):
+                zzz_field_attr = "bad"
+
+    def test_known_table_attrs_allowed(self):
+        class Okay(TableMeta):
+            comment = "works"
+            indexes = []
+            checks = []
+            uniques = []
+
+    def test_known_field_attrs_allowed(self):
+        class Okay(FieldMeta):
+            comment = "field comment"
+            public = True
+
+    def test_nested_classes_allowed(self):
+        class Parent(PGTableMeta):
+            comment = "parent"
+            indexes = []
+
+            class child(PGColumnMeta):
+                comment = "nested child"
+
+    def test_pg_field_spec_accepted(self):
+        class SpecTest(PGColumnMeta):
+            pg = pg.field(collation="en_US.UTF-8")
+            comment = "test"
+
+        assert SpecTest.pg.collation == "en_US.UTF-8"
+
+    def test_ch_field_spec_accepted(self):
+        class SpecTest(CHColumnMeta):
+            ch = ch.field(codec="ZSTD(3)")
+            comment = "test"
+
+        assert SpecTest.ch.codec == "ZSTD(3)"
+
+
+class TestPgFieldSpec:
+    def test_field_factory(self):
+        spec = pg.field(collation="en_US.UTF-8", storage="PLAIN")
+        assert spec.collation == "en_US.UTF-8"
+        assert spec.storage == "PLAIN"
+
+    def test_to_col_info(self):
+        spec = pg.field(collation="en_US.UTF-8", storage="PLAIN", identity="always")
+        info = spec.to_col_info()
+        assert info["pg_collation"] == "en_US.UTF-8"
+        assert info["pg_storage"] == "PLAIN"
+        assert info["pg_identity"] == "always"
+
+    def test_to_col_info_omits_none(self):
+        spec = pg.field()
+        info = spec.to_col_info()
+        assert info == {}
+
+
+class TestChFieldSpec:
+    def test_field_factory(self):
+        spec = ch.field(codec="ZSTD(3)", nullable=True, low_cardinality=True)
+        assert spec.codec == "ZSTD(3)"
+        assert spec.nullable is True
+        assert spec.low_cardinality is True
+
+    def test_to_col_info(self):
+        spec = ch.field(codec="ZSTD(3)", nullable=True, low_cardinality=True, ttl="created_at + INTERVAL 30 DAY")
+        info = spec.to_col_info()
+        assert info["ch_codec"] == "ZSTD(3)"
+        assert info["ch_nullable"] is True
+        assert info["ch_low_cardinality"] is True
+        assert info["ch_ttl"] == "created_at + INTERVAL 30 DAY"
+
+    def test_to_col_info_omits_false(self):
+        spec = ch.field()
+        info = spec.to_col_info()
+        assert "ch_low_cardinality" not in info
+        assert "ch_nullable" not in info
+
+
+class TestChEngineFactories:
+    def test_merge_tree(self):
+        from dbwarden.schema.clickhouse.engine import merge_tree
+        spec = merge_tree()
+        assert spec.name == "MergeTree"
+        assert spec.args == ()
+
+    def test_replacing_merge_tree(self):
+        from dbwarden.schema.clickhouse.engine import replacing_merge_tree
+        spec = replacing_merge_tree("ver")
+        assert spec.name == "ReplacingMergeTree"
+        assert spec.args == ("ver",)
+
+    def test_replicated_merge_tree(self):
+        from dbwarden.schema.clickhouse.engine import replicated_merge_tree
+        spec = replicated_merge_tree("/zk/path", "{replica}", "ver")
+        assert spec.name == "ReplicatedMergeTree"
+        assert spec.args == ("ver",)
+        assert spec.zookeeper_path == "/zk/path"
+        assert spec.replica_name == "{replica}"
+
+    def test_summing_merge_tree(self):
+        from dbwarden.schema.clickhouse.engine import summing_merge_tree
+        spec = summing_merge_tree("col1", "col2")
+        assert spec.name == "SummingMergeTree"
+        assert spec.args == ("col1", "col2")
+
+    def test_aggregating_merge_tree(self):
+        from dbwarden.schema.clickhouse.engine import aggregating_merge_tree
+        spec = aggregating_merge_tree()
+        assert spec.name == "AggregatingMergeTree"
+        assert spec.args == ()

@@ -1,7 +1,52 @@
 from __future__ import annotations
 
+import typing
 from dataclasses import dataclass, field as dc_field
 from typing import Any
+
+from dbwarden.exceptions import DBWardenConfigError
+
+
+class _MetaValidator(type):
+    """Metaclass that validates Meta class attribute names at import time.
+
+    Walks the MRO to collect all ``__annotations__`` from ancestor classes,
+    then rejects any non-dunder, non-callable, non-class attribute whose name
+    does not appear in the collected annotations.
+
+    Root base classes (``FieldMeta``, ``TableMeta``) are exempted via
+    ``__meta_root__ = True``.
+    """
+
+    def __new__(mcs, name, bases, namespace):
+        cls = super().__new__(mcs, name, bases, namespace)
+
+        if namespace.get("__meta_root__"):
+            return cls
+
+        valid_attrs: set[str] = set()
+        for base in cls.__mro__:
+            if base is cls:
+                continue
+            if hasattr(base, "__annotations__"):
+                valid_attrs.update(base.__annotations__)
+
+        valid_attrs.update(namespace.get("__annotations__", {}))
+
+        for attr_name, attr_value in list(namespace.items()):
+            if attr_name.startswith("__"):
+                continue
+            if isinstance(attr_value, type):
+                continue
+            if callable(attr_value):
+                continue
+            if attr_name not in valid_attrs:
+                raise DBWardenConfigError(
+                    f"Unknown attribute '{attr_name}' on {name}. "
+                    f"Valid attributes: {sorted(valid_attrs)}"
+                )
+
+        return cls
 
 
 @dataclass

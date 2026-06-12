@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import typing
 from typing import Any
 
 from dbwarden.exceptions import DBWardenConfigError
 from dbwarden.schema._base import DBWardenMeta, attach_meta
 
+_FLAT_BACKEND_PREFIXES = ("pg_", "ch_", "my_", "mdb_", "sq_")
 
 _LIST_FIELDS = {
     "indexes",
@@ -20,17 +22,9 @@ _LIST_FIELDS = {
     "pg_inherits",
 }
 
-
 _KNOWN_FIELD_ATTRS = frozenset({
     "comment", "public",
-    "pg_collation", "pg_storage", "pg_compression", "pg_generated",
-    "pg_identity", "pg_identity_start", "pg_identity_increment",
-    "pg_identity_min", "pg_identity_max",
-    "ch_codec", "ch_default_expression", "ch_materialized", "ch_alias",
-    "ch_ttl", "ch_low_cardinality", "ch_nullable",
-    "my_charset", "my_collate", "my_unsigned", "my_on_update",
-    "mdb_invisible", "mdb_without_overlaps", "mdb_sequence",
-    "sq_generated", "sq_generated_mode",
+    "pg", "ch", "my", "mdb", "sq",
 })
 
 _KNOWN_TABLE_ATTRS = frozenset({
@@ -68,17 +62,19 @@ def apply_meta(cls: type) -> None:
                     f"declare field metadata in class Meta instead."
                 )
 
+    backend = _get_backend_for_class(cls)
     merged_table: dict[str, Any] = {}
     merged_fields: dict[str, dict[str, Any]] = {}
 
     for meta_cls in reversed(meta_chain):
-        _merge_meta_class(meta_cls, merged_table, merged_fields)
+        _merge_meta_class(meta_cls, merged_table, merged_fields, backend=backend)
 
     if hasattr(cls, "__table__"):
         column_names = {c.name for c in cls.__table__.columns}
         for field_name, attrs in merged_fields.items():
             if field_name not in column_names:
                 continue
+            _type_check_field_attrs(field_name, attrs, cls)
             _write_column_info(cls.__table__.c[field_name], attrs)
 
     attach_meta(cls, _build_dbwarden_meta(merged_table))
@@ -94,16 +90,23 @@ def _collect_meta_chain(cls: type) -> list[type]:
     return chain
 
 
+def _get_backend_for_class(cls: type) -> str:
+    from dbwarden.engine.model_discovery import _get_backend_name
+    return _get_backend_name()
+
+
 def _merge_meta_class(
     meta_cls: type,
     merged_table: dict[str, Any],
     merged_fields: dict[str, dict[str, Any]],
+    backend: str = "postgresql",
 ) -> None:
     for name, value in vars(meta_cls).items():
         if name.startswith("__"):
             continue
         if isinstance(value, type):
             field_attrs = merged_fields.setdefault(name, {})
+            _reject_flat_backend_attrs(name, value)
             for attr, attr_value in vars(value).items():
                 if attr.startswith("__"):
                     continue
@@ -119,6 +122,32 @@ def _merge_meta_class(
             merged_table[name] = value
 
 
+def _reject_flat_backend_attrs(field_name: str, inner_cls: type) -> None:
+    for attr_name in vars(inner_cls):
+        if attr_name.startswith("__"):
+            continue
+        if isinstance(getattr(inner_cls, attr_name, None), type):
+            continue
+        if attr_name.startswith(_FLAT_BACKEND_PREFIXES):
+            prefix = attr_name.split("_")[0]
+            spec_name = {"pg": "pg", "ch": "ch", "my": "my", "mdb": "mdb", "sq": "sq"}.get(prefix, prefix)
+            attr_suffix = attr_name[len(prefix) + 1:]
+            raise DBWardenConfigError(
+                f"Field '{field_name}': use '{spec_name} = {spec_name}.field({attr_suffix}=...)' "
+                f"instead of '{attr_name} = ...'. Flat backend-specific field attrs are no longer supported."
+            )
+
+
+def _type_check_field_attrs(field_name: str, attrs: dict[str, Any], model_cls: type) -> None:
+    for attr_name, attr_value in attrs.items():
+        if attr_name in ("comment", "public"):
+            continue
+        if hasattr(attr_value, "to_col_info"):
+            continue
+        if isinstance(attr_value, type):
+            continue
+
+
 def _write_column_info(col, attrs: dict[str, Any]) -> None:
     for attr, value in attrs.items():
         if value is None:
@@ -127,6 +156,9 @@ def _write_column_info(col, attrs: dict[str, Any]) -> None:
             col.info["dw_comment"] = value
         elif attr == "public":
             col.info["dw_public"] = True if value else False
+        elif hasattr(value, "to_col_info"):
+            for k, v in value.to_col_info().items():
+                col.info[k] = v
         elif value is False:
             continue
         else:
@@ -161,7 +193,6 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
     meta.sq_indexes = list(table_attrs.get("sq_indexes", []))
     meta.table_attrs = dict(table_attrs)
 
-    # Build typed backend_table spec
     if any(k.startswith("pg_") and k not in ("pg_indexes", "pg_checks", "pg_uniques", "pg_excludes", "pg_partition") for k in table_attrs):
         meta.backend_table = PgTableSpec(
             tablespace=table_attrs.get("pg_tablespace"),

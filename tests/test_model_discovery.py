@@ -15,6 +15,7 @@ from dbwarden.engine.model_discovery import (
     ModelColumn,
     ModelTable,
 )
+from dbwarden.schema import PGColumnMeta, PGTableMeta, pg
 
 
 class TestModelDiscovery:
@@ -113,7 +114,7 @@ class User(Base):
                 pg_fillfactor = 80
 
                 class email(PGColumnMeta):
-                    pg_storage = "extended"
+                    pg = pg.field(storage="extended")
 
         table = extract_table_from_model(User, db_name="primary")
 

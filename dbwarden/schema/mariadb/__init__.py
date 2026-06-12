@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
+from dbwarden.schema.mariadb.field import MdbFieldSpec, field
 from dbwarden.schema.mysql import MyTableSpec
 
 
@@ -13,5 +13,7 @@ class MdbTableSpec(MyTableSpec):
 
 
 __all__ = [
+    "MdbFieldSpec",
     "MdbTableSpec",
+    "field",
 ]

@@ -2,13 +2,18 @@ from __future__ import annotations
 
 from typing import Any
 
+from dbwarden.schema._base import _MetaValidator
+from dbwarden.schema._meta import CHFieldMeta, FieldMeta, PGFieldMeta
 
-class TableMeta:
+
+class TableMeta(metaclass=_MetaValidator):
     """Base for all backend-specific table Meta classes.
 
     Users may inherit from this (or any backend-specific subclass) in their
     ``class Meta`` to get IDE autocomplete for supported attributes.
     """
+    __meta_root__ = True
+
     comment: str | None = None
     indexes: list[Any] = []
     checks: list[Any] = []
@@ -29,10 +34,7 @@ class PGTableMeta(TableMeta):
     pg_partition: dict[str, Any] | None = None
 
 
-from dbwarden.schema._meta import FieldMeta
-
-
-class PGColumnMeta(FieldMeta):
+class PGColumnMeta(PGFieldMeta):
     """PostgreSQL column-level metadata; inherit in ``Meta`` inner classes for autocomplete.
 
     Example::
@@ -40,8 +42,7 @@ class PGColumnMeta(FieldMeta):
         class Meta(PGTableMeta):
             class id(PGColumnMeta):
                 comment = "Surrogate primary key"
-                pg_identity = "always"
-                pg_storage = "PLAIN"
+                pg = pg.field(identity="always", storage="PLAIN")
     """
 
 
@@ -95,7 +96,7 @@ class CHTableMeta(TableMeta):
     ch_replica_name: str | None = None
 
 
-class CHColumnMeta(FieldMeta):
+class CHColumnMeta(CHFieldMeta):
     """ClickHouse column-level metadata; inherit in ``Meta`` inner classes for autocomplete.
 
     Example::
@@ -103,6 +104,5 @@ class CHColumnMeta(FieldMeta):
         class Meta(CHTableMeta):
             class payload(CHColumnMeta):
                 comment = "HTTP request body"
-                ch_codec = "ZSTD(3)"
-                ch_nullable = True
+                ch = ch.field(codec="ZSTD(3)", nullable=True)
     """

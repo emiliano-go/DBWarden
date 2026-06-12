@@ -1,42 +1,58 @@
 from __future__ import annotations
 
+from typing import Any
 
-class FieldMeta:
-    """Documentation/type surface for ``class Meta`` field attributes.
+from dbwarden.exceptions import DBWardenConfigError
+from dbwarden.schema._base import _MetaValidator
 
-    Users do not need to inherit from this class. DBWarden reads plain inner
-    classes by attribute name only.
+
+class FieldMeta(metaclass=_MetaValidator):
+    """Cross-database field metadata for ``class Meta`` inner classes.
+
+    Users should inherit from a backend-specific subclass (e.g. ``PGColumnMeta``,
+    ``CHColumnMeta``) to get IDE autocomplete for supported attributes.
     """
+    __meta_root__ = True
 
     comment: str | None = None
     public: bool | None = None
 
-    pg_collation: str | None = None
-    pg_storage: str | None = None
-    pg_compression: str | None = None
-    pg_generated: str | None = None
-    pg_identity: str | None = None
-    pg_identity_start: int | None = None
-    pg_identity_increment: int | None = None
-    pg_identity_min: int | None = None
-    pg_identity_max: int | None = None
 
-    ch_codec: str | None = None
-    ch_default_expression: str | None = None
-    ch_materialized: str | None = None
-    ch_alias: str | None = None
-    ch_ttl: str | None = None
-    ch_low_cardinality: bool = False
-    ch_nullable: bool = False
+class PGFieldMeta(FieldMeta):
+    """PostgreSQL field metadata.
 
-    my_charset: str | None = None
-    my_collate: str | None = None
-    my_unsigned: bool = False
-    my_on_update: str | None = None
+    Use ``pg = pg.field(...)`` to set column-level options.
+    """
+    pg: Any = None
 
-    mdb_invisible: bool = False
-    mdb_without_overlaps: bool = False
-    mdb_sequence: str | None = None
 
-    sq_generated: str | None = None
-    sq_generated_mode: str = "STORED"
+class CHFieldMeta(FieldMeta):
+    """ClickHouse field metadata.
+
+    Use ``ch = ch.field(...)`` to set column-level options.
+    """
+    ch: Any = None
+
+
+class MyFieldMeta(FieldMeta):
+    """MySQL field metadata.
+
+    Use ``my = my.field(...)`` to set column-level options.
+    """
+    my: Any = None
+
+
+class MdbFieldMeta(FieldMeta):
+    """MariaDB field metadata.
+
+    Use ``mdb = mdb.field(...)`` to set column-level options.
+    """
+    mdb: Any = None
+
+
+class SqFieldMeta(FieldMeta):
+    """SQLite field metadata.
+
+    Use ``sq = sq.field(...)`` to set column-level options.
+    """
+    sq: Any = None
