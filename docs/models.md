@@ -407,4 +407,82 @@ Supported `ch.field()` options:
 | `low_cardinality` | `bool` | Wrap type in LowCardinality | `True` |
 | `nullable` | `bool` | Wrap type in Nullable | `True` |
 
+## MySQL Model Metadata
+
+When `database_type="mysql"` (or `"mariadb"`), DBWarden supports first-class MySQL metadata via `class Meta(MyTableMeta)` inner classes. This is the **only** supported surface: `mapped_column(info=...)` raises `DBWardenConfigError`.
+
+### Table-Level Meta
+
+Inherit from `MyTableMeta` on your `class Meta`:
+
+```python
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from dbwarden import MyTableMeta
+
+class Base(DeclarativeBase):
+    pass
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255))
+
+    class Meta(MyTableMeta):
+        my_engine = "InnoDB"
+        my_charset = "utf8mb4"
+        my_collate = "utf8mb4_unicode_ci"
+        my_row_format = "DYNAMIC"
+        my_auto_increment = 1000
+        comment = "Core user accounts"
+```
+
+`MyTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds MySQL-specific ones (`my_engine`, `my_charset`, `my_collate`, `my_row_format`, `my_auto_increment`).
+
+For MariaDB, use `MdbTableMeta` which extends `MyTableMeta` with `mdb_page_compressed` and `mdb_page_compression_level`.
+
+### Column-Level Meta
+
+Use `MyColumnMeta` inner classes named after the column. Use `my = my.field(...)` to set column-level MySQL options:
+
+```python
+from sqlalchemy import Integer, String, TIMESTAMP
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from dbwarden import MyTableMeta, MyColumnMeta
+from dbwarden.schema import my
+
+class Base(DeclarativeBase):
+    pass
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    email: Mapped[str] = mapped_column(String(255))
+    updated_at: Mapped[str] = mapped_column(TIMESTAMP)
+
+    class Meta(MyTableMeta):
+        class id(MyColumnMeta):
+            comment = "Primary key"
+            my = my.field(unsigned=True)
+
+        class email(MyColumnMeta):
+            my = my.field(charset="utf8mb4", collate="utf8mb4_unicode_ci")
+
+        class updated_at(MyColumnMeta):
+            my = my.field(on_update="CURRENT_TIMESTAMP")
+```
+
+Supported `my.field()` options:
+
+| Keyword | Type | Description | Example |
+|---------|------|-------------|---------|
+| `unsigned` | `bool` | `UNSIGNED` on integer columns | `unsigned=True` |
+| `charset` | `str` | Per-column character set | `charset="utf8mb4"` |
+| `collate` | `str` | Per-column collation | `collate="utf8mb4_unicode_ci"` |
+| `on_update` | `str` | `ON UPDATE` expression (typically for TIMESTAMP) | `on_update="CURRENT_TIMESTAMP"` |
+
+For MariaDB, use `MdbColumnMeta` and `mdb.field()` which extends `my.field()` with `invisible` and `sequence` options.
+
 Cross-backend column attributes (`comment`, `public`) are set directly on the inner class, not on the spec object.

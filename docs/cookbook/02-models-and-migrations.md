@@ -244,6 +244,46 @@ The naming pattern is:
 {database_name}__{4-digit-version}_{auto-generated-description}.sql
 ```
 
+### MySQL-Specific Model Metadata
+
+When your `database_type` is `"mysql"` or `"mariadb"`, DBWarden supports MySQL-specific table and column metadata. The following model shows engine, charset, collation, unsigned columns, and ON UPDATE:
+
+```python
+from dbwarden import MyTableMeta, MyColumnMeta
+from dbwarden.schema import my
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    total: Mapped[float] = mapped_column(Float)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP)
+
+    class Meta(MyTableMeta):
+        my_engine = "InnoDB"
+        my_charset = "utf8mb4"
+        my_collate = "utf8mb4_unicode_ci"
+        my_row_format = "DYNAMIC"
+        comment = "Customer orders"
+
+        class id(MyColumnMeta):
+            comment = "Order ID"
+            my = my.field(unsigned=True)
+
+        class created_at(MyColumnMeta):
+            my = my.field(on_update="CURRENT_TIMESTAMP")
+```
+
+The generated MySQL DDL includes engine, charset, and per-column attributes:
+
+```sql
+CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER UNSIGNED NOT NULL COMMENT 'Order ID',
+    total FLOAT NOT NULL,
+    created_at TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='Customer orders';
+```
+
 ## Step 3: Creating a Manual Migration
 
 Sometimes you need a migration that isn't model-driven — a data backfill, a stored procedure, or a complex SQL operation.

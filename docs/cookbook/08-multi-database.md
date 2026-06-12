@@ -34,19 +34,20 @@ seo:
 
 - How to configure multiple databases in one project
 - How to target specific databases with CLI flags
-- How to manage PostgreSQL + ClickHouse in the same codebase
+- How to manage PostgreSQL + MySQL + ClickHouse in the same codebase
 - How to use `dbwarden settings` for runtime configuration changes
 
 ## Prerequisites
 
-- Docker (for PostgreSQL and ClickHouse containers)
+- Docker (for PostgreSQL, MySQL, and ClickHouse containers)
 - `examples/multi-database/` directory
 
 ## Scenario
 
-A project with two databases:
+A project with three databases:
 
 - **primary** (PostgreSQL) — transactional user data
+- **legacy** (MySQL) — legacy CRM and reporting data
 - **analytics** (ClickHouse) — page view events for analysis
 
 ## Step 1: The Configuration
@@ -63,6 +64,13 @@ primary = database_config(
     model_paths=["app.models.primary"],
 )
 
+legacy = database_config(
+    database_name="legacy",
+    database_type="mysql",
+    database_url_sync="mysql+pymysql://user:password@localhost:3306/legacy",
+    model_paths=["app.models.legacy"],
+)
+
 analytics = database_config(
     database_name="analytics",
     database_type="clickhouse",
@@ -75,6 +83,7 @@ Key rules:
 - Exactly one database must have `default=True` (used when `--database` is omitted)
 - Each database must have separate `model_paths` (no overlap by default)
 - Each database gets its own migration directory under `migrations/`
+- MySQL models use `MyTableMeta` / `MyColumnMeta` for engine, charset, and column metadata
 
 ## Step 2: Start the Databases
 
@@ -141,6 +150,11 @@ dbwarden settings database-add reporting postgresql://localhost:5432/reporting \
     --type postgresql \
     --model-path app.models.reporting
 
+# Or add a MySQL database
+dbwarden settings database-add legacy mysql+pymysql://localhost:3306/legacy \
+    --type mysql \
+    --model-path app.models.legacy
+
 # Remove a database
 dbwarden settings database-remove reporting
 
@@ -164,6 +178,15 @@ primary = database_config(
     model_paths=["app.models.primary"],
 )
 
+legacy = database_config(
+    database_name="legacy",
+    database_type="mysql",
+    database_url_sync="mysql+pymysql://localhost:3306/legacy",
+    dev_database_type="sqlite",
+    dev_database_url="sqlite:///./dev_legacy.db",
+    model_paths=["app.models.legacy"],
+)
+
 analytics = database_config(
     database_name="analytics",
     database_type="clickhouse",
@@ -180,6 +203,59 @@ dbwarden --dev migrate --all
 
 # Dev mode for a specific database
 dbwarden --dev migrate --database analytics
+```
+
+## Step 8: Legacy Database with MySQL Metadata
+
+The legacy MySQL database uses `MyTableMeta` and `MyColumnMeta` for MySQL-specific features. Here is a sample model from `app/models/legacy/customer.py`:
+
+```python
+from sqlalchemy import Integer, String, TIMESTAMP, Text
+from sqlalchemy.orm import Mapped, mapped_column
+from dbwarden import MyTableMeta, MyColumnMeta
+from dbwarden.schema import my
+
+class Customer(Base):
+    __tablename__ = "customers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[str] = mapped_column(TIMESTAMP)
+
+    class Meta(MyTableMeta):
+        my_engine = "InnoDB"
+        my_charset = "utf8mb4"
+        my_collate = "utf8mb4_unicode_ci"
+        comment = "Legacy CRM customers"
+
+        class id(MyColumnMeta):
+            my = my.field(unsigned=True)
+
+        class created_at(MyColumnMeta):
+            my = my.field(on_update="CURRENT_TIMESTAMP")
+```
+
+Migrations for the legacy database work identically to other databases:
+
+```bash
+# Generate migration for MySQL legacy database
+dbwarden make-migrations "add customer table" --database legacy
+
+# Apply to legacy only
+dbwarden migrate --database legacy
+```
+
+The generated DDL will target MySQL-native syntax:
+
+```sql
+CREATE TABLE IF NOT EXISTS customers (
+    id INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
+    name VARCHAR(200) NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Legacy CRM customers';
 ```
 
 ## Key Takeaways
