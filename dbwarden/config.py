@@ -45,6 +45,7 @@ class DatabaseConfig:
     migrations_dir: str = "migrations"
     migration_table: str = DEFAULT_MIGRATION_TABLE
     seed_table: str = DEFAULT_SEEDS_TABLE
+    auto_apply_seeds: bool = False
     postgres_schema: str | None = None
     dev_database_url: str | None = None
     dev_database_type: DatabaseType | None = None
@@ -539,6 +540,7 @@ def _finalize_entries(
             migrations_dir=migrations_dir,
             migration_table=entry.migration_table or DEFAULT_MIGRATION_TABLE,
             seed_table=entry.seed_table or DEFAULT_SEEDS_TABLE,
+            auto_apply_seeds=entry.auto_apply_seeds,
             postgres_schema=None,
             dev_database_url=entry.dev_database_url,
             dev_database_type=entry.dev_database_type,

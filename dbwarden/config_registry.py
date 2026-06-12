@@ -59,6 +59,7 @@ def database_config(
     dev_database_type: DatabaseType | None = None,
     dev_database_url: str | None = None,
     overlap_models: bool = False,
+    auto_apply_seeds: bool = False,
     seed_table: str | None = None,
 ) -> DatabaseHandle:
     from dbwarden.db_handle import DatabaseHandle as _DH
@@ -78,6 +79,7 @@ def database_config(
             dev_database_type=dev_database_type,
             dev_database_url=dev_database_url,
             overlap_models=overlap_models,
+            auto_apply_seeds=auto_apply_seeds,
             seed_table=seed_table,
         )
     )

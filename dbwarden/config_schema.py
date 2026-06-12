@@ -100,6 +100,7 @@ class DatabaseEntry:
     dev_database_type: DatabaseType | None = None
     dev_database_url: str | None = None
     overlap_models: bool = False
+    auto_apply_seeds: bool = False
     seed_table: str | None = field(default=None, validator=_validate_seed_table)
 
 

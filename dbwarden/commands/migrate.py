@@ -147,6 +147,7 @@ def migrate_single(
     backup_dir: str | None = None,
     dry_run: bool = False,
     sandbox: bool = False,
+    apply_seeds: bool = False,
 ) -> None:
     """
     Apply pending migrations to a single database.
@@ -370,6 +371,10 @@ def migrate_single(
             duration = time.time() - start_time
             logger.log_migration_end("ROC", filename, duration)
 
+        # After migrations complete, auto-apply pending seeds if configured or --apply-seeds
+        if config.auto_apply_seeds or apply_seeds:
+            _apply_pending_seeds_after_migrate(db_name)
+
         if versioned_count > 0:
             console.print(
                 f"Migrations completed successfully: {versioned_count} migrations applied.",
@@ -393,6 +398,43 @@ def migrate_single(
             _sandbox_cm.__exit__(None, None, None)
 
 
+def _apply_pending_seeds_after_migrate(db_name: str | None = None) -> None:
+    from dbwarden.engine.seeds import get_pending_seeds, apply_single_seed
+    from dbwarden.repositories.seeds_repo import (
+        create_seeds_table_if_not_exists,
+        get_seeds_directory,
+    )
+    from dbwarden.engine.code_seeds import get_pending_code_seeds, apply_code_seed
+
+    try:
+        seeds_dir = get_seeds_directory(db_name)
+    except Exception:
+        seeds_dir = None
+
+    file_seeds_applied = 0
+    if seeds_dir:
+        create_seeds_table_if_not_exists(db_name)
+        pending = get_pending_seeds(seeds_dir, db_name=db_name)
+        if pending:
+            console.print(f"Applying {len(pending)} pending seed(s)...", style="cyan")
+            for version, (filepath, seed_type) in sorted(pending.items()):
+                apply_single_seed(version, filepath, seed_type, db_name=db_name)
+                file_seeds_applied += 1
+
+    code_seeds = get_pending_code_seeds(db_name)
+    if code_seeds:
+        if not file_seeds_applied:
+            create_seeds_table_if_not_exists(db_name)
+        console.print(f"Applying {len(code_seeds)} pending code seed(s)...", style="cyan")
+        for cls in code_seeds:
+            apply_code_seed(cls, db_name=db_name)
+
+    if file_seeds_applied or code_seeds:
+        console.print("Seeds applied successfully.", style="green")
+    else:
+        console.print("Seeds are up to date.", style="cyan")
+
+
 def migrate_cmd(
     count: int | None = None,
     to_version: str | None = None,
@@ -404,6 +446,7 @@ def migrate_cmd(
     backup_dir: str | None = None,
     dry_run: bool = False,
     sandbox: bool = False,
+    apply_seeds: bool = False,
 ) -> None:
     """
     Apply pending migrations to the database.
@@ -419,6 +462,7 @@ def migrate_cmd(
         backup_dir: Directory for backup files.
         dry_run: Display pending migrations without executing them.
         sandbox: Apply migrations in a temporary sandbox database instead.
+        apply_seeds: Apply pending seeds after migrations (overrides config).
     """
     if count is not None and to_version is not None:
         raise ValueError("Cannot specify both 'count' and 'to-version'.")
@@ -444,6 +488,7 @@ def migrate_cmd(
                     backup_dir=backup_dir,
                     dry_run=dry_run,
                     sandbox=sandbox,
+                    apply_seeds=apply_seeds,
                 )
             except Exception as e:
                 console.print(f"Error migrating database '{db_name}': {e}", style="bold red")
@@ -459,6 +504,7 @@ def migrate_cmd(
             backup_dir=backup_dir,
             dry_run=dry_run,
             sandbox=sandbox,
+            apply_seeds=apply_seeds,
         )
 
 

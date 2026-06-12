@@ -84,6 +84,7 @@ def handle_migrate(
     backup_dir: str | None = None,
     dry_run: bool = False,
     sandbox: bool = False,
+    apply_seeds: bool = False,
 ) -> None:
     """Handle migrate command."""
     migrate_cmd(
@@ -97,6 +98,7 @@ def handle_migrate(
         backup_dir=backup_dir,
         dry_run=dry_run,
         sandbox=sandbox,
+        apply_seeds=apply_seeds,
     )
 
 
@@ -279,11 +281,13 @@ def handle_seed_list(
     database: str | None = None,
     all_databases: bool = False,
     verbose: bool = False,
+    prune: bool = False,
 ) -> None:
     seed_list_cmd(
         database=database,
         all_databases=all_databases,
         verbose=verbose,
+        prune=prune,
     )
 
 
