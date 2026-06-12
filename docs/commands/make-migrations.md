@@ -70,6 +70,7 @@ dbwarden make-migrations --database primary --safe-type-change
 - `--offline`: Use a model state file (`.dbwarden/model_state.json`) instead of a live database or schema snapshot. Run `dbwarden export-models` first to establish a baseline. Useful for CI pipelines without a database service.
 - `--clickhouse-engine-recreate`: Allow automatic ClickHouse table rebuild when engine changes require recreation. Required to generate `recreate_ch_table` operations. See [ClickHouse Engine Recreate](#clickhouse-engine-recreate) below.
 - `--drop-preserved-clickhouse-table` / `--keep-preserved-clickhouse-table`: Control whether the preserved old ClickHouse table is dropped after the engine-recreate swap. If omitted, interactive terminals are prompted; non-TTY preserves by default.
+- `--postgres-auto-using`: Emit an active `USING col::newtype` clause on PostgreSQL `ALTER COLUMN TYPE` statements. Default is a commented-out line for manual review. See the PostgreSQL docs section on Column Type Changes for details.
 - `--type`, `-t`: Output prefix for the generated migration file — `versioned` (default), `ra` / `runs_always`, or `roc` / `runs_on_change`. Use `ra` for SQL that should run every migration cycle (e.g. grants, materialized view refreshes) and `roc` for SQL that should re-run when the file changes (e.g. stored procedures, triggers).
 
 ## Schema Snapshots
@@ -409,7 +410,7 @@ ALTER TABLE users RENAME TO accounts;
 ALTER TABLE accounts RENAME TO users;
 ```
 
-ClickHouse emits a comment-only placeholder since it does not support `ALTER TABLE RENAME`.
+ClickHouse emits `RENAME TABLE old TO new;` (ClickHouse supports this as a standalone statement).
 
 ## Foreign Key and Index Diff
 

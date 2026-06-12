@@ -214,7 +214,7 @@ DBWarden defaults to `CREATE INDEX CONCURRENTLY` to avoid table locking. Pass `-
 
 ### Column Type Changes
 
-Emits `ALTER TABLE t ALTER COLUMN c TYPE newtype`. If a `USING` expression is needed (e.g., casting text to integer), write a manual migration; DBWarden does not auto-generate `USING` clauses.
+Emits `ALTER TABLE t ALTER COLUMN c TYPE newtype` with a commented-out `-- USING col::newtype` line. Pass `--postgres-auto-using` to emit an active `USING` clause. Without the flag, uncomment and verify the USING expression before running the migration against production.
 
 ### Safe Type Change
 

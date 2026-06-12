@@ -170,7 +170,7 @@ See [PostgreSQL Deep Dive](databases/postgresql.md) for the complete reference.
 ### ClickHouse
 
 - HTTP-based wire protocol; DBWarden uses ClickHouse client, not SQLAlchemy session
-- Several DDL operations emit comment placeholders only: table rename, column type change, nullable change, FK, indexes, safe type change
+- DDL operations now mostly auto-generated: table rename, column type change, nullable/LowCardinality changes, projections. FK, standard indexes, and safe type change still emit comment placeholders.
 - Full engine metadata support via `class Meta(CHTableMeta)` with `ChEngineSpec`, `ProjectionSpec`, `CHColumnMeta`
 - Supports materialized views, projections, dictionaries, replicated engines
 - See [ClickHouse Deep Dive](databases/clickhouse.md) for full details

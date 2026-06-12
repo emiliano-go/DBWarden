@@ -70,11 +70,11 @@ PostgreSQL and SQLite (3.25+) support `RENAME COLUMN` natively. DBWarden emits t
 
 | Backend | Syntax | Supported |
 |---------|--------|-----------|
-| PostgreSQL | `ALTER TABLE t ALTER COLUMN c TYPE newtype` | Yes (with optional `USING` clause) |
+| PostgreSQL | `ALTER TABLE t ALTER COLUMN c TYPE newtype` (commented-out `USING` by default, active with `--postgres-auto-using`) | Yes |
 | MySQL / MariaDB | `ALTER TABLE t MODIFY COLUMN c newtype` | Yes |
 | SQLite | Not supported | Comment emitted |
 
-**PostgreSQL**: Emits `ALTER TABLE t ALTER COLUMN c TYPE newtype`. If a `USING` expression is needed (e.g., casting text to integer), you must write a manual migration. DBWarden does not generate `USING` clauses.
+**PostgreSQL**: Emits `ALTER TABLE t ALTER COLUMN c TYPE newtype` with a commented-out `-- USING col::newtype` line. Pass `--postgres-auto-using` on `make-migrations` to emit an active `USING` clause.
 
 **MySQL / MariaDB**: Emits `ALTER TABLE t MODIFY COLUMN c newtype`. Note that `MODIFY COLUMN` requires specifying the entire column definition, not just the type. DBWarden includes only the type in the `MODIFY` statement; if you need additional attributes (e.g., `NOT NULL`, `DEFAULT`), add them manually.
 

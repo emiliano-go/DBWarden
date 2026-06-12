@@ -234,7 +234,7 @@ This normalization is what powers the rename detection: two columns with the sam
 
 ### Column-level change detection
 - **Snapshot required**: Column-level diff (type, nullability, default) only works when a snapshot exists. Without a snapshot, only new and dropped columns are detected.
-- **Backend limits**: Type changes emit different SQL per backend. SQLite and ClickHouse emit comment-only placeholders for type and nullable changes. Default changes work uniformly across all backends.
+- **Backend limits**: Type changes emit different SQL per backend. SQLite emits comment-only placeholders for type and nullable changes. ClickHouse auto-generates `MODIFY COLUMN` for type, nullable, and LowCardinality changes. Default changes work uniformly across all backends.
 
 ### Integrity
 - **Tampered snapshots**: If the checksum does not match, `read_snapshot()` returns `None`, and `make-migrations` falls back to the live database. A warning is logged.

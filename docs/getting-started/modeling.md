@@ -245,12 +245,12 @@ class Order(Base):
 
 Auto-generated migrations handle most cases, but some schema changes still need manual intervention via `dbwarden new`:
 
-- PostgreSQL `USING` clause for type casts (e.g., casting `TEXT` to `INTEGER`). DBWarden emits `ALTER COLUMN ... TYPE` without `USING` add the clause manually if the implicit cast fails.
+- PostgreSQL `USING` clause for type casts (e.g., casting `TEXT` to `INTEGER`). DBWarden emits `ALTER COLUMN ... TYPE` with a commented-out `-- USING col::newtype` line. Pass `--postgres-auto-using` to emit an active `USING` clause.
 - Column renames not caught by the heuristic auto-detection. Use `--rename old_name:new_name` flags for deterministic renames, or rename in a manual migration.
 - Data migrations (backfilling, transforming existing data). DBWarden emits a SQL comment placeholder.
-- ClickHouse structural changes that ClickHouse cannot alter in place (table rename, nullable/low cardinality type changes, MV SELECT statement, dictionary configs, projections, ZK paths). DBWarden emits a SQL comment placeholder.
+- ClickHouse structural changes that require `--clickhouse-engine-recreate` to auto-generate (MV SELECT statement, dictionary configs, ZK paths, replica name). Without the flag, a comment points at the flag.
 
-For these cases run `dbwarden new` and write the SQL by hand.
+For these cases run `dbwarden new` and write the SQL by hand, or use the relevant flag for auto-generation.
 
 ## Best Practices
 

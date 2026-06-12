@@ -393,18 +393,38 @@ ClickHouse executes DDL statements individually. There is no transactional DDL; 
 
 The standard statement ordering applies to ClickHouse. Operations that emit comments (table rename, safe type change) produce zero-effect placeholders. The ordering ensures the upgrade script remains structurally consistent even when backends skip operations.
 
-## What Emits Comments Only
+## Previously Manual Operations Now Auto-Generated
 
-Several DDL operations are not supported by ClickHouse. DBWarden emits SQL comment placeholders suggesting manual action.
+These operations were previously comment-only placeholders. DBWarden now auto-generates SQL for them:
 
-### ALTER TABLE RENAME
+### Table Rename
 
-ClickHouse does not support `ALTER TABLE ... RENAME TO`. A comment is emitted.
+ClickHouse supports `RENAME TABLE ... TO ...`. DBWarden emits real SQL:
 
 ```sql
--- ClickHouse does not support ALTER TABLE RENAME.
--- Manually rename users TO accounts in ClickHouse.
+RENAME TABLE users TO accounts;
 ```
+
+### Nullable / LowCardinality Type Changes
+
+DBWarden computes the target type by stripping Nullable/LowCardinality wrappers from the base type and re-wrapping with the new flags:
+
+```sql
+ALTER TABLE events MODIFY COLUMN payload Nullable(String);
+```
+
+### Projections
+
+DBWarden diffs the projection lists by name and emits native `DROP/ADD PROJECTION`:
+
+```sql
+ALTER TABLE events DROP PROJECTION by_date;
+ALTER TABLE events ADD PROJECTION by_date SELECT event_date, sum(amount) GROUP BY event_date;
+```
+
+## What Emits Comments Only
+
+These operations are not supported by ClickHouse DDL. DBWarden emits comment placeholders or points to available flags:
 
 ### Safe Type Change
 
