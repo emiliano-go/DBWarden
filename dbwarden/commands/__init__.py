@@ -12,6 +12,7 @@ from dbwarden.commands.make_rollback import make_rollback_cmd
 from dbwarden.commands.migrate import migrate_cmd
 from dbwarden.commands.rollback import rollback_cmd
 from dbwarden.commands.snapshot import snapshot_cmd
+from dbwarden.commands.export_seeds import export_seeds_cmd
 from dbwarden.commands.seeds import (
     seed_apply_cmd,
     seed_create_cmd,
@@ -304,4 +305,19 @@ def handle_seed_rollback(
         database=database,
         all_databases=all_databases,
         verbose=verbose,
+    )
+
+
+def handle_seed_export(
+    database: str | None = None,
+    all_databases: bool = False,
+    output_dir: str = "seeds",
+    render_dialect: str | None = None,
+) -> None:
+    """Handle seed export command."""
+    export_seeds_cmd(
+        database=database,
+        all_databases=all_databases,
+        output_dir=output_dir,
+        render_dialect=render_dialect,
     )

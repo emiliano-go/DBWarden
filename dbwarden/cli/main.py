@@ -22,6 +22,7 @@ from dbwarden.commands import (
     handle_rollback,
     handle_seed_apply,
     handle_seed_create,
+    handle_seed_export,
     handle_seed_list,
     handle_seed_rollback,
     handle_snapshot,
@@ -573,6 +574,31 @@ def seed_list(
         all_databases=all_databases,
         verbose=verbose,
         prune=prune,
+    )
+
+
+@seed_app.command("export")
+def seed_export(
+    database: str | None = typer.Option(
+        None, "--database", "-d", help="Target database name"
+    ),
+    all_databases: bool = typer.Option(
+        False, "--all", "-a", help="Export seeds for all configured databases"
+    ),
+    output_dir: str = typer.Option(
+        "seeds", "--output-dir", "-o", help="Output directory for ROC seed files (default: seeds/)"
+    ),
+    render_dialect: str | None = typer.Option(
+        None, "--render-dialect", help="Override literal-rendering dialect (use with caution)",
+    ),
+):
+    """Export code seeds to ROC SQL files for stateless application."""
+    validate_directory()
+    handle_seed_export(
+        database=database,
+        all_databases=all_databases,
+        output_dir=output_dir,
+        render_dialect=render_dialect,
     )
 
 

@@ -38,6 +38,7 @@ Manage seed data for a database.
 - `seed apply`: apply pending seeds (file + code seeds)
 - `seed list`: list seeds and their status
 - `seed rollback`: roll back applied seeds
+- `seed export`: export code seeds to ROC SQL files for stateless production application
 
 ---
 
@@ -125,3 +126,41 @@ dbwarden seed rollback --database primary --to-version 0003
 - `--verbose`, `-v`
 
 See also: [Seed Management](../seeds.md)
+
+---
+
+## `seed export`
+
+Export code seeds to ROC (runs-on-change) SQL files for stateless application. The generated file contains `INSERT ... ON CONFLICT` statements rendered in the target database dialect. ROC files are re-applied when their content checksum changes.
+
+### Usage
+
+```bash
+dbwarden seed export --database primary
+dbwarden seed export --all
+dbwarden seed export --database clickhouse --output-dir ./seeds
+dbwarden seed export --database primary --render-dialect postgresql
+```
+
+### Options
+
+- `--database`, `-d`: target database handle
+- `--all`, `-a`: export seeds for all configured databases
+- `--output-dir`, `-o`: output directory (default: `seeds/`)
+- `--render-dialect`: override literal-rendering dialect (use with caution — emits a warning comment in the generated SQL)
+
+### Behavior
+
+- **Row-based seeds** (`rows = [...]`): each row is rendered as an `INSERT` statement with `ON CONFLICT` matching the seed's `__seed_on_conflict__`
+- **Logic-based seeds** (`generate(session)`): executed in a temporary SQLite database with FK-closure tables created and preceding row-based seeds pre-loaded. The resulting rows are exported as INSERT statements
+- Seeds are ordered by FK dependency (topological sort) so foreign-key-safe insert order is preserved
+
+### Dialect requirement
+
+Exporting requires the same dialect packages as connecting to that database. For ClickHouse, install `clickhouse-sqlalchemy`. Missing packages produce a clear error at export time.
+
+### Non-handled problems
+
+- Removed rows are not deleted (no purge on re-export)
+- Logic seeds that depend on other logic seeds' output are unsupported
+- Non-deterministic `generate()` methods produce a new checksum every export

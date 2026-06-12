@@ -256,6 +256,18 @@ dbwarden seed rollback --all
 
 Options: `--database`, `--count`, `--to-version`, `--all`, `--verbose`
 
+### `seed export`
+
+```bash
+dbwarden seed export --database primary
+dbwarden seed export --all
+dbwarden seed export --database clickhouse --output-dir ./seeds
+```
+
+Export code seeds to ROC SQL files for stateless production application.
+
+Options: `--database`/`-d`, `--all`/`-a`, `--output-dir`/`-o` (default `seeds/`), `--render-dialect`
+
 ## Inspection and diagnostics
 
 ### `status`

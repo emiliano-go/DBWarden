@@ -368,6 +368,28 @@ This helps detect accidental changes to already-applied seeds.
 
 ---
 
+## Exporting Seeds for Production
+
+Code seeds require your full application environment to execute. For Dockerized deployments where you don't want to copy the application code into a container just to seed data, use `dbwarden seed export` to produce stateless ROC (runs-on-change) SQL files.
+
+```bash
+dbwarden seed export --database clickhouse
+```
+This writes `seeds/ROC__clickhouse__code_seeds.sql` containing `INSERT ... ON CONFLICT` statements rendered in the target database dialect. In production, apply with:
+```bash
+dbwarden seed apply --database clickhouse
+```
+
+Because the file is ROC, updating the code seed and re-exporting produces a new content checksum, which triggers re-application. The `ON CONFLICT DO UPDATE` clause handles updating existing rows — no need to delete and recreate.
+
+**Non-handled problems:**
+
+- Rows removed from a code seed are not automatically deleted in the target database
+- Logic seeds that depend on other logic seeds' output are not supported (preceding row-based seeds are pre-loaded, but logic-to-logic ordering is not)
+- Non-deterministic `generate()` methods (e.g. using `datetime.now()`) produce a new checksum every export, causing re-apply on every deploy — acceptable for idempotent upserts, wasteful for pure inserts. Use deterministic `generate()` where possible
+
+**Dialect requirement:** Exporting requires the same dialect packages as connecting to that database. For ClickHouse, install `clickhouse-sqlalchemy`. Missing packages produce a clear error at export time.
+
 ## Seeds and Migrations
 
 Seeds are independent from migrations. You can:

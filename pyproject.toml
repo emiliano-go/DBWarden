@@ -82,3 +82,9 @@ python_files = ["test_*.py"]
 
 [tool.uv]
 environments = ["sys_platform == 'linux'"]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "typer",
+]
