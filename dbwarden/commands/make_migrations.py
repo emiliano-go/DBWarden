@@ -252,9 +252,13 @@ def get_pending_migration_statements(migrations_dir: str) -> set[str]:
 
 def _run_offline_migrations(
     description: str | None = None, database: str | None = None, migration_type: str = "versioned",
+    clickhouse_engine_recreate: bool = False,
+    drop_preserved_clickhouse_table: bool | None = None,
+    rename_flags: list[str] | None = None,
+    rename_table_flags: list[str] | None = None,
 ) -> None:
-    from dbwarden.engine.offline import diff_model_states, model_state_to_dict
-    from dbwarden.engine.snapshot import snapshot_diff_to_sql
+    from dbwarden.engine.offline import diff_model_states, model_state_to_dict, normalize_model_state
+    from dbwarden.engine.snapshot import snapshot_diff_to_sql, _apply_rename_intents
 
     config = get_database(database)
     multi_config = get_multi_db_config()
@@ -280,7 +284,7 @@ def _run_offline_migrations(
         return
 
     try:
-        prev_state = json.loads(state_path.read_text())
+        prev_state = normalize_model_state(json.loads(state_path.read_text()))
     except json.JSONDecodeError:
         console.print("Error: .dbwarden/model_state.json contains invalid JSON.", style="red")
         console.print("Run 'dbwarden export-models' again to regenerate the state file.", style="yellow")
@@ -294,8 +298,51 @@ def _run_offline_migrations(
 
     upgrade_ops, rollback_ops = diff_model_states(prev_state, current_state)
 
+    # --- Column rename flag processing ---
+    rename_intents: list[RenameIntent] = []
+    if rename_flags:
+        rename_intents = _parse_rename_flags(rename_flags)
+
+    confirmed_renames: set[tuple[str, str, str]] = set()
+    resolved_from_map: dict[tuple[str, str, str], str] = {}
+
+    for intent in rename_intents:
+        key = (intent.table, intent.old_name, intent.new_name)
+        confirmed_renames.add(key)
+        resolved_from_map[key] = "rename_flag"
+
+    if confirmed_renames:
+        upgrade_ops, rollback_ops = _apply_rename_intents(
+            upgrade_ops, rollback_ops, confirmed_renames, resolved_from_map
+        )
+
+    # --- Table rename flag processing ---
+    confirmed_table_intents: set[tuple[str, str]] = set()
+    table_resolved_from_map: dict[tuple[str, str], str] = {}
+
+    if rename_table_flags:
+        table_intents = _parse_rename_table_flags(rename_table_flags)
+        for intent in table_intents:
+            key = (intent["old_table"], intent["new_table"])
+            confirmed_table_intents.add(key)
+            table_resolved_from_map[key] = "rename_flag"
+
+    _check_recreate_rename_conflict(upgrade_ops, confirmed_table_intents)
+
+    if confirmed_table_intents:
+        table_rename_ops = _build_table_rename_ops(confirmed_table_intents, table_resolved_from_map)
+        upgrade_ops = table_rename_ops["upgrade"] + upgrade_ops
+        rollback_ops = table_rename_ops["rollback"] + rollback_ops
+
+    _resolve_clickhouse_recreate_ops(
+        upgrade_ops,
+        rollback_ops,
+        clickhouse_engine_recreate=clickhouse_engine_recreate,
+        drop_preserved_clickhouse_table=drop_preserved_clickhouse_table,
+    )
+
     if not upgrade_ops:
-        console.print("No new migrations to generate - all models already covered by existing migrations.", style="cyan")
+        console.print("No offline schema changes detected between model_state.json and current models.", style="cyan")
         return
 
     from dbwarden.engine.version import get_migration_filepaths_by_version
@@ -305,7 +352,7 @@ def _run_offline_migrations(
     )
 
     if not upgrade_sql.strip():
-        console.print("No new migrations to generate - all models already covered by existing migrations.", style="cyan")
+        console.print("No offline schema changes detected between model_state.json and current models.", style="cyan")
         return
 
     from dbwarden.engine.version import get_migrations_directory as _get_migrations_dir
@@ -378,6 +425,8 @@ def make_migrations_cmd(
     concurrent: bool = True,
     offline: bool = False,
     migration_type: str = "versioned",
+    clickhouse_engine_recreate: bool = False,
+    drop_preserved_clickhouse_table: bool | None = None,
 ) -> None:
     """
     Auto-generate SQL migration from SQLAlchemy models.
@@ -399,6 +448,10 @@ def make_migrations_cmd(
     if offline:
         _run_offline_migrations(
             description=description, database=database, migration_type=migration_type,
+            clickhouse_engine_recreate=clickhouse_engine_recreate,
+            drop_preserved_clickhouse_table=drop_preserved_clickhouse_table,
+            rename_flags=rename_flags,
+            rename_table_flags=rename_table_flags,
         )
         return
 
@@ -568,6 +621,8 @@ def make_migrations_cmd(
         confirmed_table_intents=confirmed_table_intents,
         table_resolved_from_map=table_resolved_from_map,
         concurrent=concurrent,
+        clickhouse_engine_recreate=clickhouse_engine_recreate,
+        drop_preserved_clickhouse_table=drop_preserved_clickhouse_table,
     )
 
     safe_desc = _resolve_migration_description(description, changes)
@@ -654,6 +709,53 @@ def build_migration_plan(
     }
 
 
+def _resolve_clickhouse_recreate_ops(
+    upgrade_ops: list[dict[str, Any]],
+    rollback_ops: list[dict[str, Any]],
+    clickhouse_engine_recreate: bool,
+    drop_preserved_clickhouse_table: bool | None,
+) -> None:
+    recreate_ops = [op for op in upgrade_ops if op.get("type") == "recreate_ch_table"]
+    if not recreate_ops:
+        return
+    if not clickhouse_engine_recreate:
+        tables = ", ".join(sorted(op["table"] for op in recreate_ops))
+        raise ValueError(
+            f"ClickHouse engine change detected for {tables}. Rerun with --clickhouse-engine-recreate to generate a rebuild migration."
+        )
+
+    drop_old = drop_preserved_clickhouse_table
+    if drop_old is None and sys.stdin.isatty():
+        answer = input(
+            "Drop preserved old ClickHouse table after swap? [y/N]: "
+        ).strip().lower()
+        drop_old = answer in ("y", "yes")
+    if drop_old is None:
+        drop_old = False
+
+    for op in upgrade_ops:
+        if op.get("type") == "recreate_ch_table":
+            op["drop_old_after_swap"] = drop_old
+    for op in rollback_ops:
+        if op.get("type") == "recreate_ch_table":
+            op["drop_old_after_swap"] = drop_old
+
+
+def _check_recreate_rename_conflict(
+    ops: list[dict[str, Any]],
+    confirmed_table_intents: set[tuple[str, str]],
+) -> None:
+    recreate_tables = {op["table"] for op in ops if op.get("type") == "recreate_ch_table"}
+    rename_old_tables = {old for old, _ in confirmed_table_intents}
+    conflict = recreate_tables & rename_old_tables
+    if conflict:
+        names = ", ".join(sorted(conflict))
+        raise ValueError(
+            f"Table(s) {names} have both a rename and an engine change in the same migration. "
+            "Perform the rename and engine change as separate migrations."
+        )
+
+
 def _build_table_rename_ops(
     confirmed_table_intents: set[tuple[str, str]],
     table_resolved_from_map: dict[tuple[str, str], str] | None = None,
@@ -705,6 +807,8 @@ def generate_migration_sql(
     confirmed_table_intents: set[tuple[str, str]] | None = None,
     table_resolved_from_map: dict[tuple[str, str], str] | None = None,
     concurrent: bool = True,
+    clickhouse_engine_recreate: bool = False,
+    drop_preserved_clickhouse_table: bool | None = None,
 ) -> tuple[str, str, list[Change]]:
     """
     Generate upgrade and rollback SQL from table definitions.
@@ -765,10 +869,18 @@ def generate_migration_sql(
                     upgrade_ops, rollback_ops, confirmed_renames, resolved_from_map
                 )
 
+            _check_recreate_rename_conflict(upgrade_ops, confirmed_table_intents)
+
             # Prepend table rename ops to the diff output
             table_rename_ops = _build_table_rename_ops(confirmed_table_intents, table_resolved_from_map)
             upgrade_ops = table_rename_ops["upgrade"] + upgrade_ops
             rollback_ops = table_rename_ops["rollback"] + rollback_ops
+            _resolve_clickhouse_recreate_ops(
+                upgrade_ops,
+                rollback_ops,
+                clickhouse_engine_recreate=clickhouse_engine_recreate,
+                drop_preserved_clickhouse_table=drop_preserved_clickhouse_table,
+            )
 
             upgrade_sql, rollback_sql, changes = snapshot_diff_to_sql(
                 upgrade_ops, rollback_ops, database=database, db_name=db_name,

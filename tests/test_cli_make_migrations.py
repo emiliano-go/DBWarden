@@ -95,3 +95,18 @@ def test_make_migrations_with_database():
         assert result.exit_code == 0
         _, kwargs = mock.call_args
         assert kwargs["database"] == "primary"
+
+
+def test_make_migrations_clickhouse_recreate_flags():
+    runner = CliRunner()
+    with patch("dbwarden.cli.main.handle_make_migrations") as mock:
+        with patch("dbwarden.cli.main.validate_directory"):
+            result = runner.invoke(app, [
+                "make-migrations", "recreate ch engine",
+                "--clickhouse-engine-recreate",
+                "--drop-preserved-clickhouse-table",
+            ])
+        assert result.exit_code == 0
+        _, kwargs = mock.call_args
+        assert kwargs["clickhouse_engine_recreate"] is True
+        assert kwargs["drop_preserved_clickhouse_table"] is True

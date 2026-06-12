@@ -68,6 +68,8 @@ dbwarden make-migrations --database primary --safe-type-change
 - `--safe-type-change`: Use a multi-step strategy for type changes: add a temporary column, data migration comment, verification step, then drop-and-rename. Useful for databases where `ALTER COLUMN TYPE` would lock the table.
 - `--concurrent` / `--no-concurrent`: Enable or disable `CREATE INDEX CONCURRENTLY` for PostgreSQL (default: `--concurrent`). Use `--no-concurrent` when the migration runs inside a transaction block.
 - `--offline`: Use a model state file (`.dbwarden/model_state.json`) instead of a live database or schema snapshot. Run `dbwarden export-models` first to establish a baseline. Useful for CI pipelines without a database service.
+- `--clickhouse-engine-recreate`: Allow automatic ClickHouse table rebuild when engine changes require recreation. Required to generate `recreate_ch_table` operations. See [ClickHouse Engine Recreate](#clickhouse-engine-recreate) below.
+- `--drop-preserved-clickhouse-table` / `--keep-preserved-clickhouse-table`: Control whether the preserved old ClickHouse table is dropped after the engine-recreate swap. If omitted, interactive terminals are prompted; non-TTY preserves by default.
 - `--type`, `-t`: Output prefix for the generated migration file — `versioned` (default), `ra` / `runs_always`, or `roc` / `runs_on_change`. Use `ra` for SQL that should run every migration cycle (e.g. grants, materialized view refreshes) and `roc` for SQL that should re-run when the file changes (e.g. stored procedures, triggers).
 
 ## Schema Snapshots
@@ -228,6 +230,82 @@ For databases that don't support in-place `ALTER COLUMN TYPE` (or when you want 
 | MySQL / MariaDB | Yes | Multi-step temp column strategy |
 | SQLite | No | Comment emitted (SQLite cannot drop columns before 3.35.0 and has limited ALTER TABLE) |
 | ClickHouse | No | Comment emitted |
+
+## ClickHouse Engine Recreate
+
+When a ClickHouse table's engine changes (e.g., `MergeTree` → `ReplicatedMergeTree`), it cannot be altered in-place. DBWarden supports two strategies depending on the table type.
+
+### Table strategy (CREATE + INSERT + RENAME)
+
+For regular `MergeTree`-family tables, DBWarden generates a multi-step operation:
+
+1. Create the new table with the new engine as `<table>__dbw_new`
+2. Copy data: `INSERT INTO __dbw_new SELECT ... FROM <table>`
+3. Swap: `RENAME TABLE <table> TO <table>__dbw_old, <table>__dbw_new TO <table>`
+4. (optional) Drop the preserved old table
+
+**Materialized view targets:** If a materialized view targets the table being recreated (via `TO <table>`), the MV is automatically detached before and reattached after the swap:
+
+```sql
+DETACH TABLE events_mv;
+CREATE TABLE events__dbw_new (...);
+INSERT INTO events__dbw_new SELECT ... FROM events;
+RENAME TABLE events TO events__dbw_old, events__dbw_new TO events;
+ATTACH TABLE events_mv;
+```
+
+**Column renames:** If the table also has column renames, these should be performed in a separate migration (engine recreate and column rename in the same migration is not supported).
+
+### Dictionary strategy (DROP + CREATE)
+
+Dictionaries are recreated with a simple DROP + CREATE since ClickHouse does not support `RENAME DICTIONARY`:
+
+```sql
+-- upgrade
+DROP DICTIONARY my_dict;
+CREATE DICTIONARY my_dict (... ReplicatedMergeTree() ...);
+
+-- rollback
+DROP DICTIONARY my_dict;
+CREATE DICTIONARY my_dict (... MergeTree() ...);
+```
+
+> ⚠️ Dictionaries lose their cached data on recreation. The data will be re-fetched from the source.
+
+### Materialized views and unsupported objects
+
+Engine recreation is **blocked** for tables that are themselves materialized views (`ch_select_statement` or `ch_object_type = materialized_view`). Use `--force` to skip this check and handle the DROP/CREATE manually.
+
+Projections (`ch_projections`) are automatically preserved through the table rebuild and do not block it.
+
+### Safety
+
+| Object type | Safety | Notes |
+|------------|--------|-------|
+| Regular table with engine change | INFO | Preserved old table by default |
+| Table with dependent MVs | INFO | MVs detached before, reattached after |
+| Dictionary | CRITICAL | Cached data lost on DROP/CREATE |
+
+### Flags
+
+#### `--clickhouse-engine-recreate`
+
+**Required** to generate engine recreation operations. Without this flag, any detected engine change raises an error:
+
+```
+ClickHouse table 'events' cannot be automatically recreated:
+is a dictionary (current). This operation requires manual DROP/CREATE,
+or use --force to skip this check.
+```
+
+#### `--drop-preserved-clickhouse-table` / `--keep-preserved-clickhouse-table`
+
+Controls whether the preserved old table (renamed to `<table>__dbw_old`) is dropped immediately after the swap:
+
+- `--drop-preserved-clickhouse-table`: Drop the old table after successful swap
+- `--keep-preserved-clickhouse-table`: Keep the old table (default in non-TTY)
+
+Interactive terminals are prompted to confirm. The preserved table name always ends with `__dbw_old` for easy identification.
 
 ### DROP COLUMN warning
 
@@ -484,6 +562,7 @@ When no description is provided, DBWarden automatically generates a descriptive 
 | Single DROP FOREIGN KEY | `drop_foreign_key_tablename` |
 | Single ADD INDEX | `add_index_tablename_col` |
 | Single DROP INDEX | `drop_index_tablename` |
+| Single RECREATE CH TABLE | `recreate_ch_table_tablename` |
 | ADD + DROP (same table) | `alter_tablename_col1_col2` |
 | Changes across tables | `add_column_users_email_and_1_more_tables` |
 | Many targets | `add_columns_tablename_col1_col2_and_3_more` |

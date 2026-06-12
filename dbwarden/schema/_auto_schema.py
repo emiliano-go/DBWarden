@@ -76,7 +76,10 @@ def _infer_schema_config(cls: type) -> SchemaConfig:
 
 
 def _merge_dbwarden_into_schemas(cls: type) -> None:
-    from pydantic import BaseModel
+    try:
+        from pydantic import BaseModel
+    except ImportError:
+        return
 
     for schema_attr in ["Schema", "CreateSchema", "UpdateSchema", "PublicSchema"]:
         schema_cls = getattr(cls, schema_attr, None)

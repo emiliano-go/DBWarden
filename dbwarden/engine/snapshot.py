@@ -1528,13 +1528,64 @@ _CH_OPTION_KEYS: frozenset[str] = frozenset({
 })
 
 
+def _check_ch_engine_recreate_allowed(snap_spec: dict, model_spec: dict, table_name: str) -> None:
+    reasons: list[str] = []
+    for spec, label in [(snap_spec, "current"), (model_spec, "new")]:
+        if spec.get("ch_object_type") == "materialized_view" and spec.get("ch_to_table"):
+            reasons.append(f"is a materialized view with 'TO {spec['ch_to_table']}' ({label})")
+        elif spec.get("ch_select_statement") and spec.get("ch_to_table"):
+            reasons.append(f"has a SELECT statement and 'TO' target ({label})")
+    if reasons:
+        raise ValueError(
+            f"ClickHouse table '{table_name}' cannot be automatically recreated: "
+            f"{'; '.join(reasons)}. "
+            "Handle manually or use --force to skip this check."
+        )
+
+
 def _diff_ch_options(
     snap_opts: dict,
     model_opts: dict,
     table_name: str,
     upgrade_ops: list[dict],
     rollback_ops: list[dict],
+    snapshot_table: dict[str, Any] | None = None,
+    model_table: ModelTable | None = None,
 ) -> None:
+    if snap_opts.get("ch_engine") != model_opts.get("ch_engine") and snap_opts.get("ch_engine") is not None and model_opts.get("ch_engine") is not None and snapshot_table is not None and model_table is not None:
+        _check_ch_engine_recreate_allowed(snap_opts, model_opts, table_name)
+        from dbwarden.engine.offline import _table_to_state_entry
+
+        upgrade_ops.append({
+            "type": "recreate_ch_table",
+            "table": table_name,
+            "reason": "ch_engine",
+            "from_table": {
+                "name": table_name,
+                **snapshot_table,
+                "backend_table_spec": {"backend": "clickhouse", **snap_opts},
+            },
+            "to_table": _table_to_state_entry(model_table),
+            "drop_old_after_swap": False,
+            "preserve_old_suffix": "__dbw_old",
+            "failed_suffix": "__dbw_failed",
+        })
+        rollback_ops.append({
+            "type": "recreate_ch_table",
+            "table": table_name,
+            "reason": "ch_engine",
+            "from_table": _table_to_state_entry(model_table),
+            "to_table": {
+                "name": table_name,
+                **snapshot_table,
+                "backend_table_spec": {"backend": "clickhouse", **snap_opts},
+            },
+            "drop_old_after_swap": False,
+            "preserve_old_suffix": "__dbw_failed",
+            "failed_suffix": "__dbw_old",
+        })
+        return
+
     ch_changes: dict[str, dict[str, Any]] = {}
     for key in _CH_OPTION_KEYS:
         snap_val = snap_opts.get(key)
@@ -1694,7 +1745,7 @@ def diff_models_against_snapshot(
 
         snap_ch_options = snap_table.get("ch_options") or snap_table.get("clickhouse_options") or {}
         model_ch_options = table.clickhouse_options or {}
-        _diff_ch_options(snap_ch_options, model_ch_options, table.name, upgrade_ops, rollback_ops)
+        _diff_ch_options(snap_ch_options, model_ch_options, table.name, upgrade_ops, rollback_ops, snapshot_table=snap_table, model_table=table)
 
         dropped_cols = []
         for col_name in snap_columns:
@@ -2172,6 +2223,24 @@ def diff_models_against_snapshot(
 
     # --- End Enum ADD VALUE diff ---
 
+    # --- Annotate recreate_ch_table ops with dependent MVs ---
+    for op in upgrade_ops + rollback_ops:
+        if op.get("type") == "recreate_ch_table":
+            tname = op["table"]
+            mvs = sorted(
+                mt.name for mt in model_tables
+                if mt.clickhouse_options.get("ch_to_table") == tname
+                and snapshot_tables.get(mt.name, {}).get("clickhouse_options", {}).get("ch_to_table") == tname
+            )
+            if mvs:
+                op["dependent_mvs"] = mvs
+
+    recreate_tables = {op["table"] for op in upgrade_ops if op.get("type") == "recreate_ch_table"}
+    if recreate_tables:
+        allowed = {"recreate_ch_table", "drop_table", "create_table", "rename_table", "alter_enum_add_value"}
+        upgrade_ops = [op for op in upgrade_ops if op.get("table") not in recreate_tables or op.get("type") in allowed]
+        rollback_ops = [op for op in rollback_ops if op.get("table") not in recreate_tables or op.get("type") in allowed]
+
     return upgrade_ops, rollback_ops
 
 
@@ -2281,6 +2350,7 @@ def snapshot_diff_to_sql(
         generate_drop_object_sql,
         _format_clickhouse_expression,
     )
+    from dbwarden.engine.offline import reconstruct_model_table
     from dbwarden.engine.migration_name import Change
 
     statements: list[MigrationStatement] = []
@@ -2305,8 +2375,12 @@ def snapshot_diff_to_sql(
                 operation="rename_table", table=op["old_table"], target=op["new_table"],
                 resolved_from=op.get("resolved_from"),
             ))
+        elif op["type"] == "recreate_ch_table":
+            for stmt in _build_clickhouse_recreate_table_sql(op, db_name):
+                statements.append(stmt)
+            changes.append(Change(operation="recreate_ch_table", table=op["table"]))
         elif op["type"] == "create_table":
-            table = _find_model_table(op["table"], db_name=db_name)
+            table = reconstruct_model_table(op["state_table"]) if op.get("state_table") else _find_model_table(op["table"], db_name=db_name)
             if table:
                 sql = generate_create_table_sql(table, db_name)
                 statements.append(MigrationStatement(
@@ -2316,11 +2390,12 @@ def snapshot_diff_to_sql(
                 ))
                 changes.append(Change(operation="create_table", table=op["table"]))
         elif op["type"] == "drop_table":
-            drop_table = ModelTable(name=op["table"], columns=[], object_type=op.get("object_type", "table"))
+            drop_table = reconstruct_model_table(op["state_table"]) if op.get("state_table") else ModelTable(name=op["table"], columns=[], object_type=op.get("object_type", "table"))
+            rollback_sql = generate_create_table_sql(drop_table, db_name) if op.get("state_table") else f"CREATE TABLE {op['table']} (/* see .dbwarden/schemas/ for DDL */)"
             statements.append(MigrationStatement(
                 order=StatementOrder.DROP_TABLE,
                 upgrade_sql=generate_drop_object_sql(drop_table),
-                rollback_sql=f"CREATE TABLE {op['table']} (/* see .dbwarden/schemas/ for DDL */)",
+                rollback_sql=rollback_sql,
             ))
             changes.append(Change(operation="drop_table", table=op["table"]))
         elif op["type"] == "rename_column":
@@ -2758,6 +2833,120 @@ def snapshot_diff_to_sql(
 
     upgrade_sql, rollback_sql = _assemble_migration(statements)
     return upgrade_sql, rollback_sql, changes
+
+
+def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None) -> list[MigrationStatement]:
+    from dbwarden.engine.model_discovery import generate_create_table_sql, generate_drop_object_sql
+    from dbwarden.engine.offline import reconstruct_model_table
+
+    table_name = op["table"]
+    from_table = reconstruct_model_table(op["from_table"])
+    to_table = reconstruct_model_table(op["to_table"])
+
+    # Dictionaries use DROP + CREATE instead of rename swap
+    if from_table.object_type == "dictionary" or to_table.object_type == "dictionary":
+        upgrade_sql = (
+            f"{generate_drop_object_sql(from_table)};\n"
+            f"{generate_create_table_sql(to_table, db_name)};"
+        )
+        rollback_sql = (
+            f"{generate_drop_object_sql(to_table)};\n"
+            f"{generate_create_table_sql(from_table, db_name)};"
+        )
+        return [
+            MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_OPTIONS,
+                upgrade_sql=upgrade_sql,
+                rollback_sql=rollback_sql,
+            )
+        ]
+
+    # Inline materialized views (no TO target) use DROP VIEW + CREATE MATERIALIZED VIEW
+    if from_table.object_type == "materialized_view" or to_table.object_type == "materialized_view":
+        upgrade_sql = (
+            f"{generate_drop_object_sql(from_table)};\n"
+            f"{generate_create_table_sql(to_table, db_name)};"
+        )
+        rollback_sql = (
+            f"{generate_drop_object_sql(to_table)};\n"
+            f"{generate_create_table_sql(from_table, db_name)};"
+        )
+        return [
+            MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_OPTIONS,
+                upgrade_sql=upgrade_sql,
+                rollback_sql=rollback_sql,
+            )
+        ]
+
+    new_name = f"{table_name}__dbw_new"
+    preserved_name = f"{table_name}{op.get('preserve_old_suffix', '__dbw_old')}"
+    failed_name = f"{table_name}{op.get('failed_suffix', '__dbw_failed')}"
+    drop_old_after_swap = bool(op.get("drop_old_after_swap", False))
+    dependent_mvs: list[str] = op.get("dependent_mvs", [])
+
+    copy_columns = [col.name for col in to_table.columns if any(src.name == col.name for src in from_table.columns)]
+    copy_cols_sql = ", ".join(copy_columns)
+
+    upgrade_parts = []
+    if dependent_mvs:
+        upgrade_parts.append("; ".join(f"DETACH TABLE {mv}" for mv in dependent_mvs) + ";")
+    upgrade_parts += [
+        generate_create_table_sql(ModelTable(
+            name=new_name,
+            columns=to_table.columns,
+            clickhouse_options=to_table.clickhouse_options,
+            object_type=to_table.object_type,
+            foreign_keys=to_table.foreign_keys,
+            indexes=to_table.indexes,
+            comment=to_table.comment,
+            checks=to_table.checks,
+            uniques=to_table.uniques,
+            excludes=to_table.excludes,
+            pg_table=to_table.pg_table,
+        ), db_name),
+        f"INSERT INTO {new_name} ({copy_cols_sql}) SELECT {copy_cols_sql} FROM {table_name};",
+        f"RENAME TABLE {table_name} TO {preserved_name}, {new_name} TO {table_name};",
+    ]
+    if drop_old_after_swap:
+        upgrade_parts.append(generate_drop_object_sql(ModelTable(name=preserved_name, columns=[], object_type=to_table.object_type)))
+    else:
+        upgrade_parts.append(f"-- Preserved previous table as {preserved_name}. Drop it after validation:\n-- DROP TABLE {preserved_name};")
+
+    if dependent_mvs:
+        upgrade_parts.append("; ".join(f"ATTACH TABLE {mv}" for mv in dependent_mvs) + ";")
+
+    rollback_parts = []
+    if dependent_mvs:
+        rollback_parts.append("; ".join(f"DETACH TABLE {mv}" for mv in dependent_mvs) + ";")
+    rollback_parts.append(generate_create_table_sql(ModelTable(
+        name=failed_name,
+        columns=from_table.columns,
+        clickhouse_options=from_table.clickhouse_options,
+        object_type=from_table.object_type,
+        foreign_keys=from_table.foreign_keys,
+        indexes=from_table.indexes,
+        comment=from_table.comment,
+        checks=from_table.checks,
+        uniques=from_table.uniques,
+        excludes=from_table.excludes,
+        pg_table=from_table.pg_table,
+    ), db_name))
+    rollback_copy_columns = [col.name for col in from_table.columns if any(dst.name == col.name for dst in to_table.columns)]
+    rollback_cols_sql = ", ".join(rollback_copy_columns)
+    rollback_parts.append(f"INSERT INTO {failed_name} ({rollback_cols_sql}) SELECT {rollback_cols_sql} FROM {table_name};")
+    rollback_parts.append(f"RENAME TABLE {table_name} TO {preserved_name}, {failed_name} TO {table_name};")
+    if dependent_mvs:
+        rollback_parts.append("; ".join(f"ATTACH TABLE {mv}" for mv in dependent_mvs) + ";")
+    rollback_parts.append(f"-- Preserved forward table as {preserved_name}. Drop it after validation:\n-- DROP TABLE {preserved_name};")
+
+    return [
+        MigrationStatement(
+            order=StatementOrder.ALTER_TABLE_OPTIONS,
+            upgrade_sql="\n".join(upgrade_parts),
+            rollback_sql="\n".join(rollback_parts),
+        )
+    ]
 
 
 def _build_fk_name(table: str, columns: list[str]) -> str:

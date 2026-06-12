@@ -5,6 +5,8 @@ from pathlib import Path
 
 from dbwarden.commands.make_migrations import (
     RenameIntent,
+    _check_recreate_rename_conflict,
+    _resolve_clickhouse_recreate_ops,
     _parse_rename_flags,
     _parse_rename_table_flags,
     _validate_table_rename_intents,
@@ -364,6 +366,53 @@ def test_build_plan_operation_rename_table():
     assert op["new_name"] == "accounts"
     assert op["old_table"] == "users"
     assert op["resolved_from"] == "rename_flag"
+
+
+def test_resolve_clickhouse_recreate_ops_requires_flag():
+    import pytest
+    upgrade = [{"type": "recreate_ch_table", "table": "events"}]
+    rollback = [{"type": "recreate_ch_table", "table": "events"}]
+    with pytest.raises(ValueError, match="--clickhouse-engine-recreate"):
+        _resolve_clickhouse_recreate_ops(upgrade, rollback, False, None)
+
+
+def test_resolve_clickhouse_recreate_ops_non_tty_preserves_old():
+    upgrade = [{"type": "recreate_ch_table", "table": "events"}]
+    rollback = [{"type": "recreate_ch_table", "table": "events"}]
+    _resolve_clickhouse_recreate_ops(upgrade, rollback, True, None)
+    assert upgrade[0]["drop_old_after_swap"] is False
+    assert rollback[0]["drop_old_after_swap"] is False
+
+
+def test_resolve_clickhouse_recreate_ops_explicit_drop():
+    upgrade = [{"type": "recreate_ch_table", "table": "events"}]
+    rollback = [{"type": "recreate_ch_table", "table": "events"}]
+    _resolve_clickhouse_recreate_ops(upgrade, rollback, True, True)
+    assert upgrade[0]["drop_old_after_swap"] is True
+    assert rollback[0]["drop_old_after_swap"] is True
+
+
+def test_resolve_clickhouse_recreate_ops_tty_prompt_yes(monkeypatch):
+    upgrade = [{"type": "recreate_ch_table", "table": "events"}]
+    rollback = [{"type": "recreate_ch_table", "table": "events"}]
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("builtins.input", lambda _prompt: "y")
+    _resolve_clickhouse_recreate_ops(upgrade, rollback, True, None)
+    assert upgrade[0]["drop_old_after_swap"] is True
+
+
+def test_check_recreate_rename_conflict_raises():
+    ops = [{"type": "recreate_ch_table", "table": "events"}]
+    intents = {("events", "events_new")}
+    import pytest
+    with pytest.raises(ValueError, match="rename and an engine change"):
+        _check_recreate_rename_conflict(ops, intents)
+
+
+def test_check_recreate_rename_conflict_ok():
+    ops = [{"type": "recreate_ch_table", "table": "events"}]
+    intents: set[tuple[str, str]] = set()
+    _check_recreate_rename_conflict(ops, intents)  # no raise
 
 
 def test_generate_migration_sql_with_table_rename():

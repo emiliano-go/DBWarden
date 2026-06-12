@@ -44,6 +44,8 @@ def handle_make_migrations(
     concurrent: bool = True,
     offline: bool = False,
     migration_type: str = "versioned",
+    clickhouse_engine_recreate: bool = False,
+    drop_preserved_clickhouse_table: bool | None = None,
 ) -> None:
     """Handle make-migrations command."""
     make_migrations_cmd(
@@ -57,6 +59,8 @@ def handle_make_migrations(
         concurrent=concurrent,
         offline=offline,
         migration_type=migration_type,
+        clickhouse_engine_recreate=clickhouse_engine_recreate,
+        drop_preserved_clickhouse_table=drop_preserved_clickhouse_table,
     )
 
 

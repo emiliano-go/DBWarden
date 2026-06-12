@@ -185,6 +185,16 @@ def make_migrations(
         "--offline",
         help="Use model state file instead of live database (requires export-models first)",
     ),
+    clickhouse_engine_recreate: bool = typer.Option(
+        False,
+        "--clickhouse-engine-recreate",
+        help="Allow automatic ClickHouse table rebuild when engine changes require recreation",
+    ),
+    drop_preserved_clickhouse_table: bool | None = typer.Option(
+        None,
+        "--drop-preserved-clickhouse-table/--keep-preserved-clickhouse-table",
+        help="Drop the preserved old ClickHouse table after swap; if omitted, prompt in TTY and preserve by default",
+    ),
     migration_type: str = typer.Option(
         "versioned", "--type", "-t",
         help="Output prefix: versioned (default), runs_always/ra, runs_on_change/roc",
@@ -202,6 +212,8 @@ def make_migrations(
         rename_table_flags=rename_table,
         concurrent=concurrent,
         offline=offline,
+        clickhouse_engine_recreate=clickhouse_engine_recreate,
+        drop_preserved_clickhouse_table=drop_preserved_clickhouse_table,
         migration_type=migration_type,
     )
 

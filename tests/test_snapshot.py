@@ -1872,8 +1872,194 @@ class TestClickHouseDiff:
 
         upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
 
-        assert any(op["type"] == "alter_ch_options" for op in upgrade)
-        assert any(op["type"] == "alter_ch_options" for op in rollback)
+        assert any(op["type"] == "recreate_ch_table" for op in upgrade)
+        assert any(op["type"] == "recreate_ch_table" for op in rollback)
+
+    def test_recreate_preserves_projections(self):
+        model_tables = [
+            ModelTable(
+                name="events",
+                columns=[
+                    ModelColumn("id", "UInt64", False, True, False, None, None, ch_meta={"ch_type": "UInt64"}),
+                ],
+                clickhouse_options={
+                    "ch_engine": "MergeTree",
+                    "ch_order_by": ["id"],
+                },
+            )
+        ]
+        snapshot = {
+            "tables": {
+                "events": {
+                    "object_type": "table",
+                    "columns": {
+                        "id": {
+                            "type": "UInt64",
+                            "nullable": False,
+                            "default": None,
+                            "ch_column": {"ch_type": "UInt64"},
+                        }
+                    },
+                    "clickhouse_options": {
+                        "ch_engine": "ReplacingMergeTree",
+                        "ch_order_by": ["id"],
+                        "ch_projections": [{"name": "by_id", "query": "SELECT id ORDER BY id"}],
+                    },
+                    "indexes": {},
+                }
+            },
+            "indexes": {},
+            "constraints": {},
+        }
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        assert any(op["type"] == "recreate_ch_table" for op in upgrade)
+
+    def test_recreate_inline_materialized_view(self):
+        """Inline MV (no TO target) now recreates with DROP VIEW + CREATE MATERIALIZED VIEW."""
+        model_tables = [
+            ModelTable(
+                name="events",
+                columns=[
+                    ModelColumn("id", "UInt64", False, True, False, None, None, ch_meta={"ch_type": "UInt64"}),
+                ],
+                clickhouse_options={
+                    "ch_engine": "MergeTree",
+                    "ch_order_by": ["id"],
+                },
+            )
+        ]
+        snapshot = {
+            "tables": {
+                "events": {
+                    "object_type": "materialized_view",
+                    "columns": {
+                        "id": {
+                            "type": "UInt64",
+                            "nullable": False,
+                            "default": None,
+                            "ch_column": {"ch_type": "UInt64"},
+                        }
+                    },
+                    "clickhouse_options": {
+                        "ch_engine": "ReplicatedMergeTree",
+                        "ch_order_by": ["id"],
+                        "ch_select_statement": "SELECT id FROM source",
+                    },
+                    "indexes": {},
+                }
+            },
+            "indexes": {},
+            "constraints": {},
+        }
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        recreate = next(op for op in upgrade if op["type"] == "recreate_ch_table")
+        assert recreate is not None
+
+    def test_recreate_dictionary(self):
+        model_tables = [
+            ModelTable(
+                name="events",
+                columns=[
+                    ModelColumn("id", "UInt64", False, True, False, None, None, ch_meta={"ch_type": "UInt64"}),
+                ],
+                clickhouse_options={
+                    "ch_engine": "MergeTree",
+                    "ch_order_by": ["id"],
+                },
+            )
+        ]
+        snapshot = {
+            "tables": {
+                "events": {
+                    "object_type": "dictionary",
+                    "columns": {
+                        "id": {
+                            "type": "UInt64",
+                            "nullable": False,
+                            "default": None,
+                            "ch_column": {"ch_type": "UInt64"},
+                        }
+                    },
+                    "clickhouse_options": {
+                        "ch_engine": "ReplicatedMergeTree",
+                        "ch_order_by": ["id"],
+                        "ch_dictionary": True,
+                    },
+                    "indexes": {},
+                }
+            },
+            "indexes": {},
+            "constraints": {},
+        }
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        assert any(op["type"] == "recreate_ch_table" for op in upgrade)
+
+    def test_recreate_annotates_dependent_mvs(self):
+        model_tables = [
+            ModelTable(
+                name="events",
+                columns=[
+                    ModelColumn("id", "UInt64", False, True, False, None, None, ch_meta={"ch_type": "UInt64"}),
+                ],
+                clickhouse_options={
+                    "ch_engine": "MergeTree",
+                    "ch_order_by": ["id"],
+                },
+            ),
+            ModelTable(
+                name="events_mv",
+                columns=[
+                    ModelColumn("id", "UInt64", False, True, False, None, None, ch_meta={"ch_type": "UInt64"}),
+                ],
+                clickhouse_options={
+                    "ch_engine": "MergeTree",
+                    "ch_select_statement": "SELECT id FROM source",
+                    "ch_to_table": "events",
+                },
+            ),
+        ]
+        snapshot = {
+            "tables": {
+                "events": {
+                    "object_type": "table",
+                    "columns": {
+                        "id": {
+                            "type": "UInt64",
+                            "nullable": False,
+                            "default": None,
+                            "ch_column": {"ch_type": "UInt64"},
+                        }
+                    },
+                    "clickhouse_options": {
+                        "ch_engine": "ReplicatedMergeTree",
+                        "ch_order_by": ["id"],
+                    },
+                    "indexes": {},
+                },
+                "events_mv": {
+                    "object_type": "materialized_view",
+                    "columns": {
+                        "id": {
+                            "type": "UInt64",
+                            "nullable": False,
+                            "default": None,
+                            "ch_column": {"ch_type": "UInt64"},
+                        }
+                    },
+                    "clickhouse_options": {
+                        "ch_engine": "MergeTree",
+                        "ch_select_statement": "SELECT id FROM source",
+                        "ch_to_table": "events",
+                    },
+                    "indexes": {},
+                },
+            },
+            "indexes": {},
+            "constraints": {},
+        }
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        recreate = next(op for op in upgrade if op["type"] == "recreate_ch_table")
+        assert recreate.get("dependent_mvs") == ["events_mv"]
 
     def test_snapshot_diff_to_sql_clickhouse_ch_ops(self, monkeypatch):
         monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "clickhouse")
@@ -1904,6 +2090,77 @@ class TestClickHouseDiff:
         assert "ALTER TABLE events MODIFY COLUMN payload LowCardinality(String)" in sql
         assert "DROP DICTIONARY dict_events" in sql
         assert changes
+
+    def test_snapshot_diff_to_sql_recreate_with_mixed_ops(self, monkeypatch):
+        """recreate_ch_table coexists with other op types for different tables."""
+        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+        state_events = {
+            "name": "events",
+            "object_type": "table",
+            "columns": {
+                "id": {
+                    "name": "id", "type": "UInt64",
+                    "nullable": False, "primary_key": True,
+                    "unique": False, "default": None, "foreign_key": None,
+                    "comment": None, "autoincrement": None,
+                    "pg_column": {}, "ch_column": {"ch_type": "UInt64"},
+                }
+            },
+            "indexes": [], "foreign_keys": [], "checks": [], "uniques": [],
+            "comment": None, "backend": "clickhouse",
+            "backend_table_spec": {
+                "backend": "clickhouse",
+                "ch_engine": "MergeTree", "ch_order_by": ["id"],
+            },
+        }
+        new_state_events = dict(state_events)
+        new_state_events["backend_table_spec"] = {
+            "backend": "clickhouse",
+            "ch_engine": "ReplicatedMergeTree", "ch_order_by": ["id"],
+        }
+
+        ops = [
+            {
+                "type": "recreate_ch_table",
+                "table": "events",
+                "reason": "ch_engine",
+                "from_table": state_events,
+                "to_table": new_state_events,
+                "drop_old_after_swap": False,
+                "preserve_old_suffix": "__dbw_old",
+                "failed_suffix": "__dbw_failed",
+            },
+            {
+                "type": "alter_enum_add_value",
+                "enum_name": "mood",
+                "value": "excited",
+                "after": "happy",
+            },
+            {
+                "type": "add_column",
+                "table": "audit_log",
+                "column": "action",
+                "definition": {"type": "varchar"},
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "recreate_ch_table",
+                "table": "events",
+                "reason": "ch_engine",
+                "from_table": new_state_events,
+                "to_table": state_events,
+                "drop_old_after_swap": False,
+                "preserve_old_suffix": "__dbw_old",
+                "failed_suffix": "__dbw_failed",
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="clickhouse")
+        assert "CREATE TABLE IF NOT EXISTS events__dbw_new" in sql
+        assert "RENAME TABLE events TO events__dbw_old, events__dbw_new TO events;" in sql
+        assert "ADD VALUE IF NOT EXISTS 'excited' AFTER 'happy'" in sql
+        assert "ALTER TABLE audit_log ADD COLUMN action" in sql
+        assert len([c for c in changes if c.operation == "recreate_ch_table"]) == 1
 
     def test_snapshot_parse_clickhouse_settings(self):
         from dbwarden.engine.snapshot import _parse_clickhouse_settings

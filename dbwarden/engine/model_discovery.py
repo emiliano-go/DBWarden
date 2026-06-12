@@ -976,6 +976,12 @@ def extract_table_from_model(
             if isinstance(dw_meta.backend_table, dict):
                 excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
                 pg_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("pg_") and k not in excluded_pg_keys}
+            elif any(k.startswith("pg_") for k in getattr(dw_meta, "table_attrs", {})):
+                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
+                pg_table = {
+                    k: v for k, v in dw_meta.table_attrs.items()
+                    if k.startswith("pg_") and k not in excluded_pg_keys and v is not None
+                }
 
         if _get_backend_name(db_name) == "clickhouse":
             clickhouse_options = _ch_options_from_meta(model_class)

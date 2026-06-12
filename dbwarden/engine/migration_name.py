@@ -138,6 +138,7 @@ def _pluralize(operation: str) -> str:
         "alter_column_type": "alter_column_types",
         "alter_column_nullable": "alter_column_nullables",
         "alter_column_default": "alter_column_defaults",
+        "recreate_ch_table": "recreate_ch_tables",
     }
     return singular_to_plural.get(operation, operation + "s")
 
@@ -149,9 +150,10 @@ def _truncate(name: str) -> str:
     parts = name.split("_")
     op_words = {"add", "drop", "alter", "create", "rename", "adds", "drops", "alters", "creates", "renames",
                "add_columns", "drop_columns", "rename_columns", "create_tables", "drop_tables",
-               "add_indexes", "drop_indexes", "add_foreign_keys", "drop_foreign_keys",
-               "add_constraints", "drop_constraints",
-               "alter_column_type", "alter_column_types",
+                "add_indexes", "drop_indexes", "add_foreign_keys", "drop_foreign_keys",
+                "add_constraints", "drop_constraints",
+                "recreate_ch_table", "recreate_ch_tables",
+                "alter_column_type", "alter_column_types",
                "alter_column_nullable", "alter_column_nullables",
                "alter_column_default", "alter_column_defaults"}
     

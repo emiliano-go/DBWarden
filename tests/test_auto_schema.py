@@ -96,7 +96,10 @@ class TestAutoSchema:
 
         from dbwarden.schema._auto_schema import _merge_dbwarden_into_schemas
 
-        with patch("dbwarden.schema._auto_schema.issubclass", return_value=True):
+        with (
+            patch.dict("sys.modules", {"pydantic": MagicMock()}),
+            patch("dbwarden.schema._auto_schema.issubclass", return_value=True),
+        ):
             setattr(mock_cls, "Schema", mock_schema_cls)
             _merge_dbwarden_into_schemas(mock_cls)
 
@@ -243,7 +246,10 @@ class TestAutoSchema:
             mock_cls = MagicMock()
             mock_cls.configure_mock(**{"__table__": mock_table})
 
-            with patch("dbwarden.schema._auto_schema.issubclass", return_value=True):
+            with (
+                patch.dict("sys.modules", {"pydantic": MagicMock()}),
+                patch("dbwarden.schema._auto_schema.issubclass", return_value=True),
+            ):
                 setattr(mock_cls, attr, mock_schema)
                 _merge_dbwarden_into_schemas(mock_cls)
             assert mock_field.description == "desc"
@@ -267,7 +273,10 @@ class TestAutoSchema:
 
         from dbwarden.schema._auto_schema import _merge_dbwarden_into_schemas
 
-        with patch("dbwarden.schema._auto_schema.issubclass", return_value=True):
+        with (
+            patch.dict("sys.modules", {"pydantic": MagicMock()}),
+            patch("dbwarden.schema._auto_schema.issubclass", return_value=True),
+        ):
             setattr(mock_cls, "Schema", mock_schema)
             _merge_dbwarden_into_schemas(mock_cls)
         assert mock_field.json_schema_extra["existing"] is True

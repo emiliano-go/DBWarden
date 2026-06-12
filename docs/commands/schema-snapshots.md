@@ -56,7 +56,7 @@ Each snapshot captures:
 
 ```json
 {
-  "format_version": 1,
+  "format_version": 2,
   "migration_id": "primary__0003_create_posts",
   "database_name": "primary",
   "database_type": "postgresql",
@@ -64,23 +64,28 @@ Each snapshot captures:
   "checksum": "sha256...",
   "tables": {
     "users": {
+      "object_type": "table",
       "columns": {
         "id": {
+          "name": "id",
           "type": "integer",
           "nullable": false,
           "primary_key": true,
           "default": null,
-          "comment": null
+          "comment": null,
+          "pg_column": {}
         },
         "email": {
+          "name": "email",
           "type": "varchar",
           "nullable": false,
           "primary_key": false,
           "default": null,
-          "comment": null
+          "comment": null,
+          "pg_column": {}
         }
       },
-      "primary_key": ["id"],
+      "backend_table_spec": {"backend": "postgresql"},
       "comment": null
     }
   },
@@ -89,6 +94,17 @@ Each snapshot captures:
   "constraints": {}
 }
 ```
+
+Fields added in format v2:
+
+| Field | Level | Purpose |
+|-------|-------|---------|
+| `backend_table_spec` | Per-table | Backend-specific table options (e.g., `ch_engine`, `pg_fillfactor`) |
+| `pg_column` / `ch_column` | Per-column | Backend-specific column metadata (e.g., `ch_type`, `ch_codec`, `pg_type`) |
+| `object_type` | Per-table | `"table"`, `"materialized_view"`, or `"dictionary"` |
+| `name` | Per-column | Column name (v1 stored names as keys; v2 stores them in both key and value) |
+
+**Backward compatibility:** Snapshots with `format_version: 1` are automatically normalized to v2 when read. V1 keys like `clickhouse_options`, `pg_table`, and per-table `indexes`/`primary_key` are mapped to their v2 equivalents.
 
 ### Integrity
 

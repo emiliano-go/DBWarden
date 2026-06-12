@@ -589,4 +589,29 @@ def classify_ch_safety(
             severity="CRITICAL",
             message=f"Dropping materialized view {op['table']} will lose the transformation logic",
         ))
+    elif op["type"] == "recreate_ch_table" and op.get("dependent_mvs"):
+        for mv in op["dependent_mvs"]:
+            issues.append(SafetyIssue(
+                severity="INFO",
+                change_type="detach_reattach_materialized_view",
+                table_name=op["table"],
+                message=f"Materialized view '{mv}' will be detached before and reattached after recreating '{op['table']}'",
+            ))
+    elif op["type"] == "recreate_ch_table" and op.get("to_table", {}).get("object_type") == "dictionary":
+        issues.append(SafetyIssue(
+            severity="CRITICAL",
+            change_type="recreate_dictionary",
+            table_name=op["table"],
+            message=f"Dictionary '{op['table']}' will be dropped and recreated, losing any cached data",
+        ))
+    elif op["type"] == "recreate_ch_table" and (
+        op.get("from_table", {}).get("object_type") == "materialized_view"
+        or op.get("to_table", {}).get("object_type") == "materialized_view"
+    ):
+        issues.append(SafetyIssue(
+            severity="CRITICAL",
+            change_type="recreate_materialized_view",
+            table_name=op["table"],
+            message=f"Materialized view '{op['table']}' will be dropped and recreated, losing any accumulated data",
+        ))
     return issues

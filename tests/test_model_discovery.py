@@ -93,6 +93,34 @@ class User(Base):
             files = discover_models_in_directory(tmpdir)
             assert files == []
 
+    def test_extract_table_from_model_preserves_typed_pg_meta(self, monkeypatch):
+        from sqlalchemy import Integer, String
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+        from dbwarden import PGColumnMeta, PGTableMeta
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        class Base(DeclarativeBase):
+            pass
+
+        class User(Base):
+            __tablename__ = "users"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            email: Mapped[str] = mapped_column(String(255), nullable=False)
+
+            class Meta(PGTableMeta):
+                pg_fillfactor = 80
+
+                class email(PGColumnMeta):
+                    pg_storage = "extended"
+
+        table = extract_table_from_model(User, db_name="primary")
+
+        assert table is not None
+        assert table.pg_table["pg_fillfactor"] == 80
+        assert table.columns[1].pg_meta["pg_storage"] == "extended"
+
 
 class TestModelColumn:
     """Tests for ModelColumn class."""

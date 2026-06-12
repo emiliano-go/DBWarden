@@ -84,6 +84,8 @@ Options:
 - `--rename`: Repeatable. Declare a column rename in format `table.old_name:new_name`.
 - `--rename-table`: Repeatable. Declare a table rename in format `old_table:new_table`.
 - `--safe-type-change`: Multi-step safe type change strategy.
+- `--clickhouse-engine-recreate`: Allow automatic ClickHouse table rebuild on engine change.
+- `--drop-preserved-clickhouse-table` / `--keep-preserved-clickhouse-table`: Drop or keep the preserved old ClickHouse table after engine-recreate swap.
 - `--type`/`-t`: Output prefix — `versioned` (default), `ra`/`runs_always`, or `roc`/`runs_on_change`.
 
 See [make-migrations](commands/make-migrations.md) for full documentation including rename detection, column-level changes, schema snapshots, and plan format.
