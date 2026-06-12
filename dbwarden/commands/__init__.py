@@ -312,12 +312,10 @@ def handle_seed_export(
     database: str | None = None,
     all_databases: bool = False,
     output_dir: str = "seeds",
-    render_dialect: str | None = None,
 ) -> None:
     """Handle seed export command."""
     export_seeds_cmd(
         database=database,
         all_databases=all_databases,
         output_dir=output_dir,
-        render_dialect=render_dialect,
     )

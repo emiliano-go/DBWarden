@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import hashlib
-import importlib
 from pathlib import Path
 from typing import Any
 
 from sqlalchemy import Column, MetaData, Table, create_engine, insert, text
+from sqlalchemy.dialects.sqlite import dialect as sqla_sqlite_dialect
 from sqlalchemy.orm import Session as SASession
 
 from dbwarden.config import get_database, get_multi_db_config
@@ -18,29 +18,16 @@ from dbwarden.seed import Seed, _row_to_dict
 
 ROC_FILE_PREFIX = "ROC__"
 
-DIALECT_MODULE_MAP: dict[str, str] = {
-    "sqlite": "sqlalchemy.dialects.sqlite",
-    "postgresql": "sqlalchemy.dialects.postgresql",
-    "mysql": "sqlalchemy.dialects.mysql",
-    "mariadb": "sqlalchemy.dialects.mysql",
-    "clickhouse": "clickhouse_sqlalchemy.dialect",
-}
-
-DB_TYPE_TO_INSTALL_HINT: dict[str, str] = {
-    "clickhouse": "clickhouse-sqlalchemy",
-}
-
 
 def export_seeds_cmd(
     database: str | None = None,
     all_databases: bool = False,
     output_dir: str = "seeds",
-    render_dialect: str | None = None,
 ) -> None:
     """Export code seeds to ROC SQL files for stateless application.
 
     Discovers code seeds from ``_seed_registry``, renders ``INSERT ... ON CONFLICT``
-    statements per-dialect, and writes a single ``ROC__<db>__code_seeds.sql`` file
+    statements, and writes a single ``ROC__<db>__code_seeds.sql`` file
     per database into *output_dir*.
 
     Logic-based seeds (those with a ``generate(session)`` method) are executed
@@ -52,7 +39,6 @@ def export_seeds_cmd(
         database: Target database handle (required unless ``--all``).
         all_databases: Export seeds for every configured database.
         output_dir: Directory to write the ROC seed files (default ``seeds/``).
-        render_dialect: Override literal-rendering dialect (use with caution).
     """
     if all_databases:
         multi_config = get_multi_db_config()
@@ -64,7 +50,7 @@ def export_seeds_cmd(
 
     for db_name in db_names:
         try:
-            _export_database(db_name, output_dir, render_dialect)
+            _export_database(db_name, output_dir)
         except Exception as e:
             console.print(f"  Error exporting seeds for '{db_name}': {e}", style="bold red")
             continue
@@ -73,7 +59,6 @@ def export_seeds_cmd(
 def _export_database(
     db_name: str,
     output_dir: str,
-    render_dialect: str | None = None,
 ) -> None:
     console.print(f"Exporting seeds for '{db_name}'...", style="bold cyan")
 
@@ -87,7 +72,7 @@ def _export_database(
     if not seeds:
         console.print(f"  No code seeds found for '{db_name}'.", style="yellow")
         return
-    dialect = _resolve_dialect(config.database_type, render_dialect)
+    dialect = sqla_sqlite_dialect()
 
     ordered = _ordered_seeds(seeds)
 
@@ -120,10 +105,7 @@ def _export_database(
         console.print(f"  No seed data to export for '{db_name}'.", style="yellow")
         return
 
-    header = "-- upgrade\n\n"
-    if render_dialect:
-        header += f"-- WARNING: rendered with {render_dialect} dialect, target is {config.database_type} -- verify literals manually\n\n"
-    content = header + "\n".join(statements) + "\n"
+    content = "-- upgrade\n\n" + "\n".join(statements) + "\n"
 
     out_path = Path(output_dir) / f"{ROC_FILE_PREFIX}{db_name}__code_seeds.sql"
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -366,32 +348,6 @@ def _render_conflict_clause(
         return _render_conflict_clause("mysql", on_conflict, conflict_columns, data_columns)
 
     return ""
-
-
-def _resolve_dialect(target_type: str, override: str | None = None) -> Any:
-    """Return a SQLAlchemy dialect instance for literal rendering.
-
-    Raises ``ImportError`` with a clear install hint if the dialect package
-    cannot be loaded.  The ``override`` parameter allows forcing a different
-    dialect for literal rendering (loud warning emitted by caller).
-    """
-    dialect_name = override or target_type
-    module_path = DIALECT_MODULE_MAP.get(dialect_name)
-    if module_path is None:
-        raise ValueError(f"Unknown or unsupported dialect: {dialect_name}")
-
-    try:
-        mod = importlib.import_module(module_path)
-    except ImportError:
-        hint = DB_TYPE_TO_INSTALL_HINT.get(
-            dialect_name, f"pip install dbwarden[{dialect_name}]"
-        )
-        raise ImportError(
-            f"Cannot export seeds for dialect '{dialect_name}' — missing package. "
-            f"Install with: {hint}"
-        )
-
-    return mod.dialect()
 
 
 def _collect_fk_closure(table: Table, metadata: MetaData) -> set[str]:

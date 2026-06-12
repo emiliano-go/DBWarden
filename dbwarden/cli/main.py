@@ -588,16 +588,12 @@ def seed_export(
     output_dir: str = typer.Option(
         "seeds", "--output-dir", "-o", help="Output directory for ROC seed files (default: seeds/)"
     ),
-    render_dialect: str | None = typer.Option(
-        None, "--render-dialect", help="Override literal-rendering dialect (use with caution)",
-    ),
 ):
     """Export code seeds to ROC SQL files for stateless application."""
     handle_seed_export(
         database=database,
         all_databases=all_databases,
         output_dir=output_dir,
-        render_dialect=render_dialect,
     )
 
 
