@@ -1355,10 +1355,11 @@ class TestTableRenameDetection:
         assert "ALTER TABLE users RENAME TO accounts;" in stmt.upgrade_sql
         assert "ALTER TABLE accounts RENAME TO users;" in stmt.rollback_sql
 
-    def test_rename_table_sql_clickhouse_comment(self):
+    def test_rename_table_sql_clickhouse_rename(self):
         intent = TableRenameIntent(old_table="users", new_table="accounts")
         stmt = _rename_table_sql(intent, "clickhouse")
-        assert "ClickHouse does not support" in stmt.upgrade_sql
+        assert "RENAME TABLE users TO accounts;" in stmt.upgrade_sql
+        assert "RENAME TABLE accounts TO users;" in stmt.rollback_sql
 
     def test_rename_table_sql_sqlite(self):
         intent = TableRenameIntent(old_table="users", new_table="accounts")

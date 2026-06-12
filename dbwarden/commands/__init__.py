@@ -47,6 +47,7 @@ def handle_make_migrations(
     migration_type: str = "versioned",
     clickhouse_engine_recreate: bool = False,
     drop_preserved_clickhouse_table: bool | None = None,
+    postgres_auto_using: bool = False,
 ) -> None:
     """Handle make-migrations command."""
     make_migrations_cmd(
@@ -62,6 +63,7 @@ def handle_make_migrations(
         migration_type=migration_type,
         clickhouse_engine_recreate=clickhouse_engine_recreate,
         drop_preserved_clickhouse_table=drop_preserved_clickhouse_table,
+        postgres_auto_using=postgres_auto_using,
     )
 
 

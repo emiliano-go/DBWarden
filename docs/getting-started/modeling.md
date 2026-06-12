@@ -243,14 +243,14 @@ class Order(Base):
 
 ## When to Use Manual Migrations
 
-Auto-generated migrations handle most cases, but some schema changes require a manual migration via `dbwarden new`:
+Auto-generated migrations handle most cases, but some schema changes still need manual intervention via `dbwarden new`:
 
-- PostgreSQL `USING` clause for type casts (e.g., casting `TEXT` to `INTEGER`)
-- Complex column renames that the heuristic auto-detection does not catch
-- Data migrations (backfilling, transforming existing data)
-- Operations that ClickHouse does not support natively (table rename, some type changes)
+- PostgreSQL `USING` clause for type casts (e.g., casting `TEXT` to `INTEGER`). DBWarden emits `ALTER COLUMN ... TYPE` without `USING` add the clause manually if the implicit cast fails.
+- Column renames not caught by the heuristic auto-detection. Use `--rename old_name:new_name` flags for deterministic renames, or rename in a manual migration.
+- Data migrations (backfilling, transforming existing data). DBWarden emits a SQL comment placeholder.
+- ClickHouse structural changes that ClickHouse cannot alter in place (table rename, nullable/low cardinality type changes, MV SELECT statement, dictionary configs, projections, ZK paths). DBWarden emits a SQL comment placeholder.
 
-DBWarden emits SQL comment placeholders for unsupported operations with instructions on what to write manually.
+For these cases run `dbwarden new` and write the SQL by hand.
 
 ## Best Practices
 

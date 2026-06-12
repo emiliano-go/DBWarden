@@ -196,6 +196,11 @@ def make_migrations(
         "--drop-preserved-clickhouse-table/--keep-preserved-clickhouse-table",
         help="Drop the preserved old ClickHouse table after swap; if omitted, prompt in TTY and preserve by default",
     ),
+    postgres_auto_using: bool = typer.Option(
+        False,
+        "--postgres-auto-using",
+        help="Emit active USING clause on PostgreSQL ALTER COLUMN TYPE (default: commented-out)",
+    ),
     migration_type: str = typer.Option(
         "versioned", "--type", "-t",
         help="Output prefix: versioned (default), runs_always/ra, runs_on_change/roc",
@@ -215,6 +220,7 @@ def make_migrations(
         offline=offline,
         clickhouse_engine_recreate=clickhouse_engine_recreate,
         drop_preserved_clickhouse_table=drop_preserved_clickhouse_table,
+        postgres_auto_using=postgres_auto_using,
         migration_type=migration_type,
     )
 

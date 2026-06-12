@@ -437,6 +437,7 @@ def make_migrations_cmd(
     migration_type: str = "versioned",
     clickhouse_engine_recreate: bool = False,
     drop_preserved_clickhouse_table: bool | None = None,
+    postgres_auto_using: bool = False,
 ) -> None:
     """
     Auto-generate SQL migration from SQLAlchemy models.
@@ -452,6 +453,7 @@ def make_migrations_cmd(
         concurrent: Use CREATE INDEX CONCURRENTLY on PostgreSQL.
         offline: Use model state file instead of live database.
         migration_type: Output prefix: 'versioned' (default), 'runs_always'/'ra', or 'runs_on_change'/'roc'.
+        postgres_auto_using: Emit active USING clause on PostgreSQL ALTER COLUMN TYPE.
     """
     logger = get_logger()
 
@@ -633,6 +635,7 @@ def make_migrations_cmd(
         concurrent=concurrent,
         clickhouse_engine_recreate=clickhouse_engine_recreate,
         drop_preserved_clickhouse_table=drop_preserved_clickhouse_table,
+        postgres_auto_using=postgres_auto_using,
     )
 
     safe_desc = _resolve_migration_description(description, changes)
@@ -819,6 +822,7 @@ def generate_migration_sql(
     concurrent: bool = True,
     clickhouse_engine_recreate: bool = False,
     drop_preserved_clickhouse_table: bool | None = None,
+    postgres_auto_using: bool = False,
 ) -> tuple[str, str, list[Change]]:
     """
     Generate upgrade and rollback SQL from table definitions.
@@ -872,7 +876,8 @@ def generate_migration_sql(
     if snapshot is not None:
         try:
             upgrade_ops, rollback_ops = diff_models_against_snapshot(
-                tables, snapshot, database=database, db_name=db_name
+                tables, snapshot, database=database, db_name=db_name,
+                clickhouse_engine_recreate=clickhouse_engine_recreate,
             )
             if confirmed_renames:
                 upgrade_ops, rollback_ops = _apply_rename_intents(
@@ -896,6 +901,7 @@ def generate_migration_sql(
                 upgrade_ops, rollback_ops, database=database, db_name=db_name,
                 safe_type_change=safe_type_change,
                 concurrent=concurrent,
+                postgres_auto_using=postgres_auto_using,
             )
         except Exception:
             snapshot = None

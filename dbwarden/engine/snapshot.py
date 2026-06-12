@@ -182,6 +182,7 @@ def _build_alter_type_sql(
     new_type: str,
     backend: str,
     old_type: str = "",
+    postgres_auto_using: bool = False,
 ) -> tuple[str, str]:
     if old_type:
         rollback_type = old_type
@@ -192,6 +193,10 @@ def _build_alter_type_sql(
 
     if backend == "postgresql":
         upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} TYPE {new_type}"
+        if postgres_auto_using:
+            upgrade += f" USING {column}::{new_type}"
+        else:
+            upgrade += f"\n-- USING {column}::{new_type}"
         rollback = f"{rollback_comment}ALTER TABLE {table} ALTER COLUMN {column} TYPE {rollback_type}"
     elif backend in ("mysql", "mariadb"):
         upgrade = f"ALTER TABLE {table} MODIFY COLUMN {column} {new_type}"
@@ -1422,18 +1427,44 @@ def _compute_table_overlap(
 RENAME_TABLE_OVERLAP_THRESHOLD = 0.6
 
 
+def _build_ch_projection_sql(
+    table: str,
+    to_val: Any,
+    from_val: Any,
+    up_stmts: list[str],
+    rb_stmts: list[str],
+) -> None:
+    snap_projs: list[dict] = from_val or []
+    model_projs: list[dict] = to_val or []
+    snap_by_name = {p.get("name"): p for p in snap_projs}
+    model_by_name = {p.get("name"): p for p in model_projs}
+    for name, snap_p in snap_by_name.items():
+        if name not in model_by_name:
+            up_stmts.append(f"ALTER TABLE {table} DROP PROJECTION {name}")
+            model_p = model_by_name.get(name)
+            if model_p:
+                rb_stmts.append(f"ALTER TABLE {table} ADD PROJECTION {name} {model_p.get('query', '')}")
+            else:
+                rb_stmts.append(f"ALTER TABLE {table} ADD PROJECTION {name} {snap_p.get('query', '')}")
+    for name, model_p in model_by_name.items():
+        if name not in snap_by_name:
+            up_stmts.append(f"ALTER TABLE {table} ADD PROJECTION {name} {model_p.get('query', '')}")
+            rb_stmts.append(f"ALTER TABLE {table} DROP PROJECTION {name}")
+            continue
+        snap_p = snap_by_name[name]
+        if model_p.get("query") != snap_p.get("query"):
+            up_stmts.append(f"ALTER TABLE {table} DROP PROJECTION {name}")
+            up_stmts.append(f"ALTER TABLE {table} ADD PROJECTION {name} {model_p.get('query', '')}")
+            rb_stmts.append(f"ALTER TABLE {table} DROP PROJECTION {snap_p.get('name', name)}")
+            rb_stmts.append(f"ALTER TABLE {table} ADD PROJECTION {name} {snap_p.get('query', '')}")
+
+
 def _rename_table_sql(intent: TableRenameIntent, backend: str) -> MigrationStatement:
     if backend == "clickhouse":
         return MigrationStatement(
             order=StatementOrder.RENAME_TABLE,
-            upgrade_sql=(
-                f"-- ClickHouse does not support ALTER TABLE RENAME.\n"
-                f"-- Use 'dbwarden new' to write a manual migration:\n"
-                f"-- RENAME TABLE {intent.old_table} TO {intent.new_table};"
-            ),
-            rollback_sql=(
-                f"-- RENAME TABLE {intent.new_table} TO {intent.old_table};"
-            ),
+            upgrade_sql=f"RENAME TABLE {intent.old_table} TO {intent.new_table};",
+            rollback_sql=f"RENAME TABLE {intent.new_table} TO {intent.old_table};",
         )
 
     upgrade = f"ALTER TABLE {intent.old_table} RENAME TO {intent.new_table};"
@@ -1543,6 +1574,20 @@ def _check_ch_engine_recreate_allowed(snap_spec: dict, model_spec: dict, table_n
         )
 
 
+_RECREATE_REQUIRED_CH_KEYS: frozenset[str] = frozenset({
+    "ch_select_statement",
+    "ch_to_table",
+    "ch_dictionary",
+    "ch_dict_layout",
+    "ch_dict_source",
+    "ch_dict_lifetime",
+    "ch_dict_primary_key",
+    "ch_zookeeper_path",
+    "ch_replica_name",
+    "ch_object_type",
+})
+
+
 def _diff_ch_options(
     snap_opts: dict,
     model_opts: dict,
@@ -1551,6 +1596,7 @@ def _diff_ch_options(
     rollback_ops: list[dict],
     snapshot_table: dict[str, Any] | None = None,
     model_table: ModelTable | None = None,
+    clickhouse_engine_recreate: bool = False,
 ) -> None:
     if snap_opts.get("ch_engine") != model_opts.get("ch_engine") and snap_opts.get("ch_engine") is not None and model_opts.get("ch_engine") is not None and snapshot_table is not None and model_table is not None:
         _check_ch_engine_recreate_allowed(snap_opts, model_opts, table_name)
@@ -1594,6 +1640,42 @@ def _diff_ch_options(
             if snap_val is None and model_val is None:
                 continue
             ch_changes[key] = {"from": snap_val, "to": model_val}
+
+    has_recreate_keys = any(k in _RECREATE_REQUIRED_CH_KEYS for k in ch_changes)
+    if has_recreate_keys and clickhouse_engine_recreate and snapshot_table is not None and model_table is not None:
+        from dbwarden.engine.offline import _table_to_state_entry
+
+        reason = ",".join(k for k in ch_changes if k in _RECREATE_REQUIRED_CH_KEYS)
+        upgrade_ops.append({
+            "type": "recreate_ch_table",
+            "table": table_name,
+            "reason": reason,
+            "from_table": {
+                "name": table_name,
+                **snapshot_table,
+                "backend_table_spec": {"backend": "clickhouse", **snap_opts},
+            },
+            "to_table": _table_to_state_entry(model_table),
+            "drop_old_after_swap": False,
+            "preserve_old_suffix": "__dbw_old",
+            "failed_suffix": "__dbw_failed",
+        })
+        rollback_ops.append({
+            "type": "recreate_ch_table",
+            "table": table_name,
+            "reason": reason,
+            "from_table": _table_to_state_entry(model_table),
+            "to_table": {
+                "name": table_name,
+                **snapshot_table,
+                "backend_table_spec": {"backend": "clickhouse", **snap_opts},
+            },
+            "drop_old_after_swap": False,
+            "preserve_old_suffix": "__dbw_failed",
+            "failed_suffix": "__dbw_old",
+        })
+        return
+
     if ch_changes:
         upgrade_ops.append({
             "type": "alter_ch_options",
@@ -1677,6 +1759,7 @@ def diff_models_against_snapshot(
     snapshot: dict[str, Any],
     database: str | None = None,
     db_name: str | None = None,
+    clickhouse_engine_recreate: bool = False,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     upgrade_ops: list[dict[str, Any]] = []
     rollback_ops: list[dict[str, Any]] = []
@@ -1745,7 +1828,7 @@ def diff_models_against_snapshot(
 
         snap_ch_options = snap_table.get("ch_options") or snap_table.get("clickhouse_options") or {}
         model_ch_options = table.clickhouse_options or {}
-        _diff_ch_options(snap_ch_options, model_ch_options, table.name, upgrade_ops, rollback_ops, snapshot_table=snap_table, model_table=table)
+        _diff_ch_options(snap_ch_options, model_ch_options, table.name, upgrade_ops, rollback_ops, snapshot_table=snap_table, model_table=table, clickhouse_engine_recreate=clickhouse_engine_recreate)
 
         dropped_cols = []
         for col_name in snap_columns:
@@ -2343,6 +2426,7 @@ def snapshot_diff_to_sql(
     db_name: str | None = None,
     safe_type_change: bool = False,
     concurrent: bool = True,
+    postgres_auto_using: bool = False,
 ) -> tuple[str, str, list[Any]]:
     from dbwarden.engine.model_discovery import (
         generate_add_column_sql,
@@ -2442,7 +2526,7 @@ def snapshot_diff_to_sql(
                     statements.append(s)
                 changes.append(Change(operation="alter_column_type", table=op["table"], target=op["column"]))
             else:
-                alter_up, alter_rb = _build_alter_type_sql(op["table"], op["column"], model_type, backend, old_type=op.get("snap_type", ""))
+                alter_up, alter_rb = _build_alter_type_sql(op["table"], op["column"], model_type, backend, old_type=op.get("snap_type", ""), postgres_auto_using=postgres_auto_using)
                 statements.append(MigrationStatement(
                     order=StatementOrder.ALTER_COLUMN_TYPE,
                     upgrade_sql=alter_up,
@@ -2573,9 +2657,11 @@ def snapshot_diff_to_sql(
                 elif key == "ch_engine":
                     up_stmts.append(f"-- ENGINE change for {op['table']} requires table recreation")
                     rb_stmts.append(f"-- ENGINE change for {op['table']} requires table recreation")
-                elif key in {"ch_select_statement", "ch_to_table", "ch_dictionary", "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key", "ch_zookeeper_path", "ch_replica_name", "ch_object_type", "ch_projections"}:
-                    up_stmts.append(f"-- {key} change for {op['table']} requires manual migration")
-                    rb_stmts.append(f"-- {key} change for {op['table']} requires manual migration")
+                elif key == "ch_projections":
+                    _build_ch_projection_sql(op['table'], to_val, from_val, up_stmts, rb_stmts)
+                elif key in {"ch_select_statement", "ch_to_table", "ch_dictionary", "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key", "ch_zookeeper_path", "ch_replica_name", "ch_object_type"}:
+                    up_stmts.append(f"-- {key} changed for {op['table']}. Re-run with --clickhouse-engine-recreate to auto-generate recreation SQL.")
+                    rb_stmts.append(f"-- {key} changed for {op['table']}. Re-run with --clickhouse-engine-recreate to auto-generate recreation SQL.")
 
             if up_stmts or rb_stmts:
                 statements.append(MigrationStatement(
@@ -2626,12 +2712,25 @@ def snapshot_diff_to_sql(
                     rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} TTL {from_ch['ch_ttl']}")
                 else:
                     rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} REMOVE TTL")
-            if to_ch.get("ch_low_cardinality") != from_ch.get("ch_low_cardinality"):
-                up_stmts.append(f"-- {op['table']}.{op['column']} low cardinality change requires type recreation")
-                rb_stmts.append(f"-- {op['table']}.{op['column']} low cardinality change requires type recreation")
-            if to_ch.get("ch_nullable") != from_ch.get("ch_nullable"):
-                up_stmts.append(f"-- {op['table']}.{op['column']} nullable change requires type recreation")
-                rb_stmts.append(f"-- {op['table']}.{op['column']} nullable change requires type recreation")
+            _ch_type_changed = to_ch.get("ch_type") and to_ch.get("ch_type") != from_ch.get("ch_type")
+            if not _ch_type_changed:
+                ch_lc_diff = to_ch.get("ch_low_cardinality") != from_ch.get("ch_low_cardinality")
+                ch_null_diff = to_ch.get("ch_nullable") != from_ch.get("ch_nullable")
+                if ch_lc_diff or ch_null_diff:
+                    base = _strip_ch_type_wrappers(to_ch.get("ch_type") or from_ch.get("ch_type") or "")
+                    target = base
+                    if to_ch.get("ch_low_cardinality"):
+                        target = f"LowCardinality({target})"
+                    if to_ch.get("ch_nullable"):
+                        target = f"Nullable({target})"
+                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {target}")
+                    base_rb = _strip_ch_type_wrappers(from_ch.get("ch_type") or to_ch.get("ch_type") or "")
+                    rb_target = base_rb
+                    if from_ch.get("ch_low_cardinality"):
+                        rb_target = f"LowCardinality({rb_target})"
+                    if from_ch.get("ch_nullable"):
+                        rb_target = f"Nullable({rb_target})"
+                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {rb_target}")
 
             if up_stmts or rb_stmts:
                 statements.append(MigrationStatement(
