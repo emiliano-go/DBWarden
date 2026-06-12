@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from dbwarden.schema._base import _MetaValidator
-from dbwarden.schema._meta import CHFieldMeta, FieldMeta, PGFieldMeta
+from dbwarden.schema._meta import CHFieldMeta, FieldMeta, MdbFieldMeta, MyFieldMeta, PGFieldMeta
 
 
 class TableMeta(metaclass=_MetaValidator):
@@ -106,3 +106,40 @@ class CHColumnMeta(CHFieldMeta):
                 comment = "HTTP request body"
                 ch = ch.field(codec="ZSTD(3)", nullable=True)
     """
+
+
+class MyTableMeta(TableMeta):
+    """MySQL table-level metadata; inherit in ``class Meta``."""
+
+    comment: str | None = None
+    indexes: list[Any] = []
+    checks: list[Any] = []
+    uniques: list[Any] = []
+
+    my_engine: str | None = None
+    my_charset: str | None = None
+    my_collate: str | None = None
+    my_row_format: str | None = None
+    my_auto_increment: int | None = None
+
+
+class MyColumnMeta(MyFieldMeta):
+    """MySQL column-level metadata; inherit in ``Meta`` inner classes.
+
+    Example::
+
+        class Meta(MyTableMeta):
+            class id(MyColumnMeta):
+                my = my.field(unsigned=True)
+    """
+
+
+class MdbTableMeta(MyTableMeta):
+    """MariaDB table-level metadata; inherit in ``class Meta``."""
+
+    mdb_page_compressed: bool = False
+    mdb_page_compression_level: int | None = None
+
+
+class MdbColumnMeta(MdbFieldMeta):
+    """MariaDB column-level metadata; inherit in ``Meta`` inner classes."""

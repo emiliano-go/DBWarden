@@ -37,6 +37,23 @@ Base = declarative_base()
 VALID_IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 
+def _render_mysql_column_type(type_str: str, meta: dict[str, Any]) -> str:
+    rendered = type_str
+    if meta.get("my_unsigned") and "UNSIGNED" not in rendered.upper():
+        rendered = f"{rendered} UNSIGNED"
+    return rendered
+
+
+def _append_mysql_column_attrs(sql: str, meta: dict[str, Any]) -> str:
+    if meta.get("my_charset"):
+        sql += f" CHARACTER SET {meta['my_charset']}"
+    if meta.get("my_collate"):
+        sql += f" COLLATE {meta['my_collate']}"
+    if meta.get("my_on_update"):
+        sql += f" ON UPDATE {meta['my_on_update']}"
+    return sql
+
+
 def _validate_identifier(name: str, field: str = "identifier") -> None:
     """Validate SQL identifier (table/column name)."""
     if not name or not VALID_IDENTIFIER_RE.match(name):
@@ -125,6 +142,7 @@ class ModelColumn:
         comment: Optional[str] = None,
         pg_meta: Optional[dict[str, Any]] = None,
         ch_meta: Optional[dict[str, Any]] = None,
+        my_meta: Optional[dict[str, Any]] = None,
         autoincrement: Optional[bool] = None,
     ):
         self.name = name
@@ -138,6 +156,7 @@ class ModelColumn:
         self.comment = comment
         self.pg_meta = pg_meta or {}
         self.ch_meta = ch_meta or {}
+        self.my_meta = my_meta or {}
         self.autoincrement = autoincrement
 
     def to_dict(self) -> dict:
@@ -156,6 +175,8 @@ class ModelColumn:
         }
         if self.ch_meta:
             d["ch_meta"] = self.ch_meta
+        if self.my_meta:
+            d["my_meta"] = self.my_meta
         return d
 
 
@@ -243,6 +264,7 @@ class ModelTable:
         uniques: Optional[list[dict[str, Any]]] = None,
         excludes: Optional[list[dict[str, Any]]] = None,
         pg_table: Optional[dict[str, Any]] = None,
+        my_table: Optional[dict[str, Any]] = None,
     ):
         self.name = name
         self.columns = columns
@@ -258,6 +280,7 @@ class ModelTable:
         self.uniques = uniques or []
         self.excludes = excludes or []
         self.pg_table = pg_table or {}
+        self.my_table = my_table or {}
 
     def to_dict(self) -> dict:
         return {
@@ -272,6 +295,7 @@ class ModelTable:
             "uniques": self.uniques,
             "excludes": self.excludes,
             "pg_table": self.pg_table,
+            "my_table": self.my_table,
         }
 
 
@@ -960,6 +984,7 @@ def extract_table_from_model(
         uniques = []
         excludes = []
         pg_table = {}
+        my_table = {}
 
         if dw_meta:
             checks = list(getattr(dw_meta, "pg_checks", []) or getattr(dw_meta, "checks", []))
@@ -993,11 +1018,17 @@ def extract_table_from_model(
             if isinstance(dw_meta.backend_table, dict):
                 excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
                 pg_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("pg_") and k not in excluded_pg_keys}
+                my_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("my_") and k != "my_indexes"}
             elif any(k.startswith("pg_") for k in getattr(dw_meta, "table_attrs", {})):
                 excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
                 pg_table = {
                     k: v for k, v in dw_meta.table_attrs.items()
                     if k.startswith("pg_") and k not in excluded_pg_keys and v is not None
+                }
+            if not my_table and any(k.startswith("my_") for k in getattr(dw_meta, "table_attrs", {})):
+                my_table = {
+                    k: v for k, v in dw_meta.table_attrs.items()
+                    if k.startswith("my_") and k != "my_indexes" and v is not None
                 }
 
         if _get_backend_name(db_name) == "clickhouse":
@@ -1016,6 +1047,7 @@ def extract_table_from_model(
             uniques=uniques,
             excludes=excludes,
             pg_table=pg_table,
+            my_table=my_table,
         )
     except DBWardenConfigError:
         raise
@@ -1139,6 +1171,7 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
         comment = None
         pg_meta: dict[str, Any] = {}
         ch_meta: dict[str, Any] = {}
+        my_meta: dict[str, Any] = {}
         if _get_backend_name(db_name) == "clickhouse":
             ch_codec = column.info.get("ch_codec")
             if isinstance(ch_codec, str) and ch_codec.strip():
@@ -1208,6 +1241,15 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
                         pg_type_entry["config"] = str(regconfig)
                     pg_meta["pg_type"] = pg_type_entry
 
+        for key in (
+            "my_charset",
+            "my_collate",
+            "my_unsigned",
+            "my_on_update",
+        ):
+            if key in column.info:
+                my_meta[key] = column.info[key]
+
         return ModelColumn(
             name=name,
             type=type_str,
@@ -1220,6 +1262,7 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
             comment=comment,
             pg_meta=pg_meta,
             ch_meta=ch_meta,
+            my_meta=my_meta,
             autoincrement=autoincrement,
         )
     except Exception:
@@ -1281,7 +1324,12 @@ def generate_add_column_sql(
     _validate_identifier(column.name, "column_name")
     
     backend = _get_backend_name(db_name)
-    col_type = column.ch_meta.get("ch_type", column.type) if backend == "clickhouse" else column.type
+    if backend == "clickhouse":
+        col_type = column.ch_meta.get("ch_type", column.type)
+    elif backend in ("mysql", "mariadb"):
+        col_type = _render_mysql_column_type(column.type, column.my_meta)
+    else:
+        col_type = column.type
     is_serial = (
         column.type.upper() in ("SERIAL", "BIGSERIAL")
         if backend == "postgresql"
@@ -1291,8 +1339,16 @@ def generate_add_column_sql(
     nullable_sql = "" if column.nullable or is_serial else "NOT NULL"
     default_sql = f" DEFAULT {column.default}" if column.default else ""
     fk_sql = f" REFERENCES {column.foreign_key}" if column.foreign_key else ""
-
-    return f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type} {nullable_sql}{default_sql}{fk_sql}"
+    sql = f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type}"
+    if nullable_sql:
+        sql += f" {nullable_sql}"
+    if default_sql:
+        sql += default_sql
+    if backend in ("mysql", "mariadb"):
+        sql = _append_mysql_column_attrs(sql, column.my_meta)
+    if fk_sql:
+        sql += fk_sql
+    return sql
 
 
 def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> str:
@@ -1305,7 +1361,12 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
     column_defs = []
 
     for col in table.columns:
-        col_type = col.ch_meta.get("ch_type", col.type) if backend == "clickhouse" else col.type
+        if backend == "clickhouse":
+            col_type = col.ch_meta.get("ch_type", col.type)
+        elif backend in ("mysql", "mariadb"):
+            col_type = _render_mysql_column_type(col.type, col.my_meta)
+        else:
+            col_type = col.type
         col_def = f"    {col.name} {col_type}"
         is_serial = (
             col.type.upper() in ("SERIAL", "BIGSERIAL")
@@ -1321,6 +1382,8 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             col_def += " UNIQUE"
         if col.default and not is_serial:
             col_def += f" DEFAULT {col.default}"
+        if backend in ("mysql", "mariadb"):
+            col_def = _append_mysql_column_attrs(col_def, col.my_meta)
         if col.foreign_key:
             col_def += f" REFERENCES {col.foreign_key}"
         if backend == "clickhouse" and col.codec:
@@ -1338,6 +1401,20 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
     if backend == "clickhouse":
         if table.object_type == "table":
             sql += _render_clickhouse_table_suffix(table)
+    if backend in ("mysql", "mariadb") and table.my_table:
+        parts: list[str] = []
+        if table.my_table.get("my_engine"):
+            parts.append(f"ENGINE={table.my_table['my_engine']}")
+        if table.my_table.get("my_charset"):
+            parts.append(f"DEFAULT CHARSET={table.my_table['my_charset']}")
+        if table.my_table.get("my_collate"):
+            parts.append(f"COLLATE={table.my_table['my_collate']}")
+        if table.my_table.get("my_row_format"):
+            parts.append(f"ROW_FORMAT={table.my_table['my_row_format']}")
+        if table.my_table.get("my_auto_increment") is not None:
+            parts.append(f"AUTO_INCREMENT={table.my_table['my_auto_increment']}")
+        if parts:
+            sql += " " + " ".join(parts)
     if backend == "postgresql" and table.pg_table:
         pg_partition = table.pg_table.get("pg_partition")
         if pg_partition:
