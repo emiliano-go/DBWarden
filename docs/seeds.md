@@ -109,6 +109,8 @@ class RepoSeed(Seed):
 
 Your editor will suggest `name`, `owner`, `is_org`, `default_branch` etc. as you type.
 
+> SQLAlchemy 2.0's `DeclarativeBase` does not accept positional arguments in the constructor. Always use keyword arguments when instantiating models in `rows`: `Repo(name="dbwarden", ...)` instead of `Repo("dbwarden", ...)`.
+
 ### SeedRow (Alternative)
 
 If you prefer dict-like rows, `SeedRow` still works:

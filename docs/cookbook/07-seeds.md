@@ -68,6 +68,7 @@ Notice:
 
 - **No `version`**: versions are auto-assigned (`C0001`, `C0002`, ...)
 - **Model instances** in `rows`: your IDE gives full autocompletion on column names
+- **Keyword arguments required**: SQLAlchemy 2.0's `DeclarativeBase` does not accept positional args; always use `Model(col=val)` syntax
 - **`__seed_database__`**: route the seed to the correct database
 
 ### Logic-Based Seeds
