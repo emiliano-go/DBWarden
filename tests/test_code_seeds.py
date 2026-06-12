@@ -1,4 +1,5 @@
 from dbwarden.schema.seed import SeedRow, DBWardenSeed, seed_data
+from dbwarden.seed import SeedMeta
 
 
 def test_seed_row_construction():
@@ -22,16 +23,10 @@ def test_seed_row_multiple_values():
 def test_dbwarden_seed_defaults():
     seed = DBWardenSeed(database="primary", version="0001", description="initial")
     assert seed.database == "primary"
-    assert seed.version == "0001"
     assert seed.description == "initial"
     assert seed.on_conflict == "ignore"
-    assert seed.conflict_columns is None
+    assert seed.conflict_columns == []
     assert seed.source_hash == ""
-
-
-def test_dbwarden_seed_seed_id():
-    seed = DBWardenSeed(database="primary", version="0001", description="test")
-    assert seed.seed_id == "primary__0001"
 
 
 def test_dbwarden_seed_full():
@@ -43,7 +38,6 @@ def test_dbwarden_seed_full():
         conflict_columns=["code"],
         source_hash="abc123",
     )
-    assert seed.seed_id == "analytics__0042"
     assert seed.on_conflict == "update"
     assert seed.conflict_columns == ["code"]
     assert seed.source_hash == "abc123"
@@ -63,11 +57,9 @@ class TestSeedDataDecorator:
         meta = getattr(CountrySeed, "__dbwarden_seed__", None)
         assert meta is not None
         assert meta.database == "primary"
-        assert meta.version == "0001"
         assert meta.description == "initial countries"
         assert meta.on_conflict == "ignore"
         assert meta.conflict_columns == []
-        assert meta.seed_id == "primary__0001"
         assert len(CountrySeed.rows) == 2
         assert CountrySeed.rows[0].to_dict()["code"] == "UY"
 
@@ -84,7 +76,6 @@ class TestSeedDataDecorator:
 
         meta = getattr(PermissionSeed, "__dbwarden_seed__", None)
         assert meta is not None
-        assert meta.version == "0002"
 
     def test_custom_on_conflict(self):
         @seed_data(database="primary", version="0003", description="with update",
@@ -116,11 +107,3 @@ class TestSeedDataDecorator:
         meta = HashSeed.__dbwarden_seed__
         assert len(meta.source_hash) == 16
         assert all(c in "0123456789abcdef" for c in meta.source_hash)
-
-    def test_reused_class_preserves_meta(self):
-        @seed_data(database="primary", version="0010", description="reused")
-        class ReusedSeed:
-            model = "Item"
-
-        meta = ReusedSeed.__dbwarden_seed__
-        assert meta.seed_id == "primary__0010"

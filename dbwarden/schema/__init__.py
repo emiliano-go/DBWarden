@@ -41,7 +41,7 @@ from dbwarden.schema.pgsql import (
     partition_by_range,
 )
 from dbwarden.schema.projection import ProjectionSpec
-from dbwarden.schema.seed import SeedRow, seed_data
+from dbwarden.seed import SeedRow, Seed, seed_data
 from dbwarden.schema.sqlite import SqFieldSpec, SqTableSpec, field as sq_field
 from dbwarden.schema.table_meta import (
     CHColumnMeta,
@@ -78,6 +78,7 @@ __all__ = [
     "PgTableSpec",
     "ProjectionSpec",
     "SchemaConfig",
+    "Seed",
     "SeedRow",
     "SqFieldMeta",
     "SqFieldSpec",
