@@ -106,6 +106,45 @@ def test_generate_table_code_with_postgresql_meta():
     assert "pg = pg.field(collation='en_US.UTF-8')" in code
 
 
+def test_generate_table_code_with_mysql_meta():
+    columns = [
+        {
+            "name": "id",
+            "type": "INT",
+            "nullable": False,
+            "default": None,
+            "primary_key": True,
+            "unique": False,
+            "foreign_key": None,
+            "comment": "Primary key",
+            "my_meta": {"my_unsigned": True},
+            "dialect": "mysql",
+        },
+        {
+            "name": "updated_at",
+            "type": "TIMESTAMP",
+            "nullable": False,
+            "default": None,
+            "primary_key": False,
+            "unique": False,
+            "foreign_key": None,
+            "my_meta": {"my_on_update": "CURRENT_TIMESTAMP"},
+            "dialect": "mysql",
+        },
+    ]
+    code = _generate_table_code(
+        "users",
+        columns,
+        object_type="table",
+        my_meta={"my_engine": "InnoDB", "my_charset": "utf8mb4", "my_collate": "utf8mb4_unicode_ci"},
+    )
+    assert "class Meta(MyTableMeta):" in code
+    assert "my_engine = 'InnoDB'" in code
+    assert "class id(MyColumnMeta):" in code
+    assert "my = my.field(unsigned=True)" in code
+    assert "my = my.field(on_update='CURRENT_TIMESTAMP')" in code
+
+
 def test_write_models_postgresql_emits_dialect_imports_and_meta():
     with tempfile.TemporaryDirectory() as tmpdir:
         from dbwarden.commands.generate_models import _write_models
@@ -152,6 +191,40 @@ def test_write_models_postgresql_emits_dialect_imports_and_meta():
         assert "comment = 'Users table'" in content
         assert "from dbwarden.schema import pg" in content
         assert 'pg = pg.field(collation=' in content
+
+
+def test_write_models_mysql_emits_meta_imports():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        from dbwarden.commands.generate_models import _write_models
+
+        tables = [
+            {
+                "name": "users",
+                "columns": [
+                    {
+                        "name": "id",
+                        "type": "INT",
+                        "nullable": False,
+                        "default": None,
+                        "primary_key": True,
+                        "unique": False,
+                        "foreign_key": None,
+                        "autoincrement": True,
+                        "dialect": "mysql",
+                        "my_meta": {"my_unsigned": True},
+                    },
+                ],
+                "clickhouse_options": None,
+                "object_type": "table",
+                "dialect": "mysql",
+                "my_meta": {"my_engine": "InnoDB", "my_charset": "utf8mb4"},
+            }
+        ]
+        _write_models(tmpdir, tables, single_file=True)
+        content = Path(tmpdir, "models.py").read_text()
+        assert "from dbwarden import MyColumnMeta, MyTableMeta" in content
+        assert "from dbwarden.schema import my" in content
+        assert "class Meta(MyTableMeta):" in content
 
 
 def test_write_models_single_file():

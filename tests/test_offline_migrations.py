@@ -17,6 +17,14 @@ def _make_table(name, columns=None, comment=None, ch_opts=None, pg_table=None, o
     )
 
 
+def _make_mysql_table(name, columns=None, my_table=None):
+    return ModelTable(
+        name=name,
+        columns=columns or [_make_col("id")],
+        my_table=my_table or {},
+    )
+
+
 def test_model_state_roundtrip():
     table = _make_table("users", columns=[
         _make_col("id", "biginteger", pk=True),
@@ -150,6 +158,55 @@ def test_column_ch_meta_in_state():
     col_entry = entry["columns"]["payload"]
     assert col_entry["ch_column"]["ch_codec"] == "ZSTD(3)"
     assert col_entry["ch_column"]["ch_nullable"] is True
+
+
+def test_table_to_state_entry_includes_mysql():
+    table = _make_mysql_table(
+        "users",
+        my_table={"my_engine": "InnoDB", "my_charset": "utf8mb4"},
+    )
+    entry = _table_to_state_entry(table)
+    assert entry["backend_table_spec"]["backend"] == "mysql"
+    assert entry["backend_table_spec"]["my_engine"] == "InnoDB"
+    assert entry["backend_table_spec"]["my_charset"] == "utf8mb4"
+
+
+def test_column_my_meta_in_state():
+    col = _make_col("id", "integer")
+    col.my_meta = {"my_unsigned": True, "my_on_update": "CURRENT_TIMESTAMP"}
+    table = _make_mysql_table("users", columns=[col])
+    entry = _table_to_state_entry(table)
+    col_entry = entry["columns"]["id"]
+    assert col_entry["my_column"]["my_unsigned"] is True
+    assert col_entry["my_column"]["my_on_update"] == "CURRENT_TIMESTAMP"
+
+
+def test_diff_mysql_table_meta_change():
+    prev = model_state_to_dict([
+        _make_mysql_table("users", my_table={"my_engine": "InnoDB"})
+    ])
+    curr = model_state_to_dict([
+        _make_mysql_table("users", my_table={"my_engine": "MyISAM"})
+    ])
+    up, down = diff_model_states(prev, curr)
+    ops = [op for op in up if op["type"] == "alter_my_table"]
+    assert len(ops) == 1
+    assert ops[0]["key"] == "my_engine"
+    assert ops[0]["to_value"] == "MyISAM"
+
+
+def test_diff_mysql_column_meta_change():
+    prev_col = _make_col("id", "integer")
+    prev_col.my_meta = {"my_unsigned": True}
+    curr_col = _make_col("id", "integer")
+    curr_col.my_meta = {"my_unsigned": True, "my_on_update": "CURRENT_TIMESTAMP"}
+    prev = model_state_to_dict([_make_mysql_table("users", columns=[prev_col])])
+    curr = model_state_to_dict([_make_mysql_table("users", columns=[curr_col])])
+    up, down = diff_model_states(prev, curr)
+    ops = [op for op in up if op["type"] == "alter_my_column_meta"]
+    assert len(ops) == 1
+    assert ops[0]["column"] == "id"
+    assert ops[0]["to_my_column"]["my_on_update"] == "CURRENT_TIMESTAMP"
 
 
 def test_diff_table_comment_change():

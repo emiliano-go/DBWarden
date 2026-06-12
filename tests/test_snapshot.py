@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+pymysql = pytest.importorskip("pymysql")
+
 from dbwarden.engine.snapshot import (
     _apply_rename_intents,
     _assemble_migration,
@@ -12,6 +14,7 @@ from dbwarden.engine.snapshot import (
     _build_index_name,
     _build_foreign_key_sql,
     _build_index_sql,
+    _normalize_mysql_default,
     _compute_table_overlap,
     _rename_table_sql,
     TableRenameIntent,
@@ -253,6 +256,54 @@ class TestFindLatestSnapshot:
 
             latest = find_latest_snapshot(database="mydb")
             assert latest is None
+
+
+class TestMySQLSnapshot:
+    def test_extract_full_schema_snapshot_mysql_metadata(self, monkeypatch):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            monkeypatch.chdir(tmpdir)
+            Path("dbwarden.py").write_text(
+                "from dbwarden import database_config\n"
+                "database_config(database_name='mysqltest', default=True, database_type='mysql', "
+                "database_url_sync='mysql+pymysql://root:Rocky-011079-mysql@127.0.0.1:3307/dbwarden_mysql_snapshot_test')\n"
+            )
+
+            conn = pymysql.connect(
+                host="127.0.0.1",
+                port=3307,
+                user="root",
+                password="Rocky-011079-mysql",
+                autocommit=True,
+            )
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("DROP DATABASE IF EXISTS dbwarden_mysql_snapshot_test")
+                    cur.execute("CREATE DATABASE dbwarden_mysql_snapshot_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+                    cur.execute("USE dbwarden_mysql_snapshot_test")
+                    cur.execute(
+                        """
+                        CREATE TABLE users (
+                            id INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'Primary key',
+                            email VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            PRIMARY KEY (id)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='Core users'
+                        """
+                    )
+            finally:
+                conn.close()
+
+            snapshot = extract_full_schema_snapshot(database="mysqltest")
+            users = snapshot["tables"]["users"]
+            assert users["comment"] == "Core users"
+            assert users["my_table"]["my_engine"] == "InnoDB"
+            assert users["my_table"]["my_charset"] == "utf8mb4"
+            assert users["my_table"]["my_collate"] == "utf8mb4_unicode_ci"
+            assert users["my_table"]["my_row_format"] == "Dynamic"
+            assert users["columns"]["id"]["my_column"]["my_unsigned"] is True
+            assert users["columns"]["id"]["comment"] == "Primary key"
+            assert users["columns"]["email"]["my_column"]["my_collate"] == "utf8mb4_unicode_ci"
+            assert users["columns"]["updated_at"]["my_column"]["my_on_update"] == "CURRENT_TIMESTAMP"
 
 
 class TestDetectRenames:
@@ -1680,6 +1731,236 @@ class TestIndexDiff:
         op = {"type": "add_index", "table": "users", "columns": ["email"], "unique": True}
         stmt = _build_index_sql(op, "mariadb")
         assert "CREATE UNIQUE INDEX" in stmt[0].upgrade_sql
+
+    def test_mysql_table_option_sql(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                Path("dbwarden.py").write_text(
+                    "from dbwarden import database_config\n"
+                    "database_config(database_name='mysql_db', default=True, database_type='mysql', database_url_sync='mysql+pymysql://root:pw@localhost/test')\n"
+                )
+                ops = [{
+                    "type": "alter_my_table",
+                    "table": "users",
+                    "key": "my_engine",
+                    "from_value": "InnoDB",
+                    "to_value": "MyISAM",
+                }]
+                rollback_ops = [{
+                    "type": "alter_my_table",
+                    "table": "users",
+                    "key": "my_engine",
+                    "from_value": "MyISAM",
+                    "to_value": "InnoDB",
+                }]
+                sql, rb_sql, _changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="mysql_db")
+                assert "ALTER TABLE users ENGINE=MyISAM;" in sql
+                assert "ALTER TABLE users ENGINE=InnoDB;" in rb_sql
+            finally:
+                os.chdir(old)
+
+    def test_mysql_column_meta_sql(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                Path("dbwarden.py").write_text(
+                    "from dbwarden import database_config\n"
+                    "database_config(database_name='mysql_db', default=True, database_type='mysql', database_url_sync='mysql+pymysql://root:pw@localhost/test')\n"
+                )
+                ops = [{
+                    "type": "alter_my_column_meta",
+                    "table": "users",
+                    "column": "id",
+                    "col_type": "integer",
+                    "snap_type": "integer",
+                    "from_my_column": {},
+                    "to_my_column": {"my_unsigned": True},
+                }]
+                rollback_ops = [{
+                    "type": "alter_my_column_meta",
+                    "table": "users",
+                    "column": "id",
+                    "col_type": "integer",
+                    "snap_type": "integer",
+                    "from_my_column": {"my_unsigned": True},
+                    "to_my_column": {},
+                }]
+                sql, rb_sql, _changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="mysql_db")
+                assert "ALTER TABLE users MODIFY COLUMN id integer UNSIGNED;" in sql
+                assert "ALTER TABLE users MODIFY COLUMN id integer;" in rb_sql
+            finally:
+                os.chdir(old)
+
+    def test_mysql_table_comment_sql(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                Path("dbwarden.py").write_text(
+                    "from dbwarden import database_config\n"
+                    "database_config(database_name='mysql_db', default=True, database_type='mysql', "
+                    "database_url_sync='mysql+pymysql://root:pw@localhost/test')\n"
+                )
+                ops = [{
+                    "type": "alter_table_comment",
+                    "table": "users",
+                    "comment": "Core users table",
+                    "previous_comment": "",
+                }]
+                rollback_ops = [{
+                    "type": "alter_table_comment",
+                    "table": "users",
+                    "comment": "",
+                    "previous_comment": "Core users table",
+                }]
+                sql, rb_sql, _changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="mysql_db")
+                assert "ALTER TABLE users COMMENT = 'Core users table';" in sql
+                assert "ALTER TABLE users COMMENT = '';" in rb_sql
+            finally:
+                os.chdir(old)
+
+    def test_mysql_column_comment_sql(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                Path("dbwarden.py").write_text(
+                    "from dbwarden import database_config\n"
+                    "database_config(database_name='mysql_db', default=True, database_type='mysql', "
+                    "database_url_sync='mysql+pymysql://root:pw@localhost/test')\n"
+                )
+                ops = [{
+                    "type": "alter_column_comment",
+                    "table": "users",
+                    "column": "email",
+                    "comment": "User email address",
+                    "previous_comment": "",
+                    "col_type": "VARCHAR(255)",
+                    "nullable": False,
+                    "autoincrement": False,
+                    "my_meta": {},
+                }]
+                rollback_ops = [{
+                    "type": "alter_column_comment",
+                    "table": "users",
+                    "column": "email",
+                    "comment": "",
+                    "previous_comment": "User email address",
+                    "col_type": "VARCHAR(255)",
+                    "nullable": False,
+                    "autoincrement": False,
+                    "my_meta": {},
+                }]
+                sql, rb_sql, _changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="mysql_db")
+                assert "ALTER TABLE users MODIFY COLUMN email VARCHAR(255) NOT NULL COMMENT 'User email address';" in sql
+                assert "ALTER TABLE users MODIFY COLUMN email VARCHAR(255) NOT NULL COMMENT '';" in rb_sql
+            finally:
+                os.chdir(old)
+
+    def test_mysql_autoincrement_add_sql(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                Path("dbwarden.py").write_text(
+                    "from dbwarden import database_config\n"
+                    "database_config(database_name='mysql_db', default=True, database_type='mysql', "
+                    "database_url_sync='mysql+pymysql://root:pw@localhost/test')\n"
+                )
+                ops = [{
+                    "type": "alter_column_autoincrement",
+                    "table": "users",
+                    "column": "id",
+                    "autoincrement": True,
+                    "col_type": "INT",
+                    "nullable": False,
+                }]
+                rollback_ops = [{
+                    "type": "alter_column_autoincrement",
+                    "table": "users",
+                    "column": "id",
+                    "autoincrement": False,
+                    "col_type": "INT",
+                    "nullable": False,
+                }]
+                sql, rb_sql, _changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="mysql_db")
+                assert "ALTER TABLE users MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT;" in sql
+                assert "ALTER TABLE users MODIFY COLUMN id INT NOT NULL;" in rb_sql
+            finally:
+                os.chdir(old)
+
+    def test_mysql_autoincrement_remove_sql(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            old = os.getcwd()
+            os.chdir(tmpdir)
+            try:
+                Path("dbwarden.py").write_text(
+                    "from dbwarden import database_config\n"
+                    "database_config(database_name='mysql_db', default=True, database_type='mysql', "
+                    "database_url_sync='mysql+pymysql://root:pw@localhost/test')\n"
+                )
+                ops = [{
+                    "type": "alter_column_autoincrement",
+                    "table": "users",
+                    "column": "id",
+                    "autoincrement": False,
+                    "col_type": "INT",
+                    "nullable": False,
+                }]
+                rollback_ops = [{
+                    "type": "alter_column_autoincrement",
+                    "table": "users",
+                    "column": "id",
+                    "autoincrement": True,
+                    "col_type": "INT",
+                    "nullable": False,
+                }]
+                sql, rb_sql, _changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="mysql_db")
+                assert "ALTER TABLE users MODIFY COLUMN id INT NOT NULL;" in sql
+                assert "ALTER TABLE users MODIFY COLUMN id INT NOT NULL AUTO_INCREMENT;" in rb_sql
+            finally:
+                os.chdir(old)
+
+    def test_normalize_mysql_default_strips_on_update_clause(self):
+        assert _normalize_mysql_default("CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP") == "CURRENT_TIMESTAMP"
+
+    def test_mysql_table_diff_ignores_omitted_auto_increment_and_row_format_case(self):
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True, "my_column": {"my_unsigned": True}},
+                    },
+                    "my_table": {
+                        "my_engine": "InnoDB",
+                        "my_charset": "utf8mb4",
+                        "my_collate": "utf8mb4_unicode_ci",
+                        "my_row_format": "Dynamic",
+                        "my_auto_increment": 1,
+                    },
+                }
+            },
+            "constraints": {},
+            "indexes": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[ModelColumn("id", "INT", False, True, False, None, None, my_meta={"my_unsigned": True})],
+                my_table={
+                    "my_engine": "InnoDB",
+                    "my_charset": "utf8mb4",
+                    "my_collate": "utf8mb4_unicode_ci",
+                    "my_row_format": "DYNAMIC",
+                },
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot, db_name=None)
+        assert upgrade == []
+        assert rollback == []
 
     def test_index_clickhouse_uses_generic(self):
         op = {"type": "add_index", "table": "users", "columns": ["email"], "unique": False}

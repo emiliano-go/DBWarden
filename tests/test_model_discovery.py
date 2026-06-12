@@ -255,6 +255,72 @@ class TestSQLGeneration:
 
         assert "user_id INTEGER NOT NULL REFERENCES users(id)" in sql
 
+    def test_generate_mysql_create_table_sql_with_options(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "mysql")
+
+        columns = [
+            ModelColumn("id", "INT", False, True, False, None, None, my_meta={"my_unsigned": True}),
+            ModelColumn(
+                "updated_at",
+                "TIMESTAMP",
+                False,
+                False,
+                False,
+                "CURRENT_TIMESTAMP",
+                None,
+                my_meta={"my_on_update": "CURRENT_TIMESTAMP"},
+            ),
+            ModelColumn(
+                "email",
+                "VARCHAR(255)",
+                False,
+                False,
+                True,
+                None,
+                None,
+                my_meta={"my_charset": "utf8mb4", "my_collate": "utf8mb4_unicode_ci"},
+            ),
+        ]
+
+        table = ModelTable(
+            name="users",
+            columns=columns,
+            my_table={
+                "my_engine": "InnoDB",
+                "my_charset": "utf8mb4",
+                "my_collate": "utf8mb4_unicode_ci",
+                "my_row_format": "DYNAMIC",
+                "my_auto_increment": 10,
+            },
+        )
+        sql = generate_create_table_sql(table)
+
+        assert "id INT UNSIGNED NOT NULL PRIMARY KEY" in sql
+        assert "updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" in sql
+        assert "email VARCHAR(255) NOT NULL UNIQUE CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci" in sql
+        assert "ENGINE=InnoDB" in sql
+        assert "DEFAULT CHARSET=utf8mb4" in sql
+        assert "COLLATE=utf8mb4_unicode_ci" in sql
+        assert "ROW_FORMAT=DYNAMIC" in sql
+        assert "AUTO_INCREMENT=10" in sql
+
+    def test_generate_mysql_add_column_sql_with_options(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "mysql")
+
+        column = ModelColumn(
+            "updated_at",
+            "TIMESTAMP",
+            False,
+            False,
+            False,
+            "CURRENT_TIMESTAMP",
+            None,
+            my_meta={"my_on_update": "CURRENT_TIMESTAMP"},
+        )
+        sql = model_discovery.generate_add_column_sql("users", column, db_name="primary")
+
+        assert "ALTER TABLE users ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" in sql
+
     def test_generate_clickhouse_create_table_sql_with_options(self, monkeypatch):
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
 
