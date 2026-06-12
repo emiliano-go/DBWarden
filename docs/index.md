@@ -29,14 +29,39 @@ seo:
       name: Emiliano Gandini Outeda
 ---
 
-# DBWarden
+<p align="center">
+  <img src="https://raw.githubusercontent.com/emiliano-gandini-outeda/DBWarden/refs/heads/main/assets/icon.png" alt="DBWarden" width="128"/>
+</p>
+<p align="center">
+  <strong style="font-size: 2.5em;">DBWarden</strong>
+</p>
+<p align="center">
+  <em>The SQL-first database toolkit for SQLAlchemy.</em>
+</p>
+<p align="center">
+  <a href="https://www.python.org/downloads/">
+    <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white&style=for-the-badge" alt="Python">
+  </a>
+  <a href="https://pypi.org/project/dbwarden">
+    <img src="https://img.shields.io/badge/PyPI-0.11.2-34D058?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
+  </a>
+  <a href="https://github.com/emiliano-gandini-outeda/DBWarden/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
+  </a>
+  <a href="https://deepwiki.com/emiliano-gandini-outeda/DBWarden/">
+    <img src="https://img.shields.io/badge/DeepWiki-8A2BE2?logo=readthedocs&logoColor=white&style=for-the-badge" alt="DeepWiki">
+  </a>
+</p>
+
+<p align="center">
+  <strong><a href="https://emiliano-gandini-outeda.github.io/DBWarden/">Full documentation</a></strong>
+  &nbsp;|&nbsp;
+  <strong><a href="https://github.com/emiliano-gandini-outeda/DBWarden">Source Code</a></strong>
+</p>
 
 DBWarden is a SQL-first migration system for Python and SQLAlchemy projects.
 
 It is built for teams that want schema changes to remain explicit, reviewable, and operationally safe, from local development to production.
-
-**Project links**:
-[PyPI](https://pypi.org/project/dbwarden/) | [GitHub](https://github.com/emiliano-gandini-outeda/DBWarden) | [Documentation](https://emiliano-gandini-outeda.github.io/DBWarden/)
 
 ## What DBWarden Does
 
