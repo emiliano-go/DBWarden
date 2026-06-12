@@ -116,8 +116,10 @@ def normalize_model_state(state: dict[str, Any]) -> dict[str, Any]:
             normalized_col.setdefault("autoincrement", None)
             pg_meta = normalized_col.pop("pg_meta", None) or normalized_col.get("pg_column") or {}
             ch_meta = normalized_col.pop("ch_meta", None) or normalized_col.get("ch_column") or {}
+            my_meta = normalized_col.pop("my_meta", None) or normalized_col.get("my_column") or {}
             normalized_col["pg_column"] = {k: _serialize_value(v) for k, v in pg_meta.items()}
             normalized_col["ch_column"] = {k: _serialize_value(v) for k, v in ch_meta.items()}
+            normalized_col["my_column"] = {k: _serialize_value(v) for k, v in my_meta.items()}
 
             pg_type = normalized_col["pg_column"].get("pg_type", {})
             if isinstance(pg_type, dict) and pg_type.get("kind") == "enum":
@@ -196,6 +198,7 @@ def reconstruct_model_table(table_entry: dict[str, Any]) -> ModelTable:
     ]
     columns = [reconstruct_model_column(col_entry) for _, col_entry in sorted((table_entry.get("columns", {}) or {}).items())]
     pg_table = {k: v for k, v in backend_spec.items() if k.startswith("pg_")}
+    my_table = {k: v for k, v in backend_spec.items() if k.startswith("my_")}
     excludes = list(pg_table.get("pg_excludes", []) or [])
     return ModelTable(
         name=table_entry["name"],
@@ -209,6 +212,7 @@ def reconstruct_model_table(table_entry: dict[str, Any]) -> ModelTable:
         uniques=list(table_entry.get("uniques", []) or []),
         excludes=excludes,
         pg_table=pg_table,
+        my_table=my_table,
     )
 
 
@@ -224,6 +228,7 @@ def reconstruct_model_column(col_entry: dict[str, Any]) -> ModelColumn:
         comment=col_entry.get("comment"),
         pg_meta=dict(col_entry.get("pg_column", {}) or {}),
         ch_meta=dict(col_entry.get("ch_column", {}) or {}),
+        my_meta=dict(col_entry.get("my_column", {}) or {}),
         autoincrement=col_entry.get("autoincrement"),
     )
 
@@ -239,6 +244,11 @@ def _table_to_state_entry(table: ModelTable) -> dict[str, Any]:
     if pg_table:
         backend_table_spec["backend"] = "postgresql"
         backend_table_spec.update({k: _serialize_value(v) for k, v in pg_table.items() if v is not None})
+
+    my_table = table.my_table or {}
+    if my_table:
+        backend_table_spec["backend"] = "mysql"
+        backend_table_spec.update({k: _serialize_value(v) for k, v in my_table.items() if v is not None})
 
     return {
         "name": table.name,
@@ -267,6 +277,7 @@ def _column_to_entry(col: Any) -> dict[str, Any]:
         "autoincrement": getattr(col, "autoincrement", None),
         "pg_column": {k: _serialize_value(v) for k, v in (getattr(col, "pg_meta", None) or {}).items() if v is not None},
         "ch_column": {k: _serialize_value(v) for k, v in (getattr(col, "ch_meta", None) or {}).items() if v is not None},
+        "my_column": {k: _serialize_value(v) for k, v in (getattr(col, "my_meta", None) or {}).items() if v is not None},
     }
 
 
@@ -286,6 +297,14 @@ def _normalize_type(t: str | None) -> str:
     if t is None:
         return ""
     return t.strip().lower().replace(" ", "").replace("(", "(").replace(")", ")")
+
+
+def _normalize_mysql_table_value(key: str, value: Any) -> Any:
+    if value is None and key in {"my_auto_increment", "my_row_format"}:
+        return None
+    if isinstance(value, str) and key in {"my_engine", "my_charset", "my_collate", "my_row_format"}:
+        return value.lower()
+    return value
 
 
 def _generated_index_key(table: str, idx: dict[str, Any]) -> str:
@@ -451,10 +470,12 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
                 upgrade_ops.append({
                     "type": "alter_column_autoincrement", "table": table_name, "column": col_name,
                     "autoincrement": bool(curr_col.get("autoincrement")), "col_type": curr_type,
+                    "nullable": curr_col.get("nullable"),
                 })
                 rollback_ops.insert(0, {
                     "type": "alter_column_autoincrement", "table": table_name, "column": col_name,
                     "autoincrement": bool(prev_col.get("autoincrement")), "col_type": prev_type,
+                    "nullable": prev_col.get("nullable"),
                 })
 
             if _normalize_default(prev_col.get("default")) != _normalize_default(curr_col.get("default")):
@@ -474,12 +495,20 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
                     "type": "alter_column_comment", "table": table_name, "column": col_name,
                     "comment": curr_col.get("comment"),
                     "previous_comment": prev_col.get("comment"),
+                    "col_type": curr_type,
+                    "nullable": curr_col.get("nullable"),
+                    "autoincrement": curr_col.get("autoincrement"),
+                    "my_meta": curr_col.get("my_column", {}),
                     "severity": "INFO",
                 })
                 rollback_ops.insert(0, {
                     "type": "alter_column_comment", "table": table_name, "column": col_name,
                     "comment": prev_col.get("comment"),
                     "previous_comment": curr_col.get("comment"),
+                    "col_type": prev_type,
+                    "nullable": prev_col.get("nullable"),
+                    "autoincrement": prev_col.get("autoincrement"),
+                    "my_meta": prev_col.get("my_column", {}),
                     "severity": "INFO",
                 })
 
@@ -507,6 +536,34 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
                 upgrade_ops,
                 rollback_ops,
             )
+
+            prev_my_col = prev_col.get("my_column", {}) or {}
+            curr_my_col = curr_col.get("my_column", {}) or {}
+            if prev_my_col != curr_my_col:
+                upgrade_ops.append({
+                    "type": "alter_my_column_meta", "table": table_name, "column": col_name,
+                    "col_type": curr_type, "snap_type": prev_type,
+                    "from_my_column": prev_my_col, "to_my_column": curr_my_col,
+                    "nullable": curr_col.get("nullable", True),
+                    "default": curr_col.get("default"),
+                    "comment": curr_col.get("comment"),
+                    "autoincrement": curr_col.get("autoincrement"),
+                    "snap_nullable": prev_col.get("nullable", True),
+                    "snap_default": prev_col.get("default"),
+                    "snap_comment": prev_col.get("comment"),
+                })
+                rollback_ops.insert(0, {
+                    "type": "alter_my_column_meta", "table": table_name, "column": col_name,
+                    "col_type": prev_type, "snap_type": curr_type,
+                    "from_my_column": curr_my_col, "to_my_column": prev_my_col,
+                    "nullable": prev_col.get("nullable", True),
+                    "default": prev_col.get("default"),
+                    "comment": prev_col.get("comment"),
+                    "autoincrement": prev_col.get("autoincrement"),
+                    "snap_nullable": curr_col.get("nullable", True),
+                    "snap_default": curr_col.get("default"),
+                    "snap_comment": curr_col.get("comment"),
+                })
 
         prev_spec = prev_entry.get("backend_table_spec", {}) or {}
         curr_spec = curr_entry.get("backend_table_spec", {}) or {}
@@ -549,6 +606,24 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
                 rollback_ops.insert(0, {
                     "type": "alter_pg_table", "table": table_name, "key": key,
                     "from_value": curr_pg_table.get(key), "to_value": prev_pg_table.get(key),
+                })
+
+        prev_my_table = prev_spec if prev_spec.get("backend") == "mysql" else {}
+        curr_my_table = curr_spec if curr_spec.get("backend") == "mysql" else {}
+        scalar_keys = {k for k in set(prev_my_table.keys()) | set(curr_my_table.keys()) if k != "backend"}
+        for key in sorted(scalar_keys):
+            prev_val = _normalize_mysql_table_value(key, prev_my_table.get(key))
+            curr_val = _normalize_mysql_table_value(key, curr_my_table.get(key))
+            if key == "my_auto_increment" and curr_val is None:
+                continue
+            if prev_val != curr_val:
+                upgrade_ops.append({
+                    "type": "alter_my_table", "table": table_name, "key": key,
+                    "from_value": prev_my_table.get(key), "to_value": curr_my_table.get(key),
+                })
+                rollback_ops.insert(0, {
+                    "type": "alter_my_table", "table": table_name, "key": key,
+                    "from_value": curr_my_table.get(key), "to_value": prev_my_table.get(key),
                 })
 
         if prev_entry.get("comment") != curr_entry.get("comment"):

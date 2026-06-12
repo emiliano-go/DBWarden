@@ -557,6 +557,21 @@ def extract_full_schema_snapshot(
                 if pg_column:
                     col_entry["pg_column"] = pg_column
 
+            if database_type in ("mysql", "mariadb"):
+                my_column: dict[str, Any] = {}
+                type_obj = col.get("type")
+                charset = getattr(type_obj, "charset", None)
+                collation = getattr(type_obj, "collation", None)
+                unsigned = bool(getattr(type_obj, "unsigned", False))
+                if charset:
+                    my_column["my_charset"] = charset
+                if collation:
+                    my_column["my_collate"] = collation
+                if unsigned:
+                    my_column["my_unsigned"] = True
+                if my_column:
+                    col_entry["my_column"] = my_column
+
             columns_dict[col_name] = col_entry
 
         table_entry: dict[str, Any] = {
@@ -703,6 +718,82 @@ def extract_full_schema_snapshot(
 
                 if pg_table:
                     table_entry["pg_table"] = pg_table
+            except Exception:
+                pass
+            finally:
+                if own_engine and _conn is not None:
+                    try:
+                        _conn.close()
+                    except Exception:
+                        pass
+
+        if database_type in ("mysql", "mariadb"):
+            _conn = engine.connect() if own_engine and engine is not None else connection
+            try:
+                my_table: dict[str, Any] = {}
+
+                try:
+                    row = _conn.execute(
+                        text(
+                            "SELECT ENGINE, TABLE_COLLATION, AUTO_INCREMENT, ROW_FORMAT, TABLE_COMMENT "
+                            "FROM information_schema.TABLES "
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t"
+                        ),
+                        {"t": table_name},
+                    ).fetchone()
+                    if row:
+                        if row[0]:
+                            my_table["my_engine"] = row[0]
+                        if row[1]:
+                            my_table["my_collate"] = row[1]
+                            charset = str(row[1]).split("_", 1)[0]
+                            if charset:
+                                my_table["my_charset"] = charset
+                        if row[2] is not None:
+                            my_table["my_auto_increment"] = int(row[2])
+                        if row[3]:
+                            my_table["my_row_format"] = row[3]
+                        if row[4]:
+                            table_entry["comment"] = row[4]
+                except Exception:
+                    pass
+
+                try:
+                    rows = _conn.execute(
+                        text(
+                            "SELECT COLUMN_NAME, COLUMN_TYPE, CHARACTER_SET_NAME, COLLATION_NAME, EXTRA, COLUMN_COMMENT "
+                            "FROM information_schema.COLUMNS "
+                            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t"
+                        ),
+                        {"t": table_name},
+                    ).fetchall()
+                    for row in rows:
+                        col_entry = columns_dict.get(row[0])
+                        if col_entry is None:
+                            continue
+                        my_column = dict(col_entry.get("my_column", {}) or {})
+                        column_type = str(row[1] or "")
+                        if "unsigned" in column_type.lower():
+                            my_column["my_unsigned"] = True
+                        if row[2]:
+                            my_column["my_charset"] = row[2]
+                        if row[3]:
+                            my_column["my_collate"] = row[3]
+                        extra = str(row[4] or "")
+                        if "auto_increment" in extra.lower():
+                            col_entry["autoincrement"] = True
+                        on_update_match = re.search(r"on update\s+(.+)$", extra, re.IGNORECASE)
+                        if on_update_match:
+                            my_column["my_on_update"] = on_update_match.group(1).strip()
+                        if row[5]:
+                            col_entry["comment"] = row[5]
+                        if my_column:
+                            col_entry["my_column"] = my_column
+                except Exception:
+                    pass
+
+                if my_table:
+                    table_entry["my_table"] = my_table
             except Exception:
                 pass
             finally:
@@ -1754,6 +1845,53 @@ def _normalize_default(d: Any) -> str | None:
     return s
 
 
+def _normalize_mysql_default(d: Any) -> str | None:
+    s = _normalize_default(d)
+    if s is None:
+        return None
+    upper = s.upper()
+    if upper.startswith("CURRENT_TIMESTAMP ON UPDATE "):
+        return "CURRENT_TIMESTAMP"
+    return s
+
+
+def _normalize_mysql_table_value(key: str, value: Any) -> Any:
+    if value is None and key in {"my_auto_increment", "my_row_format"}:
+        return None
+    if isinstance(value, str) and key in {"my_engine", "my_charset", "my_collate", "my_row_format"}:
+        return value.lower()
+    return value
+
+
+def _mysql_column_definition_for_meta(
+    col_type: str,
+    meta: dict[str, Any],
+    nullable: bool | None = None,
+    default: str | None = None,
+    comment: str | None = None,
+    autoincrement: bool | None = None,
+) -> str:
+    definition = col_type
+    if meta.get("my_unsigned") and "UNSIGNED" not in definition.upper():
+        definition = f"{definition} UNSIGNED"
+    if autoincrement:
+        definition += " AUTO_INCREMENT"
+    if nullable is not None:
+        definition += " NOT NULL" if not nullable else " NULL"
+    if default is not None:
+        definition += f" DEFAULT {default}"
+    if comment is not None:
+        escaped = comment.replace("'", "''")
+        definition += f" COMMENT '{escaped}'"
+    if meta.get("my_charset"):
+        definition += f" CHARACTER SET {meta['my_charset']}"
+    if meta.get("my_collate"):
+        definition += f" COLLATE {meta['my_collate']}"
+    if meta.get("my_on_update"):
+        definition += f" ON UPDATE {meta['my_on_update']}"
+    return definition
+
+
 def diff_models_against_snapshot(
     model_tables: list[ModelTable],
     snapshot: dict[str, Any],
@@ -1829,6 +1967,29 @@ def diff_models_against_snapshot(
         snap_ch_options = snap_table.get("ch_options") or snap_table.get("clickhouse_options") or {}
         model_ch_options = table.clickhouse_options or {}
         _diff_ch_options(snap_ch_options, model_ch_options, table.name, upgrade_ops, rollback_ops, snapshot_table=snap_table, model_table=table, clickhouse_engine_recreate=clickhouse_engine_recreate)
+
+        snap_my_table = snap_table.get("my_table") or {}
+        model_my_table = table.my_table or {}
+        for key in sorted(set(snap_my_table.keys()) | set(model_my_table.keys())):
+            snap_val = _normalize_mysql_table_value(key, snap_my_table.get(key))
+            model_val = _normalize_mysql_table_value(key, model_my_table.get(key))
+            if key == "my_auto_increment" and model_val is None:
+                continue
+            if snap_val != model_val:
+                upgrade_ops.append({
+                    "type": "alter_my_table",
+                    "table": table.name,
+                    "key": key,
+                    "from_value": snap_my_table.get(key),
+                    "to_value": model_my_table.get(key),
+                })
+                rollback_ops.append({
+                    "type": "alter_my_table",
+                    "table": table.name,
+                    "key": key,
+                    "from_value": model_my_table.get(key),
+                    "to_value": snap_my_table.get(key),
+                })
 
         dropped_cols = []
         for col_name in snap_columns:
@@ -1909,13 +2070,14 @@ def diff_models_against_snapshot(
                 })
             snap_autoinc = snap_col.get("autoincrement", False)
             model_autoinc = model_col.autoincrement
-            if model_autoinc is not None and bool(snap_autoinc) != model_autoinc:
+            if model_autoinc is not None and bool(snap_autoinc) != bool(model_autoinc):
                 upgrade_ops.append({
                     "type": "alter_column_autoincrement",
                     "table": table.name,
                     "column": col_name,
                     "autoincrement": model_autoinc,
                     "col_type": model_col.type,
+                    "nullable": model_col.nullable,
                 })
                 rollback_ops.append({
                     "type": "alter_column_autoincrement",
@@ -1923,9 +2085,17 @@ def diff_models_against_snapshot(
                     "column": col_name,
                     "autoincrement": bool(snap_autoinc),
                     "col_type": snap_col.get("type", ""),
+                    "nullable": snap_nullable,
                 })
             snap_default = _normalize_default(snap_col.get("default"))
             model_default = _normalize_default(model_col.default)
+            if _get_backend(db_name) in ("mysql", "mariadb"):
+                snap_default = _normalize_mysql_default(snap_col.get("default"))
+                model_default = _normalize_mysql_default(model_col.default)
+                snap_my_col = snap_col.get("my_column") or {}
+                model_my_col = model_col.my_meta or {}
+                if snap_my_col.get("my_on_update") and model_my_col.get("my_on_update") and model_default is None and snap_default == "CURRENT_TIMESTAMP":
+                    snap_default = None
             if snap_default != model_default:
                 upgrade_ops.append({
                     "type": "alter_column_default",
@@ -1941,18 +2111,28 @@ def diff_models_against_snapshot(
                 })
             snap_col_comment = snap_col.get("comment")
             if snap_col_comment != model_col.comment:
+                snap_my_col = snap_col.get("my_column") or {}
+                model_my_col = model_col.my_meta or {}
                 upgrade_ops.append({
                     "type": "alter_column_comment",
                     "table": table.name,
                     "column": col_name,
                     "comment": model_col.comment,
                     "previous_comment": snap_col_comment,
+                    "col_type": model_col.type,
+                    "nullable": model_col.nullable,
+                    "autoincrement": model_col.autoincrement,
+                    "my_meta": model_my_col,
                 })
                 rollback_ops.append({
                     "type": "alter_column_comment",
                     "table": table.name,
                     "column": col_name,
                     "comment": snap_col_comment,
+                    "col_type": snap_col.get("type", ""),
+                    "nullable": snap_nullable,
+                    "autoincrement": snap_col.get("autoincrement", False),
+                    "my_meta": snap_my_col,
                 })
             snap_pg_col = snap_col.get("pg_column") or {}
             model_pg_meta = model_col.pg_meta or {}
@@ -1987,6 +2167,42 @@ def diff_models_against_snapshot(
             snap_ch_col = snap_col.get("ch_column") or {}
             model_ch_col = model_col.ch_meta or {}
             _diff_ch_column_extras(snap_ch_col, model_ch_col, table.name, col_name, upgrade_ops, rollback_ops)
+
+            snap_my_col = snap_col.get("my_column") or {}
+            model_my_col = model_col.my_meta or {}
+            if snap_my_col != model_my_col:
+                upgrade_ops.append({
+                    "type": "alter_my_column_meta",
+                    "table": table.name,
+                    "column": col_name,
+                    "col_type": model_col.type,
+                    "snap_type": snap_col.get("type", ""),
+                    "from_my_column": snap_my_col,
+                    "to_my_column": model_my_col,
+                    "nullable": model_col.nullable,
+                    "default": model_col.default,
+                    "comment": model_col.comment,
+                    "autoincrement": model_col.autoincrement,
+                    "snap_nullable": snap_col.get("nullable", True),
+                    "snap_default": snap_col.get("default"),
+                    "snap_comment": snap_col.get("comment"),
+                })
+                rollback_ops.append({
+                    "type": "alter_my_column_meta",
+                    "table": table.name,
+                    "column": col_name,
+                    "col_type": snap_col.get("type", ""),
+                    "snap_type": model_col.type,
+                    "from_my_column": model_my_col,
+                    "to_my_column": snap_my_col,
+                    "nullable": snap_col.get("nullable", True),
+                    "default": snap_col.get("default"),
+                    "comment": snap_col.get("comment"),
+                    "autoincrement": snap_col.get("autoincrement", False),
+                    "snap_nullable": model_col.nullable,
+                    "snap_default": model_col.default,
+                    "snap_comment": model_col.comment,
+                })
 
         for col_name, col_def in dropped_cols:
             if col_name in renamed_old:
@@ -2579,6 +2795,17 @@ def snapshot_diff_to_sql(
                         f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT nextval('{seq_name}');\n"
                         f"ALTER SEQUENCE {seq_name} OWNED BY {table}.{column};"
                     )
+            elif backend in ("mysql", "mariadb"):
+                nullable = op.get("nullable")
+                null_clause = ""
+                if nullable is not None:
+                    null_clause = " NOT NULL" if not nullable else " NULL"
+                if autoinc:
+                    upgrade_sql = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type}{null_clause} AUTO_INCREMENT;"
+                    rollback_sql = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type}{null_clause};"
+                else:
+                    upgrade_sql = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type}{null_clause};"
+                    rollback_sql = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type}{null_clause} AUTO_INCREMENT;"
             else:
                 upgrade_sql = f"-- Autoincrement toggle for {table}.{column} only supported on PostgreSQL"
                 rollback_sql = f"-- Autoincrement toggle for {table}.{column} only supported on PostgreSQL"
@@ -2591,10 +2818,17 @@ def snapshot_diff_to_sql(
         elif op["type"] == "alter_table_comment":
             comment = op.get("comment") or ""
             prev = op.get("previous_comment") or ""
+            raw_comment = op.get("comment")
+            raw_prev = op.get("previous_comment")
             if backend == "sqlite":
                 c = comment.replace(chr(39), chr(39)+chr(39))
                 up = f"-- COMMENT ON TABLE {op['table']} IS '{c}';" if comment else f"-- COMMENT ON TABLE {op['table']} IS NULL;"
                 rb = f"-- COMMENT ON TABLE {op['table']} IS '{prev}';" if prev else f"-- COMMENT ON TABLE {op['table']} IS NULL;"
+            elif backend in ("mysql", "mariadb"):
+                c = (raw_comment or "").replace(chr(39), chr(39)+chr(39))
+                p = (raw_prev or "").replace(chr(39), chr(39)+chr(39))
+                up = f"ALTER TABLE {op['table']} COMMENT = '{c}';"
+                rb = f"ALTER TABLE {op['table']} COMMENT = '{p}';"
             else:
                 up = f"COMMENT ON TABLE {op['table']} IS '{comment.replace(chr(39), chr(39)+chr(39))}';" if comment else f"COMMENT ON TABLE {op['table']} IS NULL;"
                 rb = f"COMMENT ON TABLE {op['table']} IS '{prev.replace(chr(39), chr(39)+chr(39))}';" if prev else f"COMMENT ON TABLE {op['table']} IS NULL;"
@@ -2606,11 +2840,26 @@ def snapshot_diff_to_sql(
         elif op["type"] == "alter_column_comment":
             comment = op.get("comment") or ""
             prev = op.get("previous_comment") or ""
+            raw_comment = op.get("comment")
+            raw_prev = op.get("previous_comment")
+            col_type = op.get("col_type", "")
+            nullable = op.get("nullable")
             if backend == "sqlite":
                 c = comment.replace(chr(39), chr(39)+chr(39))
                 col = f"{op['table']}.{op['column']}"
                 up = f"-- COMMENT ON COLUMN {col} IS '{c}';" if comment else f"-- COMMENT ON COLUMN {col} IS NULL;"
                 rb = f"-- COMMENT ON COLUMN {col} IS '{prev}';" if prev else f"-- COMMENT ON COLUMN {col} IS NULL;"
+            elif backend in ("mysql", "mariadb"):
+                my_meta = op.get("my_meta", {}) or {}
+                autoinc = op.get("autoincrement")
+                up = (
+                    f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} "
+                    f"{_mysql_column_definition_for_meta(col_type, my_meta, nullable=nullable, comment=raw_comment, autoincrement=autoinc)};"
+                )
+                rb = (
+                    f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} "
+                    f"{_mysql_column_definition_for_meta(col_type, my_meta, nullable=nullable, comment=raw_prev, autoincrement=autoinc)};"
+                )
             else:
                 up = f"COMMENT ON COLUMN {op['table']}.{op['column']} IS '{comment.replace(chr(39), chr(39)+chr(39))}';" if comment else f"COMMENT ON COLUMN {op['table']}.{op['column']} IS NULL;"
                 rb = f"COMMENT ON COLUMN {op['table']}.{op['column']} IS '{prev.replace(chr(39), chr(39)+chr(39))}';" if prev else f"COMMENT ON COLUMN {op['table']}.{op['column']} IS NULL;"
@@ -2814,6 +3063,61 @@ def snapshot_diff_to_sql(
                         upgrade_sql=up, rollback_sql=rb,
                     ))
             changes.append(Change(operation=f"alter_pg_table_{key}", table=op["table"]))
+        elif op["type"] == "alter_my_table":
+            key = op["key"]
+            to_val = op.get("to_value")
+            from_val = op.get("from_value")
+            if backend in ("mysql", "mariadb"):
+                if key == "my_engine":
+                    up = f"ALTER TABLE {op['table']} ENGINE={to_val};" if to_val else f"-- Cannot unset engine for {op['table']}"
+                    rb = f"ALTER TABLE {op['table']} ENGINE={from_val};" if from_val else f"-- Cannot restore unset engine for {op['table']}"
+                elif key == "my_charset":
+                    up = f"ALTER TABLE {op['table']} DEFAULT CHARACTER SET {to_val};" if to_val else f"-- Cannot unset character set for {op['table']}"
+                    rb = f"ALTER TABLE {op['table']} DEFAULT CHARACTER SET {from_val};" if from_val else f"-- Cannot restore unset character set for {op['table']}"
+                elif key == "my_collate":
+                    up = f"ALTER TABLE {op['table']} COLLATE={to_val};" if to_val else f"-- Cannot unset collation for {op['table']}"
+                    rb = f"ALTER TABLE {op['table']} COLLATE={from_val};" if from_val else f"-- Cannot restore unset collation for {op['table']}"
+                elif key == "my_row_format":
+                    up = f"ALTER TABLE {op['table']} ROW_FORMAT={to_val};" if to_val else f"-- Cannot unset row format for {op['table']}"
+                    rb = f"ALTER TABLE {op['table']} ROW_FORMAT={from_val};" if from_val else f"-- Cannot restore unset row format for {op['table']}"
+                elif key == "my_auto_increment":
+                    up = f"ALTER TABLE {op['table']} AUTO_INCREMENT={to_val};" if to_val is not None else f"-- Cannot unset auto_increment for {op['table']}"
+                    rb = f"ALTER TABLE {op['table']} AUTO_INCREMENT={from_val};" if from_val is not None else f"-- Cannot restore unset auto_increment for {op['table']}"
+                else:
+                    up = f"-- Unsupported MySQL table option change {key} on {op['table']}"
+                    rb = up
+                statements.append(MigrationStatement(
+                    order=StatementOrder.ALTER_TABLE_OPTIONS,
+                    upgrade_sql=up,
+                    rollback_sql=rb,
+                ))
+            changes.append(Change(operation=f"alter_my_table_{key}", table=op["table"]))
+        elif op["type"] == "alter_my_column_meta":
+            from_my = op.get("from_my_column", {}) or {}
+            to_my = op.get("to_my_column", {}) or {}
+            if backend in ("mysql", "mariadb"):
+                up = (
+                    f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} "
+                    f"{_mysql_column_definition_for_meta(op['col_type'], to_my,
+                        nullable=op.get('nullable'),
+                        default=op.get('default'),
+                        comment=op.get('comment'),
+                        autoincrement=op.get('autoincrement'))};"
+                )
+                rb = (
+                    f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} "
+                    f"{_mysql_column_definition_for_meta(op['snap_type'], from_my,
+                        nullable=op.get('snap_nullable'),
+                        default=op.get('snap_default'),
+                        comment=op.get('snap_comment'),
+                        autoincrement=op.get('autoincrement'))};"
+                )
+                statements.append(MigrationStatement(
+                    order=StatementOrder.ALTER_COLUMN_TYPE,
+                    upgrade_sql=up,
+                    rollback_sql=rb,
+                ))
+            changes.append(Change(operation="alter_my_column_meta", table=op["table"], target=op["column"]))
         elif op["type"] in ("add_unique_constraint", "drop_unique_constraint"):
             name = op["name"]
             using = op.get("using")

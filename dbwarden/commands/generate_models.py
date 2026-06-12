@@ -258,8 +258,10 @@ def _resolve_imports(columns: list[dict], has_relationships: bool) -> set[str]:
                 imports.add("String")
             elif inner.startswith("Integer"):
                 imports.add("Integer")
-        if col.get("default") and "func.now()" in str(col["default"]):
-            imports.add("func")
+        if col.get("default"):
+            raw_default = str(col["default"]).upper()
+            if "func.now()" in raw_default or raw_default == "CURRENT_TIMESTAMP" or raw_default == "CURRENT_DATE" or raw_default == "CURRENT_TIME":
+                imports.add("func")
         if col.get("server_default"):
             imports.add("text")
         if col.get("foreign_key"):
@@ -282,6 +284,15 @@ def _resolve_postgresql_imports(columns: list[dict]) -> set[str]:
             imports.add("TSVECTOR")
         elif upper.endswith("RANGE"):
             imports.add(upper)
+    return imports
+
+
+def _resolve_mysql_imports(columns: list[dict]) -> set[str]:
+    imports: set[str] = set()
+    for col in columns:
+        raw_type = str(col.get("type", "")).upper()
+        if raw_type.startswith("YEAR"):
+            imports.add("Integer")
     return imports
 
 
@@ -354,12 +365,60 @@ def _render_postgresql_meta(columns: list[dict], pg_meta: dict | None = None) ->
     return lines
 
 
+def _render_mysql_meta(columns: list[dict], my_meta: dict | None = None) -> list[str]:
+    if not my_meta and not any(col.get("my_meta") or col.get("comment") for col in columns):
+        return []
+
+    lines = ["    class Meta(MyTableMeta):"]
+    my_meta = my_meta or {}
+    for key, value in my_meta.items():
+        if key == "comment":
+            lines.append(f"        comment = {value!r}")
+        else:
+            rendered = _format_meta_value(value)
+            if len(rendered) == 1:
+                lines.append(f"        {key} = {rendered[0].strip()}")
+            else:
+                lines.append(f"        {key} = {rendered[0].strip()}")
+                lines.extend(rendered[1:])
+
+    flat_to_spec: dict[str, str] = {
+        "my_charset": "charset",
+        "my_collate": "collate",
+        "my_unsigned": "unsigned",
+        "my_on_update": "on_update",
+    }
+
+    for col in columns:
+        field_meta: dict[str, Any] = {}
+        if col.get("comment"):
+            field_meta["comment"] = col["comment"]
+        field_meta.update(col.get("my_meta") or {})
+        if not field_meta:
+            continue
+        lines.append("")
+        lines.append(f"        class {col['name']}(MyColumnMeta):")
+        comment_val = field_meta.pop("comment", None)
+        if comment_val is not None:
+            lines.append(f"            comment = {comment_val!r}")
+        my_kwargs = {}
+        for flat_key, spec_key in flat_to_spec.items():
+            if flat_key in field_meta:
+                my_kwargs[spec_key] = field_meta[flat_key]
+        if my_kwargs:
+            kwargs_repr = ", ".join(f"{k}={v!r}" for k, v in my_kwargs.items())
+            lines.append(f"            my = my.field({kwargs_repr})")
+
+    return lines
+
+
 def _generate_table_code(
     table_name: str,
     columns: list[dict],
     clickhouse_options: dict | None = None,
     object_type: str = "table",
     pg_meta: dict | None = None,
+    my_meta: dict | None = None,
 ) -> str:
     class_name = "".join(part.capitalize() for part in re.split(r"[_\s]", table_name) if part)
     if not class_name:
@@ -376,9 +435,12 @@ def _generate_table_code(
         lines.append("")
         lines.append("    class Meta(CHTableMeta):")
         lines.extend(_render_ch_meta(columns, clickhouse_options, object_type))
-    if pg_meta or any(col.get("pg_meta") or col.get("comment") for col in columns):
+    if pg_meta or any(col.get("pg_meta") for col in columns):
         lines.append("")
         lines.extend(_render_postgresql_meta(columns, pg_meta))
+    if my_meta or any(col.get("my_meta") or col.get("comment") for col in columns):
+        lines.append("")
+        lines.extend(_render_mysql_meta(columns, my_meta))
     return "\n".join(lines) + "\n"
 
 
@@ -507,12 +569,6 @@ def _format_column(col: dict) -> str:
     sa_type = _format_pg_type(col) or _parse_type(col["type"], col.get("dialect"))
 
     col_args = [f"{col_name} = Column({col_name!r}, {sa_type}"]
-    if col.get("primary_key"):
-        col_args.append("primary_key=True")
-    if not col.get("nullable", True):
-        col_args.append("nullable=False")
-    if col.get("unique"):
-        col_args.append("unique=True")
     if col.get("foreign_key"):
         fk_opts = col.get("fk_options", {})
         fk_parts: list[str] = []
@@ -527,6 +583,12 @@ def _format_column(col: dict) -> str:
             col_args.append(f"ForeignKey('{col['foreign_key']}', {', '.join(fk_parts)})")
         else:
             col_args.append(f"ForeignKey('{col['foreign_key']}')")
+    if col.get("primary_key"):
+        col_args.append("primary_key=True")
+    if not col.get("nullable", True):
+        col_args.append("nullable=False")
+    if col.get("unique"):
+        col_args.append("unique=True")
     default = _format_default(col.get("default"))
     if default is not None:
         col_args.append(f"default={default}")
@@ -547,6 +609,7 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
     if single_file:
         all_imports: set[str] = set()
         pg_dialect_imports: set[str] = set()
+        my_dialect_imports: set[str] = set()
         ch_meta_imports: set[str] = set()
         all_classes: list[str] = []
         for table in tables:
@@ -555,6 +618,8 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
             all_imports |= _resolve_imports(table["columns"], has_relationships)
             if table.get("dialect") == "postgresql":
                 pg_dialect_imports |= _resolve_postgresql_imports(table["columns"])
+            if table.get("dialect") in ("mysql", "mariadb"):
+                my_dialect_imports |= _resolve_mysql_imports(table["columns"])
             if table.get("clickhouse_options"):
                 ch_meta_imports.update({"CHColumnMeta", "CHTableMeta", "ChEngineSpec", "ProjectionSpec"})
             all_classes.append(
@@ -564,21 +629,29 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
                     table.get("clickhouse_options"),
                     table.get("object_type", "table"),
                     table.get("pg_meta"),
+                    table.get("my_meta"),
                 )
             )
 
         imports = _render_imports(all_imports)
         pg_meta_imports: set[str] = set()
+        my_meta_imports: set[str] = set()
         needs_pg_spec = False
+        needs_my_spec = False
         needs_ch_spec = False
         for table in tables:
             if any(col.get("pg_meta") for col in table["columns"]):
                 pg_meta_imports.add("PGColumnMeta")
                 needs_pg_spec = True
+            if any(col.get("my_meta") for col in table["columns"]):
+                my_meta_imports.add("MyColumnMeta")
+                needs_my_spec = True
             if any(col.get("ch_meta") for col in table["columns"]):
                 needs_ch_spec = True
         if any(table.get("pg_meta") for table in tables):
             pg_meta_imports.add("PGTableMeta")
+        if any(table.get("my_meta") for table in tables):
+            my_meta_imports.add("MyTableMeta")
 
         content = (
             "from sqlalchemy import " + ", ".join(sorted(imports)) + "\n"
@@ -597,6 +670,12 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
             content += "from dbwarden.schema import pg\n"
         if pg_meta_imports or needs_pg_spec:
             content += "\n"
+        if my_meta_imports:
+            content += "from dbwarden import " + ", ".join(sorted(my_meta_imports)) + "\n"
+        if needs_my_spec:
+            content += "from dbwarden.schema import my\n"
+        if my_meta_imports or needs_my_spec:
+            content += "\n"
         if ch_meta_imports:
             content += "from dbwarden import " + ", ".join(sorted(ch_meta_imports)) + "\n"
         if needs_ch_spec:
@@ -612,6 +691,7 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
             col["dialect"] = table.get("dialect")
         imports = _resolve_imports(table["columns"], has_relationships)
         pg_dialect_imports = _resolve_postgresql_imports(table["columns"]) if table.get("dialect") == "postgresql" else set()
+        my_dialect_imports = _resolve_mysql_imports(table["columns"]) if table.get("dialect") in ("mysql", "mariadb") else set()
         content_lines: list[str] = []
         content_lines.append("from sqlalchemy import " + ", ".join(sorted(imports)) + "\n")
         if pg_dialect_imports:
@@ -619,18 +699,31 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
         content_lines.append("from sqlalchemy.ext.declarative import declarative_base\n\n\n")
         content_lines.append("Base = declarative_base()\n\n\n")
         needs_pg_base: set[str] = set()
+        needs_my_base: set[str] = set()
         needs_pg_spec = False
+        needs_my_spec = False
         needs_ch_spec = False
         if any(col.get("pg_meta") for col in table["columns"]):
             needs_pg_base.add("PGColumnMeta")
             needs_pg_spec = True
         if table.get("pg_meta"):
             needs_pg_base.add("PGTableMeta")
+        if any(col.get("my_meta") for col in table["columns"]):
+            needs_my_base.add("MyColumnMeta")
+            needs_my_spec = True
+        if table.get("my_meta"):
+            needs_my_base.add("MyTableMeta")
         if needs_pg_base:
             content_lines.append("from dbwarden import " + ", ".join(sorted(needs_pg_base)) + "\n")
         if needs_pg_spec:
             content_lines.append("from dbwarden.schema import pg\n")
         if needs_pg_base or needs_pg_spec:
+            content_lines.append("\n")
+        if needs_my_base:
+            content_lines.append("from dbwarden import " + ", ".join(sorted(needs_my_base)) + "\n")
+        if needs_my_spec:
+            content_lines.append("from dbwarden.schema import my\n")
+        if needs_my_base or needs_my_spec:
             content_lines.append("\n")
         if table.get("clickhouse_options"):
             content_lines.append("from dbwarden import CHColumnMeta, CHTableMeta, ChEngineSpec, ProjectionSpec\n")
@@ -644,6 +737,7 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
                 table.get("clickhouse_options"),
                 table.get("object_type", "table"),
                 table.get("pg_meta"),
+                table.get("my_meta"),
             )
         )
         safe_name = table["name"].lower().replace("-", "_")
@@ -906,6 +1000,77 @@ def _extract_postgresql_meta(inspector, connection, table_name: str, raw_columns
     return table_meta, column_meta
 
 
+def _extract_mysql_meta(connection, table_name: str) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+    from sqlalchemy import text
+
+    table_meta: dict[str, Any] = {}
+    column_meta: dict[str, dict[str, Any]] = {}
+
+    try:
+        row = connection.execute(
+            text(
+                "SELECT ENGINE, TABLE_COLLATION, AUTO_INCREMENT, ROW_FORMAT, TABLE_COMMENT "
+                "FROM information_schema.TABLES "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t"
+            ),
+            {"t": table_name},
+        ).fetchone()
+        if row:
+            if row[0]:
+                table_meta["my_engine"] = row[0]
+            if row[1]:
+                table_meta["my_collate"] = row[1]
+                charset = str(row[1]).split("_", 1)[0]
+                if charset:
+                    table_meta["my_charset"] = charset
+            if row[2] is not None:
+                table_meta["my_auto_increment"] = int(row[2])
+            if row[3]:
+                table_meta["my_row_format"] = row[3]
+            if row[4]:
+                table_meta["comment"] = row[4]
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+
+    try:
+        rows = connection.execute(
+            text(
+                "SELECT COLUMN_NAME, COLUMN_TYPE, CHARACTER_SET_NAME, COLLATION_NAME, EXTRA, COLUMN_COMMENT "
+                "FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t "
+                "ORDER BY ORDINAL_POSITION"
+            ),
+            {"t": table_name},
+        ).fetchall()
+        for row in rows:
+            meta: dict[str, Any] = {}
+            column_type = str(row[1] or "")
+            if "unsigned" in column_type.lower():
+                meta["my_unsigned"] = True
+            if row[2]:
+                meta["my_charset"] = row[2]
+            if row[3]:
+                meta["my_collate"] = row[3]
+            extra = str(row[4] or "")
+            on_update_match = re.search(r"on update\s+(.+)$", extra, re.IGNORECASE)
+            if on_update_match:
+                meta["my_on_update"] = on_update_match.group(1).strip()
+            if row[5]:
+                meta["comment"] = row[5]
+            if meta:
+                column_meta[row[0]] = meta
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+
+    return table_meta, column_meta
+
+
 def generate_models_cmd(
     output: str = "models",
     tables: str | None = None,
@@ -1086,6 +1251,18 @@ def generate_models_cmd(
                 # Remove raw columns list from options (already merged above)
                 ch_options.pop("columns", None)
 
+            my_meta: dict[str, Any] | None = None
+            if actual_dialect in ("mysql", "mariadb"):
+                my_meta, column_meta = _extract_mysql_meta(connection, table_name)
+                for col in columns_info:
+                    if col["name"] in column_meta:
+                        meta = dict(column_meta[col["name"]])
+                        comment = meta.pop("comment", None)
+                        if comment is not None:
+                            col["comment"] = comment
+                        if meta:
+                            col["my_meta"] = meta
+
             tables_data.append({
                 "name": table_name,
                 "columns": columns_info,
@@ -1093,6 +1270,7 @@ def generate_models_cmd(
                 "object_type": ch_options.get("ch_object_type", "table") if ch_options else "table",
                 "dialect": actual_dialect,
                 "pg_meta": pg_meta,
+                "my_meta": my_meta,
             })
 
     output_dir = Path(output)
