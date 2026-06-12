@@ -272,6 +272,9 @@ def migrate(
     sandbox: bool = typer.Option(
         False, "--sandbox", help="Apply migrations in a temporary sandbox database"
     ),
+    apply_seeds: bool = typer.Option(
+        False, "--apply-seeds", help="Apply pending seeds after migrations (overrides config)"
+    ),
 ):
     """Apply pending migrations to the database."""
     validate_directory()
@@ -286,6 +289,7 @@ def migrate(
         backup_dir=backup_dir,
         dry_run=dry_run,
         sandbox=sandbox,
+        apply_seeds=apply_seeds,
     )
 
 
@@ -558,6 +562,9 @@ def seed_list(
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose logging"
     ),
+    prune: bool = typer.Option(
+        False, "--prune", help="Remove tracking records for seed files that no longer exist"
+    ),
 ):
     """List seed files and their applied status."""
     validate_directory()
@@ -565,6 +572,7 @@ def seed_list(
         database=database,
         all_databases=all_databases,
         verbose=verbose,
+        prune=prune,
     )
 
 

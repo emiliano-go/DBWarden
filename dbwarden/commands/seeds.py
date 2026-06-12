@@ -145,9 +145,17 @@ def seed_list_cmd(
     database: str | None = None,
     all_databases: bool = False,
     verbose: bool = False,
+    prune: bool = False,
 ) -> None:
     """List seeds and their applied status."""
-    from dbwarden.repositories.seeds_repo import get_all_seed_records, get_seeds_directory
+    from dbwarden.repositories.seeds_repo import (
+        get_all_seed_records,
+        get_seeds_directory,
+        remove_seed_record,
+    )
+
+    if prune:
+        _prune_orphaned_seeds(database, all_databases)
 
     if all_databases:
         config = get_multi_db_config()
@@ -256,3 +264,40 @@ def _rollback_seeds_single(
         f"Rollback completed: {len(to_rollback)} seed record(s) removed.",
         style="green",
     )
+
+
+def _prune_orphaned_seeds(database: str | None = None, all_databases: bool = False) -> None:
+    from dbwarden.repositories.seeds_repo import (
+        get_all_seed_records,
+        get_seeds_directory,
+        remove_seed_record,
+    )
+
+    def _prune_single(db_name: str | None) -> None:
+        try:
+            seeds_dir = get_seeds_directory(db_name)
+        except DirectoryNotFoundError:
+            return
+        on_disk = set()
+        for f in Path(seeds_dir).iterdir():
+            if f.suffix in (".sql", ".py") and f.name.startswith("V"):
+                on_disk.add(f.name)
+        records = get_all_seed_records(db_name)
+        pruned = 0
+        for rec in records:
+            if rec.seed_type in ("sql", "python") and rec.filename not in on_disk:
+                remove_seed_record(rec.version, db_name)
+                console.print(f"  Removed orphaned record: V{rec.version} ({rec.filename})", style="yellow")
+                pruned += 1
+        if pruned:
+            console.print(f"  Pruned {pruned} orphaned seed record(s) for {db_name}.", style="green")
+        else:
+            console.print(f"  No orphaned seed records for {db_name}.", style="cyan")
+
+    if all_databases:
+        config = get_multi_db_config()
+        for db_name in config.databases:
+            _prune_single(db_name)
+    else:
+        db_name = database or get_multi_db_config().default
+        _prune_single(db_name)

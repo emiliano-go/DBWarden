@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import text
 
 from dbwarden.database.connection import get_db_connection
-from dbwarden.database.queries import QueryMethod, get_seed_query
+from dbwarden.database.queries import QueryMethod, get_seed_query, get_seed_table_name
 from dbwarden.models import SeedRecord
 
 
@@ -96,6 +96,28 @@ def remove_seed_record(version: str, db_name: str | None = None) -> None:
         connection.execute(
             text(get_seed_query(QueryMethod.DELETE_SEED, db_name)),
             {"version": version},
+        )
+
+
+def get_seed_record(version: str, db_name: str | None = None) -> SeedRecord | None:
+    if not seeds_table_exists(db_name):
+        return None
+    table = get_seed_table_name(db_name)
+    with get_db_connection(db_name) as connection:
+        result = connection.execute(
+            text(f"SELECT * FROM {table} WHERE version = :version"),
+            {"version": version},
+        )
+        row = result.fetchone()
+        if row is None:
+            return None
+        return SeedRecord(
+            version=row.version,
+            description=row.description,
+            filename=row.filename,
+            seed_type=row.seed_type,
+            applied_at=row.applied_at,
+            checksum=row.checksum,
         )
 
 

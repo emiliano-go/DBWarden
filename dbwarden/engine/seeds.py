@@ -17,6 +17,7 @@ from dbwarden.output import console
 from dbwarden.repositories.seeds_repo import (
     create_seeds_table_if_not_exists,
     get_applied_seed_versions,
+    get_seed_record,
     record_applied_seed,
     remove_seed_record,
 )
@@ -243,6 +244,15 @@ def apply_single_seed(
     filename = Path(filepath).name
     description = _description_from_filename(filename)
     checksum = _compute_checksum(filepath, seed_type)
+
+    # Checksum drift detection
+    existing = get_seed_record(version, db_name)
+    if existing is not None and existing.checksum and existing.checksum != checksum:
+        console.print(
+            f"  [yellow]Warning:[/yellow] Seed V{version} has been modified "
+            f"since last applied (checksum mismatch).",
+            style="yellow",
+        )
 
     console.print(f"  Applying seed V{version}: {filename}")
 
