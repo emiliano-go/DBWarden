@@ -99,39 +99,36 @@ These attributes work with any `database_type`. Backend-specific subclasses (`PG
 
 ### Column-Level Meta Base Class
 
-For IDE autocomplete on column-level inner classes, use `PGColumnMeta` for PostgreSQL or `CHColumnMeta` for ClickHouse. Both inherit from `FieldMeta`, which contains all backend-specific column attributes (`pg_*`, `ch_*`, `my_*`, `mdb_*`, `sq_*`):
+For IDE autocomplete on column-level inner classes, use `PGColumnMeta` for PostgreSQL or `CHColumnMeta` for ClickHouse. Both inherit from `FieldMeta`, which defines cross-database attributes (`comment`, `public`) and backend-specific spec objects (`pg`, `ch`, `my`, `mdb`, `sq`):
 
 ```python
-from dbwarden import FieldMeta
+from dbwarden import FieldMeta, pg
 
-# FieldMeta provides autocomplete for ALL backend attributes:
-#   comment, public
-#   pg_collation, pg_storage, pg_compression, pg_generated, pg_identity*
-#   ch_codec, ch_default_expression, ch_materialized, ch_alias, ch_ttl,
-#     ch_low_cardinality, ch_nullable
-#   my_charset, my_collate, my_unsigned, my_on_update
-#   mdb_invisible, mdb_without_overlaps, mdb_sequence
-#   sq_generated, sq_generated_mode
+# Use typed spec objects for backend-specific column attributes:
+#   pg = pg.field(collation=..., storage=..., ...)
+#   ch = ch.field(codec=..., nullable=..., ...)
 ```
 
-You do not need to inherit from `FieldMeta` directly -- `PGColumnMeta` and `CHColumnMeta` already do.
+Backend-specific options are always set via a typed spec object attribute — never as flat attributes. For example, use `pg = pg.field(collation="en_US.UTF-8")` instead of the old `pg_collation = "en_US.UTF-8"`.
 
 ### Backend Subpackages
 
-DBWarden organizes backend-specific types into subpackages under `dbwarden.schema`:
+DBWarden organizes backend-specific types into subpackages under `dbwarden.schema`, also available as short aliases:
 
-| Subpackage | Key types |
-|------------|-----------|
-| `dbwarden.schema.pgsql` | `PgIndexSpec`, `PgTableSpec` |
-| `dbwarden.schema.clickhouse` | `ChIndexSpec`, `ChTableSpec` |
-| `dbwarden.schema.mysql` | `MyTableSpec` |
-| `dbwarden.schema.mariadb` | `MdbTableSpec` |
-| `dbwarden.schema.sqlite` | `SqTableSpec` |
-
-These types are also re-exported from `dbwarden` for convenience:
+| Alias | Subpackage | Key types |
+|-------|------------|-----------|
+| `pg` | `dbwarden.schema.pgsql` | `PgFieldSpec`, `PgIndexSpec`, `PgTableSpec` |
+| `ch` | `dbwarden.schema.clickhouse` | `ChFieldSpec`, `ChIndexSpec`, `ChTableSpec` |
+| `my` | `dbwarden.schema.mysql` | `MyFieldSpec`, `MyTableSpec` |
+| `mdb` | `dbwarden.schema.mariadb` | `MdbFieldSpec`, `MdbTableSpec` |
+| `sq` | `dbwarden.schema.sqlite` | `SqFieldSpec`, `SqTableSpec` |
 
 ```python
-from dbwarden import PgIndexSpec, ChIndexSpec, PgTableSpec, ChTableSpec
+from dbwarden import pg, ch, my, mdb, sq
+
+# Use pg.field(), ch.field() for column-level metadata
+pg_spec = pg.field(collation="en_US.UTF-8", storage="PLAIN")
+ch_spec = ch.field(codec="ZSTD(3)", nullable=True)
 ```
 
 ## PostgreSQL Model Metadata
@@ -163,11 +160,11 @@ class User(Base):
 
 ### Column-Level Meta
 
-Use `PGColumnMeta` inner classes named after the column:
+Use `PGColumnMeta` inner classes named after the column. Use `pg = pg.field(...)` to set column-level options:
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import PGTableMeta, PGColumnMeta
+from dbwarden import PGTableMeta, PGColumnMeta, pg
 
 class Base(DeclarativeBase):
     pass
@@ -180,15 +177,13 @@ class User(Base):
 
     class Meta(PGTableMeta):
         class id(PGColumnMeta):
-            pg_identity = "always"
-            pg_identity_start = 100
+            pg = pg.field(identity="always", identity_start=100)
 
         class bio(PGColumnMeta):
-            pg_storage = "EXTENDED"
-            pg_collation = "en_US.UTF-8"
+            pg = pg.field(storage="EXTENDED", collation="en_US.UTF-8")
 ```
 
-`PGColumnMeta` includes the common `comment` and `public` attributes plus PostgreSQL-specific ones (`pg_collation`, `pg_storage`, `pg_compression`, `pg_generated`, `pg_identity` and its sequence options).
+`PGColumnMeta` includes the common `comment` and `public` attributes plus a `pg` attribute of type `PgFieldSpec` that bundles all PostgreSQL-specific column options.
 
 For the full list of supported attributes, see [PostgreSQL Deep Dive](databases/postgresql.md).
 
@@ -233,11 +228,11 @@ For the full list of supported attributes, see [ClickHouse Deep Dive](databases/
 
 ### Column-Level Meta
 
-Use `CHColumnMeta` inner classes named after the column:
+Use `CHColumnMeta` inner classes named after the column. Use `ch = ch.field(...)` to set column-level options:
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ch
 
 class Base(DeclarativeBase):
     pass
@@ -254,14 +249,13 @@ class Event(Base):
         ch_order_by = "event_time"
 
         class payload(CHColumnMeta):
-            ch_codec = "ZSTD(3)"
-            ch_nullable = False
+            ch = ch.field(codec="ZSTD(3)", nullable=False)
 
         class tags(CHColumnMeta):
-            ch_low_cardinality = True
+            ch = ch.field(low_cardinality=True)
 ```
 
-`CHColumnMeta` includes the common `comment` and `public` attributes plus ClickHouse-specific ones (`ch_codec`, `ch_default_expression`, `ch_materialized`, `ch_alias`, `ch_ttl`, `ch_low_cardinality`, `ch_nullable`).
+`CHColumnMeta` includes the common `comment` and `public` attributes plus a `ch` attribute of type `ChFieldSpec` that bundles all ClickHouse-specific column options.
 
 ### Engine Spec
 
@@ -386,23 +380,23 @@ Column types render as CH-native types (`Int64`, `String`).
 Use `CHColumnMeta` inner classes for per-column hints instead of `info={}`:
 
 ```python
+from dbwarden import ch
+
 class Meta(CHTableMeta):
     class payload(CHColumnMeta):
-        ch_codec = "ZSTD(3)"
-        ch_low_cardinality = True
-        ch_nullable = False
+        ch = ch.field(codec="ZSTD(3)", low_cardinality=True, nullable=False)
 ```
 
-Supported `CHColumnMeta` fields:
+Supported `ch.field()` options:
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| `ch_codec` | Compression codec | `"ZSTD(3)"` |
-| `ch_default_expression` | Default value expression | `"now()"` |
-| `ch_materialized` | Materialized expression | `"lower(name)"` |
-| `ch_alias` | Alias expression | `"concat(a, b)"` |
-| `ch_ttl` | Column TTL expression | `"event_time + INTERVAL 1 YEAR"` |
-| `ch_low_cardinality` | Wrap type in LowCardinality | `True` |
-| `ch_nullable` | Wrap type in Nullable | `True` |
-| `comment` | Column comment | `"User payload"` |
-| `public` | Schema visibility | `False` |
+| Keyword | Type | Description | Example |
+|---------|------|-------------|---------|
+| `codec` | `str` | Compression codec | `"ZSTD(3)"` |
+| `default_expression` | `str` | Default value expression | `"now()"` |
+| `materialized` | `str` | Materialized expression | `"lower(name)"` |
+| `alias` | `str` | Alias expression | `"concat(a, b)"` |
+| `ttl` | `str` | Column TTL expression | `"event_time + INTERVAL 1 YEAR"` |
+| `low_cardinality` | `bool` | Wrap type in LowCardinality | `True` |
+| `nullable` | `bool` | Wrap type in Nullable | `True` |
+
+Cross-backend column attributes (`comment`, `public`) are set directly on the inner class, not on the spec object.

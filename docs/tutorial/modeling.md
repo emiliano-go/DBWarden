@@ -88,7 +88,7 @@ class Meta(TableMeta):
 
 Available column-level attributes: `comment`, `public`. Fields named with a leading `_` are implicitly `public=False`.
 
-For the full list of backend-specific column attributes (`pg_*`, `ch_*`, `my_*`, `mdb_*`, `sq_*`), see [Column-Level Meta Base Class](../models.md#column-level-meta-base-class).
+For backend-specific column options, use `pg = pg.field(...)` for PostgreSQL or `ch = ch.field(...)` for ClickHouse. See [Column-Level Meta Base Class](../models.md#column-level-meta-base-class) for details.
 
 ## PostgreSQL Models
 
@@ -96,7 +96,7 @@ When `database_type="postgresql"`, use `class Meta(PGTableMeta)` for table-level
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import PGTableMeta, PGColumnMeta
+from dbwarden import PGTableMeta, PGColumnMeta, pg
 
 class Base(DeclarativeBase):
     pass
@@ -111,12 +111,10 @@ class User(Base):
         pg_fillfactor = 80
 
         class id(PGColumnMeta):
-            pg_identity = "always"
-            pg_identity_start = 100
+            pg = pg.field(identity="always", identity_start=100)
 
         class bio(PGColumnMeta):
-            pg_storage = "EXTENDED"
-            pg_compression = "pglz"
+            pg = pg.field(storage="EXTENDED", compression="pglz")
 ```
 
 See the [reference](../models.md#postgresql-model-metadata) for the full list of `PGTableMeta` and `PGColumnMeta` attributes, or the [PostgreSQL Deep Dive](../databases/postgresql.md) for DDL behavior and snapshot format.
@@ -127,7 +125,7 @@ When `database_type="clickhouse"`, use `class Meta(CHTableMeta)` for table-level
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec, ch
 
 class Base(DeclarativeBase):
     pass
@@ -156,11 +154,10 @@ class Event(Base):
         ]
 
         class payload(CHColumnMeta):
-            ch_codec = "ZSTD(3)"
-            ch_nullable = False
+            ch = ch.field(codec="ZSTD(3)", nullable=False)
 
         class tags(CHColumnMeta):
-            ch_low_cardinality = True
+            ch = ch.field(low_cardinality=True)
 ```
 
 See the [reference](../models.md#clickhouse-model-metadata) for the full list of `CHTableMeta` and `CHColumnMeta` attributes, or the [ClickHouse Deep Dive](../databases/clickhouse.md) for DDL behavior, materialized views, and dictionaries.

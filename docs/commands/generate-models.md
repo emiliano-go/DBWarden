@@ -82,7 +82,7 @@ For PostgreSQL databases, `generate-models` reverse-engineers all supported meta
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import PGTableMeta, PGColumnMeta
+from dbwarden import PGTableMeta, PGColumnMeta, pg
 
 class Base(DeclarativeBase):
     pass
@@ -99,13 +99,10 @@ class User(Base):
         pg_fillfactor = 80
 
         class id(PGColumnMeta):
-            pg_identity = "always"
-            pg_identity_start = 100
-            pg_identity_increment = 1
+            pg = pg.field(identity="always", identity_start=100, identity_increment=1)
 
         class bio(PGColumnMeta):
-            pg_storage = "EXTENDED"
-            pg_collation = "en_US.UTF-8"
+            pg = pg.field(storage="EXTENDED", collation="en_US.UTF-8")
 ```
 
 The following metadata is reverse-engineered:
@@ -130,7 +127,7 @@ For ClickHouse databases, `generate-models` reverse-engineers all supported meta
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec, ch
 
 class Base(DeclarativeBase):
     pass
@@ -153,7 +150,7 @@ class Event(Base):
         ]
 
         class payload(CHColumnMeta):
-            ch_codec = "ZSTD(3)"
+            ch = ch.field(codec="ZSTD(3)")
 ```
 
 The following metadata is reverse-engineered:

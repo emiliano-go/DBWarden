@@ -64,8 +64,8 @@ The following ClickHouse features are fully supported in this round-trip:
 | Projections | `PROJECTION name (SELECT ...)` via `ProjectionSpec` list |
 | Dictionaries | `CREATE DICTIONARY ... SOURCE(...) LIFETIME(...) LAYOUT(...)` via `ch_dict_*` fields |
 | Skip Indexes | `ALTER TABLE ... ADD INDEX ... TYPE bloom_filter GRANULARITY N` via `ChIndexSpec` entries in `ch_indexes` |
-| Column Codecs | `CODEC(ZSTD(3))` via `ch_codec` on `CHColumnMeta` |
-| LowCardinality / Nullable | Type wrappers via `ch_low_cardinality`, `ch_nullable` on `CHColumnMeta` |
+| Column Codecs | `CODEC(ZSTD(3))` via `ch.field(codec=...)` on `CHColumnMeta` |
+| LowCardinality / Nullable | Type wrappers via `ch.field(low_cardinality=..., nullable=...)` on `CHColumnMeta` |
 | Column Defaults | `DEFAULT expr`, `MATERIALIZED expr`, `ALIAS expr` via column Meta |
 | Type Normalization | `VARCHAR` -> `String`, `INTEGER` -> `Int32`, `BIGINT` -> `Int64`, `FLOAT(53)` -> `Float64`, `NUMERIC(p,s)` -> `Decimal(p,s)`, `BOOLEAN` -> `Bool`, `ARRAY(Integer)` -> `Array(Int32)`, `Enum` -> `Enum8/Enum16`, `UUID` -> `UUID`, `JSON` -> `JSON`, `DATETIME` -> `DateTime` / `DateTime64` |
 | Auto-detect | `generate-models` auto-enables ClickHouse engine metadata when `database_type="clickhouse"` (no `--clickhouse-engines` flag needed) |
@@ -236,11 +236,11 @@ ALTER TABLE events ADD INDEX ix_url (url) TYPE minmax GRANULARITY 3
 
 ### Column-Level Meta
 
-Use `CHColumnMeta` inner classes for per-column metadata. The inner class must be named after the column:
+Use `CHColumnMeta` inner classes for per-column metadata. The inner class must be named after the column. Use `ch = ch.field(...)` to set column-level options:
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ch
 
 class Base(DeclarativeBase):
     pass
@@ -258,14 +258,13 @@ class Event(Base):
         ch_order_by = "event_time"
 
         class payload(CHColumnMeta):
-            ch_codec = "ZSTD(3)"
-            ch_nullable = False
+            ch = ch.field(codec="ZSTD(3)", nullable=False)
 
         class tags(CHColumnMeta):
-            ch_low_cardinality = True
+            ch = ch.field(low_cardinality=True)
 
         class event_time(CHColumnMeta):
-            ch_default_expression = "now()"
+            ch = ch.field(default_expression="now()")
 ```
 
 `CHColumnMeta` includes common column attributes shared across all backends:
@@ -274,18 +273,19 @@ class Event(Base):
 |-----------|------|-----|
 | `comment` | `str` | `COMMENT ON COLUMN t.c IS '...'` |
 | `public` | `bool` | Controls field visibility in schemap auto-schema |
+| `ch` | `ChFieldSpec` | ClickHouse-specific column options (see table below) |
 
-ClickHouse-specific `CHColumnMeta` attributes:
+ClickHouse-specific `ChFieldSpec` fields (set via `ch.field(...)`):
 
-| Attribute | Type | SQL |
-|-----------|------|-----|
-| `ch_codec` | `str` | `CODEC(ZSTD(3))` |
-| `ch_default_expression` | `str` | `DEFAULT expr` |
-| `ch_materialized` | `str` | `MATERIALIZED expr` |
-| `ch_alias` | `str` | `ALIAS expr` |
-| `ch_ttl` | `str` | Column-level TTL expression |
-| `ch_low_cardinality` | `bool` | Wrap type in `LowCardinality(...)` |
-| `ch_nullable` | `bool` | Wrap type in `Nullable(...)` |
+| Keyword | Type | SQL |
+|---------|------|-----|
+| `codec` | `str` | `CODEC(ZSTD(3))` |
+| `default_expression` | `str` | `DEFAULT expr` |
+| `materialized` | `str` | `MATERIALIZED expr` |
+| `alias` | `str` | `ALIAS expr` |
+| `ttl` | `str` | Column-level TTL expression |
+| `low_cardinality` | `bool` | Wrap type in `LowCardinality(...)` |
+| `nullable` | `bool` | Wrap type in `Nullable(...)` |
 
 ### Materialized Views
 
@@ -479,7 +479,7 @@ Generated output for a table with engine, ordering, partitioning, codec, and pro
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
+from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec, ch
 
 class Base(DeclarativeBase):
     pass
@@ -502,7 +502,7 @@ class Event(Base):
         ]
 
         class payload(CHColumnMeta):
-            ch_codec = "ZSTD(3)"
+            ch = ch.field(codec="ZSTD(3)")
 ```
 
 ## Safety Classification
