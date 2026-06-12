@@ -74,6 +74,9 @@ poetry add --group dev dbwarden
 
 | Group | Command | Provides |
 |-------|---------|----------|
+| `postgres` | `pip install "dbwarden[postgres]"` | PostgreSQL driver (`psycopg2-binary`) |
+| `mysql` | `pip install "dbwarden[mysql]"` | MySQL/MariaDB driver (`pymysql`) |
+| `clickhouse` | `pip install "dbwarden[clickhouse]"` | ClickHouse driver (`clickhouse-connect`) |
 | `fastapi` | `pip install "dbwarden[fastapi]"` | FastAPI session dependencies, health router, migration router, metrics router, Redis lock |
 | `metrics` | `pip install "dbwarden[metrics]"` | Prometheus metrics endpoint (`prometheus-client`) |
 | `sandbox` | `pip install "dbwarden[sandbox]"` | Sandbox migration testing via testcontainers |
@@ -81,21 +84,32 @@ poetry add --group dev dbwarden
 Combine groups as needed:
 
 ```bash
-pip install "dbwarden[fastapi,metrics,sandbox]"
+pip install "dbwarden[postgres,mysql,fastapi]"
 ```
 
 ## Database drivers
 
-DBWarden uses SQLAlchemy under the hood. Your project already has a database driver, but you can ensure specific drivers:
+DBWarden uses SQLAlchemy under the hood. The recommended way to install drivers is via the extras above:
 
 ```bash
-# PostgreSQL (most common)
-pip install psycopg2-binary
+# PostgreSQL
+pip install "dbwarden[postgres]"
 
 # MySQL/MariaDB
-pip install mysql-connector-python
+pip install "dbwarden[mysql]"
+
+# ClickHouse
+pip install "dbwarden[clickhouse]"
 
 # SQLite comes bundled with Python
+```
+
+You can also install drivers directly if you prefer:
+
+```bash
+pip install psycopg2-binary    # PostgreSQL
+pip install pymysql            # MySQL / MariaDB
+pip install clickhouse-connect # ClickHouse
 ```
 
 ## Verify installation

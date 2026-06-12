@@ -114,6 +114,7 @@ Databases = [
   {Overview = "databases.md"},
   {"Common SQL Databases" = "databases/sql-databases.md"},
   {PostgreSQL = "databases/postgresql.md"},
+  {MySQL = "databases/mysql.md"},
   {ClickHouse = "databases/clickhouse.md"}
 ]
 

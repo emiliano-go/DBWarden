@@ -140,10 +140,10 @@ Each backend has deep-dive documentation:
 
 | Backend | Guide |
 |---------|-------|
-| PostgreSQL | [SQL Databases](databases/sql-databases.md) |
-| MySQL / MariaDB | [SQL Databases](databases/sql-databases.md) |
+| PostgreSQL | [PostgreSQL Deep Dive](databases/postgresql.md) |
+| MySQL / MariaDB | [MySQL Deep Dive](databases/mysql.md) |
 | SQLite | [SQL Databases](databases/sql-databases.md) |
-| ClickHouse | [ClickHouse](databases/clickhouse.md) |
+| ClickHouse | [ClickHouse Deep Dive](databases/clickhouse.md) |
 
 ### PostgreSQL
 
@@ -153,11 +153,19 @@ See [PostgreSQL Deep Dive](databases/postgresql.md) for the complete reference.
 
 ### MySQL / MariaDB
 
+MySQL and MariaDB are **first-class backends** with full round-trip support. All metadata: engine, charset, collation, row format, auto_increment, unsigned columns, ON UPDATE, and column comments, is captured by the snapshot, diffed correctly, and emitted as valid DDL.
+
+Key MySQL/MariaDB DDL behavior:
+
 - **DDL is NOT transactional**: each statement auto-commits; partial failure possible
-- MariaDB configured as `database_type="mariadb"` (separate from MySQL)
-- FK drop uses `DROP FOREIGN KEY` (not `DROP CONSTRAINT`)
 - Column type/nullable changes use `MODIFY COLUMN` (requires full column definition)
-- Validate engine-specific syntax in manual migrations
+- Table comments use `ALTER TABLE t COMMENT = '...'` (not `COMMENT ON`)
+- Column comments use `MODIFY COLUMN ... COMMENT '...'` (full column definition preserved)
+- Auto-increment toggle uses `MODIFY COLUMN ... AUTO_INCREMENT`
+- FK drop uses `DROP FOREIGN KEY` (not `DROP CONSTRAINT`)
+- MariaDB configured as `database_type="mariadb"` (separate from MySQL)
+
+See [MySQL Deep Dive](databases/mysql.md) for the complete reference.
 
 ### SQLite
 
