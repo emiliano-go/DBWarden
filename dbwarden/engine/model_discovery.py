@@ -780,6 +780,21 @@ def get_all_model_tables(
     return tables
 
 
+def _find_project_root(start: Path) -> Path:
+    PROJECT_ROOT_MARKERS = {
+        "pyproject.toml",
+        "setup.py",
+        "setup.cfg",
+        ".git",
+        ".hg",
+        ".svn",
+    }
+    for candidate in [start] + list(start.parents):
+        if any((candidate / marker).exists() for marker in PROJECT_ROOT_MARKERS):
+            return candidate
+    return start
+
+
 def auto_discover_model_paths() -> List[str]:
     """
     Auto-discover model paths by looking for models/ or model/ directories.
@@ -787,7 +802,8 @@ def auto_discover_model_paths() -> List[str]:
     Searches:
     1. Current directory for models/ or model/
     2. All subdirectories for models/ or model/ folders
-    3. Parent directories (up to 5 levels)
+    3. Parent directories (up to the project root, detected via
+       pyproject.toml, setup.py, .git, etc.)
     4. Ignores common lib folders (.venv, node_modules, __pycache__, etc.)
 
     Returns:
@@ -795,6 +811,7 @@ def auto_discover_model_paths() -> List[str]:
     """
     model_paths = []
     current = Path.cwd().resolve()
+    project_root = _find_project_root(current)
 
     IGNORED_DIRS = {
         ".venv",
@@ -841,7 +858,7 @@ def auto_discover_model_paths() -> List[str]:
             pass
         return found
 
-    for _ in range(5):
+    while True:
         # Check for models/ or model/ in current directory
         for dirname in ["models", "model"]:
             model_dir = current / dirname
@@ -854,7 +871,7 @@ def auto_discover_model_paths() -> List[str]:
             if subdir not in model_paths:
                 model_paths.append(subdir)
 
-        if current.parent == current:
+        if current == project_root or current.parent == current:
             break
         current = current.parent
 
