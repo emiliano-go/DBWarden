@@ -1167,6 +1167,17 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
             else:
                 foreign_key = colspec
 
+        if foreign_key and backend == "clickhouse":
+            raise DBWardenConfigError(
+                f"Column '{column.table.name}.{column.name}' uses ForeignKey "
+                f"constraint referencing '{foreign_key}', but ClickHouse does "
+                f"not support foreign key constraints. Remove ForeignKey() and "
+                f"use a plain mapped_column instead; the relationship is "
+                f"logical only. If this model is shared across multiple "
+                f"databases, move it to its own module and configure separate "
+                f"model_paths per database."
+            )
+
         codec = None
         comment = None
         pg_meta: dict[str, Any] = {}

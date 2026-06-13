@@ -75,7 +75,7 @@ dbwarden make-migrations --database primary --safe-type-change
 
 ## Schema Snapshots
 
-After each migration is applied, DBWarden writes a **schema snapshot** to `dbwarden/schemas/<migration_id>.schema.json`. These snapshots capture the full DDL state (tables, columns, types, indexes, constraints, enums) at that point in time.
+After each migration is applied, DBWarden writes a **schema snapshot** to `.dbwarden/schemas/<migration_id>.schema.json`. These snapshots capture the full DDL state (tables, columns, types, indexes, constraints, enums) at that point in time.
 
 `make-migrations` diffs your SQLAlchemy models against the **latest** snapshot instead of the live database. This means:
 
@@ -612,7 +612,7 @@ dbwarden make-migrations --database primary --plan
 - Generated `.plan.json` files are useful for CI checks and debugging.
 - If no models are discovered, configure `model_paths` explicitly.
 - With `--dev`, translation can target dev SQLite behavior.
-- Schema snapshots are written to `dbwarden/schemas/` after each successful `migrate`: see [Schema Snapshots](schema-snapshots.md).
+- Schema snapshots are written to `.dbwarden/schemas/` after each successful `migrate`: see [Schema Snapshots](schema-snapshots.md).
 - Column-level diff (type/null/default changes) only works with a schema snapshot.
 - Without a snapshot, `make-migrations` falls back to live-DB diffing which only detects new/dropped columns.
 - For authoring guidelines and the review checklist, see [Migration File Format](../migration-files.md).

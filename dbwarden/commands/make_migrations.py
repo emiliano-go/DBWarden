@@ -28,6 +28,8 @@ from dbwarden.engine.version import (
     generate_migration_filename,
     generate_repeatable_filename,
 )
+from dbwarden import __version__
+from dbwarden.engine.offline import model_state_to_dict
 from dbwarden.logging import get_logger
 from dbwarden.output import console
 
@@ -693,6 +695,12 @@ def make_migrations_cmd(
     console.print(f"Created migration file: {filepath}", style="green")
     console.print(f"Created migration plan: {plan_filepath}", style="green")
     console.print(f"Tables included: {', '.join(t.name for t in tables)}", style="cyan")
+
+    state = model_state_to_dict(tables, dbwarden_version=__version__)
+    state_path = Path(".dbwarden/model_state.json")
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(json.dumps(state, indent=2, default=str) + "\n")
+    logger.info(f"Model state written: {state_path}")
 
 
 def _resolve_migration_description(

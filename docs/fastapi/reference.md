@@ -34,7 +34,7 @@ Complete API documentation for DBWarden's FastAPI integration.
 
 For most applications, use the `DatabaseHandle` pattern instead of
 `get_session()`. Call `database_config()` and use `.async_session`
-directly in route parameters  no `Annotated`, `Depends`, or type
+directly in route parameters: no `Annotated`, `Depends`, or type
 aliases needed. See [Session Dependency](tutorial/session-dependency.md).
 
 ## `get_session`
@@ -883,7 +883,7 @@ async def lifespan(app: FastAPI):
 
 ### `DatabaseHandle` Pattern (Recommended)
 
-Use `.async_session` and `.sync_session` directly  no type aliases needed:
+Use `.async_session` and `.sync_session` directly: no type aliases needed:
 
 ```python
 from dbwarden import database_config

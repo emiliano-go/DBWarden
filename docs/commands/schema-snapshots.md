@@ -44,7 +44,7 @@ Schema snapshots are JSON files that record the full DDL state of a database at 
 After each versioned migration is successfully applied by `migrate`, DBWarden extracts the complete schema from the live database and writes it as a `<migration_id>.schema.json` file:
 
 ```
-dbwarden/schemas/
+.dbwarden/schemas/
   primary__0001_init.schema.json
   primary__0002_add_email.schema.json
   primary__0003_create_posts.schema.json
@@ -99,12 +99,12 @@ Fields added in format v2:
 
 | Field | Level | Purpose |
 |-------|-------|---------|
-| `backend_table_spec` | Per-table | Backend-specific table options (e.g., `ch_engine`, `pg_fillfactor`) |
-| `pg_column` / `ch_column` | Per-column | Backend-specific column metadata (e.g., `ch_type`, `ch_codec`, `pg_type`) |
+| `backend_table_spec` | Per-table | Backend-specific table options (e.g., `ch_engine`, `pg_fillfactor`, `my_engine`) |
+| `pg_column` / `ch_column` / `my_column` | Per-column | Backend-specific column metadata (e.g., `ch_type`, `ch_codec`, `pg_type`, `my_unsigned`) |
 | `object_type` | Per-table | `"table"`, `"materialized_view"`, or `"dictionary"` |
 | `name` | Per-column | Column name (v1 stored names as keys; v2 stores them in both key and value) |
 
-**Backward compatibility:** Snapshots with `format_version: 1` are automatically normalized to v2 when read. V1 keys like `clickhouse_options`, `pg_table`, and per-table `indexes`/`primary_key` are mapped to their v2 equivalents.
+**Backward compatibility:** Snapshots with `format_version: 1` are automatically normalized to v2 when read. V1 keys like `clickhouse_options`, `pg_table`, `my_table`, and per-table `indexes`/`primary_key` are mapped to their v2 equivalents.
 
 ### Integrity
 
@@ -177,7 +177,7 @@ The snapshot is written **after** all pending migrations have been applied. If t
 
 ## Finding the latest snapshot
 
-`make-migrations` uses `find_latest_snapshot()` which scans `dbwarden/schemas/` for snapshot files matching the current database name and picks the one with the highest version prefix (e.g., `0003` > `0002`).
+`make-migrations` uses `find_latest_snapshot()` which scans `.dbwarden/schemas/` for snapshot files matching the current database name and picks the one with the highest version prefix (e.g., `0003` > `0002`).
 
 If no snapshot exists for the database, `make-migrations` falls back to diffing against the live database (which does not include rename detection).
 

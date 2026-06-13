@@ -97,11 +97,11 @@ class Meta(TableMeta):
         public = False
 ```
 
-These attributes work with any `database_type`. Backend-specific subclasses (`PGTableMeta`, `CHTableMeta`) inherit all common attributes and add their own.
+These attributes work with any `database_type`. Backend-specific subclasses (`PGTableMeta`, `MyTableMeta`, `CHTableMeta`) inherit all common attributes and add their own.
 
 ### Column-Level Meta Base Class
 
-For IDE autocomplete on column-level inner classes, use `PGColumnMeta` for PostgreSQL or `CHColumnMeta` for ClickHouse. Both inherit from `FieldMeta`, which defines cross-database attributes (`comment`, `public`) and backend-specific spec objects (`pg`, `ch`, `my`, `mdb`, `sq`):
+For IDE autocomplete on column-level inner classes, use `PGColumnMeta` for PostgreSQL, `MyColumnMeta` for MySQL, `MdbColumnMeta` for MariaDB, or `CHColumnMeta` for ClickHouse. All inherit from `FieldMeta`, which defines cross-database attributes (`comment`, `public`) and backend-specific spec objects (`pg`, `ch`, `my`, `mdb`, `sq`):
 
 ```python
 from dbwarden import FieldMeta

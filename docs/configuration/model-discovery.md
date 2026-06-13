@@ -512,7 +512,7 @@ You learned:
 
  What model discovery is and how it works  
  When `model_paths` is required vs optional  
- Discovery algorithm (import  find  extract)  
+ Discovery algorithm (import → find → extract)  
  Common module path patterns  
  How to handle model path overlap  
  Troubleshooting discovery issues  

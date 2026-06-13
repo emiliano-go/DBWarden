@@ -100,16 +100,16 @@ async def list_users(db: AsyncSession = Depends(get_db)):
 ### With DBWarden
 
 ```python
-# One-time setup  database_config() returns a DatabaseHandle
+# One-time setup: database_config() returns a DatabaseHandle
 primary = database_config(database_name="primary", ...)
 
-# Every route  use .async_session directly
+# Every route: use .async_session directly
 @app.get("/users")
 async def list_users(session: primary.async_session):
     ...
 ```
 
-The `DatabaseHandle` `.async_session` property is a FastAPI dependency annotation  ready to use in route parameters without `Annotated`, `Depends`, or type aliases.
+The `DatabaseHandle` `.async_session` property is a FastAPI dependency annotation, ready to use in route parameters without `Annotated`, `Depends`, or type aliases.
 
 ## Engine Caching
 
@@ -393,7 +393,7 @@ Django's ORM is integrated with Django's migration system. DBWarden is for FastA
  Health endpoints integrate with Kubernetes probes  
  Async-native for high concurrency  
  `expire_on_commit=False` for FastAPI compatibility  
- Configuration resolves from explicit  environment  defaults  
+ Configuration resolves from explicit → environment → defaults  
 
 ## What's Next?
 

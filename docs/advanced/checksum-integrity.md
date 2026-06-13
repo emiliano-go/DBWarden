@@ -126,7 +126,7 @@ Never. A checksum mismatch means recorded history diverges from what is on disk.
 ## Schema snapshot checksums
 
 DBWarden also writes a **schema snapshot** after each migration:
-a JSON file at `dbwarden/schemas/<migration_id>.schema.json`. Each
+a JSON file at `.dbwarden/schemas/<migration_id>.schema.json`. Each
 snapshot contains a `checksum` field computed from the full snapshot
 content via SHA-256, plus a `previous_checksum` field linking it to
 the prior snapshot:

@@ -75,7 +75,7 @@ logging = database_config(
 )
 ```
 
-Each handle's `.async_session` is a FastAPI dependency annotation  use it directly in routes:
+Each handle's `.async_session` is a FastAPI dependency annotation: use it directly in routes:
 
 ```python
 from config import primary, analytics, logging

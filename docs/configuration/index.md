@@ -43,7 +43,7 @@ seo:
 
 DBWarden uses Python-based configuration with `database_config()` to define your databases.
 
-**One configuration source** for migrations, CLI tools, and runtime  no split configs.
+**One configuration source** for migrations, CLI tools, and runtime: no split configs.
 
 ## Quick Start
 

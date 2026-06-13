@@ -85,7 +85,7 @@ A migration with a destructive change would show:
 
 ```
   primary__0002_drop_username:
-    ALTER TABLE users DROP COLUMN username  CRITICAL
+    ALTER TABLE users DROP COLUMN username: CRITICAL
 ```
 
 This gives you a quick visual signal during code review: if a migration contains CRITICAL operations, it needs extra scrutiny.

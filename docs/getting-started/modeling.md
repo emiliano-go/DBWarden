@@ -215,7 +215,7 @@ class User(Base):
 public = User.PublicSchema(email="alice@example.com")
 ```
 
-The decorator reads `class Meta` to infer `SchemaConfig`, then calls `schemap` to build the Pydantic models. Column `comment` values are injected into Pydantic field descriptions, and backend-specific metadata (`pg_*`, `ch_*`, etc.) is included in `json_schema_extra.dbwarden_backend_meta`.
+The decorator reads `class Meta` to infer `SchemaConfig`, then calls `schemap` to build the Pydantic models. Column `comment` values are injected into Pydantic field descriptions, and backend-specific metadata (`pg_*`, `my_*`, `ch_*`, `mdb_*`, `sq_*`) is included in `json_schema_extra.dbwarden_backend_meta`.
 
 `@auto_schema` requires the `schemap` dependency (included with `pip install dbwarden`).
 

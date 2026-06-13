@@ -89,7 +89,7 @@ Created migration: migrations/primary/primary__0002_add_posts_table.sql
 
 ## Backend-Specific Metadata
 
-PostgreSQL and ClickHouse support first-class metadata through `class Meta`.
+PostgreSQL, MySQL/MariaDB, and ClickHouse support first-class metadata through `class Meta`.
 
 PostgreSQL
 
@@ -102,6 +102,21 @@ class Meta(PGTableMeta):
 
     class id(PGColumnMeta):
         pg_identity = "always"
+```
+
+MySQL
+
+```python
+from dbwarden import MyTableMeta, MyColumnMeta
+from dbwarden.schema import my
+
+
+class Meta(MyTableMeta):
+    my_engine = "InnoDB"
+    my_charset = "utf8mb4"
+
+    class id(MyColumnMeta):
+        my = my.field(unsigned=True)
 ```
 
 ClickHouse example:

@@ -58,11 +58,13 @@ pre-commit install
 - **Bug Fixes**: `fix/short-description`
 - **Hotfixes**: `hotfix/short-description`
 - **Documentation**: `docs/short-description`
+- **Refactors**: `refactor/short-description`
 
 Example:
 ```
 feature/add-migration-dependencies
 fix/resolve-sqlite-foreign-key-issue
+refactor/extract-snapshot-utils
 ```
 
 ### Creating Changes
@@ -101,25 +103,36 @@ ruff check dbwarden/
 
 3. **Update documentation** for any new features or changes.
 
-4. **Commit your changes** with a clear commit message:
+4. **Sign your commits with a GPG key**:
+
+   All commits must be signed with a GPG key. Configure Git to sign commits by default:
+
+   ```bash
+   git config --global user.signingkey YOUR_GPG_KEY_ID
+   git config --global commit.gpgsign true
+   ```
+
+   Unsigned commits will be rejected in CI. See [GitHub's GPG signing guide](https://docs.github.com/en/authentication/managing-commit-signature-verification/about-commit-signature-verification) for setup instructions.
+
+5. **Commit your changes** with a clear commit message:
 
 ```
-feature: Add migration dependency resolution
+feat: Add migration dependency resolution
 
 - Add parse_migration_header() to extract dependencies
 - Implement resolve_migration_order() for execution order
 - Update migrate command to use resolved order
 ```
 
-5. **Push to your fork**:
+6. **Push to your fork**:
 
 ```bash
 git push origin feature/your-feature-name
 ```
 
-6. **Create a Pull Request** against the `main` branch.
+7. **Create a Pull Request** against the `main` branch.
 
-7. **Address review feedback** if requested by reviewers.
+8. **Address review feedback** if requested by reviewers.
 
 ### Pull Request Requirements
 
@@ -140,8 +153,8 @@ type: short description
 - detailed change 2
 ```
 
-Types:
-- `feature`: New functionality
+Types (both `feat:` and `feature:` are accepted):
+- `feat` / `feature`: New functionality
 - `fix`: Bug fix
 - `refactor`: Code restructuring
 - `docs`: Documentation changes
@@ -150,7 +163,7 @@ Types:
 
 Examples:
 ```
-feature: Add colored SQL output in verbose mode
+feat: Add colored SQL output in verbose mode
 
 fix: Resolve UNIQUE constraint error on migration retry
 

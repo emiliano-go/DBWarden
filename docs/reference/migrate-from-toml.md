@@ -250,9 +250,9 @@ Python loads all `database_config(...)` calls, so ensure each call has a unique 
 
 Some TOML features don't map 1:1 to Python:
 
-- Inline tables  use separate key-value dictionary in Python (more verbose but explicit)
-- Multiline strings  use triple-quoted strings in Python
-- Arrays of tables  use separate `model_paths=[...]` list entries
+- Inline tables → use separate key-value dictionary in Python (more verbose but explicit)
+- Multiline strings → use triple-quoted strings in Python
+- Arrays of tables → use separate `model_paths=[...]` list entries
 
 If you used advanced TOML features, manually translate those to equivalent Python constructs.
 

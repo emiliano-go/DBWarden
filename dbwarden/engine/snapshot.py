@@ -1314,7 +1314,7 @@ def compute_checksum(snapshot: dict[str, Any]) -> str:
 
 
 def get_schemas_directory(database: str | None = None) -> str:
-    base_dir = os.path.join(os.getcwd(), "dbwarden", "schemas")
+    base_dir = os.path.join(os.getcwd(), ".dbwarden", "schemas")
     os.makedirs(base_dir, exist_ok=True)
     return base_dir
 

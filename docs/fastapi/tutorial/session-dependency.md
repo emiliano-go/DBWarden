@@ -34,7 +34,7 @@ Learn how to get database sessions in your FastAPI routes using `DatabaseHandle`
 
 ## The Handle Pattern
 
-`database_config()` returns a `DatabaseHandle`. Its `.async_session` (and `.sync_session`) properties are FastAPI dependency annotations  use them **directly** in route parameters:
+`database_config()` returns a `DatabaseHandle`. Its `.async_session` (and `.sync_session`) properties are FastAPI dependency annotations: use them **directly** in route parameters:
 
 ```python
 from dbwarden import database_config
@@ -147,7 +147,7 @@ When the first request comes in:
 
 ```
 1. primary.async_session resolves
-2. Cached engine is reused  no new engine created
+2. Cached engine is reused; no new engine created
 3. A fresh session opens for this request
 4. Your route runs
 5. Session closes automatically
@@ -247,7 +247,7 @@ primary = database_config(
 ```
 
 - `ENVIRONMENT=development` or `local` or `test`  uses `dev_database_url`
-- Otherwise  uses `database_url_sync`
+- Otherwise, uses `database_url_sync`
 
 No code changes needed between environments.
 
@@ -278,7 +278,7 @@ DBWarden sessions use `expire_on_commit=False` so that Pydantic response models 
 This happens if you try to use the session outside a request handler:
 
 ```python
-# Wrong  used outside a request
+# Wrong: used outside a request
 session = primary.async_session
 ```
 

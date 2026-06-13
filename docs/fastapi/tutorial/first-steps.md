@@ -93,7 +93,7 @@ That's it! **15 lines** of meaningful code including imports.
 
 Key details:
 - `database_config()` returns a `DatabaseHandle`
-- The handle's `.async_session` is a FastAPI dependency annotation  use it **directly** in route parameters
+- The handle's `.async_session` is a FastAPI dependency annotation: use it **directly** in route parameters
 - No need for `Annotated`, `Depends`, session type aliases, or manual engine creation
 - `migration_context(mode="check")` validates the database on startup
 
@@ -222,12 +222,12 @@ Let's break down what each piece does:
 ### `database_config()` handle (e.g., `primary`)
 
 - Returns a `DatabaseHandle` with `.async_session` and `.sync_session` properties
-- Each property is a FastAPI dependency annotation  usable directly in route parameters
+- Each property is a FastAPI dependency annotation, usable directly in route parameters
 - Create one handle per database, pass the right one to each route
 
 ### `primary.async_session`
 
-- A FastAPI dependency annotation  no `Annotated`, `Depends`, or type aliases needed
+- A FastAPI dependency annotation with no `Annotated`, `Depends`, or type aliases needed
 - Creates a new `AsyncSession` per request automatically
 - Closes the session when the request finishes
 - For sync routes, use `primary.sync_session` instead

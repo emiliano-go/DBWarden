@@ -133,7 +133,7 @@ In Kubernetes, pods are terminated quickly, so disposal is less critical. The OS
 Each request gets its own session:
 
 ```
-Request  get_session()  Session created  Route runs  Session closed
+Request → get_session() → Session created → Route runs → Session closed
 ```
 
 ### Session Settings

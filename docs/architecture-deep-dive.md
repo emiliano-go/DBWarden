@@ -89,7 +89,7 @@ Rollback uses the same lock discipline, selecting rollback SQL from applied file
 1. discover model paths
 2. import model modules
 3. extract table/column metadata
-4. load latest schema snapshot (`dbwarden/schemas/*.schema.json`) if one exists
+4. load latest schema snapshot (`.dbwarden/schemas/*.schema.json`) if one exists
 5. if snapshot exists: **snapshot-diff path**
    - diff model tables against snapshot tables
    - auto-detect table renames from dropped↔added table pairs (column overlap ≥ 0.6)
@@ -119,7 +119,7 @@ After applying versioned migrations, `migrate` calls `_write_migration_snapshot(
 1. connect to database (respecting sandbox override)
 2. extract full schema: tables, columns, types, indexes, constraints, enums
 3. compute SHA-256 checksum
-4. write `<migration_id>.schema.json` to `dbwarden/schemas/`
+4. write `<migration_id>.schema.json` to `.dbwarden/schemas/`
 5. on failure: log warning (non-blocking)
 
 Snapshots are not written during `--dry-run`, `--sandbox`, or for repeatable migrations.

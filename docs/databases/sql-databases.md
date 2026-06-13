@@ -118,6 +118,7 @@ All four backends support `ALTER TABLE t ALTER COLUMN c SET DEFAULT value` and `
 | MySQL | `ADD CONSTRAINT ... FOREIGN KEY` | `DROP FOREIGN KEY ...` | Uses constraint name, not FK name |
 | MariaDB | `ADD CONSTRAINT ... FOREIGN KEY` | `DROP FOREIGN KEY ...` | Same as MySQL |
 | SQLite | Not supported (comment) | Not supported (comment) | Recreate table |
+| ClickHouse | Not supported (error) | Not supported (error) | `ForeignKey()` raises `DBWardenConfigError` |
 
 **PostgreSQL FK options**: `ON DELETE`, `ON UPDATE`, and `DEFERRABLE INITIALLY DEFERRED` are fully supported. See [PostgreSQL Deep Dive](postgresql.md).
 

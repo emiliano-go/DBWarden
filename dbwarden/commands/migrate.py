@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import sqlite3
@@ -23,6 +24,7 @@ from dbwarden.metrics import (
     set_pending_migrations,
     set_schema_version,
 )
+from dbwarden import __version__
 from dbwarden.output import console
 from dbwarden.repositories import (
     create_migrations_table_if_not_exists,
@@ -34,6 +36,12 @@ from dbwarden.repositories import (
     run_repeatable_migration,
 )
 from dbwarden.repositories.lock_repo import acquire_lock, check_lock, release_lock
+from dbwarden.engine.model_discovery import (
+    get_all_model_tables,
+    filter_model_tables_by_name,
+    validate_model_tables_exist,
+)
+from dbwarden.engine.offline import model_state_to_dict
 
 
 def create_backup(sqlalchemy_url: str, backup_dir: str) -> str:
@@ -384,6 +392,8 @@ def migrate_single(
                 set_schema_version(actual_db_name, latest_version)
                 set_pending_migrations(actual_db_name, 0)
 
+        _write_model_state(config=config, db_name=db_name)
+
     except Exception:
         if metrics_enabled():
             increment_migration_errors(actual_db_name)
@@ -525,7 +535,35 @@ def _write_migration_snapshot(
         logger.info(f"Schema snapshot written: {filepath}")
     except Exception as exc:
         logger = get_logger(db_name=db_name)
-        logger.warning(f"Failed to write schema snapshot: {exc}")
+        logger.warning(f"Failed to write schema snapshot", exc_info=True)
+
+
+def _write_model_state(
+    config=None,
+    db_name: str | None = None,
+) -> None:
+    """Export current model definitions to .dbwarden/model_state.json."""
+    if config is None:
+        from dbwarden.config import get_database
+        config = get_database(db_name)
+
+    model_paths = config.model_paths
+    if not model_paths:
+        return
+
+    try:
+        tables = get_all_model_tables(model_paths, db_name=db_name)
+        validate_model_tables_exist(tables, config.model_tables, db_name or "default")
+        tables = filter_model_tables_by_name(tables, config.model_tables)
+        state = model_state_to_dict(tables, dbwarden_version=__version__)
+        state_path = Path(".dbwarden/model_state.json")
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_text(json.dumps(state, indent=2, default=str) + "\n")
+        logger = get_logger(db_name=db_name)
+        logger.info(f"Model state written: {state_path}")
+    except Exception as exc:
+        logger = get_logger(db_name=db_name)
+        logger.warning(f"Failed to write model state", exc_info=True)
 
 
 def _get_filepaths_by_version(

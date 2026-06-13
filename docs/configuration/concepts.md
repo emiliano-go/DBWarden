@@ -379,8 +379,8 @@ Command: dbwarden --dev migrate
     
 Check for --dev flag
     
-Swap database_type  dev_database_type
-Swap database_url  dev_database_url
+Swap database_type → dev_database_type
+Swap database_url → dev_database_url
     
 Connect to dev database
     

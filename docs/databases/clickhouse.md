@@ -437,7 +437,27 @@ These operations are not supported by ClickHouse DDL. DBWarden emits comment pla
 
 ### Foreign Keys
 
-ClickHouse does not enforce foreign key constraints. Any FK add/drop operations emit a comment-only placeholder. Table recreation is typically required to add or remove FKs in ClickHouse.
+ClickHouse does not enforce foreign key constraints, and DBWarden **prohibits**
+`ForeignKey()` on models configured for a ClickHouse-backed database. Using
+`ForeignKey()` raises `DBWardenConfigError` at model discovery time:
+
+```
+DBWardenConfigError: Column 'sync.repo' uses ForeignKey constraint
+referencing 'repos(name)', but ClickHouse does not support foreign key
+constraints. Remove ForeignKey() and use a plain mapped_column instead;
+the relationship is logical only. If this model is shared across multiple
+databases, move it to its own module and configure separate model_paths
+per database.
+```
+
+Instead, use a plain `mapped_column` for columns that reference other tables —
+the relationship is logical only and should be enforced at the application layer.
+
+If you need to share model code between a ClickHouse database and another
+backend, keep the shared models in a module that is **only** included in the
+non-ClickHouse database's `model_paths`. Each `database_config()` entry has
+independent `model_paths`, so a model file with `ForeignKey()` will never be
+discovered for a database that shouldn't see it.
 
 ### Indexes (Standard)
 
