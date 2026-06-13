@@ -122,7 +122,15 @@ def _make_clickhouse_dep(name: str, dev: bool = False):
 
     async def _dependency() -> AsyncGenerator[Any, None]:
         if name not in _CLICKHOUSE_ASYNC_CLIENTS:
-            import clickhouse_connect
+            try:
+                import clickhouse_connect
+                HAS_CLICKHOUSE = True
+            except ImportError:
+                clickhouse_connect = None
+                HAS_CLICKHOUSE = False
+
+            if not HAS_CLICKHOUSE:
+                raise ImportError("clickhouse_connect is required for ClickHouse support. " "Install with: pip install dbwarden[clickhouse]")
 
             with runtime_flags(dev=dev, strict_translation=False):
                 config = get_database(name)
@@ -141,8 +149,16 @@ def _make_sync_clickhouse_dep(name: str, dev: bool = False):
 
     def _dependency() -> Generator[Any, None, None]:
         if name not in _CLICKHOUSE_SYNC_CLIENTS:
-            import clickhouse_connect
+            try:
+                import clickhouse_connect
+                HAS_CLICKHOUSE = True
+            except ImportError:
+                clickhouse_connect = None
+                HAS_CLICKHOUSE = False
 
+            if not HAS_CLICKHOUSE:
+                raise ImportError("clickhouse_connect is required for ClickHOuse support. " "Install with: pip install dbwarden[clickhouse]")
+            
             with runtime_flags(dev=dev, strict_translation=False):
                 config = get_database(name)
 
