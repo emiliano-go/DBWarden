@@ -58,14 +58,14 @@ Every backend supports a core set of cross-database attributes via `class Meta(T
 | Attribute | Type | SQL | Backends |
 |-----------|------|-----|----------|
 | `comment` | `str` | `COMMENT ON TABLE t IS '...'` | All |
-| `indexes` | `list[dict]` | `CREATE INDEX ...` | All |
+| `indexes` | `list[IndexSpec \| dict]` | `CREATE INDEX ...` | All |
 | `checks` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` | All |
 | `uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` | All |
 
 ```python
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import TableMeta
+from dbwarden import TableMeta, IndexSpec
 
 class Base(DeclarativeBase):
     pass
@@ -79,9 +79,19 @@ class User(Base):
     class Meta(TableMeta):
         comment = "Core user accounts"
         indexes = [
-            {"name": "ix_users_email", "columns": ["email"]},
+            IndexSpec(name="ix_users_email", columns=["email"]),
         ]
 ```
+
+For a lighter syntax without the `IndexSpec` import, pass plain dicts:
+
+```python
+indexes = [
+    {"name": "ix_users_email", "columns": ["email"]},
+]
+```
+
+`IndexSpec` accepts the same fields as the dict form with IDE autocomplete. Use it for cross-backend indexes shared by any `database_type`.
 
 ### Column-level
 
@@ -126,6 +136,8 @@ DBWarden organizes backend-specific types into subpackages under `dbwarden.schem
 | `mdb` | `dbwarden.schema.mariadb` | `MdbFieldSpec`, `MdbTableSpec` |
 | `sq` | `dbwarden.schema.sqlite` | `SqFieldSpec`, `SqTableSpec` |
 
+Only `IndexSpec`, `PgIndexSpec`, and `ChIndexSpec` exist as typed index spec classes. MySQL, MariaDB, and SQLite use the base `IndexSpec` with the `indexes` attribute or plain dicts in their backend-specific index list (`my_indexes`, `sq_indexes`).
+
 ```python
 from dbwarden.schema import pg, ch, my, mdb, sq
 
@@ -161,6 +173,18 @@ class User(Base):
 ```
 
 `PGTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds PostgreSQL-specific ones (`pg_fillfactor`, `pg_tablespace`, `pg_unlogged`, `pg_partition`, `pg_inherits`, `pg_excludes`, `pg_indexes`, `pg_checks`, `pg_uniques`).
+
+For PostgreSQL-specific indexes, use `PgIndexSpec` in `pg_indexes`:
+
+```python
+from dbwarden import PgIndexSpec
+
+class Meta(PGTableMeta):
+    pg_indexes = [
+        PgIndexSpec("ix_users_email", ["email"],
+            unique=True, using="gin"),
+    ]
+```
 
 ### Column-Level Meta
 
