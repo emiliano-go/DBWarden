@@ -39,7 +39,7 @@ DBWarden discovers models in the directories specified by `model_paths` in your 
 1. **Column definitions**: typed SQLAlchemy `Mapped[...] = mapped_column(...)` fields, nullability, defaults, primary keys
 2. **`class Meta` inner class**: backend-specific options like engine specs, partitioning, codecs
 
-All backend-specific metadata uses the `class Meta` pattern. The `__table_args__` approach is not supported for PostgreSQL or ClickHouse metadata. Using `mapped_column(info=...)` for backend-specific options raises `DBWardenConfigError`.
+All backend-specific metadata uses the `class Meta` pattern. The `__table_args__` approach is not supported for PostgreSQL metadata. Using `mapped_column(info=...)` for backend-specific options raises `DBWardenConfigError`.
 
 ## Common Meta Attributes
 
@@ -50,7 +50,7 @@ Every backend supports a core set of cross-database attributes. These work with 
 ```python
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import TableMeta
+from dbwarden.databases import TableMeta
 
 class Base(DeclarativeBase):
     pass
@@ -81,7 +81,7 @@ class Meta(TableMeta):
 
 Available column-level attributes: `comment`, `public`. Fields named with a leading `_` are implicitly `public=False`.
 
-For backend-specific column options, use `pg = pg.field(...)` for PostgreSQL or `ch = ch.field(...)` for ClickHouse. See [Column-Level Meta Base Class](../models.md#column-level-meta-base-class) for details.
+For backend-specific column options, use `pg = pg.field(...)` for PostgreSQL. See [Column-Level Meta Base Class](../models.md#column-level-meta-base-class) for details.
 
 ## PostgreSQL Models
 
@@ -90,8 +90,7 @@ When `database_type="postgresql"`, use `class Meta(PGTableMeta)` for table-level
 ```python
 from sqlalchemy import Integer, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import PGTableMeta, PGColumnMeta
-from dbwarden.schema import pg
+from dbwarden.databases.pgsql import PGTableMeta, PGColumnMeta, pg
 
 class Base(DeclarativeBase):
     pass
@@ -114,61 +113,15 @@ class User(Base):
 
 See the [reference](../models.md#postgresql-model-metadata) for the full list of `PGTableMeta` and `PGColumnMeta` attributes, or the [PostgreSQL Deep Dive](../databases/postgresql.md) for DDL behavior and snapshot format.
 
-## ClickHouse Models
-
-When `database_type="clickhouse"`, use `class Meta(CHTableMeta)` for table-level metadata and `CHColumnMeta` inner classes for column-level metadata.
-
-```python
-from datetime import date
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ChIndexSpec, ProjectionSpec
-from dbwarden.schema import ch
-
-class Base(DeclarativeBase):
-    pass
-
-class Event(Base):
-    __tablename__ = "events"
-
-    id: Mapped[int] = mapped_column(Int64, primary_key=True)
-    event_date: Mapped[date] = mapped_column(Date)
-    payload: Mapped[str] = mapped_column(String)
-    tags: Mapped[list[str]] = mapped_column(ARRAY(String))
-
-    class Meta(CHTableMeta):
-        ch_engine = ChEngineSpec("MergeTree")
-        ch_order_by = ["event_date", "id"]
-        ch_partition_by = "toYYYYMM(event_date)"
-        ch_ttl = ["event_date + toIntervalYear(1)"]
-        ch_settings = {"index_granularity": "8192"}
-        ch_projections = [
-            ProjectionSpec("by_date",
-                "SELECT event_date, sum(amount) GROUP BY event_date"),
-        ]
-        ch_indexes = [
-            ChIndexSpec("ix_payload", ["payload"],
-                type="bloom_filter", granularity=1),
-        ]
-
-        class payload(CHColumnMeta):
-            ch = ch.field(codec="ZSTD(3)", nullable=False)
-
-        class tags(CHColumnMeta):
-            ch = ch.field(low_cardinality=True)
-```
-
-See the [reference](../models.md#clickhouse-model-metadata) for the full list of `CHTableMeta` and `CHColumnMeta` attributes, or the [ClickHouse Deep Dive](../databases/clickhouse.md) for DDL behavior, materialized views, and dictionaries.
 
 ## Using `generate-models` as a Starting Point
+
+> **Note**: `generate-models` only works for databases with round trip support (PostgreSQL, SQLite, MySQL, ClickHouse). See [Round Trip Support](../databases/round-trip.md) for details.
 
 The fastest way to get a correct model is to reverse-engineer it from your live database:
 
 ```bash
-# PostgreSQL
-dbwarden generate-models -d primary --tables users,orders
-
-# ClickHouse (auto-detects engine metadata)
-dbwarden generate-models -d analytics
+$ dbwarden generate-models -d primary --tables users,orders
 ```
 
 DBWarden produces one `.py` file per table (or a single `models.py` with `--single-file`). The generated output includes `class Meta` with all detected backend-specific metadata.
@@ -193,7 +146,7 @@ Use `@auto_schema` to generate four Pydantic schema classes on your model:
 ```python
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
-from dbwarden.schema import auto_schema
+from dbwarden.databases import auto_schema
 
 @auto_schema
 class User(Base):
@@ -217,12 +170,10 @@ public = User.PublicSchema(email="alice@example.com")
 
 The decorator reads `class Meta` to infer `SchemaConfig`, then calls `schemap` to build the Pydantic models. Column `comment` values are injected into Pydantic field descriptions, and backend-specific metadata (`pg_*`, `my_*`, `ch_*`, `mdb_*`, `sq_*`) is included in `json_schema_extra.dbwarden_backend_meta`.
 
-`@auto_schema` requires the `schemap` dependency (included with `pip install dbwarden`).
-
 To customize schema generation, pass a `SchemaConfig` explicitly:
 
 ```python
-from dbwarden.schema import auto_schema, SchemaConfig
+from dbwarden.databases import auto_schema, SchemaConfig
 
 @auto_schema(config=SchemaConfig(exclude_public=["internal_note"]))
 class Order(Base):
@@ -248,7 +199,6 @@ Auto-generated migrations handle most cases, but some schema changes still need 
 - PostgreSQL `USING` clause for type casts (e.g., casting `TEXT` to `INTEGER`). DBWarden emits `ALTER COLUMN ... TYPE` with a commented-out `-- USING col::newtype` line. Pass `--postgres-auto-using` to emit an active `USING` clause.
 - Column renames not caught by the heuristic auto-detection. Use `--rename old_name:new_name` flags for deterministic renames, or rename in a manual migration.
 - Data migrations (backfilling, transforming existing data). DBWarden emits a SQL comment placeholder.
-- ClickHouse structural changes that require `--clickhouse-engine-recreate` to auto-generate (MV SELECT statement, dictionary configs, ZK paths, replica name). Without the flag, a comment points at the flag.
 
 For these cases run `dbwarden new` and write the SQL by hand, or use the relevant flag for auto-generation.
 
@@ -256,7 +206,7 @@ For these cases run `dbwarden new` and write the SQL by hand, or use the relevan
 
 - **One model class per table**: DBWarden discovers models by scanning directories. Each table should have exactly one model class.
 - **Use `model_paths`**: always set `model_paths` explicitly in `database_config(...)`. Auto-discovery is available but explicit paths are more predictable.
-- **Review generated migrations**: always read the `.sql` file before running `dbwarden migrate`, especially for ClickHouse where DDL is not transactional.
+- **Review generated migrations**: always read the `.sql` file before running `dbwarden migrate`.
 - **Use `--dev` for local development**: configure a `dev_database_url` (SQLite works well) and use `dbwarden --dev` to iterate quickly without touching your real database.
 - **Keep Meta classes minimal**: only set attributes that differ from the default. Default values are omitted from generated migrations, reducing noise.
 - **Use `@auto_schema` for API projects**: generates Pydantic schemas from your model annotations. Fields with `public=False` or a leading `_` are excluded from `PublicSchema`.
