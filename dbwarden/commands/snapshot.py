@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dbwarden.config import get_database
 from dbwarden.database.connection import get_db_connection
+from dbwarden.exceptions import DBDisconnectedError
 from dbwarden.output import console
 
 
@@ -12,11 +13,17 @@ def snapshot_cmd(
     config = get_database(database)
     db_type = config.database_type
 
-    with get_db_connection(database) as connection:
-        if db_type == "clickhouse":
-            _snapshot_clickhouse(connection, table_name)
-        else:
-            _snapshot_generic(connection, table_name)
+    try:
+        with get_db_connection(database) as connection:
+            if db_type == "clickhouse":
+                _snapshot_clickhouse(connection, table_name)
+            else:
+                _snapshot_generic(connection, table_name)
+    except DBDisconnectedError:
+        console.print(
+            "Database disconnected \u2014 cannot inspect table schema.",
+            style="yellow",
+        )
 
 
 def _snapshot_generic(connection, table_name: str) -> None:

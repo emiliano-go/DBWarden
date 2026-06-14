@@ -4,6 +4,7 @@ from sqlalchemy import inspect
 
 from dbwarden.config import get_database
 from dbwarden.database.connection import get_db_connection
+from dbwarden.exceptions import DBDisconnectedError
 from dbwarden.logging import get_logger
 from dbwarden.output import console
 
@@ -20,40 +21,47 @@ def check_db_cmd(output_format: str = "txt", database: str | None = None) -> Non
     config = get_database(database)
     db_name = database or "default"
 
-    with get_db_connection(database) as connection:
-        inspector = inspect(connection)
-        tables = inspector.get_table_names()
+    try:
+        with get_db_connection(database) as connection:
+            inspector = inspect(connection)
+            tables = inspector.get_table_names()
 
-        schema_info = {}
-        for table in tables:
-            columns = inspector.get_columns(table)
-            indexes = inspector.get_indexes(table)
-            foreign_keys = inspector.get_foreign_keys(table)
+            schema_info = {}
+            for table in tables:
+                columns = inspector.get_columns(table)
+                indexes = inspector.get_indexes(table)
+                foreign_keys = inspector.get_foreign_keys(table)
 
-            schema_info[table] = {
-                "columns": [
-                    {
-                        "name": col["name"],
-                        "type": str(col["type"]),
-                        "nullable": col["nullable"],
-                        "default": str(col.get("default", None)),
-                    }
-                    for col in columns
-                ],
-                "indexes": [
-                    {"name": idx["name"], "columns": idx["column_names"]}
-                    for idx in indexes
-                ],
-                "foreign_keys": [
-                    {
-                        "name": fk["name"],
-                        "columns": fk["constrained_columns"],
-                        "referred_table": fk["referred_table"],
-                        "referred_columns": fk["referred_columns"],
-                    }
-                    for fk in foreign_keys
-                ],
-            }
+                schema_info[table] = {
+                    "columns": [
+                        {
+                            "name": col["name"],
+                            "type": str(col["type"]),
+                            "nullable": col["nullable"],
+                            "default": str(col.get("default", None)),
+                        }
+                        for col in columns
+                    ],
+                    "indexes": [
+                        {"name": idx["name"], "columns": idx["column_names"]}
+                        for idx in indexes
+                    ],
+                    "foreign_keys": [
+                        {
+                            "name": fk["name"],
+                            "columns": fk["constrained_columns"],
+                            "referred_table": fk["referred_table"],
+                            "referred_columns": fk["referred_columns"],
+                        }
+                        for fk in foreign_keys
+                    ],
+                }
+    except DBDisconnectedError:
+        console.print(
+            "Database disconnected \u2014 cannot inspect live schema.",
+            style="yellow",
+        )
+        return
 
     console.print(f"\n=== Database Schema: {db_name} ===\n", style="bold cyan")
 

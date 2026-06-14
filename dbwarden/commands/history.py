@@ -1,5 +1,6 @@
 from rich.table import Table
 
+from dbwarden.exceptions import DBDisconnectedError
 from dbwarden.logging import get_logger
 from dbwarden.output import console
 from dbwarden.repositories import get_migration_records, migrations_table_exists
@@ -11,7 +12,16 @@ def history_cmd(database: str | None = None) -> None:
 
     db_name = database or "default"
 
-    if not migrations_table_exists(database):
+    try:
+        table_exists = migrations_table_exists(database)
+    except DBDisconnectedError:
+        console.print(
+            "Database disconnected \u2014 cannot retrieve migration history.",
+            style="yellow",
+        )
+        return
+
+    if not table_exists:
         console.print(
             f"[yellow]No migrations have been applied to '{db_name}' yet.[/yellow]"
         )

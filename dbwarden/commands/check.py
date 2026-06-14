@@ -3,6 +3,7 @@ from __future__ import annotations
 from rich.table import Table
 
 from dbwarden.engine.safety import issues_to_json, load_issues
+from dbwarden.exceptions import DBDisconnectedError
 from dbwarden.output import console
 
 
@@ -11,7 +12,15 @@ def check_cmd(
     database: str | None = None,
     force: bool = False,
 ) -> None:
-    issues = load_issues(database=database)
+    try:
+        issues = load_issues(database=database)
+    except DBDisconnectedError:
+        console.print(
+            "Database disconnected \u2014 cannot compare against live schema. "
+            "Run with models only (no live compatibility checks).",
+            style="yellow",
+        )
+        return
 
     if output_format == "json":
         console.print(issues_to_json(issues), markup=False, highlight=False)

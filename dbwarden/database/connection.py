@@ -1,4 +1,5 @@
 import logging
+import time
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Any, Generator
@@ -7,6 +8,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
 from dbwarden.config import get_database
+from dbwarden.exceptions import DBDisconnectedError
 from dbwarden.logging import get_logger
 
 
@@ -61,6 +63,41 @@ def _get_engine(url: str, db_type: str = "postgresql") -> Engine:
 
 
 _connection_init_logged = False
+
+
+def _probe_connection(
+    engine: Engine,
+    db_type: str,
+    logger: Any,
+    url: str,
+    max_retries: int = 5,
+    retry_delay: float = 1.0,
+) -> None:
+    """Verify database connectivity with retry logic on failure."""
+    for attempt in range(1, max_retries + 1):
+        try:
+            if db_type == "clickhouse":
+                with engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+            else:
+                with engine.begin() as conn:
+                    conn.execute(text("SELECT 1"))
+            return
+        except Exception as e:
+            if attempt < max_retries:
+                logger.warning(
+                    f"Connection attempt {attempt}/{max_retries} failed, "
+                    f"retrying in {retry_delay * attempt}s..."
+                )
+                time.sleep(retry_delay * attempt)
+                dispose_engine(url, db_type)
+                engine = _get_engine(url, db_type)
+            else:
+                logger.error(
+                    f"Disconnected: could not connect to database "
+                    f"after {max_retries} attempts"
+                )
+                raise DBDisconnectedError(str(e)) from e
 
 
 def reset_connection_logging() -> None:
@@ -126,6 +163,8 @@ def get_db_connection(db_name: str | None = None) -> Generator[Any, None, None]:
     )
 
     engine = _get_engine(url, db_type)
+
+    _probe_connection(engine, db_type, logger, url)
 
     if not _connection_init_logged:
         logger.log_connection_init(db_type)

@@ -1,6 +1,7 @@
 from rich.table import Table
 
 from dbwarden.engine.version import get_migrations_directory
+from dbwarden.exceptions import DBDisconnectedError
 from dbwarden.logging import get_logger
 from dbwarden.output import console
 from dbwarden.repositories import (
@@ -25,8 +26,15 @@ def status_single(database: str | None = None) -> None:
         return
 
     applied_versions = []
-    if migrations_table_exists(database):
-        applied_versions = get_migrated_versions(database)
+    try:
+        if migrations_table_exists(database):
+            applied_versions = get_migrated_versions(database)
+    except DBDisconnectedError:
+        console.print(
+            "Database disconnected \u2014 showing migration files only, "
+            "applied status unknown.",
+            style="yellow",
+        )
 
     from dbwarden.engine.version import get_migration_filepaths_by_version
 

@@ -62,3 +62,9 @@ class NoSeedsError(DBWardenError):
     """Raised when no seeds are found."""
 
     pass
+
+
+class DBDisconnectedError(DatabaseError):
+    """Raised when the database is unreachable after retries."""
+
+    pass

@@ -433,8 +433,8 @@ _CH_OPTION_KEY_MAP: dict[str, str] = {
 }
 
 _CH_OPTION_RULES: dict[str, tuple[str, str | None, str]] = {
-    "ch_order_by": ("ERROR", None, "Change ORDER BY for '{table}'"),
-    "ch_partition_by": ("ERROR", None, "Change PARTITION BY for '{table}'"),
+    "ch_order_by": ("WARNING", "--force", "Change ORDER BY for '{table}'"),
+    "ch_partition_by": ("WARNING", "--force", "Change PARTITION BY for '{table}'"),
     "ch_ttl": ("WARNING", "--force", "Change TTL for '{table}'"),
     "ch_engine": ("WARNING", "--force", "Change engine for '{table}'"),
     "ch_select_statement": ("WARNING", "--force", "Change materialized view query for '{table}'"),
