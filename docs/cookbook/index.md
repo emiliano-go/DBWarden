@@ -1,31 +1,27 @@
 ---
 seo:
   title: Cookbook & Examples - DBWarden Documentation
-  description: Practical, runnable examples that walk through the entire DBWarden
-    workflow — from project setup through advanced observability patterns.
+  description: "Practical, runnable examples that walk through the entire DBWarden workflow: from project setup through advanced observability patterns."
   canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/
   robots: index,follow
   og:
     type: website
     title: Cookbook & Examples - DBWarden Documentation
-    description: Practical, runnable examples that walk through the entire DBWarden
-      workflow — from project setup through advanced observability patterns.
+    description: "Practical, runnable examples that walk through the entire DBWarden workflow: from project setup through advanced observability patterns."
     url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Cookbook & Examples - DBWarden Documentation
-    description: Practical, runnable examples that walk through the entire DBWarden
-      workflow — from project setup through advanced observability patterns.
+    description: "Practical, runnable examples that walk through the entire DBWarden workflow: from project setup through advanced observability patterns."
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Cookbook & Examples - DBWarden Documentation
     url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/
-    description: Practical, runnable examples that walk through the entire DBWarden
-      workflow — from project setup through advanced observability patterns.
+    description: "Practical, runnable examples that walk through the entire DBWarden workflow: from project setup through advanced observability patterns."
     image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
@@ -34,11 +30,11 @@ seo:
 
 # Cookbook & Examples
 
-Practical, runnable examples that walk through the entire DBWarden workflow — from project setup through advanced observability patterns.
+Practical, runnable examples that walk through the entire DBWarden workflow: from project setup through advanced observability patterns.
 
 ## How to Use
 
-Each cookbook section links to code under the [`examples/`](https://github.com/emiliano-gandini-outeda/DBWarden/tree/main/examples) directory. The **core examples** (sections 1–7) use SQLite and require only `pip install dbwarden`. Advanced examples may need Docker for PostgreSQL, ClickHouse, or Prometheus.
+Each cookbook section links to code under the [`examples/`](https://github.com/emiliano-gandini-outeda/DBWarden/tree/main/examples) directory. The **core examples** (sections 1–7) use SQLite and require only `uv add dbwarden`. Advanced examples may need Docker for PostgreSQL, ClickHouse, or Prometheus.
 
 ```
 examples/
@@ -69,10 +65,58 @@ examples/
 
 ```bash
 cd examples/core
-pip install -r requirements.txt
+uv add dbwarden sqlalchemy
 bash scripts/01-setup.sh
 bash scripts/02-models-migrations.sh
 bash scripts/03-apply-inspect.sh
 ```
 
 Each section in the cookbook explains what these commands do, what SQL they produce, and why it matters.
+
+## Database-Specific Examples
+
+The core examples use SQLite for zero-dependency setup. For production, DBWarden fully supports PostgreSQL, MySQL, and ClickHouse &mdash; each with its own deep-dive guide and dedicated example patterns.
+
+### PostgreSQL
+
+PostgreSQL is a first-class backend with full round-trip support (read and write schema). The FastAPI integration example in [Section 9](09-fastapi-integration.md) uses PostgreSQL, and [Section 8](08-multi-database.md) shows PostgreSQL + ClickHouse together.
+
+For the complete reference on PostgreSQL-specific metadata (identity columns, collation, compression, generated columns, tablespace, inheritance, exclusion constraints, deferrable FKs, advanced index options), see the [PostgreSQL Deep Dive](../databases/postgresql.md).
+
+```python
+from dbwarden import database_config
+
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://user:password@localhost:5432/myapp",
+    database_url_async="postgresql+asyncpg://user:password@localhost:5432/myapp",
+    model_paths=["app.models"],
+)
+```
+
+### MySQL / MariaDB
+
+MySQL and MariaDB are first-class backends with full round-trip support. All MySQL-specific metadata (engine, charset, collation, row format, auto_increment, unsigned columns, ON UPDATE, column comments) is captured by the snapshot, diffed correctly, and emitted as valid DDL.
+
+See the [MySQL Deep Dive](../databases/mysql.md) for the complete reference, including MySQL-specific model metadata via `class Meta(MyTableMeta)`.
+
+```python
+from dbwarden import database_config
+
+legacy = database_config(
+    database_name="legacy",
+    database_type="mysql",
+    database_url_sync="mysql+pymysql://user:password@localhost:3306/legacy",
+    model_paths=["app.legacy_models"],
+)
+```
+
+### ClickHouse
+
+ClickHouse is supported with partial round-trip (read schema and auto-generate most DDL). DBWarden uses the ClickHouse HTTP client directly for DDL execution and supports full engine metadata via `class Meta(CHTableMeta)` with `ChEngineSpec`, `ProjectionSpec`, and `CHColumnMeta`.
+
+See the [ClickHouse Deep Dive](../databases/clickhouse.md) for full details on materialized views, projections, dictionaries, replicated engines, and ClickHouse-specific metadata.
+
+ClickHouse is typically configured alongside a transactional database (see [Section 8](08-multi-database.md) for a PostgreSQL + ClickHouse example).
