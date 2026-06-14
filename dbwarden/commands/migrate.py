@@ -74,13 +74,13 @@ def create_backup(sqlalchemy_url: str, backup_dir: str) -> str:
     os.makedirs(backup_dir, exist_ok=True)
     
     # Ensure directory has safe permissions after creation
-    os.chmod(backup_dir, 0o755)
+    os.chmod(backup_dir, 0o700)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     # Add microseconds + short random to prevent collision
-    import random
+    import secrets
     import uuid
-    unique = f"{timestamp}_{random.randint(0, 999):03d}"
+    unique = f"{timestamp}_{secrets.randbelow(1000):03d}"
     backup_path = os.path.join(backup_dir, f"backup_{unique}.db")
 
     # Handle collision with incrementing suffix

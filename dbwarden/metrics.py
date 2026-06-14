@@ -114,4 +114,8 @@ else:
         return ""
 
     def metrics_enabled() -> bool:
-        return False
+        return os.environ.get("DBWARDEN_METRICS", "false").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
