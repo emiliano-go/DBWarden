@@ -10,7 +10,7 @@ A complete FastAPI application using DBWarden for database migrations, health ch
 ## Quick Start
 
 ```bash
-pip install -r requirements.txt
+uv add dbwarden sqlalchemy fastapi uvicorn asyncpg
 
 # Start PostgreSQL
 docker run -d --name pg \

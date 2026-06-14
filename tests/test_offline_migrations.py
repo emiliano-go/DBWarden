@@ -752,7 +752,7 @@ def test_offline_missing_state_file_does_not_crash():
             Path("migrations/primary").mkdir(parents=True)
             Path(".dbwarden").mkdir(parents=True)
 
-            # Run offline WITHOUT state file — should not crash
+            # Run offline WITHOUT state file: should not crash
             make_migrations_cmd("should fail gracefully", offline=True, database="primary")
 
             # No SQL file should be created
@@ -936,7 +936,7 @@ def test_offline_simultaneous_column_changes():
 
 
 def test_offline_case_sensitive_table():
-    """Table names are case-sensitive — 'Users' and 'users' are different tables."""
+    """Table names are case-sensitive: 'Users' and 'users' are different tables."""
     prev = model_state_to_dict([_make_table("Users")])
     curr = model_state_to_dict([_make_table("users")])
     up_ops, down_ops = diff_model_states(prev, curr)
@@ -1014,7 +1014,7 @@ def test_offline_object_type_view():
 
 
 def test_offline_add_and_drop_same_column_name():
-    """Same column name added in one table and dropped in another — no collision."""
+    """Same column name added in one table and dropped in another: no collision."""
     prev = model_state_to_dict([_make_table("users")])
     curr = model_state_to_dict([
         _make_table("users", columns=[_make_col("id"), _make_col("email", "varchar")]),

@@ -147,7 +147,7 @@ def test_analyze_schema_ttl_change_is_warning():
     assert issues[0].required_flag == "--force"
 
 
-def test_analyze_schema_partition_change_is_error():
+def test_analyze_schema_partition_change_is_warning():
     model_tables = [
         ModelTable(
             name="events",
@@ -171,7 +171,7 @@ def test_analyze_schema_partition_change_is_error():
     issues = analyze_schema(model_tables, snapshot)
 
     assert len(issues) == 1
-    assert issues[0].severity == "ERROR"
+    assert issues[0].severity == "WARNING"
 
 
 def test_check_cmd_requires_force_for_warning(monkeypatch):

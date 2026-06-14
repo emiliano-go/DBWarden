@@ -8,7 +8,7 @@ class Base(DeclarativeBase):
 
 # This model uses SQLAlchemy 2.0 Mapped/mapped_column style.
 # DBWarden works with both the classic Column() style (core
-# example) and the 2.0 Mapped style shown here — it detects
+# example) and the 2.0 Mapped style shown here: it detects
 # columns regardless of declaration style.
 #
 # Note: no TableMeta or IndexSpec here.  Those are optional

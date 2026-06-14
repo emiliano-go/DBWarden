@@ -10,7 +10,7 @@ Demonstrates Prometheus metrics, structured logging, and query tracing with DBWa
 ## Quick Start
 
 ```bash
-pip install -r requirements.txt
+uv add "dbwarden[metrics]" sqlalchemy fastapi uvicorn asyncpg
 
 # Start infrastructure (PostgreSQL, Prometheus, Grafana)
 docker compose up -d
@@ -26,11 +26,11 @@ uvicorn app.main:app --reload
 
 ### Prometheus Metrics
 
-- `dbwarden_migrations_total` — Migration count by status
-- `dbwarden_migration_duration_seconds` — Migration execution time
-- `dbwarden_schema_version` — Current schema version
-- `dbwarden_pending_migrations` — Number of pending migrations
-- `dbwarden_errors_total` — Error count by type
+- `dbwarden_migrations_total`: Migration count by status
+- `dbwarden_migration_duration_seconds`: Migration execution time
+- `dbwarden_schema_version`: Current schema version
+- `dbwarden_pending_migrations`: Number of pending migrations
+- `dbwarden_errors_total`: Error count by type
 
 Available at `http://localhost:8000/metrics`.
 

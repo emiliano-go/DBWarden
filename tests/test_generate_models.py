@@ -189,7 +189,7 @@ def test_write_models_postgresql_emits_dialect_imports_and_meta():
         assert "from sqlalchemy.dialects.postgresql import JSONB, UUID" in content
         assert "class Meta(PGTableMeta):" in content
         assert "comment = 'Users table'" in content
-        assert "from dbwarden.schema import pg" in content
+        assert "from dbwarden.databases.pgsql import pg" in content
         assert 'pg = pg.field(collation=' in content
 
 
@@ -222,8 +222,8 @@ def test_write_models_mysql_emits_meta_imports():
         ]
         _write_models(tmpdir, tables, single_file=True)
         content = Path(tmpdir, "models.py").read_text()
-        assert "from dbwarden import MyColumnMeta, MyTableMeta" in content
-        assert "from dbwarden.schema import my" in content
+        assert "from dbwarden.databases.mysql import my, MyColumnMeta, MyTableMeta" in content
+        assert "from dbwarden.databases.mysql import my" in content
         assert "class Meta(MyTableMeta):" in content
 
 
@@ -495,7 +495,7 @@ class TestClickHouseGenerateModels:
             content = Path(tmpdir, "models.py").read_text()
             assert "CHColumnMeta" in content
             assert "CHTableMeta" in content
-            assert "from dbwarden import CHColumnMeta, CHTableMeta" in content
+            assert "from dbwarden.databases.clickhouse import CHColumnMeta, CHTableMeta" in content
 
     def test_write_models_clickhouse_ch_engine_spec_import(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -515,7 +515,7 @@ class TestClickHouseGenerateModels:
             _write_models(tmpdir, tables, single_file=True)
             content = Path(tmpdir, "models.py").read_text()
             assert "ChEngineSpec" in content
-            assert "from dbwarden import CHColumnMeta, CHTableMeta, ChEngineSpec" in content
+            assert "from dbwarden.databases.clickhouse import CHColumnMeta, CHTableMeta, ChEngineSpec" in content
 
     def test_generate_table_code_ch_materialized_view(self):
         columns = [

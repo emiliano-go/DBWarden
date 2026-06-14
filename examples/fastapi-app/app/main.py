@@ -24,8 +24,8 @@ from app.routes import users
 #     - Closes ClickHouse clients
 #
 # Other modes:
-#   mode="migrate" — auto-apply pending migrations on startup
-#   mode="skip"    — no startup checks
+#   mode="migrate": auto-apply pending migrations on startup
+#   mode="skip"   : no startup checks
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -41,9 +41,9 @@ app = FastAPI(
 )
 
 # ── Routers ────────────────────────────────────────────────────
-# /api/v1/users  — CRUD routes using primary.async_session injection
-# /health/*      — liveness, readiness, per-database health status
-# /db/*          — migration status (GET /db/status) and execution
+# /api/v1/users : CRUD routes using primary.async_session injection
+# /health/*     : liveness, readiness, per-database health status
+# /db/*         : migration status (GET /db/status) and execution
 #                  (POST /db/migrate) as HTTP endpoints
 app.include_router(users.router, prefix="/api/v1")
 app.include_router(DBWardenHealthRouter(), prefix="/health")

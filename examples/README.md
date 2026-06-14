@@ -10,7 +10,7 @@ The quickest path through all core concepts:
 
 ```bash
 cd core
-pip install -r requirements.txt
+uv add dbwarden sqlalchemy
 bash scripts/01-setup.sh
 bash scripts/02-models-migrations.sh
 bash scripts/03-apply-inspect.sh
@@ -30,13 +30,13 @@ bash scripts/03-apply-inspect.sh
 
 Each example is self-contained:
 
-1. **`dbwarden.py`** — configuration file that registers database targets.
+1. **`dbwarden.py`**: configuration file that registers database targets.
    The CLI discovers it automatically when you run commands from that directory.
 
-2. **`app/models.py`** — SQLAlchemy model definitions with optional
+2. **`app/models.py`**: SQLAlchemy model definitions with optional
    `class Meta(TableMeta)` annotations for comments, indexes, and checks.
 
-3. **Shell scripts** — runnable command sequences that demonstrate the
+3. **Shell scripts**: runnable command sequences that demonstrate the
    CLI workflow step by step.  Each script includes detailed comments
    explaining what each command does behind the scenes.
 

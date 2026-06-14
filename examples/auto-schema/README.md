@@ -5,7 +5,7 @@ Demonstrates how `@auto_schema` generates CreateSchema, UpdateSchema, and Public
 ## Quick Start
 
 ```bash
-pip install -r requirements.txt
+uv add dbwarden sqlalchemy
 python -c "
 import sys; sys.path.insert(0, '.')
 from app.models import User

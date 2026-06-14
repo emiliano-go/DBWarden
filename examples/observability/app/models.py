@@ -8,7 +8,7 @@ class Base(DeclarativeBase):
 
 # Simple User model for the observability demo.
 # The metrics and query tracing middleware are the main focus of
-# this example — the model is minimal to keep attention on the
+# this example; the model is minimal to keep attention on the
 # observability tooling.
 #
 # When QueryTracingMiddleware is active, every SQL query executed

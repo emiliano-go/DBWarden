@@ -10,13 +10,13 @@ Base = declarative_base()
 # This decorator tells DBWarden to generate Pydantic v2 schemas
 # directly from the model's column annotations.  It creates:
 #
-#   User.CreateSchema   — for POST requests (excludes server-defaulted fields)
-#   User.UpdateSchema   — for PATCH requests (all fields optional)
-#   User.PublicSchema   — for API responses (excludes fields with public=False)
-#   User.Schema         — all mapped columns (including non-public)
+#   User.CreateSchema  : for POST requests (excludes server-defaulted fields)
+#   User.UpdateSchema  : for PATCH requests (all fields optional)
+#   User.PublicSchema  : for API responses (excludes fields with public=False)
+#   User.Schema        : all mapped columns (including non-public)
 #
 # The schemas are generated at class-definition time by schemap,
-# so they're available immediately — no CLI command, no migration.
+# so they're available immediately: no CLI command, no migration.
 # They show up as attributes on the model class itself.
 
 @auto_schema

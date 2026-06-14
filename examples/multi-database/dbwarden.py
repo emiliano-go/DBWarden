@@ -1,6 +1,6 @@
 # This config registers TWO database targets in one project:
-#   primary   — PostgreSQL for transactional user data
-#   analytics — ClickHouse for page view event analytics
+#   primary  : PostgreSQL for transactional user data
+#   analytics: ClickHouse for page view event analytics
 #
 # Each gets its own migration directory (migrations/primary/,
 # migrations/analytics/), its own migration tracking table,
@@ -23,7 +23,7 @@ primary = database_config(
 
 analytics = database_config(
     database_name="analytics",
-    # No default=True here — exactly one target must have it.
+    # No default=True here: exactly one target must have it.
     database_type="clickhouse",
     # ClickHouse uses HTTP for the sync connection.
     database_url_sync="http://localhost:8123/analytics",

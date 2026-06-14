@@ -15,11 +15,11 @@ Base = declarative_base()
 # default), storage, compression, collation.
 #
 # PgIndexSpec adds PG-specific index features:
-#   where=     — partial index (WHERE clause)
-#   include=   — covering index (INCLUDE columns)
-#   using=     — access method (btree, hash, gin, gist, brin)
-#   nulls_not_distinct=True  — PG 15+ feature
-#   with=      — storage parameters (fillfactor)
+#   where=    : partial index (WHERE clause)
+#   include=  : covering index (INCLUDE columns)
+#   using=    : access method (btree, hash, gin, gist, brin)
+#   nulls_not_distinct=True : PG 15+ feature
+#   with=     : storage parameters (fillfactor)
 
 
 class User(Base):

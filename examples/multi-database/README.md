@@ -1,12 +1,12 @@
 # Multi-Database: PostgreSQL + ClickHouse
 
-Demonstrates managing two databases in a single project — PostgreSQL for transactional data and ClickHouse for analytics.
+Demonstrates managing two databases in a single project: PostgreSQL for transactional data and ClickHouse for analytics.
 
 ## Prerequisites
 
 - Docker (for PostgreSQL and ClickHouse containers)
 - Python 3.12+
-- `pip install -r requirements.txt`
+- `uv add dbwarden sqlalchemy clickhouse-connect`
 
 ## Quick Start
 

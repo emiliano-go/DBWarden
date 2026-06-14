@@ -3,11 +3,11 @@
 #
 # The database_config() call returns a DatabaseHandle object that
 # exposes:
-#   primary.sync_session   — sync session for scripts / background tasks
-#   primary.async_session  — async session for FastAPI route handlers
+#   primary.sync_session  : sync session for scripts / background tasks
+#   primary.async_session : async session for FastAPI route handlers
 #
 # Both are FastAPI-compatible dependency annotations.  No separate
-# dependency-injection module is needed — just annotate your route
+# dependency-injection module is needed: just annotate your route
 # parameter with primary.async_session and FastAPI resolves it.
 
 from dbwarden import database_config

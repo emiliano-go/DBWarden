@@ -8,13 +8,13 @@ Base = declarative_base()
 # ── CHTableMeta ────────────────────────────────────────────────
 # ClickHouse-specific table metadata.  Controls the MergeTree
 # engine configuration, partitioning, ordering, TTL, projections,
-# and skip indexes — all of which are ClickHouse-native DDL
+# and skip indexes, all of which are ClickHouse-native DDL
 # concepts that DBWarden translates into CREATE TABLE statements.
 #
-# ChEngineSpec      — MergeTree, ReplicatedMergeTree, etc.
-# ChIndexSpec       — skip indexes (bloom_filter, minmax, etc.)
-# ProjectionSpec    — table projections (pre-computed aggregations)
-# CHColumnMeta      — per-column codecs (ZSTD, LZ4, etc.)
+# ChEngineSpec     : MergeTree, ReplicatedMergeTree, etc.
+# ChIndexSpec      : skip indexes (bloom_filter, minmax, etc.)
+# ProjectionSpec   : table projections (pre-computed aggregations)
+# CHColumnMeta     : per-column codecs (ZSTD, LZ4, etc.)
 
 
 class PageView(Base):

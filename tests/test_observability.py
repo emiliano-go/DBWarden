@@ -22,6 +22,10 @@ class TestMetricsModule:
 
         assert metrics_enabled() is True
 
+    def test_generate_metrics_contains_all_metric_families(self):
+        pytest.importorskip("prometheus_client")
+        from dbwarden.metrics import generate_metrics
+
     def test_metrics_enabled_accepts_1_and_yes(self, monkeypatch):
         from dbwarden.metrics import metrics_enabled
 
@@ -30,6 +34,7 @@ class TestMetricsModule:
             assert metrics_enabled() is True
 
     def test_generate_metrics_contains_all_metric_families(self):
+        pytest.importorskip("prometheus_client")
         from dbwarden.metrics import generate_metrics
 
         output = generate_metrics()
@@ -45,6 +50,7 @@ class TestMetricsModule:
             assert name in output
 
     def test_increment_and_generate(self):
+        pytest.importorskip("prometheus_client")
         from dbwarden.metrics import generate_metrics, increment_migrations_total
 
         label = "test_inc_gen"
@@ -54,6 +60,7 @@ class TestMetricsModule:
         assert 'version="0001"' in output
 
     def test_observe_migration_duration(self):
+        pytest.importorskip("prometheus_client")
         from dbwarden.metrics import generate_metrics, observe_migration_duration
 
         label = "test_obs_dur"
@@ -63,6 +70,7 @@ class TestMetricsModule:
         assert "_bucket" in output
 
     def test_set_schema_version(self):
+        pytest.importorskip("prometheus_client")
         from dbwarden.metrics import generate_metrics, set_schema_version
 
         label = "test_schema_ver"
@@ -72,6 +80,7 @@ class TestMetricsModule:
         assert f'database="{label}"' in output
 
     def test_set_seed_version(self):
+        pytest.importorskip("prometheus_client")
         from dbwarden.metrics import generate_metrics, set_seed_version
 
         label = "test_seed_ver"
@@ -81,6 +90,7 @@ class TestMetricsModule:
         assert f'database="{label}"' in output
 
     def test_set_pending_migrations(self):
+        pytest.importorskip("prometheus_client")
         from dbwarden.metrics import generate_metrics, set_pending_migrations
 
         label = "test_pending_mig"
@@ -90,6 +100,7 @@ class TestMetricsModule:
         assert f'database="{label}"' in output
 
     def test_increment_migration_errors(self):
+        pytest.importorskip("prometheus_client")
         from dbwarden.metrics import generate_metrics, increment_migration_errors
 
         label = "test_err_inc"
@@ -380,6 +391,7 @@ class TestMetricsEdgeCases:
     """Edge cases for metrics."""
 
     def test_concurrent_metric_access(self):
+        pytest.importorskip("prometheus_client")
         import threading
 
         from dbwarden.metrics import generate_metrics, increment_migrations_total, observe_migration_duration
@@ -404,6 +416,7 @@ class TestMetricsEdgeCases:
             assert f'database="conc_db_{i}"' in output
 
     def test_metrics_round_trip_values(self):
+        pytest.importorskip("prometheus_client")
         from dbwarden.metrics import (
             generate_metrics,
             increment_migrations_total,

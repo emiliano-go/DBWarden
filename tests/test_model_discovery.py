@@ -15,7 +15,7 @@ from dbwarden.engine.model_discovery import (
     ModelColumn,
     ModelTable,
 )
-from dbwarden.schema import PGColumnMeta, PGTableMeta, pg
+from dbwarden.databases.pgsql import PGColumnMeta, PGTableMeta, pg
 
 
 class TestModelDiscovery:
@@ -97,7 +97,7 @@ class User(Base):
     def test_extract_table_from_model_preserves_typed_pg_meta(self, monkeypatch):
         from sqlalchemy import Integer, String
         from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-        from dbwarden import PGColumnMeta, PGTableMeta
+        from dbwarden.databases.pgsql import PGColumnMeta, PGTableMeta
 
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
 
@@ -652,7 +652,7 @@ class TestColumnExtraction:
 
 
 class TestMetaBasedClickHouse:
-    """Tests for CH extraction via class Meta(CHTableMeta) — no __table_args__ fallback."""
+    """Tests for CH extraction via class Meta(CHTableMeta): no __table_args__ fallback."""
 
     def test_extract_table_from_model_uses_meta(self, monkeypatch):
         from sqlalchemy import Column, Integer, String, MetaData, Table

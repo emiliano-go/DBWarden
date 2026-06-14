@@ -26,7 +26,7 @@ class TestGetDbConnection:
         with get_db_connection("test") as conn:
             assert conn is mock_connection
 
-        mock_engine.begin.assert_called_once()
+        assert mock_engine.begin.call_count == 2  # probe + actual connection
 
     @patch("dbwarden.database.connection.get_database")
     @patch("dbwarden.database.connection._get_engine")
