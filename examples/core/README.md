@@ -5,12 +5,13 @@ A progressive example demonstrating the core DBWarden migration workflow.
 ## Prerequisites
 
 - Python 3.12+
-- `pip install dbwarden sqlalchemy`
+- `uv add dbwarden sqlalchemy psycopg2-binary`
+- A running PostgreSQL instance (update `database_url_sync` in `dbwarden.py`)
 
 ## Quick Start
 
 ```bash
-pip install -r requirements.txt
+uv add dbwarden sqlalchemy psycopg2-binary
 bash scripts/01-setup.sh
 bash scripts/02-models-migrations.sh
 bash scripts/03-apply-inspect.sh
@@ -28,4 +29,4 @@ bash scripts/03-apply-inspect.sh
 | `06-safety-impact.sh` | `check`, `check-impact` |
 | `07-seeds.sh` | `seed create`, `seed apply`, `seed rollback`, `seed list` |
 
-Run scripts in order — each builds on the state left by the previous one.
+Run scripts in order: each builds on the state left by the previous one.

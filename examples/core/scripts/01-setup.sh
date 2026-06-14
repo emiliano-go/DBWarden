@@ -5,10 +5,8 @@ echo "=== 01: Project Setup ==="
 
 # ── Clean slate ────────────────────────────────────────────────
 # These commands remove any state from a previous run so the
-# example starts fresh.  `app.db` is the SQLite database file,
-# `migrations/` holds generated SQL files, and `.dbwarden/` stores
-# schema snapshots and cached model state.
-rm -f app.db
+# example starts fresh.  `migrations/` holds generated SQL files
+# and `.dbwarden/` stores schema snapshots and cached model state.
 rm -rf migrations .dbwarden
 
 # ── dbwarden init ──────────────────────────────────────────────

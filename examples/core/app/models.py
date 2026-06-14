@@ -17,7 +17,7 @@ Base = declarative_base()
 # IndexSpec entries become CREATE INDEX statements.
 #
 # Columns defined directly on the model (via Column()) are read by
-# DBWarden's schema scanner — their types, nullability, defaults,
+# DBWarden's schema scanner, their types, nullability, defaults,
 # unique constraints, and foreign keys all feed into the generated SQL.
 
 class User(Base):
@@ -34,7 +34,7 @@ class User(Base):
         comment = "Core user accounts"
         indexes = [
             # Named indexes produce "CREATE INDEX IF NOT EXISTS ..."
-            # in PostgreSQL output (SQLite omits these in DDL).
+            # in the generated DDL.
             IndexSpec(name="ix_users_created_at", columns=["created_at"]),
         ]
 
@@ -46,8 +46,7 @@ class Post(Base):
     title = Column(String(255), nullable=False)
     body = Column(Text, nullable=False)
     # ForeignKey("users.id") generates a REFERENCES clause in the
-    # CREATE TABLE statement.  DBWarden renders it inline for SQLite
-    # and as a table-level FOREIGN KEY constraint for PostgreSQL.
+    # CREATE TABLE statement.
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, server_default=text("CURRENT_TIMESTAMP"))
 
@@ -71,8 +70,8 @@ class Product(Base):
 
     class Meta(TableMeta):
         comment = "Product catalog"
-        # CHECK constraints defined in Meta.checks are rendered inline
-        # for SQLite and as CONSTRAINT ... CHECK (...) for PostgreSQL.
+        # CHECK constraints defined in Meta.checks are rendered as
+        # CONSTRAINT ... CHECK (...) in the generated DDL.
         checks = [
             {"name": "ck_products_price_positive", "sql": "price > 0"},
         ]
