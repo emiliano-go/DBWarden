@@ -56,23 +56,23 @@ Before running migrations in production:
 
 ```bash
 # 1. Verify lock is free
-dbwarden lock-status --database primary
+$ dbwarden lock-status --database primary
 
 # 2. Check what will run
-dbwarden status --database primary
+$ dbwarden status --database primary
 
 # 3. Apply with backup
-dbwarden migrate --database primary --with-backup --backup-dir ./backups
+$ dbwarden migrate --database primary --with-backup --backup-dir ./backups
 
 # 4. Confirm clean state post-migration
-dbwarden status --database primary
-dbwarden history --database primary
+$ dbwarden status --database primary
+$ dbwarden history --database primary
 ```
 
 For multi-database deployments:
 
 ```bash
-dbwarden migrate --all --with-backup --backup-dir ./backups
+$ dbwarden migrate --all --with-backup --backup-dir ./backups
 ```
 
 ## What happens when a migration fails mid-run
@@ -83,11 +83,11 @@ PostgreSQL wraps DDL in transactions. If a migration file fails partway through,
 
 ```bash
 # After a failed migration:
-dbwarden status --database primary     # confirm migration is still pending
-dbwarden lock-status --database primary # confirm lock was released
+$ dbwarden status --database primary     # confirm migration is still pending
+$ dbwarden lock-status --database primary # confirm lock was released
 
 # Fix the migration file, then:
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 ```
 
 ### MySQL / databases without transactional DDL
@@ -113,19 +113,19 @@ If a migration process was killed and the lock was not released:
 
 ```bash
 # 1. Confirm no migration process is running
-dbwarden lock-status --database primary
+$ dbwarden lock-status --database primary
 
 # 2. Inspect history to see the last applied migration
-dbwarden history --database primary
+$ dbwarden history --database primary
 
 # 3. Inspect pending state
-dbwarden status --database primary
+$ dbwarden status --database primary
 
 # 4. Only if the process is confirmed dead:
-dbwarden unlock --database primary
+$ dbwarden unlock --database primary
 
 # 5. Retry
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 ```
 
 See [Migration Locking](migration-locking.md) for full lock recovery guidance.
@@ -137,7 +137,7 @@ If a migration applied successfully but produced incorrect data or schema:
 **Option A: Rollback** (if the migration has a `-- rollback` section):
 
 ```bash
-dbwarden rollback --database primary
+$ dbwarden rollback --database primary
 ```
 
 This executes the rollback SQL defined in the migration file. Verify the rollback SQL was written when the migration was created; not all migrations include one.
@@ -146,9 +146,9 @@ This executes the rollback SQL defined in the migration file. Verify the rollbac
 
 ```bash
 # Create a corrective migration
-dbwarden new "fix column type on payments" --database primary
+$ dbwarden new "fix column type on payments" --database primary
 # Edit the generated file with the corrective SQL
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 ```
 
 Forward fixes are safer than rollbacks for data migrations, as rollback SQL is harder to write correctly after the fact.
@@ -158,7 +158,7 @@ Forward fixes are safer than rollbacks for data migrations, as rollback SQL is h
 For databases that already have a schema (migrating from another tool or brownfield setup):
 
 ```bash
-dbwarden migrate --database primary --baseline --to-version 0005
+$ dbwarden migrate --database primary --baseline --to-version 0005
 ```
 
 `--baseline` marks migrations as applied without executing them. Use this to tell DBWarden "this database already has schema up to version 0005."
@@ -168,7 +168,7 @@ dbwarden migrate --database primary --baseline --to-version 0005
 After migrations complete, run a quick connectivity and schema check:
 
 ```bash
-dbwarden check-db --database primary
+$ dbwarden check-db --database primary
 ```
 
 `check-db` inspects the live database schema and reports what tables and columns exist. Use this to confirm the schema matches what your application expects.

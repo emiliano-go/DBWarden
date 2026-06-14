@@ -66,9 +66,9 @@ That's it! **4 parameters** to get started.
 Run your first migration:
 
 ```bash
-dbwarden init
-dbwarden make-migrations "initial schema"
-dbwarden migrate
+$ dbwarden init
+$ dbwarden make-migrations "initial schema"
+$ dbwarden migrate
 ```
 
 ## Learning Path
@@ -130,8 +130,8 @@ primary = database_config(
 Run commands with `--dev`:
 
 ```bash
-dbwarden --dev migrate
-dbwarden --dev status
+$ dbwarden --dev migrate
+$ dbwarden --dev status
 ```
 
 ###  Multi-Database

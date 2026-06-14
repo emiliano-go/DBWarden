@@ -35,7 +35,7 @@ Generate a rollback SQL file for a given migration file.
 ## Usage
 
 ```bash
-dbwarden make-rollback migrations/primary__0005_add_table.sql
+$ dbwarden make-rollback migrations/primary__0005_add_table.sql
 ```
 
 ## Arguments

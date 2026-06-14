@@ -384,17 +384,6 @@ DBWarden can work **with** SQLModel for migrations while you use SQLModel's ORM.
 
 Django's ORM is integrated with Django's migration system. DBWarden is for FastAPI + SQLAlchemy apps.
 
-## Recap
-
- DBWarden provides one configuration source for migrations and runtime  
- Uses dependency injection for clean, reusable code  
- Caches engines for performance  
- Sessions are request-scoped and automatically managed  
- Health endpoints integrate with Kubernetes probes  
- Async-native for high concurrency  
- `expire_on_commit=False` for FastAPI compatibility  
- Configuration resolves from explicit → environment → defaults  
-
 ## What's Next?
 
 - **[API Reference](reference.md)** - Complete function signatures

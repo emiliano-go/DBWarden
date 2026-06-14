@@ -56,9 +56,9 @@ primary = database_config(
 Run commands with `--dev`:
 
 ```bash
-dbwarden --dev migrate        # Uses SQLite
-dbwarden --dev status         # Uses SQLite
-dbwarden migrate              # Uses PostgreSQL
+$ dbwarden --dev migrate        # Uses SQLite
+$ dbwarden --dev status         # Uses SQLite
+$ dbwarden migrate              # Uses PostgreSQL
 ```
 
 ## Why Use Dev Mode?
@@ -117,14 +117,14 @@ primary = database_config(
 
 ```bash
 # Development workflow
-dbwarden --dev make-migrations "create users"
-dbwarden --dev migrate
-dbwarden --dev status
+$ dbwarden --dev make-migrations "create users"
+$ dbwarden --dev migrate
+$ dbwarden --dev status
 
 # Production workflow
-dbwarden make-migrations "create users"
-dbwarden migrate
-dbwarden status
+$ dbwarden make-migrations "create users"
+$ dbwarden migrate
+$ dbwarden status
 ```
 
 ## Dev Mode Workflow
@@ -136,19 +136,19 @@ dbwarden status
 git pull
 
 # Run migrations against dev database
-dbwarden --dev migrate
+$ dbwarden --dev migrate
 
 # Work on features...
 # Add new models
 
 # Generate migration
-dbwarden --dev make-migrations "add orders table"
+$ dbwarden --dev make-migrations "add orders table"
 
 # Test migration
-dbwarden --dev migrate
+$ dbwarden --dev migrate
 
 # Verify
-dbwarden --dev status
+$ dbwarden --dev status
 
 # Commit
 git add migrations/primary/0002_add_orders_table.sql
@@ -159,13 +159,13 @@ git commit -m "Add orders table"
 
 ```bash
 # Apply migration
-dbwarden --dev migrate
+$ dbwarden --dev migrate
 
 # Test rollback
-dbwarden --dev rollback
+$ dbwarden --dev rollback
 
 # Re-apply
-dbwarden --dev migrate
+$ dbwarden --dev migrate
 ```
 
 ### Fresh Start
@@ -177,7 +177,7 @@ Reset your dev database anytime:
 rm dev.db
 
 # Re-run migrations
-dbwarden --dev migrate
+$ dbwarden --dev migrate
 ```
 
 ## Production Workflow
@@ -198,10 +198,10 @@ Dev mode only affects **local development**. Production uses the main URL:
 
 ```bash
 # Staging
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 
 # Production
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 ```
 
 Dev mode is **never used** in CI/CD or production.
@@ -326,8 +326,8 @@ analytics = database_config(
 Run against all dev databases:
 
 ```bash
-dbwarden --dev migrate --all
-dbwarden --dev status --all
+$ dbwarden --dev migrate --all
+$ dbwarden --dev status --all
 ```
 
 ## Common Patterns
@@ -427,7 +427,7 @@ Use `--dev` for integration tests:
 
 ```bash
 # Run integration tests
-dbwarden --dev migrate
+$ dbwarden --dev migrate
 pytest tests/integration/
 ```
 
@@ -462,21 +462,8 @@ dev_database_url="sqlite:///./dev.db"  #  Add this
 **Solution:** Use `--dev`:
 
 ```bash
-dbwarden --dev migrate  #  Add --dev
+$ dbwarden --dev migrate  #  Add --dev
 ```
-
-## Recap
-
-You learned:
-
- What dev mode is and why it's useful  
- How to configure dev and production URLs  
- Daily development workflow with `--dev`  
- SQLite limitations and workarounds  
- Environment-based configuration  
- Common patterns and best practices  
- Testing strategies  
- Troubleshooting dev mode issues  
 
 ## What's Next?
 

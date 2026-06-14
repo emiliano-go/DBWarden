@@ -99,7 +99,7 @@ For local development, use a `.env` file to avoid setting vars manually each ses
 Install:
 
 ```bash
-pip install python-dotenv
+uv add python-dotenv
 ```
 
 Create `.env` in your project root:

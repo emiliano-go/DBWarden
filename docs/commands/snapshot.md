@@ -35,7 +35,7 @@ Output the DDL schema of a specific database table.
 ## Usage
 
 ```bash
-dbwarden snapshot users --database primary
+$ dbwarden snapshot users --database primary
 ```
 
 ## Options

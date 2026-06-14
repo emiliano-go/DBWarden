@@ -47,7 +47,7 @@ The goal is not just to run commands, but to understand why each step exists and
 ## Step 1: Initialize the project
 
 ```bash
-dbwarden init
+$ dbwarden init
 ```
 
 This creates:
@@ -102,7 +102,7 @@ Why it matters: model metadata is the input to `make-migrations`.
 ## Step 4: Generate migration SQL
 
 ```bash
-dbwarden make-migrations -d "create users table" --database primary
+$ dbwarden make-migrations -d "create users table" --database primary
 ```
 
 DBWarden creates a versioned SQL file under `migrations/primary/`.
@@ -124,7 +124,7 @@ Why it matters: rollback quality determines recovery quality.
 ## Step 6: Apply migrations
 
 ```bash
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 ```
 
 During execution DBWarden:
@@ -138,8 +138,8 @@ During execution DBWarden:
 ## Step 7: Verify the result
 
 ```bash
-dbwarden status --database primary
-dbwarden history --database primary
+$ dbwarden status --database primary
+$ dbwarden history --database primary
 ```
 
 Use status to confirm pending/applied counts and history to confirm execution order.

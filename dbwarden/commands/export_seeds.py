@@ -277,7 +277,7 @@ def _build_insert_sql(
     """Build a single ``INSERT`` statement with *dialect*-aware literal rendering.
 
     Uses ``literal_binds=True`` so that Python values (bool, datetime, None, …)
-    are rendered in the target dialect's format — avoiding silent mismatches
+    are rendered in the target dialect's format, avoiding silent mismatches
     from generic SQL rendering.
     """
     if model_cls is not None and hasattr(model_cls, "__table__"):

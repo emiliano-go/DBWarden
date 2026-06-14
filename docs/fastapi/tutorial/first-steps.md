@@ -46,7 +46,7 @@ You should have:
 - **DBWarden installed** with the FastAPI extra
 
 ```bash
-pip install "dbwarden[fastapi]"
+uv add "dbwarden[fastapi]"
 ```
 
 ## Create Your First App
@@ -219,7 +219,7 @@ Let's break down what each piece does:
 - Verifies migration state
 - Fails fast if there are issues
 
-### `database_config()` handle (e.g., `primary`)
+### `database_config` handle (e.g., `primary`)
 
 - Returns a `DatabaseHandle` with `.async_session` and `.sync_session` properties
 - Each property is a FastAPI dependency annotation, usable directly in route parameters
@@ -232,22 +232,12 @@ Let's break down what each piece does:
 - Closes the session when the request finishes
 - For sync routes, use `primary.sync_session` instead
 
-### `DBWardenHealthRouter()`
+### `DBWardenHealthRouter`
 
 - Adds `/health/` endpoint for all databases
 - Adds `/health/{database_name}` for specific database
 - Returns connectivity and migration status
 - Perfect for Kubernetes probes
-
-## Recap
-
-You learned how to:
-
- Install DBWarden with FastAPI support  
- Create a lifespan function for startup checks  
- Use `primary.async_session` to get database sessions in routes  
- Add health endpoints for monitoring  
- Run and test your application
 
 ## What's Next?
 

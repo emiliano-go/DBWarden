@@ -7,6 +7,7 @@ from typing import Any
 
 from dbwarden.config import get_database
 from dbwarden.database.connection import get_db_connection
+from dbwarden.logging import get_logger
 from dbwarden.output import console
 
 
@@ -664,23 +665,23 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
             "from sqlalchemy.ext.declarative import declarative_base\n\n\n"
             "Base = declarative_base()\n\n\n"
         )
-        if pg_meta_imports:
-            content += "from dbwarden import " + ", ".join(sorted(pg_meta_imports)) + "\n"
-        if needs_pg_spec:
-            content += "from dbwarden.schema import pg\n"
         if pg_meta_imports or needs_pg_spec:
+            imports = ", ".join(sorted(pg_meta_imports))
+            if needs_pg_spec:
+                imports = ("pg, " + imports) if pg_meta_imports else "pg"
+            content += "from dbwarden.databases.pgsql import " + imports + "\n"
             content += "\n"
-        if my_meta_imports:
-            content += "from dbwarden import " + ", ".join(sorted(my_meta_imports)) + "\n"
-        if needs_my_spec:
-            content += "from dbwarden.schema import my\n"
         if my_meta_imports or needs_my_spec:
+            imports = ", ".join(sorted(my_meta_imports))
+            if needs_my_spec:
+                imports = ("my, " + imports) if my_meta_imports else "my"
+            content += "from dbwarden.databases.mysql import " + imports + "\n"
             content += "\n"
-        if ch_meta_imports:
-            content += "from dbwarden import " + ", ".join(sorted(ch_meta_imports)) + "\n"
-        if needs_ch_spec:
-            content += "from dbwarden.schema import ch\n"
         if ch_meta_imports or needs_ch_spec:
+            if ch_meta_imports:
+                content += "from dbwarden.databases.clickhouse import " + ", ".join(sorted(ch_meta_imports)) + "\n"
+            if needs_ch_spec:
+                content += "from dbwarden.databases.clickhouse import ch\n"
             content += "\n"
         content += "\n\n".join(all_classes)
         (out_path / "models.py").write_text(content, encoding="utf-8")
@@ -713,22 +714,22 @@ def _write_models(output_dir: str, tables: list[dict], single_file: bool) -> Non
             needs_my_spec = True
         if table.get("my_meta"):
             needs_my_base.add("MyTableMeta")
-        if needs_pg_base:
-            content_lines.append("from dbwarden import " + ", ".join(sorted(needs_pg_base)) + "\n")
-        if needs_pg_spec:
-            content_lines.append("from dbwarden.schema import pg\n")
         if needs_pg_base or needs_pg_spec:
+            imports = ", ".join(sorted(needs_pg_base))
+            if needs_pg_spec:
+                imports = ("pg, " + imports) if needs_pg_base else "pg"
+            content_lines.append("from dbwarden.databases.pgsql import " + imports + "\n")
             content_lines.append("\n")
-        if needs_my_base:
-            content_lines.append("from dbwarden import " + ", ".join(sorted(needs_my_base)) + "\n")
-        if needs_my_spec:
-            content_lines.append("from dbwarden.schema import my\n")
         if needs_my_base or needs_my_spec:
+            imports = ", ".join(sorted(needs_my_base))
+            if needs_my_spec:
+                imports = ("my, " + imports) if needs_my_base else "my"
+            content_lines.append("from dbwarden.databases.mysql import " + imports + "\n")
             content_lines.append("\n")
         if table.get("clickhouse_options"):
-            content_lines.append("from dbwarden import CHColumnMeta, CHTableMeta, ChEngineSpec, ProjectionSpec\n")
+            content_lines.append("from dbwarden.databases.clickhouse import CHColumnMeta, CHTableMeta, ChEngineSpec, ProjectionSpec\n")
             if any(col.get("ch_meta") for col in table["columns"]):
-                content_lines.append("from dbwarden.schema import ch\n")
+                content_lines.append("from dbwarden.databases.clickhouse import ch\n")
             content_lines.append("\n")
         content_lines.append(
             _generate_table_code(
@@ -1318,7 +1319,7 @@ def _clean_engine_full(engine_full: str) -> str:
                 if depth == 0:
                     end = name_end + i + 1
                     return engine_full[:end]
-        # unbalanced parens — return as-is
+        # unbalanced parens: return as-is
         return engine_full
     # No args: engine name only
     return engine_full[:name_end]

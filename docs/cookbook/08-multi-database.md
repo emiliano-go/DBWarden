@@ -30,6 +30,10 @@ seo:
 
 # 8. Multi-Database & Configuration
 
+DBWarden supports managing multiple databases in a single project; each with its own migration directory, lock, tracking table, and model paths. You can mix PostgreSQL, MySQL, and ClickHouse backends in the same codebase.
+
+For complete documentation see the [Multi-Database Configuration](../configuration/multi-database.md) reference.
+
 ## What You'll Learn
 
 - How to configure multiple databases in one project
@@ -46,9 +50,9 @@ seo:
 
 A project with three databases:
 
-- **primary** (PostgreSQL) — transactional user data
-- **legacy** (MySQL) — legacy CRM and reporting data
-- **analytics** (ClickHouse) — page view events for analysis
+- **primary** (PostgreSQL): transactional user data
+- **legacy** (MySQL): legacy CRM and reporting data
+- **analytics** (ClickHouse): page view events for analysis
 
 ## Step 1: The Configuration
 
@@ -95,8 +99,8 @@ docker compose up -d
 ## Step 3: Initialize and Migrate
 
 ```bash
-dbwarden init
-dbwarden migrate --all
+$ dbwarden init
+$ dbwarden migrate --all
 ```
 
 This applies migrations to both databases in sequence. Each has its own lock, its own tracking table, and its own migration history.
@@ -105,19 +109,19 @@ This applies migrations to both databases in sequence. Each has its own lock, it
 
 ```bash
 # Generate migrations for primary only
-dbwarden make-migrations "add user table" --database primary
+$ dbwarden make-migrations "add user table" --database primary
 
 # Apply to analytics only
-dbwarden migrate --database analytics
+$ dbwarden migrate --database analytics
 
 # Check status of one database
-dbwarden status --database primary
+$ dbwarden status --database primary
 ```
 
 ## Step 5: Check Status of All Databases
 
 ```bash
-dbwarden status --all
+$ dbwarden status --all
 ```
 
 Output:
@@ -140,26 +144,26 @@ The settings commands allow runtime configuration changes without editing `dbwar
 
 ```bash
 # View current configuration
-dbwarden settings show --all
+$ dbwarden settings show --all
 
 # Set a default database
-dbwarden settings default-database primary
+$ dbwarden settings default-database primary
 
 # Add a new database entry
-dbwarden settings database-add reporting postgresql://localhost:5432/reporting \
+$ dbwarden settings database-add reporting postgresql://localhost:5432/reporting \
     --type postgresql \
     --model-path app.models.reporting
 
 # Or add a MySQL database
-dbwarden settings database-add legacy mysql+pymysql://localhost:3306/legacy \
+$ dbwarden settings database-add legacy mysql+pymysql://localhost:3306/legacy \
     --type mysql \
     --model-path app.models.legacy
 
 # Remove a database
-dbwarden settings database-remove reporting
+$ dbwarden settings database-remove reporting
 
 # Rename a database
-dbwarden settings database-rename analytics analytics_v2
+$ dbwarden settings database-rename analytics analytics_v2
 ```
 
 Settings commands modify the `dbwarden.py` file directly using AST-based mutation. The changes are permanent and committed to version control.
@@ -199,10 +203,10 @@ analytics = database_config(
 
 ```bash
 # Dev mode for all databases
-dbwarden --dev migrate --all
+$ dbwarden --dev migrate --all
 
 # Dev mode for a specific database
-dbwarden --dev migrate --database analytics
+$ dbwarden --dev migrate --database analytics
 ```
 
 ## Step 8: Legacy Database with MySQL Metadata
@@ -212,8 +216,7 @@ The legacy MySQL database uses `MyTableMeta` and `MyColumnMeta` for MySQL-specif
 ```python
 from sqlalchemy import Integer, String, TIMESTAMP, Text
 from sqlalchemy.orm import Mapped, mapped_column
-from dbwarden import MyTableMeta, MyColumnMeta
-from dbwarden.schema import my
+from dbwarden.databases.mysql import MyTableMeta, MyColumnMeta, my
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -240,10 +243,10 @@ Migrations for the legacy database work identically to other databases:
 
 ```bash
 # Generate migration for MySQL legacy database
-dbwarden make-migrations "add customer table" --database legacy
+$ dbwarden make-migrations "add customer table" --database legacy
 
 # Apply to legacy only
-dbwarden migrate --database legacy
+$ dbwarden migrate --database legacy
 ```
 
 The generated DDL will target MySQL-native syntax:

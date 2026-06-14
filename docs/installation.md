@@ -40,20 +40,12 @@ This guide covers installing DBWarden in your project and verifying it works cor
 
 - Python 3.10 or higher
 - A project that uses SQLAlchemy for database models
-- pip or another Python package manager
+- uv or another Python package manager
 
-## Install using pip
-
-```bash
-pip install dbwarden
-```
-
-### With poetry
-
-If your project uses Poetry:
+## Install using uv
 
 ```bash
-poetry add dbwarden
+uv add dbwarden
 ```
 
 ### Development dependencies
@@ -61,30 +53,26 @@ poetry add dbwarden
 To also install testing and linting tools:
 
 ```bash
-pip install "dbwarden[dev]"
-```
-
-Or with poetry:
-
-```bash
-poetry add --group dev dbwarden
+uv add "dbwarden[dev]"
 ```
 
 ### Optional dependency groups
 
-| Group | Command | Provides |
-|-------|---------|----------|
-| `postgres` | `pip install "dbwarden[postgres]"` | PostgreSQL driver (`psycopg2-binary`) |
-| `mysql` | `pip install "dbwarden[mysql]"` | MySQL/MariaDB driver (`pymysql`) |
-| `clickhouse` | `pip install "dbwarden[clickhouse]"` | ClickHouse driver (`clickhouse-connect`) |
-| `fastapi` | `pip install "dbwarden[fastapi]"` | FastAPI session dependencies, health router, migration router, metrics router, Redis lock |
-| `metrics` | `pip install "dbwarden[metrics]"` | Prometheus metrics endpoint (`prometheus-client`) |
-| `sandbox` | `pip install "dbwarden[sandbox]"` | Sandbox migration testing via testcontainers |
+The `[postgres]` extra is the most commonly used. Install it if you are targeting PostgreSQL.
+
+| Group                  | Command | Provides |
+|------------------------|-------|-------|
+| `postgres`             | `uv add "dbwarden[postgres]"` | PostgreSQL driver (`psycopg2-binary`) |
+| `mysql`                | `uv add "dbwarden[mysql]"` | MySQL/MariaDB driver (`pymysql`) |
+| `clickhouse`           | `uv add "dbwarden[clickhouse]"` | ClickHouse driver (`clickhouse-connect`) |
+| `fastapi`              | `uv add "dbwarden[fastapi]"` | FastAPI session dependencies, health router, migration router, metrics router, Redis lock |
+| `metrics`              | `uv add "dbwarden[metrics]"` | Prometheus metrics endpoint (`prometheus-client`) |
+| `sandbox`              | `uv add "dbwarden[sandbox]"` | Sandbox migration testing via testcontainers |
 
 Combine groups as needed:
 
 ```bash
-pip install "dbwarden[postgres,mysql,fastapi]"
+uv add "dbwarden[postgres,mysql,fastapi]"
 ```
 
 ## Database drivers
@@ -93,13 +81,13 @@ DBWarden uses SQLAlchemy under the hood. The recommended way to install drivers 
 
 ```bash
 # PostgreSQL
-pip install "dbwarden[postgres]"
+uv add "dbwarden[postgres]"
 
 # MySQL/MariaDB
-pip install "dbwarden[mysql]"
+uv add "dbwarden[mysql]"
 
 # ClickHouse
-pip install "dbwarden[clickhouse]"
+uv add "dbwarden[clickhouse]"
 
 # SQLite comes bundled with Python
 ```
@@ -107,9 +95,9 @@ pip install "dbwarden[clickhouse]"
 You can also install drivers directly if you prefer:
 
 ```bash
-pip install psycopg2-binary    # PostgreSQL
-pip install pymysql            # MySQL / MariaDB
-pip install clickhouse-connect # ClickHouse
+uv add psycopg2-binary    # PostgreSQL
+uv add pymysql            # MySQL / MariaDB
+uv add clickhouse-connect # ClickHouse
 ```
 
 ## Verify installation
@@ -117,7 +105,7 @@ pip install clickhouse-connect # ClickHouse
 After installing, confirm DBWarden is available:
 
 ```bash
-dbwarden version
+$ dbwarden version
 ```
 
 You should see output:
@@ -131,7 +119,7 @@ You should see output:
 Create the DBWarden structure in your project directory:
 
 ```bash
-dbwarden init
+$ dbwarden init
 ```
 
 This creates:
@@ -172,21 +160,21 @@ The `dev_database_*` fields are optional but recommended - they enable fast loca
 ## Verify configuration loads
 
 ```bash
-dbwarden settings show --all
+$ dbwarden settings show --all
 ```
 
 You should see your database entry printed with type and URL.
 
 ## Common installation issues
 
-**Command not found after pip install**
+**Command not found after uv add**
 
 - Ensure your virtual environment is activated
-- Try uninstalling and reinstalling: `pip uninstall dbwarden && pip install dbwarden`
+- Try removing and re-adding: `uv remove dbwarden && uv add dbwarden`
 
 **Import errors or missing module warnings**
 
-- Upgrade pip and reinstall: `pip install --upgrade pip dbwarden`
+- Upgrade uv and reinstall: `uv add --upgrade dbwarden`
 
 **Database driver errors**
 
@@ -197,7 +185,7 @@ You should see your database entry printed with type and URL.
 To update to a newer version:
 
 ```bash
-pip install --upgrade dbwarden
+uv add --upgrade dbwarden
 ```
 
 Or with poetry:

@@ -95,7 +95,7 @@ primary = database_config(
 Check your existing `warden.toml`:
 
 ```bash
-dbwarden database list
+$ dbwarden database list
 ```
 
 Note each database entry and its configuration.
@@ -141,7 +141,7 @@ primary = database_config(
 ### Step 4: Verify configuration loads
 
 ```bash
-dbwarden settings show --all
+$ dbwarden settings show --all
 ```
 
 You should see all your migrated databases listed with correct types and URLs.
@@ -151,8 +151,8 @@ You should see all your migrated databases listed with correct types and URLs.
 Confirm the migration works by running key commands:
 
 ```bash
-dbwarden status --database primary
-dbwarden history --database primary
+$ dbwarden status --database primary
+$ dbwarden history --database primary
 ```
 
 ### Step 6: Remove TOML file
@@ -262,16 +262,16 @@ After completing the migration, run these to confirm everything works:
 
 ```bash
 # Confirm all databases visible
-dbwarden settings show --all
+$ dbwarden settings show --all
 
 # Confirm status works
-dbwarden status --database <name>
+$ dbwarden status --database <name>
 
 # Confirm history works
-dbwarden history --database <name>
+$ dbwarden history --database <name>
 
 # If using --dev, confirm it works
-dbwarden --dev status --database <name>
+$ dbwarden --dev status --database <name>
 ```
 
 ## Rollback if needed

@@ -403,10 +403,10 @@ except Exception as e:
 
 ```bash
 # Check configuration
-dbwarden settings show
+$ dbwarden settings show
 
 # Test connection
-dbwarden check-db
+$ dbwarden check-db
 ```
 
 ## Common Mistakes
@@ -447,18 +447,6 @@ database_url_sync="postgresql://user:p@ss@localhost/myapp"  # @ not encoded
 ```python
 database_url_sync="postgresql://user:p%40ss@localhost/myapp"  # @ encoded as %40
 ```
-
-## Recap
-
-You learned:
-
- URL format for PostgreSQL, SQLite, MySQL, ClickHouse  
- SSL configuration options  
- Connection pool parameters  
- Cloud provider URL patterns  
- Environment variable patterns  
- URL encoding for special characters  
- Common mistakes and how to avoid them  
 
 ## What's Next?
 

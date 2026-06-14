@@ -60,7 +60,7 @@ my_app/
 │   └── routes/
 │       ├── __init__.py
 │       └── users.py     # User endpoints
-└── requirements.txt
+└── pyproject.toml
 ```
 
 ## Step 1: Database Configuration
@@ -353,10 +353,10 @@ Initialize DBWarden and create your first migration:
 
 ```bash
 # Initialize DBWarden (if not already done)
-dbwarden init
+$ dbwarden init
 
 # Create migration for User model
-dbwarden make-migrations -m "create users table"
+$ dbwarden make-migrations -m "create users table"
 ```
 
 This generates a migration file like `0001_create_users_table.py`.
@@ -368,11 +368,11 @@ Apply the migration to your database:
 ```bash
 # For development (SQLite)
 export ENVIRONMENT=development
-dbwarden migrate
+$ dbwarden migrate
 
 # For production (PostgreSQL)
 export ENVIRONMENT=production
-dbwarden migrate
+$ dbwarden migrate
 ```
 
 ## Step 9: Run the Application
@@ -549,8 +549,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml uv.lock .
+RUN uv sync
 
 COPY . .
 
@@ -637,24 +637,30 @@ ENVIRONMENT=production
 DATABASE_URL=postgresql://user:password@db-host:5432/myapp
 ```
 
-## Requirements
+## Dependencies
 
-Create `requirements.txt`:
+Create `pyproject.toml`:
 
-```txt
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-sqlalchemy>=2.0.0
-asyncpg>=0.29.0  # PostgreSQL async driver
-aiosqlite>=0.19.0  # SQLite async driver
-pydantic[email]>=2.4.0
-dbwarden>=0.1.0
+```toml
+[project]
+name = "my-app"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "sqlalchemy>=2.0.0",
+    "asyncpg>=0.29.0",
+    "aiosqlite>=0.19.0",
+    "pydantic[email]>=2.4.0",
+    "dbwarden>=0.1.0",
+]
 ```
 
 Install:
 
 ```bash
-pip install -r requirements.txt
+uv sync
 ```
 
 ## Testing
@@ -706,21 +712,6 @@ Run tests:
 ```bash
 pytest tests/
 ```
-
-## Recap
-
-This complete application demonstrates:
-
- Database configuration with DBWarden  
- SQLAlchemy models with Mapped columns  
- Pydantic schemas for validation  
- Session dependencies with type aliases  
- Full CRUD operations  
- Error handling and transactions  
- Startup migration checks  
- Health endpoints  
- Production deployment (Docker, Kubernetes)  
- Testing setup  
 
 ## What's Next?
 

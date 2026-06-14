@@ -595,7 +595,7 @@ This means migrations need to be applied:
 
 ```bash
 # Apply migrations
-dbwarden migrate
+$ dbwarden migrate
 
 # Or let the app auto-migrate (if configured)
 # See: Startup Checks documentation
@@ -634,18 +634,6 @@ For very fast health checks, consider:
 async def ping():
     return {"status": "ok"}
 ```
-
-## Recap
-
-You learned:
-
- Add health endpoints with `DBWardenHealthRouter()`  
- Health endpoints return database connectivity and migration state  
- Status codes: 200 (healthy/degraded), 503 (error), 404 (not found)  
- Use for Kubernetes liveness/readiness probes  
- Feed metrics to Prometheus, Datadog, etc.  
- Health endpoints vs startup checks - different purposes  
- Troubleshoot common issues (503, degraded, 404)  
 
 ## What's Next?
 

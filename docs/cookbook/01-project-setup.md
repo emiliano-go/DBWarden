@@ -38,7 +38,7 @@ seo:
 
 ## Prerequisites
 
-- Python 3.12+ with `pip install dbwarden sqlalchemy`
+- Python 3.12+ with `uv add dbwarden sqlalchemy`
 - The `examples/core/` directory (see [Cookbook Index](index.md))
 
 ## Step 1: Initialize the Project
@@ -85,7 +85,7 @@ Each parameter has a specific role:
 | `model_paths` | `["app"]` | Python module paths to scan for SQLAlchemy models |
 | `model_tables` | `["users", "posts"]` | Optional table-name filter for this database |
 
-The return value `primary` is a `DatabaseHandle` object. It's also used later for FastAPI dependency injection — the same object provides `primary.async_session` and `primary.sync_session`.
+The return value `primary` is a `DatabaseHandle` object. It's also used later for FastAPI dependency injection: the same object provides `primary.async_session` and `primary.sync_session`.
 
 ## Step 3: Viewing the Configuration
 
@@ -114,7 +114,7 @@ When you import `dbwarden` and call `database_config()`:
 
 ## Key Takeaways
 
-- `dbwarden init` creates the directory skeleton — run it once per project
+- `dbwarden init` creates the directory skeleton: run it once per project
 - `dbwarden config` shows what DBWarden actually resolved (useful for debugging)
 - `database_config()` is the single entry point for all configuration
 - `model_paths` controls which Python modules are scanned for models

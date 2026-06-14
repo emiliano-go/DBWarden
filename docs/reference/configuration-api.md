@@ -348,8 +348,8 @@ primary = database_config(
 
 Use with:
 ```bash
-dbwarden --dev migrate  # Uses SQLite
-dbwarden migrate        # Uses PostgreSQL
+$ dbwarden --dev migrate  # Uses SQLite
+$ dbwarden migrate        # Uses PostgreSQL
 ```
 
 Use SQLite with `dev_database_url="sqlite:///./dev.db"` for the fastest local iteration loop.

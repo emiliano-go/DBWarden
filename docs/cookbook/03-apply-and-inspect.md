@@ -52,7 +52,7 @@ bash scripts/03-apply-inspect.sh
 ### The Migrate Command
 
 ```bash
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 ```
 
 When you run `migrate`, DBWarden:
@@ -75,7 +75,7 @@ When you run `migrate`, DBWarden:
 ### Verify Status
 
 ```bash
-dbwarden status --database primary
+$ dbwarden status --database primary
 ```
 
 Output:
@@ -90,7 +90,7 @@ Database: primary
 ### View History
 
 ```bash
-dbwarden history --database primary
+$ dbwarden history --database primary
 ```
 
 Output:
@@ -105,7 +105,7 @@ The checksum (`a1b2c3d4...`) is a SHA-256 hash of the migration file content. Th
 ## Step 2: Rollback
 
 ```bash
-dbwarden rollback --database primary --count 1
+$ dbwarden rollback --database primary --count 1
 ```
 
 Rollback executes the `-- rollback` section of the most recently applied migration. After rollback:
@@ -116,7 +116,7 @@ Rollback executes the `-- rollback` section of the most recently applied migrati
 ```
 
 ```bash
-dbwarden status --database primary
+$ dbwarden status --database primary
 ```
 
 ```
@@ -128,7 +128,7 @@ Database: primary
 
 ### Rollback Mechanics
 
-- Rollback always executes the `-- rollback` section of the file — never auto-generates reverse SQL
+- Rollback always executes the `-- rollback` section of the file; never auto-generates reverse SQL
 - `--count` controls how many migrations to roll back (default: 1)
 - Rollbacks are also lock-protected
 - After rollback, the migration is considered "pending" again and can be re-applied
@@ -136,7 +136,7 @@ Database: primary
 ## Step 3: Re-apply
 
 ```bash
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 ```
 
 Re-applies the migration. Since rollback removed the tracking record, the migration runs again.
@@ -144,7 +144,7 @@ Re-applies the migration. Since rollback removed the tracking record, the migrat
 ## Step 4: Downgrade to a Version
 
 ```bash
-dbwarden downgrade --to 0000 --database primary
+$ dbwarden downgrade --to 0000 --database primary
 ```
 
 `downgrade` is a bulk rollback: it rolls back all migrations down to (but not including) the target version. `--to 0000` rolls back everything.
@@ -165,8 +165,8 @@ dbwarden downgrade --to 0000 --database primary
 ## Step 5: Re-apply All
 
 ```bash
-dbwarden migrate --database primary
-dbwarden status --database primary
+$ dbwarden migrate --database primary
+$ dbwarden status --database primary
 ```
 
 After the final apply, status should show:
@@ -181,15 +181,15 @@ Database: primary
 ## Step 6: Schema Validation
 
 ```bash
-dbwarden check --database primary
+$ dbwarden check --database primary
 ```
 
 `check` scans each migration file and classifies operations by safety level:
 
-- **SAFE** — Adding a nullable column, creating an index
-- **INFO** — Table comment changes
-- **WARN** — Dropping a default, changing column type
-- **CRITICAL** — Dropping a table or column, removing a NOT NULL
+- **SAFE**: Adding a nullable column, creating an index
+- **INFO**: Table comment changes
+- **WARN**: Dropping a default, changing column type
+- **CRITICAL**: Dropping a table or column, removing a NOT NULL
 
 ```
 Checking migrations for 'primary'...
@@ -206,7 +206,7 @@ Checking migrations for 'primary'...
 ## Step 7: Database Connectivity Check
 
 ```bash
-dbwarden check-db --database primary
+$ dbwarden check-db --database primary
 ```
 
 `check-db` connects to the live database and reports its schema:

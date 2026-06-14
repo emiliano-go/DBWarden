@@ -159,7 +159,7 @@ Every schema snapshot is an immutable record of the database schema at a specifi
 Snapshots are created automatically by the `migrate` command after applying a versioned migration:
 
 ```
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 ```
 
 The snapshot is written **after** all pending migrations have been applied. If the write fails (permission issue, disk full, etc.), a warning is logged but the migration itself is not rolled back. Failure to write a snapshot is non-fatal.

@@ -62,7 +62,7 @@ DBWarden does not retry on lock failure. The calling process (CI job, deploy scr
 ## Inspecting lock state
 
 ```bash
-dbwarden lock-status --database primary
+$ dbwarden lock-status --database primary
 ```
 
 Output when unlocked:
@@ -113,19 +113,19 @@ If the process is genuinely dead:
 
 ```bash
 # 1. Confirm lock state
-dbwarden lock-status --database primary
+$ dbwarden lock-status --database primary
 
 # 2. Inspect migration history to see what ran last
-dbwarden history --database primary
+$ dbwarden history --database primary
 
 # 3. Check pending migrations
-dbwarden status --database primary
+$ dbwarden status --database primary
 
 # 4. Release the stale lock
-dbwarden unlock --database primary
+$ dbwarden unlock --database primary
 
 # 5. Retry migration
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 ```
 
 ## When NOT to use `unlock`
@@ -169,7 +169,7 @@ concurrency:
 Run `dbwarden status` to verify no pending migrations remain:
 
 ```bash
-dbwarden status --database primary
+$ dbwarden status --database primary
 ```
 
 ## Distributed locking with Redis

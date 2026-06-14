@@ -57,7 +57,7 @@ primary = database_config(
 )
 ```
 
-The `primary` object is a `DatabaseHandle`. It exposes `primary.async_session` and `primary.sync_session` as FastAPI-compatible dependency annotations — no separate dependency module needed.
+The `primary` object is a `DatabaseHandle`. It exposes `primary.async_session` and `primary.sync_session` as FastAPI-compatible dependency annotations; no separate dependency module needed.
 
 ## Step 2: Lifespan Hook
 
@@ -78,15 +78,15 @@ app = FastAPI(lifespan=lifespan)
 
 `dbwarden_lifespan` runs on every startup:
 
-1. **Schema validation** (mode `"check"`) — verifies all pending migrations exist and the database is in a known state
-2. **Readiness gate** — the app won't accept traffic until validation passes
-3. **Connection pool warmup** — pre-connects to the database
-4. **On shutdown** — disposes all engine pools and ClickHouse clients
+1. **Schema validation** (mode `"check"`): verifies all pending migrations exist and the database is in a known state
+2. **Readiness gate**: the app won't accept traffic until validation passes
+3. **Connection pool warmup**: pre-connects to the database
+4. **On shutdown**: disposes all engine pools and ClickHouse clients
 
 Available modes:
-- `"check"` — validate schema, fail on pending migrations (recommended for production)
-- `"migrate"` — apply pending migrations automatically on startup
-- `"skip"` — no startup checks
+- `"check"`: validate schema, fail on pending migrations (recommended for production)
+- `"migrate"`: apply pending migrations automatically on startup
+- `"skip"`: no startup checks
 
 ## Step 3: Session Dependency in Routes
 
@@ -196,7 +196,7 @@ app.include_router(DBWardenRouter(), prefix="/db")
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+uv add dbwarden sqlalchemy fastapi uvicorn asyncpg
 
 # Start PostgreSQL
 docker run -d --name pg -e POSTGRES_USER=user \
@@ -204,9 +204,9 @@ docker run -d --name pg -e POSTGRES_USER=user \
     -p 5432:5432 postgres:16
 
 # Initialize and migrate
-dbwarden init
-dbwarden make-migrations "create users table"
-dbwarden migrate
+$ dbwarden init
+$ dbwarden make-migrations "create users table"
+$ dbwarden migrate
 
 # Start the app
 uvicorn app.main:app --reload

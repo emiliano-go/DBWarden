@@ -71,10 +71,10 @@ Checksum mismatch errors only apply to versioned migrations (`V__` prefix).
 
 ```bash
 # See which migrations are applied and their checksums
-dbwarden history --database primary
+$ dbwarden history --database primary
 
 # Check the current status
-dbwarden status --database primary
+$ dbwarden status --database primary
 ```
 
 Common causes:
@@ -113,10 +113,10 @@ If the file was intentionally changed to fix an error in a migration that was al
 git checkout <commit-before-edit> -- migrations/primary/V__0004_add_indexes.sql
 
 # 2. Verify status is clean
-dbwarden status --database primary
+$ dbwarden status --database primary
 
 # 3. Create a corrective migration for the actual schema fix
-dbwarden new "fix index on users" --database primary
+$ dbwarden new "fix index on users" --database primary
 ```
 
 ## When is it safe to ignore?
@@ -158,7 +158,7 @@ intact snapshot.
 
 ```bash
 # .git/hooks/pre-commit (example, adapt to your setup)
-dbwarden check --database primary
+$ dbwarden check --database primary
 ```
 
 `dbwarden check` compares models to the live schema. While not a direct checksum check, it surfaces drift that often accompanies unintended migration file edits.

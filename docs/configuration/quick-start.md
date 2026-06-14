@@ -36,7 +36,7 @@ Configure your first database in **2 minutes**.
 
 You should have:
 - Python 3.10+ installed
-- DBWarden installed (`pip install dbwarden`)
+- DBWarden installed (`uv add dbwarden`)
 - A database to connect to (or use SQLite)
 
 ## Step 1: Initialize
@@ -44,7 +44,7 @@ You should have:
 Create project structure:
 
 ```bash
-dbwarden init
+$ dbwarden init
 ```
 
 This creates:
@@ -79,7 +79,7 @@ Start with SQLite for the simplest setup. Switch to PostgreSQL later.
 Verify DBWarden can read your config:
 
 ```bash
-dbwarden settings show
+$ dbwarden settings show
 ```
 
 You'll see:
@@ -143,20 +143,20 @@ primary = database_config(
 Now you can run commands against SQLite locally:
 
 ```bash
-dbwarden --dev migrate
-dbwarden --dev status
+$ dbwarden --dev migrate
+$ dbwarden --dev status
 ```
 
 And against PostgreSQL in production:
 
 ```bash
-dbwarden migrate
-dbwarden status
+$ dbwarden migrate
+$ dbwarden status
 ```
 
 ## What Just Happened?
 
-### `database_config()` Registered Your Database
+### `database_config` registered your database
 
 When Python loads `dbwarden.py`, it executes `database_config()` which:
 1. Validates your parameters
@@ -168,10 +168,10 @@ When Python loads `dbwarden.py`, it executes `database_config()` which:
 All CLI commands now know about your database:
 
 ```bash
-dbwarden make-migrations "create users"
-dbwarden migrate
-dbwarden status
-dbwarden history
+$ dbwarden make-migrations "create users"
+$ dbwarden migrate
+$ dbwarden status
+$ dbwarden history
 ```
 
 ## Common First-Time Issues
@@ -231,18 +231,6 @@ primary = database_config(
     secure_values=True,
 )
 ```
-
-## Recap
-
-You learned how to:
-
- Initialize a DBWarden project  
- Create your first `database_config()`  
- Verify configuration with `dbwarden settings show --all`  
- Add model discovery  
- Upgrade from SQLite to PostgreSQL  
- Add dev mode for local development  
- Use environment variables for credentials  
 
 ## What's Next?
 

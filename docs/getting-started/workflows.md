@@ -62,14 +62,14 @@ analytics = database_config(
 Apply migrations per database:
 
 ```bash
-dbwarden migrate --database primary
-dbwarden migrate --database analytics
+$ dbwarden migrate --database primary
+$ dbwarden migrate --database analytics
 ```
 
 Show status across all configured databases:
 
 ```bash
-dbwarden status --all
+$ dbwarden status --all
 ```
 
 ## Separate Model Sets
@@ -83,9 +83,9 @@ This prevents one model tree from being interpreted as belonging to multiple dat
 A common CI pattern is:
 
 ```bash
-dbwarden export-models --database primary
-dbwarden make-migrations "ci validation" --offline --database primary
-dbwarden check --database primary
+$ dbwarden export-models --database primary
+$ dbwarden make-migrations "ci validation" --offline --database primary
+$ dbwarden check --database primary
 ```
 
 This keeps schema generation deterministic and avoids depending on a live database in every pipeline step.
@@ -97,33 +97,38 @@ For a full example, see [Cookbook: Offline & CI](../cookbook/04-offline-ci.md).
 Before applying migrations to a real environment, you can validate them in a temporary sandbox database.
 
 ```bash
-dbwarden migrate --sandbox --database primary
+$ dbwarden migrate --sandbox --database primary
 ```
 
 This is especially useful for complex migrations, risky type changes, and CI gates.
+
+See the [Architecture Deep Dive](../architecture-deep-dive.md) for a thorough explanation of sandbox validation.
 
 ## Baselines and Partial Applies
 
 When integrating DBWarden into an existing environment, or when applying only part of a migration sequence, these patterns are common:
 
+- `--baseline` marks the target migration as already applied without actually running it, useful for onboarding an existing database.
+- `--partial` (via `--count` or `--to-version`) applies a subset of pending migrations instead of all of them.
+
 ```bash
-dbwarden migrate --database primary --baseline --to-version 0005
-dbwarden migrate --database primary --count 2
-dbwarden rollback --database primary --to-version 0007
+$ dbwarden migrate --database primary --baseline --to-version 0005
+$ dbwarden migrate --database primary --count 2
+$ dbwarden rollback --database primary --to-version 0007
 ```
 
-Use these modes carefully. They are operational tools, not everyday authoring commands.
+See the [CLI Reference](../cli-reference.md) for a full breakdown of these flags. Use these modes carefully. They are operational tools, not everyday authoring commands.
 
 ## Operational Command Pattern
 
 A typical production-safe pattern is:
 
 ```bash
-dbwarden check --database primary
-dbwarden make-migrations "release change" --database primary
-dbwarden migrate --database primary
-dbwarden status --database primary
-dbwarden history --database primary
+$ dbwarden check --database primary
+$ dbwarden make-migrations "release change" --database primary
+$ dbwarden migrate --database primary
+$ dbwarden status --database primary
+$ dbwarden history --database primary
 ```
 
 This keeps planning, execution, and verification as separate visible steps.
@@ -133,25 +138,17 @@ This keeps planning, execution, and verification as separate visible steps.
 When validating rollback quality, use a loop like this:
 
 ```bash
-dbwarden migrate --database primary
-dbwarden rollback --count 1 --database primary
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
+$ dbwarden rollback --count 1 --database primary
+$ dbwarden migrate --database primary
 ```
 
 This verifies both directions of the migration before a release depends on them.
 
 ## Where to Go Next
 
-- Use [Cookbook & Examples](../cookbook/index.md) for full working flows
+- Use [Cookbook Overview](../cookbook/index.md) for full working flows
 - Use [Configuration](../configuration/index.md) for deeper config behavior
 - Use [CLI Reference](../cli-reference.md) for command details
 
-## Recap
 
-You have seen how to:
-
-- manage multiple databases from one config source
-- separate models by database
-- use offline and CI-friendly workflows
-- validate migrations in a sandbox
-- keep operational commands explicit and repeatable

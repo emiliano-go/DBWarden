@@ -92,7 +92,7 @@ class PermissionSeed(Seed):
 ## Step 2: Apply Seeds
 
 ```bash
-dbwarden seed apply --database primary
+$ dbwarden seed apply --database primary
 ```
 
 Output:
@@ -106,7 +106,7 @@ Code seeds and file seeds are both discovered and applied together. Each seed ve
 ## Step 3: List Applied Seeds
 
 ```bash
-dbwarden seed list --database primary
+$ dbwarden seed list --database primary
 ```
 
 Output:
@@ -136,7 +136,7 @@ Now running `dbwarden migrate` will also apply any pending seeds.
 Or apply seeds once without changing config:
 
 ```bash
-dbwarden migrate --apply-seeds
+$ dbwarden migrate --apply-seeds
 ```
 
 ## Step 5: Traditional File Seeds (Legacy)
@@ -146,7 +146,7 @@ For complex multi-statement SQL, you can still use file-based seeds.
 ### Create a SQL Seed
 
 ```bash
-dbwarden seed create "initial admin users" --database primary
+$ dbwarden seed create "initial admin users" --database primary
 ```
 
 This creates `seeds/V0001__initial_admin_users.sql`. Fill it with data:
@@ -162,8 +162,8 @@ VALUES ('moderator@example.com', 'moderator', 'Moderator User', 1, CURRENT_TIMES
 ### Apply and List
 
 ```bash
-dbwarden seed apply --database primary
-dbwarden seed list --database primary
+$ dbwarden seed apply --database primary
+$ dbwarden seed list --database primary
 ```
 
 Output:
@@ -177,7 +177,7 @@ Seeds for database 'primary':
 ### Python File Seeds
 
 ```bash
-dbwarden seed create "generate sample data" --database primary --type python
+$ dbwarden seed create "generate sample data" --database primary --type python
 ```
 
 Creates `seeds/V0002__generate_sample_data.py` with a `seed(connection, session)` function.
@@ -185,7 +185,7 @@ Creates `seeds/V0002__generate_sample_data.py` with a `seed(connection, session)
 ## Step 6: Roll Back a Seed
 
 ```bash
-dbwarden seed rollback --database primary --count 1
+$ dbwarden seed rollback --database primary --count 1
 ```
 
 Seed rollback removes the tracking record, allowing the seed to be re-applied. It does **not** reverse the data changes; that is your responsibility if needed.
@@ -203,7 +203,7 @@ Seeds for database 'primary':
 Remove tracking records for seed files that no longer exist on disk:
 
 ```bash
-dbwarden seed list --prune
+$ dbwarden seed list --prune
 ```
 
 ## Key Takeaways

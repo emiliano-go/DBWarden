@@ -35,7 +35,7 @@ Revert applied migrations to reach a specific target version.
 ## Usage
 
 ```bash
-dbwarden downgrade --to 0005 --database primary
+$ dbwarden downgrade --to 0005 --database primary
 ```
 
 ## Options

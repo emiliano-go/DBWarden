@@ -35,11 +35,13 @@ Reverse-engineer SQLAlchemy model code from a live database.
 ## Usage
 
 ```bash
-dbwarden generate-models --output ./models/ --database primary
-dbwarden generate-models --output ./models/ --database primary --single-file
-dbwarden generate-models --database primary --tables users,posts
-dbwarden generate-models --database primary --exclude-tables logs,audit
+$ dbwarden generate-models --output ./models/ --database primary
+$ dbwarden generate-models --output ./models/ --database primary --single-file
+$ dbwarden generate-models --database primary --tables users,posts
+$ dbwarden generate-models --database primary --exclude-tables logs,audit
 ```
+
+> **Note:** `generate-models` only works for fully supported databases (PostgreSQL, MySQL, MariaDB). For ClickHouse and SQLite, use `make-migrations` or manual schema definition.
 
 ## Options
 
@@ -82,8 +84,7 @@ For PostgreSQL databases, `generate-models` reverse-engineers all supported meta
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import PGTableMeta, PGColumnMeta
-from dbwarden.schema import pg
+from dbwarden.databases.pgsql import PGTableMeta, PGColumnMeta, pg
 
 class Base(DeclarativeBase):
     pass
@@ -128,8 +129,7 @@ For ClickHouse databases, `generate-models` reverse-engineers all supported meta
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
-from dbwarden.schema import ch
+from dbwarden.databases.clickhouse import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec, ch
 
 class Base(DeclarativeBase):
     pass

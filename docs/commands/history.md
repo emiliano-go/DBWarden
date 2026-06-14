@@ -35,7 +35,7 @@ Show migration execution history.
 ## Usage
 
 ```bash
-dbwarden history --database primary
+$ dbwarden history --database primary
 ```
 
 ## Options

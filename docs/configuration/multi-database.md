@@ -150,26 +150,26 @@ class Event(AnalyticsBase):
 
 ```bash
 # Migrate primary
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 
 # Migrate analytics
-dbwarden migrate --database analytics
+$ dbwarden migrate --database analytics
 
 # Status for logging
-dbwarden status --database logging
+$ dbwarden status --database logging
 ```
 
 ### Target All Databases
 
 ```bash
 # Migrate all
-dbwarden migrate --all
+$ dbwarden migrate --all
 
 # Status for all
-dbwarden status --all
+$ dbwarden status --all
 
 # Rollback all
-dbwarden rollback --all
+$ dbwarden rollback --all
 ```
 
 ### Default Database
@@ -178,8 +178,8 @@ The database with `default=True` is used when `--database` is omitted:
 
 ```bash
 # These are equivalent when primary is default:
-dbwarden migrate
-dbwarden migrate --database primary
+$ dbwarden migrate
+$ dbwarden migrate --database primary
 ```
 
 ## Migration Directories
@@ -256,10 +256,10 @@ Use dev mode:
 
 ```bash
 # Dev mode for all databases
-dbwarden --dev migrate --all
+$ dbwarden --dev migrate --all
 
 # Dev mode for specific database
-dbwarden --dev migrate --database analytics
+$ dbwarden --dev migrate --database analytics
 ```
 
 ## Common Patterns
@@ -422,23 +422,13 @@ overlap_models=True
 
 **Check default:**
 ```bash
-dbwarden settings show  # Shows which is default
+$ dbwarden settings show  # Shows which is default
 ```
 
 **Be explicit:**
 ```bash
-dbwarden migrate --database analytics  # Specify database
+$ dbwarden migrate --database analytics  # Specify database
 ```
-
-## Recap
-
- Configure multiple databases with separate `database_config()` calls  
- Organize models in separate modules  
- Each database has independent migration history  
- Target specific database with `--database` flag  
- Target all databases with `--all` flag  
- Configure dev mode per database  
- `model_paths` required for multi-database  
 
 ## What's Next?
 

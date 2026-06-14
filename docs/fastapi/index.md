@@ -50,7 +50,7 @@ DBWarden provides first-class FastAPI integration for database sessions, health 
 Install the FastAPI integration:
 
 ```bash
-pip install "dbwarden[fastapi]"
+uv add "dbwarden[fastapi]"
 ```
 
 Create your first FastAPI app with DBWarden:

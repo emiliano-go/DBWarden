@@ -38,20 +38,20 @@ seo:
 
 ## Prerequisites
 
-- `examples/auto-schema/` directory (no config file needed — `@auto_schema` works at model definition time)
-- `pip install dbwarden sqlalchemy`
+- `examples/auto-schema/` directory (no config file needed; `@auto_schema` works at model definition time)
+- `uv add dbwarden sqlalchemy`
 
 ## The Problem
 
-In FastAPI applications, you typically define SQLAlchemy models for the database and Pydantic schemas for the API. This means maintaining two parallel definitions for every entity — the ORM layer and the API layer. They drift apart over time.
+In FastAPI applications, you typically define SQLAlchemy models for the database and Pydantic schemas for the API. This means maintaining two parallel definitions for every entity: the ORM layer and the API layer. They drift apart over time.
 
 DBWarden's `@auto_schema` eliminates this duplication by deriving Pydantic schemas directly from model annotations.
 
 ## Step 1: Define a Model with @auto_schema
 
 ```python
-from dbwarden import TableMeta
-from dbwarden.schema import auto_schema
+from dbwarden.databases import TableMeta
+from dbwarden.databases import auto_schema
 
 
 @auto_schema
@@ -82,7 +82,7 @@ The decorator creates four schema classes on the model:
 
 ### `User.CreateSchema`
 
-Used for POST requests — includes all fields that the client should provide. Server-defaulted fields (like auto-increment `id`) are excluded.
+Used for POST requests: includes all fields that the client should provide. Server-defaulted fields (like auto-increment `id`) are excluded.
 
 ```python
 create = User.CreateSchema(
@@ -96,7 +96,7 @@ create = User.CreateSchema(
 
 ### `User.UpdateSchema`
 
-All fields optional — used for PATCH requests.
+All fields optional: used for PATCH requests.
 
 ```python
 update = User.UpdateSchema(full_name="Alice Johnson")
@@ -143,7 +143,7 @@ All mapped columns, including those marked `public = False`.
 ## Step 4: Customizing Schema Generation
 
 ```python
-from dbwarden.schema import auto_schema, SchemaConfig
+from dbwarden.databases import auto_schema, SchemaConfig
 
 
 @auto_schema(config=SchemaConfig(
@@ -172,7 +172,7 @@ class User(Base):
 ## Key Takeaways
 
 - `@auto_schema` generates CreateSchema, UpdateSchema, PublicSchema, and Schema
-- `public = False` in `class Meta` controls API visibility — no manual filtering in routes
+- `public = False` in `class Meta` controls API visibility; no manual filtering in routes
 - Fields starting with `_` are implicitly non-public
 - Use `User.PublicSchema.model_validate(instance)` to convert model instances to API responses
 - Customize with `SchemaConfig` for advanced use cases

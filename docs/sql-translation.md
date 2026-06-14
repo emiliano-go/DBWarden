@@ -66,7 +66,7 @@ It is not a runtime SQL proxy for arbitrary manual SQL.
 When you run commands in development mode and target a SQLite dev database:
 
 ```bash
-dbwarden --dev make-migrations "sync models" -d primary
+$ dbwarden --dev make-migrations "sync models" -d primary
 ```
 
 DBWarden uses this flow:
@@ -109,7 +109,7 @@ In strict mode, unsupported defaults fail generation.
 If you want hard failures instead of fallback behavior:
 
 ```bash
-dbwarden --dev --strict-translation make-migrations "sync models" -d primary
+$ dbwarden --dev --strict-translation make-migrations "sync models" -d primary
 ```
 
 In strict mode:

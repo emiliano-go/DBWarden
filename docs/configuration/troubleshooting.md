@@ -52,7 +52,7 @@ ls dbwarden.py
 **Solution:** Create `dbwarden.py`:
 
 ```bash
-dbwarden init
+$ dbwarden init
 ```
 
 **Cause 2: Wrong directory**
@@ -63,7 +63,7 @@ DBWarden looks in current directory and parents.
 
 ```bash
 cd /path/to/project
-dbwarden migrate
+$ dbwarden migrate
 ```
 
 **Cause 3: No `database_config()` calls**
@@ -530,7 +530,7 @@ export PYTHONPATH=/path/to/project:$PYTHONPATH
 2. **Install package:**
 
 ```bash
-pip install -e .  # Editable install
+uv add -e .  # Editable install
 ```
 
 3. **Verify import:**
@@ -581,17 +581,17 @@ db = database_config(
 ### Enable verbose output
 
 ```bash
-dbwarden --verbose migrate
+$ dbwarden --verbose migrate
 ```
 
 ### Check configuration
 
 ```bash
 # Show all configuration
-dbwarden settings show
+$ dbwarden settings show
 
 # Show specific database
-dbwarden settings show --database primary
+$ dbwarden settings show --database primary
 ```
 
 ### Test imports
@@ -604,18 +604,9 @@ python -c "from dbwarden import database_config; print('OK')"
 ### Verify database connection
 
 ```bash
-dbwarden check-db
-dbwarden check-db --database primary
+$ dbwarden check-db
+$ dbwarden check-db --database primary
 ```
-
-## Recap
-
- Most issues are configuration or import errors  
- Use `dbwarden settings show` to inspect configuration  
- Use `dbwarden check-db` to test connections  
- Specify `model_paths` for faster loading  
- Check Python imports with `python -c`  
- Use `--verbose` for detailed output  
 
 ## What's Next?
 

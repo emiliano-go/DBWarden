@@ -204,10 +204,10 @@ Before merge:
 Before release:
 
 ```bash
-dbwarden status --database primary
-dbwarden migrate --database primary
-dbwarden rollback --database primary --count 1
-dbwarden migrate --database primary
+$ dbwarden status --database primary
+$ dbwarden migrate --database primary
+$ dbwarden rollback --database primary --count 1
+$ dbwarden migrate --database primary
 ```
 
 

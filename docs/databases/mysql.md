@@ -42,10 +42,10 @@ DBWarden treats MySQL (and its fork MariaDB) as **first-class backends**: every 
 
 ```bash
 # Step 1: reverse-engineer your live MySQL/MariaDB database
-dbwarden generate-models -d primary
+$ dbwarden generate-models -d primary
 
 # Step 2: feed the generated models back in, zero diff
-dbwarden make-migrations -d primary
+$ dbwarden make-migrations -d primary
 # -> "No new migrations to generate"  (output is empty; your models match the DB exactly)
 ```
 
@@ -62,7 +62,7 @@ The following MySQL/MariaDB features are fully supported in this round-trip:
 | Comments | Table: `ALTER TABLE t COMMENT = '...'`. Column: `MODIFY COLUMN ... COMMENT '...'` (full column definition preserved) |
 | Foreign Keys | `ON DELETE` / `ON UPDATE` options; DROP uses `DROP FOREIGN KEY` (MySQL syntax) |
 | Indexes | Full index support; `USING BTREE / HASH` preserved |
-| Auto-increment Lifecycle | Toggle autoincrement on integer PKs via `autoincrement` field — generates `MODIFY COLUMN ... AUTO_INCREMENT` |
+| Auto-increment Lifecycle | Toggle autoincrement on integer PKs via `autoincrement` field: generates `MODIFY COLUMN ... AUTO_INCREMENT` |
 | Type Normalization | `TINYINT(1)` -> `BOOLEAN`, `INT`, `BIGINT`, `VARCHAR(n)`, `TEXT`, `DATETIME`, `TIMESTAMP`, `YEAR`, `DECIMAL(p,s)`, `FLOAT`, `DOUBLE`, `BLOB`, `JSON`, `ENUM`, `SET` |
 
 ### MariaDB-Specific Features
@@ -78,7 +78,7 @@ The following MySQL/MariaDB features are fully supported in this round-trip:
 Install with the MySQL driver:
 
 ```bash
-pip install "dbwarden[mysql]"
+uv add "dbwarden[mysql]"
 ```
 
 Or with uv:
@@ -115,7 +115,7 @@ Inherit from `MyTableMeta` on your `class Meta`:
 ```python
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import MyTableMeta
+from dbwarden.databases.mysql import MyTableMeta
 
 class Base(DeclarativeBase):
     pass
@@ -157,7 +157,7 @@ MySQL-specific `MyTableMeta` attributes:
 For MariaDB, use `MdbTableMeta`:
 
 ```python
-from dbwarden import MdbTableMeta
+from dbwarden.databases.mariadb import MdbTableMeta
 
 class Meta(MdbTableMeta):
     my_engine = "InnoDB"
@@ -179,8 +179,7 @@ Use `MyColumnMeta` inner classes for per-column metadata. The inner class must b
 ```python
 from sqlalchemy import Integer, String, Text, TIMESTAMP
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import MyTableMeta, MyColumnMeta
-from dbwarden.schema import my
+from dbwarden.databases.mysql import MyTableMeta, MyColumnMeta, my
 
 class Base(DeclarativeBase):
     pass
@@ -225,8 +224,8 @@ MySQL-specific `MyFieldSpec` fields (set via `my.field(...)`):
 For MariaDB, use `MdbColumnMeta` and `mdb.field(...)`:
 
 ```python
-from dbwarden import MdbColumnMeta
-from dbwarden.schema import mdb
+from dbwarden.databases.mariadb import MdbColumnMeta
+from dbwarden.databases.mariadb import mdb
 
 class Meta(MdbTableMeta):
     class id(MdbColumnMeta):
@@ -268,8 +267,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 Base = declarative_base()
 
-from dbwarden import MyColumnMeta, MyTableMeta
-from dbwarden.schema import my
+from dbwarden.databases.mysql import MyColumnMeta, MyTableMeta, my
 
 class User(Base):
     __tablename__ = 'users'
@@ -343,7 +341,7 @@ DBWarden supports toggling auto-increment on integer primary key columns. The `a
 class User(Base):
     __tablename__ = "users"
 
-    # Autoincrement enabled — same as default behavior
+    # Autoincrement enabled: same as default behavior
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     class Meta(MyTableMeta):
@@ -357,7 +355,7 @@ To explicitly disable auto-increment on a PK column:
 class User(Base):
     __tablename__ = "users"
 
-    # Plain integer PK — no auto-increment
+    # Plain integer PK: no auto-increment
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
 ```
 
@@ -457,7 +455,7 @@ For MariaDB, additional fields appear:
 `generate-models` queries `information_schema.TABLES` and `information_schema.COLUMNS` to reverse-engineer all MySQL/MariaDB metadata. The emitted model uses `class Meta` with `MyTableMeta` and `MyColumnMeta` inner classes.
 
 ```bash
-dbwarden generate-models -d primary
+$ dbwarden generate-models -d primary
 ```
 
 Generated output includes automatic detection of:

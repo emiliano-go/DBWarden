@@ -267,13 +267,13 @@ Each database has its own migration history:
 
 ```bash
 # Create migration for primary database
-dbwarden make-migrations -d primary -m "add users table"
+$ dbwarden make-migrations -d primary -m "add users table"
 
 # Create migration for analytics database
-dbwarden make-migrations -d analytics -m "add events table"
+$ dbwarden make-migrations -d analytics -m "add events table"
 
 # Apply migrations to all databases
-dbwarden migrate --all
+$ dbwarden migrate --all
 ```
 
 ## Common Patterns
@@ -331,16 +331,6 @@ async def create_user(
     
     return user
 ```
-
-## Recap
-
- Configure multiple databases with `database_config()`  
- Create separate session dependencies for each database  
- Use multiple sessions in the same route  
- Each session has independent transactions  
- Check all databases on startup with `all_databases=True`  
- Health endpoints report all databases automatically  
- Each database has its own migration history  
 
 ## What's Next?
 

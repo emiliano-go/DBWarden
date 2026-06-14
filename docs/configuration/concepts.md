@@ -122,9 +122,9 @@ Error: No configuration found
 Configuration loads when you run **any** DBWarden command:
 
 ```bash
-dbwarden migrate    #  Config loads here
-dbwarden status     #  Config loads here
-dbwarden history    #  Config loads here
+$ dbwarden migrate    #  Config loads here
+$ dbwarden status     #  Config loads here
+$ dbwarden history    #  Config loads here
 ```
 
 **Load process:**
@@ -178,11 +178,11 @@ Validation happens **before** any commands execute.
 
 When looking for config, DBWarden uses this precedence:
 
-1. **Top-level `dbwarden.py`** — the conventional standalone config file at your project root. This is the default scaffold created by `dbwarden init`, not the only valid location. Always sandboxed (only `dbwarden` imports allowed).
+1. **Top-level `dbwarden.py`**: the conventional standalone config file at your project root. This is the default scaffold created by `dbwarden init`, not the only valid location. Always sandboxed (only `dbwarden` imports allowed).
 
-2. **`DBWARDEN_CONFIG_MODULE`** — an explicit environment variable override. Always imported normally as a Python module (no sandbox). This is the escape hatch for projects with ambiguous full-scan results or non-standard layouts.
+2. **`DBWARDEN_CONFIG_MODULE`**: an explicit environment variable override. Always imported normally as a Python module (no sandbox). This is the escape hatch for projects with ambiguous full-scan results or non-standard layouts.
 
-3. **Full-scan discovery** — if neither of the above produces a config source, DBWarden walks your project tree looking for any `database_config(...)` call. This means `database_config(...)` can live in any discovered Python file inside your project. Files directly at the project root are sandboxed; files inside subdirectories are imported normally.
+3. **Full-scan discovery**: if neither of the above produces a config source, DBWarden walks your project tree looking for any `database_config(...)` call. This means `database_config(...)` can live in any discovered Python file inside your project. Files directly at the project root are sandboxed; files inside subdirectories are imported normally.
 
 ### Config Loading Security (Sandbox)
 
@@ -222,10 +222,10 @@ Consider these commands:
 
 ```bash
 # Explicit database
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 
 # Implicit database (uses default)
-dbwarden migrate
+$ dbwarden migrate
 ```
 
 Without `default=True`, DBWarden wouldn't know which database to use for the second command.
@@ -246,12 +246,12 @@ analytics = database_config(database_name="analytics", default=True, ...)  # Err
 
 ```bash
 # These are equivalent when primary is default:
-dbwarden migrate
-dbwarden migrate --database primary
+$ dbwarden migrate
+$ dbwarden migrate --database primary
 
 # These are NOT equivalent:
-dbwarden migrate
-dbwarden migrate --database analytics  # Targets analytics, not primary
+$ dbwarden migrate
+$ dbwarden migrate --database analytics  # Targets analytics, not primary
 ```
 
 ## Model Discovery
@@ -368,8 +368,8 @@ primary = database_config(
 Run commands with `--dev`:
 
 ```bash
-dbwarden --dev migrate  # Uses SQLite
-dbwarden migrate        # Uses PostgreSQL
+$ dbwarden --dev migrate  # Uses SQLite
+$ dbwarden migrate        # Uses PostgreSQL
 ```
 
 ### How It Works
@@ -526,19 +526,6 @@ When commands run:
 - Executes command logic
 
 **Key point:** Configuration errors are caught early, before any database operations.
-
-## Recap
-
-You learned:
-
- Why Python configuration is powerful  
- How configuration discovery works  
- When validation runs  
- Why `default=True` is required  
- How model discovery works  
- What dev mode does  
- How multi-database configuration works  
- When to use `secure_values`  
 
 ## What's Next?
 

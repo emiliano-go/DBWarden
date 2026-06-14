@@ -617,7 +617,7 @@ RuntimeError: Startup check failed: primary: 3 pending migrations
 **Solution:**
 ```bash
 # Apply migrations manually
-dbwarden migrate
+$ dbwarden migrate
 
 # Or use migrate mode
 # migration_context(mode="migrate")
@@ -767,20 +767,6 @@ async with migration_context(mode="migrate", only_dev=True):
 async with migration_context(mode="migrate", allow_in_production=True):
     yield
 ```
-
-## Recap
-
-You learned:
-
- Startup checks validate database before serving traffic  
- Use `migration_context` in FastAPI lifespan  
- Check mode for production (safe, read-only)  
- Migrate mode for development (auto-applies migrations)  
- All parameters and when to use them  
- Common patterns for different environments  
- Direct helper functions for more control  
- Environment detection and production safety  
- Troubleshooting common issues  
 
 ## What's Next?
 

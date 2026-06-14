@@ -85,13 +85,13 @@ DBWarden keeps the migration lifecycle simple:
 ## Install
 
 ```bash
-pip install dbwarden
+uv add dbwarden
 ```
 
 Optional groups:
 
 ```bash
-pip install "dbwarden[fastapi,metrics,sandbox]"
+uv add "dbwarden[fastapi,metrics,sandbox]"
 ```
 
 ## Quick Start
@@ -122,7 +122,7 @@ primary = database_config(
 from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import IndexSpec, TableMeta
+from dbwarden.databases import IndexSpec, TableMeta
 
 
 class Base(DeclarativeBase):

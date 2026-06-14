@@ -43,7 +43,7 @@ DBWarden provides Prometheus metrics and structured JSON logging for monitoring 
 Install the optional metrics dependency:
 
 ```bash
-pip install "dbwarden[metrics]"
+uv add "dbwarden[metrics]"
 ```
 
 This installs `prometheus-client` which is required for metric collection and exposition.

@@ -58,7 +58,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: pip install -e ".[migrations]"
+      - run: uv add -e ".[migrations]"
 
       - name: Check migration status
         run: dbwarden status --database primary
@@ -149,7 +149,7 @@ migrate:
   stage: migrate
   image: python:3.12
   script:
-    - pip install -e ".[migrations]"
+    - uv add -e ".[migrations]"
     - dbwarden status --database primary
     - dbwarden migrate --database primary
     - dbwarden status --database primary
@@ -178,7 +178,7 @@ sandbox-check:
   if: github.event_name == 'pull_request'
   steps:
     - uses: actions/checkout@v4
-    - run: pip install -e ".[migrations,testcontainers]"
+    - run: uv add -e ".[migrations,testcontainers]"
     - name: Apply migrations to sandbox
       run: dbwarden migrate --sandbox --database primary
 ```
@@ -196,7 +196,7 @@ migration-check:
   if: github.event_name == 'pull_request'
   steps:
     - uses: actions/checkout@v4
-    - run: pip install -e ".[migrations]"
+    - run: uv add -e ".[migrations]"
     - name: Check for pending migrations
       run: dbwarden status --database primary
       env:

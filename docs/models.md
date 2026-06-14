@@ -65,7 +65,7 @@ Every backend supports a core set of cross-database attributes via `class Meta(T
 ```python
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import TableMeta, IndexSpec
+from dbwarden.databases import TableMeta, IndexSpec
 
 class Base(DeclarativeBase):
     pass
@@ -75,15 +75,22 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     email: Mapped[str] = mapped_column(String(255))
+    age: Mapped[int] = mapped_column(Integer)
 
     class Meta(TableMeta):
         comment = "Core user accounts"
         indexes = [
             IndexSpec(name="ix_users_email", columns=["email"]),
         ]
+        checks = [
+            {"name": "ck_users_age", "sql": "age >= 0"},
+        ]
+        uniques = [
+            {"name": "uq_users_email", "columns": ["email"]},
+        ]
 ```
 
-For a lighter syntax without the `IndexSpec` import, pass plain dicts:
+For a lighter syntax without the `IndexSpec` import, pass plain dicts for indexes:
 
 ```python
 indexes = [
@@ -92,6 +99,18 @@ indexes = [
 ```
 
 `IndexSpec` accepts the same fields as the dict form with IDE autocomplete. Use it for cross-backend indexes shared by any `database_type`.
+
+The same dict shorthand applies to `checks` and `uniques`:
+
+```python
+checks = [
+    {"name": "ck_users_age", "sql": "age >= 0"},
+]
+
+uniques = [
+    {"name": "uq_users_email", "columns": ["email"]},
+]
+```
 
 ### Column-level
 
@@ -114,32 +133,36 @@ These attributes work with any `database_type`. Backend-specific subclasses (`PG
 For IDE autocomplete on column-level inner classes, use `PGColumnMeta` for PostgreSQL, `MyColumnMeta` for MySQL, `MdbColumnMeta` for MariaDB, or `CHColumnMeta` for ClickHouse. All inherit from `FieldMeta`, which defines cross-database attributes (`comment`, `public`) and backend-specific spec objects (`pg`, `ch`, `my`, `mdb`, `sq`):
 
 ```python
-from dbwarden import FieldMeta
-from dbwarden.schema import pg
+from dbwarden.databases import FieldMeta
+from dbwarden.databases.pgsql import pg
 
 # Use typed spec objects for backend-specific column attributes:
 #   pg = pg.field(collation=..., storage=..., ...)
 #   ch = ch.field(codec=..., nullable=..., ...)
 ```
 
-Backend-specific options are always set via a typed spec object attribute — never as flat attributes. For example, use `pg = pg.field(collation="en_US.UTF-8")` instead of the old `pg_collation = "en_US.UTF-8"`.
+Backend-specific options are always set via a typed spec object attribute, never as flat attributes. For example, use `pg = pg.field(collation="en_US.UTF-8")` instead of the old `pg_collation = "en_US.UTF-8"`.
 
 ### Backend Subpackages
 
-DBWarden organizes backend-specific types into subpackages under `dbwarden.schema`, also available there as short aliases:
+DBWarden organizes backend-specific types into subpackages under `dbwarden.databases`, also available there as short aliases:
 
 | Alias | Subpackage | Key types |
 |-------|------------|-----------|
-| `pg` | `dbwarden.schema.pgsql` | `PgFieldSpec`, `PgIndexSpec`, `PgTableSpec` |
-| `ch` | `dbwarden.schema.clickhouse` | `ChFieldSpec`, `ChIndexSpec`, `ChTableSpec` |
-| `my` | `dbwarden.schema.mysql` | `MyFieldSpec`, `MyTableSpec` |
-| `mdb` | `dbwarden.schema.mariadb` | `MdbFieldSpec`, `MdbTableSpec` |
-| `sq` | `dbwarden.schema.sqlite` | `SqFieldSpec`, `SqTableSpec` |
+| `pg` | `dbwarden.databases.pgsql` | `PgFieldSpec`, `PgIndexSpec`, `PgTableSpec` |
+| `ch` | `dbwarden.databases.clickhouse` | `ChFieldSpec`, `ChIndexSpec`, `ChTableSpec` |
+| `my` | `dbwarden.databases.mysql` | `MyFieldSpec`, `MyTableSpec` |
+| `mdb` | `dbwarden.databases.mariadb` | `MdbFieldSpec`, `MdbTableSpec` |
+| `sq` | `dbwarden.databases.sqlite` | `SqFieldSpec`, `SqTableSpec` |
 
 Only `IndexSpec`, `PgIndexSpec`, and `ChIndexSpec` exist as typed index spec classes. MySQL, MariaDB, and SQLite use the base `IndexSpec` with the `indexes` attribute or plain dicts in their backend-specific index list (`my_indexes`, `sq_indexes`).
 
 ```python
-from dbwarden.schema import pg, ch, my, mdb, sq
+from dbwarden.databases.pgsql import pg
+from dbwarden.databases.clickhouse import ch
+from dbwarden.databases.mysql import my
+from dbwarden.databases.mariadb import mdb
+from dbwarden.databases.sqlite import sq
 
 # Use pg.field(), ch.field() for column-level metadata
 pg_spec = pg.field(collation="en_US.UTF-8", storage="PLAIN")
@@ -156,8 +179,8 @@ Inherit from `PGTableMeta` on your `class Meta`:
 
 ```python
 from sqlalchemy import Integer
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import PGTableMeta
+from sqlalchemy.orm import DeclarativeBase,     Mapped, mapped_column
+from dbwarden.databases.pgsql import PGTableMeta
 
 class Base(DeclarativeBase):
     pass
@@ -177,7 +200,7 @@ class User(Base):
 For PostgreSQL-specific indexes, use `PgIndexSpec` in `pg_indexes`:
 
 ```python
-from dbwarden import PgIndexSpec
+from dbwarden.databases.pgsql import PgIndexSpec
 
 class Meta(PGTableMeta):
     pg_indexes = [
@@ -193,8 +216,7 @@ Use `PGColumnMeta` inner classes named after the column. Use `pg = pg.field(...)
 ```python
 from sqlalchemy import Integer, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import PGTableMeta, PGColumnMeta
-from dbwarden.schema import pg
+from dbwarden.databases.pgsql import PGTableMeta, PGColumnMeta, pg
 
 class Base(DeclarativeBase):
     pass
@@ -227,8 +249,8 @@ Inherit from `CHTableMeta` on your `class Meta`:
 
 ```python
 from datetime import date
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import CHTableMeta, ChEngineSpec
+from sqlalchemy.orm import DeclarativeBase,     Mapped, mapped_column
+from dbwarden.databases.clickhouse import CHTableMeta, ChEngineSpec
 
 class Base(DeclarativeBase):
     pass
@@ -263,8 +285,7 @@ Use `CHColumnMeta` inner classes named after the column. Use `ch = ch.field(...)
 
 ```python
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec
-from dbwarden.schema import ch
+from dbwarden.databases.clickhouse import CHTableMeta, CHColumnMeta, ChEngineSpec, ch
 
 class Base(DeclarativeBase):
     pass
@@ -294,7 +315,7 @@ class Event(Base):
 Use `ChEngineSpec` for the table engine:
 
 ```python
-from dbwarden import ChEngineSpec
+from dbwarden.databases.clickhouse import ChEngineSpec
 
 # Simple engine
 ch_engine = ChEngineSpec("MergeTree")
@@ -320,7 +341,7 @@ For replicated engines, `ch_zookeeper_path` and `ch_replica_name` are injected a
 Use `ProjectionSpec` in `ch_projections`:
 
 ```python
-from dbwarden import ProjectionSpec
+from dbwarden.databases.clickhouse import ProjectionSpec
 
 class Meta(CHTableMeta):
     ch_order_by = ["author", "created_at"]
@@ -341,7 +362,7 @@ Current behavior:
 Use `ChIndexSpec` in `ch_indexes`:
 
 ```python
-from dbwarden import ChIndexSpec
+from dbwarden.databases.clickhouse import ChIndexSpec
 
 class Meta(CHTableMeta):
     ch_indexes = [
@@ -412,7 +433,7 @@ Column types render as CH-native types (`Int64`, `String`).
 Use `CHColumnMeta` inner classes for per-column hints instead of `info={}`:
 
 ```python
-from dbwarden.schema import ch
+from dbwarden.databases.clickhouse import ch
 
 class Meta(CHTableMeta):
     class payload(CHColumnMeta):
@@ -442,7 +463,7 @@ Inherit from `MyTableMeta` on your `class Meta`:
 ```python
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import MyTableMeta
+from dbwarden.databases.mysql import MyTableMeta
 
 class Base(DeclarativeBase):
     pass
@@ -473,8 +494,7 @@ Use `MyColumnMeta` inner classes named after the column. Use `my = my.field(...)
 ```python
 from sqlalchemy import Integer, String, TIMESTAMP
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import MyTableMeta, MyColumnMeta
-from dbwarden.schema import my
+from dbwarden.databases.mysql import MyTableMeta, MyColumnMeta, my
 
 class Base(DeclarativeBase):
     pass

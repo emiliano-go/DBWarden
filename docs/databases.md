@@ -30,17 +30,32 @@ seo:
 
 # Supported Databases
 
-DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
+DBWarden supports PostgreSQL (the default and first-class backend), MySQL, MariaDB, SQLite, and ClickHouse.
+
+A **round-trip** backend is one where DBWarden can both read schema (via `generate-models`) and write schema (via `make-migrations` / `migrate`).
 
 ## Backend Matrix
 
-| Backend | `database_type` | Typical URL |
-|---------|------------------|-------------|
-| PostgreSQL | `postgresql` | `postgresql://user:pass@host:5432/db` |
-| MySQL | `mysql` | `mysql://user:pass@host:3306/db` |
-| MariaDB | `mariadb` | `mariadb://user:pass@host:3306/db` |
-| SQLite | `sqlite` | `sqlite:///./app.db` |
-| ClickHouse | `clickhouse` | `clickhouse://user:pass@host:8123/db` |
+| Backend | `database_type` | Typical URL | Round-Trip |
+|---------|------------------|-------------|------------|
+| PostgreSQL | `postgresql` | `postgresql://user:pass@host:5432/db` | Yes |
+| MySQL | `mysql` | `mysql://user:pass@host:3306/db` | Yes |
+| MariaDB | `mariadb` | `mariadb://user:pass@host:3306/db` | No |
+| ClickHouse | `clickhouse` | `clickhouse://user:pass@host:8123/db` | Yes |
+| SQLite | `sqlite` | `sqlite:///./app.db` | Dev only |
+
+## Optional Dependency Groups
+
+When you install `dbwarden`, the `[postgres]` extra is included by default (providing the PostgreSQL driver). For other backends you must specify the corresponding extra:
+
+| Extra | Command | Driver |
+|-------|---------|--------|
+| `[postgres]` | Included by default | `psycopg2-binary` |
+| `[mysql]` | `uv add "dbwarden[mysql]"` | `pymysql` |
+| `[mariadb]` | `uv add "dbwarden[mariadb]"` | `pymysql` |
+| `[clickhouse]` | `uv add "dbwarden[clickhouse]"` | `clickhouse-connect` |
+
+See [Installation](installation.md) for full details.
 
 ## Config Examples
 
@@ -121,8 +136,8 @@ primary = database_config(
 ```
 
 ```bash
-dbwarden --dev make-migrations "sync models" -d primary
-dbwarden --dev migrate -d primary
+$ dbwarden --dev make-migrations "sync models" -d primary
+$ dbwarden --dev migrate -d primary
 ```
 
 ## Translation Note
@@ -151,11 +166,11 @@ PostgreSQL is a **first-class backend** with full round-trip support. All metada
 
 See [PostgreSQL Deep Dive](databases/postgresql.md) for the complete reference.
 
-### MySQL / MariaDB
+### MySQL
 
-MySQL and MariaDB are **first-class backends** with full round-trip support. All metadata: engine, charset, collation, row format, auto_increment, unsigned columns, ON UPDATE, and column comments, is captured by the snapshot, diffed correctly, and emitted as valid DDL.
+MySQL is a **first-class backend** with full round-trip support. All metadata: engine, charset, collation, row format, auto_increment, unsigned columns, ON UPDATE, and column comments, is captured by the snapshot, diffed correctly, and emitted as valid DDL.
 
-Key MySQL/MariaDB DDL behavior:
+Key MySQL DDL behavior:
 
 - **DDL is NOT transactional**: each statement auto-commits; partial failure possible
 - Column type/nullable changes use `MODIFY COLUMN` (requires full column definition)
@@ -163,9 +178,14 @@ Key MySQL/MariaDB DDL behavior:
 - Column comments use `MODIFY COLUMN ... COMMENT '...'` (full column definition preserved)
 - Auto-increment toggle uses `MODIFY COLUMN ... AUTO_INCREMENT`
 - FK drop uses `DROP FOREIGN KEY` (not `DROP CONSTRAINT`)
-- MariaDB configured as `database_type="mariadb"` (separate from MySQL)
 
 See [MySQL Deep Dive](databases/mysql.md) for the complete reference.
+
+### MariaDB
+
+MariaDB is supported as a separate `database_type` (`mariadb`), but it does **not** have round-trip support. You can use MariaDB as a target database for migrations, but `generate-models` and full schema introspection are not available. Use `make-migrations` to write migrations manually.
+
+See [MySQL Deep Dive](databases/mysql.md) for MariaDB-specific notes.
 
 ### SQLite
 
@@ -177,6 +197,8 @@ See [MySQL Deep Dive](databases/mysql.md) for the complete reference.
 
 ### ClickHouse
 
+ClickHouse has full round-trip support: `generate-models` reads schema from a live ClickHouse server, and `make-migrations` / `migrate` auto-generates DDL for table operations.
+
 - HTTP-based wire protocol; DBWarden uses ClickHouse client, not SQLAlchemy session
 - DDL operations now mostly auto-generated: table rename, column type change, nullable/LowCardinality changes, projections. FK, standard indexes, and safe type change still emit comment placeholders.
 - Full engine metadata support via `class Meta(CHTableMeta)` with `ChEngineSpec`, `ProjectionSpec`, `CHColumnMeta`
@@ -187,9 +209,9 @@ See [MySQL Deep Dive](databases/mysql.md) for the complete reference.
 
 ```bash
 # local loop on dev DB
-dbwarden --dev migrate -d primary
+$ dbwarden --dev migrate -d primary
 
 # pre-release validation on production-like DB
-dbwarden migrate -d primary
-dbwarden status -d primary
+$ dbwarden migrate -d primary
+$ dbwarden status -d primary
 ```

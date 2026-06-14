@@ -315,17 +315,6 @@ async def create_order(
     return order
 ```
 
-## Recap
-
- Sessions handle transactions automatically  
- Commit explicitly for writes  
- Rollback automatically on errors  
- Use savepoints for partial rollbacks  
- Group related operations in one transaction  
- Use optimistic locking to prevent lost updates  
- Use pessimistic locking for critical sections  
- Make operations idempotent with idempotency keys  
-
 ## What's Next?
 
 - **[Engine Lifecycle](engine-lifecycle.md)** - Connection pooling and cleanup

@@ -35,7 +35,7 @@ Show DBWarden version.
 ## Usage
 
 ```bash
-dbwarden version
+$ dbwarden version
 ```
 
 ## Notes

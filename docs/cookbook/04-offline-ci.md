@@ -43,7 +43,7 @@ seo:
 
 ## The Problem
 
-In CI/CD pipelines, you often need to generate migrations as part of your build — but your CI runner may not have a database connection. DBWarden's offline mode solves this by serializing model state to a JSON file.
+In CI/CD pipelines, you often need to generate migrations as part of your build, but your CI runner may not have a database connection. DBWarden's offline mode solves this by serializing model state to a JSON file.
 
 ## Step 1: Export Model State
 
@@ -55,7 +55,7 @@ bash scripts/04-offline-ci.sh
 The key command:
 
 ```bash
-dbwarden export-models --database primary
+$ dbwarden export-models --database primary
 ```
 
 This connects to the live database, introspects the current schema, and writes a JSON file to `.dbwarden/model_state.json`:
@@ -85,7 +85,7 @@ This connects to the live database, introspects the current schema, and writes a
 }
 ```
 
-This file becomes your source of truth for future diffs — no database required.
+This file becomes your source of truth for future diffs; no database required.
 
 ## Step 2: Commit the State File
 
@@ -99,7 +99,7 @@ git commit -m "Update model state snapshot"
 On any machine (including CI without a database):
 
 ```bash
-dbwarden make-migrations "offline schema change" --offline --database primary
+$ dbwarden make-migrations "offline schema change" --offline --database primary
 ```
 
 The `--offline` flag tells DBWarden to:
@@ -124,7 +124,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install dbwarden sqlalchemy
+      - run: uv add dbwarden sqlalchemy
 
       # Generate migrations using the committed state file
       - name: Check for new migrations

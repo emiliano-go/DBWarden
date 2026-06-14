@@ -163,7 +163,7 @@ class PermissionSeed(Seed):
 The old decorator still works but is deprecated in favour of the `Seed` base class:
 
 ```python
-from dbwarden.schema import seed_data, SeedRow
+from dbwarden.seed import seed_data, SeedRow
 
 @seed_data(
     database="primary",
@@ -206,7 +206,7 @@ V<4-digit-version>__<description>.<sql|py>
 ### Creating File Seeds
 
 ```bash
-dbwarden seed create "seed initial users" --database primary
+$ dbwarden seed create "seed initial users" --database primary
 ```
 
 Creates a file like `seeds/V0001__seed_initial_users.sql`:
@@ -218,7 +218,7 @@ Creates a file like `seeds/V0001__seed_initial_users.sql`:
 ### Python File Seeds
 
 ```bash
-dbwarden seed create "generate sample data" --database primary --type python
+$ dbwarden seed create "generate sample data" --database primary --type python
 ```
 
 Creates `seeds/V0001__generate_sample_data.py` with a `seed(connection, session)` function.
@@ -248,19 +248,19 @@ def seed(connection, session):
 Apply all pending seeds (file + code seeds are both discovered):
 
 ```bash
-dbwarden seed apply --database primary
+$ dbwarden seed apply --database primary
 ```
 
 Apply a specific version:
 
 ```bash
-dbwarden seed apply --database primary --version 0003
+$ dbwarden seed apply --database primary --version 0003
 ```
 
 Apply to all databases:
 
 ```bash
-dbwarden seed apply --all
+$ dbwarden seed apply --all
 ```
 
 ### Dry Run
@@ -268,7 +268,7 @@ dbwarden seed apply --all
 Preview what would be applied without executing:
 
 ```bash
-dbwarden seed apply --database primary --dry-run
+$ dbwarden seed apply --database primary --dry-run
 ```
 
 ### Auto-Apply After Migrations
@@ -289,7 +289,7 @@ database_config(
 Or apply seeds once after a migration without changing config:
 
 ```bash
-dbwarden migrate --apply-seeds
+$ dbwarden migrate --apply-seeds
 ```
 
 ---
@@ -297,7 +297,7 @@ dbwarden migrate --apply-seeds
 ## Listing Seeds
 
 ```bash
-dbwarden seed list --database primary
+$ dbwarden seed list --database primary
 ```
 
 Output:
@@ -311,7 +311,7 @@ Seeds for database 'primary':
 List across all databases:
 
 ```bash
-dbwarden seed list --all
+$ dbwarden seed list --all
 ```
 
 ### Pruning Orphaned Records
@@ -319,7 +319,7 @@ dbwarden seed list --all
 Remove tracking records for seed files that no longer exist on disk:
 
 ```bash
-dbwarden seed list --prune
+$ dbwarden seed list --prune
 ```
 
 ---
@@ -330,13 +330,13 @@ Rollback removes the applied tracking record, allowing the seed to be re-applied
 
 ```bash
 # Rollback the most recent seed
-dbwarden seed rollback --database primary
+$ dbwarden seed rollback --database primary
 
 # Rollback a specific number
-dbwarden seed rollback --database primary --count 2
+$ dbwarden seed rollback --database primary --count 2
 
 # Rollback to a specific version
-dbwarden seed rollback --database primary --to-version 0002
+$ dbwarden seed rollback --database primary --to-version 0002
 ```
 
 ---
@@ -373,20 +373,20 @@ This helps detect accidental changes to already-applied seeds.
 Code seeds require your full application environment to execute. For Dockerized deployments where you don't want to copy the application code into a container just to seed data, use `dbwarden seed export` to produce stateless ROC (runs-on-change) SQL files.
 
 ```bash
-dbwarden seed export --database clickhouse
+$ dbwarden seed export --database clickhouse
 ```
 This writes `seeds/ROC__clickhouse__code_seeds.sql` containing `INSERT ... ON CONFLICT` statements rendered in the target database dialect. In production, apply with:
 ```bash
-dbwarden seed apply --database clickhouse
+$ dbwarden seed apply --database clickhouse
 ```
 
-Because the file is ROC, updating the code seed and re-exporting produces a new content checksum, which triggers re-application. The `ON CONFLICT DO UPDATE` clause handles updating existing rows — no need to delete and recreate.
+Because the file is ROC, updating the code seed and re-exporting produces a new content checksum, which triggers re-application. The `ON CONFLICT DO UPDATE` clause handles updating existing rows; no need to delete and recreate.
 
 **Non-handled problems:**
 
 - Rows removed from a code seed are not automatically deleted in the target database
 - Logic seeds that depend on other logic seeds' output are not supported (preceding row-based seeds are pre-loaded, but logic-to-logic ordering is not)
-- Non-deterministic `generate()` methods (e.g. using `datetime.now()`) produce a new checksum every export, causing re-apply on every deploy — acceptable for idempotent upserts, wasteful for pure inserts. Use deterministic `generate()` where possible
+- Non-deterministic `generate()` methods (e.g. using `datetime.now()`) produce a new checksum every export, causing re-apply on every deploy: acceptable for idempotent upserts, wasteful for pure inserts. Use deterministic `generate()` where possible
 
 **Dialect requirement:** Exporting requires the same dialect packages as connecting to that database. For ClickHouse, install `clickhouse-sqlalchemy`. Missing packages produce a clear error at export time.
 

@@ -41,7 +41,7 @@ Create `app/models.py`:
 from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import IndexSpec, TableMeta
+from dbwarden.databases import IndexSpec, TableMeta
 
 
 class Base(DeclarativeBase):
@@ -150,7 +150,7 @@ Use `status` to see the current state of the migration queue. Use `history` to s
 You can also inspect the live schema directly:
 
 ```bash
-dbwarden check-db --database primary
+$ dbwarden check-db --database primary
 ```
 
 This is useful when you want a read-only view of what the database currently contains.
@@ -202,7 +202,7 @@ class Meta(TableMeta):
 ### Step 4: Generate SQL
 
 ```bash
-dbwarden make-migrations "create core tables" --database primary
+$ dbwarden make-migrations "create core tables" --database primary
 ```
 
 This command inspects the configured models, compares them with the current schema, and emits a SQL file. The file becomes part of your normal code review and deployment workflow.
@@ -214,7 +214,7 @@ Every migration file contains both directions. This is one of DBWarden's core de
 ### Step 6: Apply the Migration
 
 ```bash
-dbwarden migrate --database primary
+$ dbwarden migrate --database primary
 ```
 
 This executes pending migrations in order and records them in the migration table.
@@ -222,8 +222,8 @@ This executes pending migrations in order and records them in the migration tabl
 ### Step 7: Verify the State
 
 ```bash
-dbwarden status --database primary
-dbwarden history --database primary
+$ dbwarden status --database primary
+$ dbwarden history --database primary
 ```
 
 Verification is part of the workflow, not optional cleanup.
@@ -231,7 +231,7 @@ Verification is part of the workflow, not optional cleanup.
 ### Step 8: Roll It Back
 
 ```bash
-dbwarden rollback --count 1 --database primary
+$ dbwarden rollback --count 1 --database primary
 ```
 
 Rolling back the first migration confirms that the file contains valid reverse SQL, not just valid forward SQL.
@@ -241,7 +241,7 @@ Rolling back the first migration confirms that the file contains valid reverse S
 Not every schema or data change should be auto-generated. When the change is not model-driven, create a manual migration file:
 
 ```bash
-dbwarden new "manual hotfix" --database primary
+$ dbwarden new "manual hotfix" --database primary
 ```
 
 Use manual migrations for cases like:
@@ -251,16 +251,5 @@ Use manual migrations for cases like:
 - backend-specific operations that need hand-written SQL
 
 DBWarden will track these files the same way it tracks generated migrations.
-
-## Recap
-
-You have:
-
-- defined SQLAlchemy models
-- generated a SQL migration file
-- reviewed its upgrade and rollback sections
-- applied the migration
-- verified the result
-- rolled it back successfully
 
 Next, continue with [Developing Locally](developing-locally.md).

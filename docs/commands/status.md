@@ -35,8 +35,8 @@ Show migration status (applied vs pending).
 ## Usage
 
 ```bash
-dbwarden status --database primary
-dbwarden status --all
+$ dbwarden status --database primary
+$ dbwarden status --all
 ```
 
 ## Options

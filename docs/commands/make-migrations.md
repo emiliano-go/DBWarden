@@ -36,25 +36,25 @@ Generate SQL migration file(s) from SQLAlchemy models.
 
 ```bash
 # Auto-generated name from schema changes
-dbwarden make-migrations
+$ dbwarden make-migrations
 
 # User-provided description
-dbwarden make-migrations "create users table"
+$ dbwarden make-migrations "create users table"
 
 # With database option
-dbwarden make-migrations --database primary --verbose
+$ dbwarden make-migrations --database primary --verbose
 
 # Output plan JSON only
-dbwarden make-migrations --database primary --plan
+$ dbwarden make-migrations --database primary --plan
 
 # Explicitly declare column renames
-dbwarden make-migrations --rename users.username:email --rename posts.title:headline
+$ dbwarden make-migrations --rename users.username:email --rename posts.title:headline
 
 # Explicitly declare table renames
-dbwarden make-migrations --rename-table users:accounts
+$ dbwarden make-migrations --rename-table users:accounts
 
 # Safe multi-step type changes
-dbwarden make-migrations --database primary --safe-type-change
+$ dbwarden make-migrations --database primary --safe-type-change
 ```
 
 ## Options
@@ -71,7 +71,7 @@ dbwarden make-migrations --database primary --safe-type-change
 - `--clickhouse-engine-recreate`: Allow automatic ClickHouse table rebuild when engine changes require recreation. Required to generate `recreate_ch_table` operations. See [ClickHouse Engine Recreate](#clickhouse-engine-recreate) below.
 - `--drop-preserved-clickhouse-table` / `--keep-preserved-clickhouse-table`: Control whether the preserved old ClickHouse table is dropped after the engine-recreate swap. If omitted, interactive terminals are prompted; non-TTY preserves by default.
 - `--postgres-auto-using`: Emit an active `USING col::newtype` clause on PostgreSQL `ALTER COLUMN TYPE` statements. Default is a commented-out line for manual review. See the PostgreSQL docs section on Column Type Changes for details.
-- `--type`, `-t`: Output prefix for the generated migration file — `versioned` (default), `ra` / `runs_always`, or `roc` / `runs_on_change`. Use `ra` for SQL that should run every migration cycle (e.g. grants, materialized view refreshes) and `roc` for SQL that should re-run when the file changes (e.g. stored procedures, triggers).
+- `--type`, `-t`: Output prefix for the generated migration file: `versioned` (default), `ra` / `runs_always`, or `roc` / `runs_on_change`. Use `ra` for SQL that should run every migration cycle (e.g. grants, materialized view refreshes) and `roc` for SQL that should re-run when the file changes (e.g. stored procedures, triggers).
 
 ## Schema Snapshots
 
@@ -147,13 +147,13 @@ Examples:
 
 ```bash
 # Single rename
-dbwarden make-migrations --rename users.username:email
+$ dbwarden make-migrations --rename users.username:email
 
 # Multiple renames
-dbwarden make-migrations --rename users.username:email --rename posts.title:headline
+$ dbwarden make-migrations --rename users.username:email --rename posts.title:headline
 
 # Force rename even when types differ
-dbwarden make-migrations --rename users.phone:mobile_phone
+$ dbwarden make-migrations --rename users.phone:mobile_phone
 ```
 
 ### Resolution order
@@ -379,13 +379,13 @@ Format: `--rename-table <old_table>:<new_table>`
 
 ```bash
 # Single table rename
-dbwarden make-migrations --rename-table users:accounts
+$ dbwarden make-migrations --rename-table users:accounts
 
 # Multiple renames
-dbwarden make-migrations --rename-table users:accounts --rename-table posts:articles
+$ dbwarden make-migrations --rename-table users:accounts --rename-table posts:articles
 
 # Combined with column rename
-dbwarden make-migrations --rename-table users:accounts --rename accounts.username:email
+$ dbwarden make-migrations --rename-table users:accounts --rename accounts.username:email
 ```
 
 Note: when combining table and column renames, the column rename references the **new** table name. Table renames are applied to the snapshot before column-level processing.
@@ -579,31 +579,31 @@ When no description is provided, DBWarden automatically generates a descriptive 
 
 ```bash
 # Creates primary__0001_create_table_users.sql + .plan.json
-dbwarden make-migrations --database primary
+$ dbwarden make-migrations --database primary
 
 # Creates primary__0002_add_column_users_email.sql + .plan.json
-dbwarden make-migrations --database primary
+$ dbwarden make-migrations --database primary
 
 # Creates primary__0003_rename_column_users_email.sql with a confirmed rename
-dbwarden make-migrations --database primary --rename users.username:email
+$ dbwarden make-migrations --database primary --rename users.username:email
 
 # Creates primary__0003_alter_column_type_users_bio.sql with type change
-dbwarden make-migrations --database primary
+$ dbwarden make-migrations --database primary
 
 # Creates primary__0004_add_columns_users_email_name.sql + .plan.json
-dbwarden make-migrations --database primary
+$ dbwarden make-migrations --database primary
 
 # Creates primary__0003_rename_table_users_accounts.sql with a confirmed table rename
-dbwarden make-migrations --database primary --rename-table users:accounts
+$ dbwarden make-migrations --database primary --rename-table users:accounts
 
 # Uses safe multi-step type change for PostgreSQL
-dbwarden make-migrations --database primary --safe-type-change
+$ dbwarden make-migrations --database primary --safe-type-change
 
 # Uses custom name
-dbwarden make-migrations "initial_schema" --database primary
+$ dbwarden make-migrations "initial_schema" --database primary
 
 # Preview plan JSON without writing files
-dbwarden make-migrations --database primary --plan
+$ dbwarden make-migrations --database primary --plan
 ```
 
 ## Notes

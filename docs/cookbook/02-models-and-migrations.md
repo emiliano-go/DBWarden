@@ -139,7 +139,7 @@ class Tag(Base):
         comment = "Taxonomy tags for products"
 ```
 
-The simplest model — just an ID and a unique name.
+The simplest model: just an ID and a unique name.
 
 ## Step 2: Generating the Migration
 
@@ -151,7 +151,7 @@ bash scripts/02-models-migrations.sh
 The first script step runs:
 
 ```bash
-dbwarden make-migrations "create core tables" --database primary
+$ dbwarden make-migrations "create core tables" --database primary
 ```
 
 This compares the current model state against the database (or a stored snapshot). Since this is a fresh project, it detects four new tables and generates:
@@ -199,9 +199,9 @@ DROP TABLE posts
 ```
 
 > **Note:** The example uses SQLite, which has limited DDL support. With PostgreSQL, DBWarden generates additional features:
-> - **`CREATE INDEX IF NOT EXISTS ...`** — from `IndexSpec` entries in `class Meta`
-> - **`COMMENT ON TABLE ...`** — from `Meta.comment` attributes
-> - **`CONSTRAINT ... CHECK (...)`** — from `Meta.checks`
+> - **`CREATE INDEX IF NOT EXISTS ...`**: from `IndexSpec` entries in `class Meta`
+> - **`COMMENT ON TABLE ...`**: from `Meta.comment` attributes
+> - **`CONSTRAINT ... CHECK (...)`**: from `Meta.checks`
 > - **`server_default`** expressions rendered as native SQL defaults
 > - Inline `REFERENCES` become table-level `FOREIGN KEY` constraints
 >
@@ -211,24 +211,24 @@ DROP TABLE posts
 
 Let's walk through what each section does:
 
-**`-- upgrade`** — Applied when you run `dbwarden migrate`
+**`-- upgrade`**: Applied when you run `dbwarden migrate`
 
-1. **`CREATE TABLE IF NOT EXISTS posts (...)`** — Creates posts with a foreign key reference to `users(id)` (inline `REFERENCES` style for SQLite). The foreign key originates from `ForeignKey("users.id")` on the `user_id` column.
+1. **`CREATE TABLE IF NOT EXISTS posts (...)`**: Creates posts with a foreign key reference to `users(id)` (inline `REFERENCES` style for SQLite). The foreign key originates from `ForeignKey("users.id")` on the `user_id` column.
 
-2. **`CREATE TABLE IF NOT EXISTS products (...)`** — Creates products with a `CHECK` constraint defined in `class Meta`. In SQLite, CHECK constraints must be inline; with PostgreSQL they become `CONSTRAINT ... CHECK (...)`.
+2. **`CREATE TABLE IF NOT EXISTS products (...)`**: Creates products with a `CHECK` constraint defined in `class Meta`. In SQLite, CHECK constraints must be inline; with PostgreSQL they become `CONSTRAINT ... CHECK (...)`.
 
-3. **`CREATE TABLE IF NOT EXISTS tags (...)`** — Simple table with a unique constraint on `name`.
+3. **`CREATE TABLE IF NOT EXISTS tags (...)`**: Simple table with a unique constraint on `name`.
 
-4. **`CREATE TABLE IF NOT EXISTS users (...)`** — Creates the users table with all columns, primary key, and unique constraints inline.
+4. **`CREATE TABLE IF NOT EXISTS users (...)`**: Creates the users table with all columns, primary key, and unique constraints inline.
 
 Note that with this SQLite backend the table order differs from the order in our Python models, and some features are omitted:
 - **IndexSpec entries** generate `CREATE INDEX` only on PostgreSQL and ClickHouse
 - **`COMMENT ON TABLE`** is only generated for PostgreSQL
 - **`server_default`** expressions render as native SQL defaults on PostgreSQL
 
-**`-- rollback`** — Applied when you run `dbwarden rollback`
+**`-- rollback`**: Applied when you run `dbwarden rollback`
 
-1. Drops tables. Order may vary by backend — DBWarden handles dependency ordering automatically.
+1. Drops tables. Order may vary by backend; DBWarden handles dependency ordering automatically.
 
 ### Auto-generated Migration Name
 
@@ -244,13 +244,12 @@ The naming pattern is:
 {database_name}__{4-digit-version}_{auto-generated-description}.sql
 ```
 
-### MySQL-Specific Model Metadata
+### PostgreSQL-Specific Model Metadata
 
-When your `database_type` is `"mysql"` or `"mariadb"`, DBWarden supports MySQL-specific table and column metadata. The following model shows engine, charset, collation, unsigned columns, and ON UPDATE:
+When your `database_type` is `"postgresql"`, DBWarden supports PostgreSQL-specific table and column metadata. The following model shows tablespace, fillfactor, identity columns, and column compression:
 
 ```python
-from dbwarden import MyTableMeta, MyColumnMeta
-from dbwarden.schema import my
+from dbwarden.databases.pgsql import PGTableMeta, PGColumnMeta, pg
 
 class Order(Base):
     __tablename__ = "orders"
@@ -259,37 +258,38 @@ class Order(Base):
     total: Mapped[float] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP)
 
-    class Meta(MyTableMeta):
-        my_engine = "InnoDB"
-        my_charset = "utf8mb4"
-        my_collate = "utf8mb4_unicode_ci"
-        my_row_format = "DYNAMIC"
+    class Meta(PGTableMeta):
+        pg_tablespace = "fast_space"
+        pg_fillfactor = 90
         comment = "Customer orders"
 
-        class id(MyColumnMeta):
+        class id(PGColumnMeta):
             comment = "Order ID"
-            my = my.field(unsigned=True)
+            pg = pg.field(identity="ALWAYS")
 
-        class created_at(MyColumnMeta):
-            my = my.field(on_update="CURRENT_TIMESTAMP")
+        class created_at(PGColumnMeta):
+            pg = pg.field(compression="pglz")
 ```
 
-The generated MySQL DDL includes engine, charset, and per-column attributes:
+The generated PostgreSQL DDL includes tablespace, fillfactor, identity columns, and column-level options:
 
 ```sql
 CREATE TABLE IF NOT EXISTS orders (
-    id INTEGER UNSIGNED NOT NULL COMMENT 'Order ID',
+    id INTEGER GENERATED ALWAYS AS IDENTITY NOT NULL,
     total FLOAT NOT NULL,
-    created_at TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='Customer orders';
+    created_at TIMESTAMP NOT NULL COMPRESSION pglz
+) TABLESPACE fast_space WITH (fillfactor=90);
+
+COMMENT ON TABLE orders IS 'Customer orders';
+COMMENT ON COLUMN orders.id IS 'Order ID';
 ```
 
 ## Step 3: Creating a Manual Migration
 
-Sometimes you need a migration that isn't model-driven — a data backfill, a stored procedure, or a complex SQL operation.
+Sometimes you need a migration that isn't model-driven: a data backfill, a stored procedure, or a complex SQL operation.
 
 ```bash
-dbwarden new add_custom_table --database primary
+$ dbwarden new add_custom_table --database primary
 ```
 
 This creates a blank migration:
@@ -311,17 +311,17 @@ You fill in both sections manually. Manual migrations follow the same file namin
 If you have a migration file and need to extract just its rollback section:
 
 ```bash
-dbwarden make-rollback migrations/primary/primary__0001_create_core_tables.sql
+$ dbwarden make-rollback migrations/primary/primary__0001_create_core_tables.sql
 ```
 
 This prints the rollback SQL to stdout. Useful for quickly verifying what a rollback will do before running it.
 
 ## Key Takeaways
 
-- DBWarden generates explicit, reviewable SQL — no hidden runtime behavior
+- DBWarden generates explicit, reviewable SQL: no hidden runtime behavior
 - Every migration has both `-- upgrade` and `-- rollback` sections
 - `class Meta(TableMeta)` is where table-level metadata (comments, indexes, checks) lives
-- `IndexSpec` produces named `CREATE INDEX` statements — always prefer named indexes
+- `IndexSpec` produces named `CREATE INDEX` statements; always prefer named indexes
 - `dbwarden new` creates blank migrations for non-model-driven changes
 - `dbwarden make-rollback` extracts rollback SQL for review
 

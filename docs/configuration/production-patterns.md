@@ -130,8 +130,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml uv.lock .
+RUN uv sync
 
 COPY . .
 
@@ -526,7 +526,7 @@ jobs:
       - uses: actions/checkout@v2
       
       - name: Install dependencies
-        run: pip install dbwarden
+        run: uv add dbwarden
       
       - name: Run migrations
         run: dbwarden migrate
@@ -540,7 +540,7 @@ jobs:
 migrate:
   stage: deploy
   script:
-    - pip install dbwarden
+    - uv add dbwarden
     - dbwarden migrate
   environment:
     name: production
@@ -549,17 +549,6 @@ migrate:
   variables:
     DATABASE_URL: $DATABASE_URL
 ```
-
-## Recap
-
- Use environment variables for credentials  
- Configure SSL/TLS for production  
- Implement connection pooling  
- Use init containers for Kubernetes migrations  
- Store secrets in AWS Secrets Manager / K8s Secrets  
- Monitor connections with application names  
- Follow security best practices  
- Integrate with CI/CD pipelines  
 
 ## What's Next?
 

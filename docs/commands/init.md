@@ -35,8 +35,8 @@ Initialize DBWarden project scaffolding.
 ## Usage
 
 ```bash
-dbwarden init
-dbwarden init --database primary
+$ dbwarden init
+$ dbwarden init --database primary
 ```
 
 ## What it does

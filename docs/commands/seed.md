@@ -49,8 +49,8 @@ Create a new file-based seed file (SQL or Python). For new projects, prefer [cod
 ### Usage
 
 ```bash
-dbwarden seed create "seed initial data" --database primary
-dbwarden seed create "populate lookup tables" --database primary --type python
+$ dbwarden seed create "seed initial data" --database primary
+$ dbwarden seed create "populate lookup tables" --database primary --type python
 ```
 
 ### Options
@@ -68,10 +68,10 @@ Apply pending seeds. Both file seeds and [code seeds](../seeds.md#code-seeds-rec
 ### Usage
 
 ```bash
-dbwarden seed apply --database primary
-dbwarden seed apply --database primary --version 0003
-dbwarden seed apply --database primary --dry-run
-dbwarden seed apply --all
+$ dbwarden seed apply --database primary
+$ dbwarden seed apply --database primary --version 0003
+$ dbwarden seed apply --database primary --dry-run
+$ dbwarden seed apply --all
 ```
 
 ### Options
@@ -91,9 +91,9 @@ List seeds and their applied status. Includes both file seeds and code seeds.
 ### Usage
 
 ```bash
-dbwarden seed list --database primary
-dbwarden seed list --all
-dbwarden seed list --prune              # clean up orphaned tracking records
+$ dbwarden seed list --database primary
+$ dbwarden seed list --all
+$ dbwarden seed list --prune              # clean up orphaned tracking records
 ```
 
 ### Options
@@ -112,9 +112,9 @@ Roll back applied seeds. Removes the tracking record, allowing the seed to be re
 ### Usage
 
 ```bash
-dbwarden seed rollback --database primary
-dbwarden seed rollback --database primary --count 2
-dbwarden seed rollback --database primary --to-version 0003
+$ dbwarden seed rollback --database primary
+$ dbwarden seed rollback --database primary --count 2
+$ dbwarden seed rollback --database primary --to-version 0003
 ```
 
 ### Options
@@ -136,10 +136,9 @@ Export code seeds to ROC (runs-on-change) SQL files for stateless application. T
 ### Usage
 
 ```bash
-dbwarden seed export --database primary
-dbwarden seed export --all
-dbwarden seed export --database clickhouse --output-dir ./seeds
-dbwarden seed export --database primary --render-dialect postgresql
+$ dbwarden seed export --database primary
+$ dbwarden seed export --all
+$ dbwarden seed export --database clickhouse --output-dir ./seeds
 ```
 
 ### Options
@@ -147,7 +146,6 @@ dbwarden seed export --database primary --render-dialect postgresql
 - `--database`, `-d`: target database handle
 - `--all`, `-a`: export seeds for all configured databases
 - `--output-dir`, `-o`: output directory (default: `seeds/`)
-- `--render-dialect`: override literal-rendering dialect (use with caution — emits a warning comment in the generated SQL)
 
 ### Behavior
 

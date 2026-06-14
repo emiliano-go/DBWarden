@@ -35,8 +35,8 @@ Inspect and recover migration lock state.
 ## Usage
 
 ```bash
-dbwarden lock-status --database primary
-dbwarden unlock --database primary
+$ dbwarden lock-status --database primary
+$ dbwarden unlock --database primary
 ```
 
 ## Options

@@ -39,9 +39,9 @@ Analyze schema differences between your SQLAlchemy models and the live database.
 ## Usage
 
 ```bash
-dbwarden check --database primary
-dbwarden check --database primary --force
-dbwarden check --database primary --out json
+$ dbwarden check --database primary
+$ dbwarden check --database primary --force
+$ dbwarden check --database primary --out json
 ```
 
 ## Options

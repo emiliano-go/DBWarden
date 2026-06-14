@@ -42,10 +42,10 @@ DBWarden treats ClickHouse as a **first-class backend**: every natively supporte
 
 ```bash
 # Step 1: reverse-engineer your live ClickHouse database
-dbwarden generate-models -d analytics
+$ dbwarden generate-models -d analytics
 
 # Step 2: feed the generated models back in, zero diff
-dbwarden make-migrations -d analytics
+$ dbwarden make-migrations -d analytics
 # -> "No new migrations to generate"  (output is empty; your models match the DB exactly)
 ```
 
@@ -82,7 +82,7 @@ Inherit from `CHTableMeta` on your `class Meta`:
 ```python
 from datetime import date, datetime
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import CHTableMeta, ChEngineSpec, ProjectionSpec
+from dbwarden.databases.clickhouse import CHTableMeta, ChEngineSpec, ProjectionSpec
 
 class Base(DeclarativeBase):
     pass
@@ -138,10 +138,10 @@ ClickHouse-specific `CHTableMeta` attributes:
 | `ch_zookeeper_path` | `str` | ZooKeeper path for replicated engines |
 | `ch_replica_name` | `str` | Replica name for replicated engines |
 
-The `ChTableSpec` dataclass (from `dbwarden.schema.clickhouse` or `dbwarden`) mirrors these attributes for programmatic access:
+The `ChTableSpec` dataclass (from `dbwarden.databases.clickhouse` or `dbwarden`) mirrors these attributes for programmatic access:
 
 ```python
-from dbwarden import ChTableSpec
+from dbwarden.databases import ChTableSpec
 
 spec = ChTableSpec(
     engine="MergeTree",
@@ -157,7 +157,7 @@ spec = ChTableSpec(
 Use `ChEngineSpec` to define the table engine:
 
 ```python
-from dbwarden import ChEngineSpec
+from dbwarden.databases.clickhouse import ChEngineSpec
 
 # Simple engine
 ch_engine = ChEngineSpec("MergeTree")
@@ -191,7 +191,7 @@ The `ChEngineSpec` constructor fields:
 Use `ProjectionSpec` in `ch_projections` to attach named projections:
 
 ```python
-from dbwarden import ProjectionSpec
+from dbwarden.databases.clickhouse import ProjectionSpec
 
 class Meta(CHTableMeta):
     ch_order_by = ["author", "created_at"]
@@ -207,7 +207,7 @@ class Meta(CHTableMeta):
 Use `ChIndexSpec` in `ch_indexes`:
 
 ```python
-from dbwarden import ChIndexSpec
+from dbwarden.databases.clickhouse import ChIndexSpec
 
 class Meta(CHTableMeta):
     ch_indexes = [
@@ -241,8 +241,7 @@ Use `CHColumnMeta` inner classes for per-column metadata. The inner class must b
 
 ```python
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec
-from dbwarden.schema import ch
+from dbwarden.databases.clickhouse import CHTableMeta, CHColumnMeta, ChEngineSpec, ch
 
 class Base(DeclarativeBase):
     pass
@@ -450,7 +449,7 @@ databases, move it to its own module and configure separate model_paths
 per database.
 ```
 
-Instead, use a plain `mapped_column` for columns that reference other tables —
+Instead, use a plain `mapped_column` for columns that reference other tables;
 the relationship is logical only and should be enforced at the application layer.
 
 If you need to share model code between a ClickHouse database and another
@@ -512,7 +511,7 @@ The snapshot JSON captures all ClickHouse-specific metadata. Key sections:
 `generate-models` queries `system.tables`, `system.columns`, and `system.data_skipping_indices` to reverse-engineer all ClickHouse metadata. The emitted model uses `class Meta` with `CHTableMeta`, `CHColumnMeta`, `ChEngineSpec`, and `ProjectionSpec`.
 
 ```bash
-dbwarden generate-models -d analytics
+$ dbwarden generate-models -d analytics
 ```
 
 Auto-detection is the default: when `database_type="clickhouse"`, engine metadata is included automatically. The `--clickhouse-engines` flag is no longer required.
@@ -522,8 +521,7 @@ Generated output for a table with engine, ordering, partitioning, codec, and pro
 ```python
 from datetime import date
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec
-from dbwarden.schema import ch
+from dbwarden.databases.clickhouse import CHTableMeta, CHColumnMeta, ChEngineSpec, ProjectionSpec, ch
 
 class Base(DeclarativeBase):
     pass
@@ -601,8 +599,8 @@ from dbwarden.engine.safety import (
 Because ClickHouse diverges from standard SQL DDL, always review auto-generated migrations before applying:
 
 ```bash
-dbwarden make-migrations -d analytics
-dbwarden migrate -d analytics
+$ dbwarden make-migrations -d analytics
+$ dbwarden migrate -d analytics
 ```
 
 Use `dbwarden make-migrations --plan -d analytics` to preview the ops without writing files.

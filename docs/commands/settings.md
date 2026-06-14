@@ -47,9 +47,9 @@ the current configuration.
 ### Usage
 
 ```bash
-dbwarden settings show
-dbwarden settings show primary
-dbwarden settings show --all
+$ dbwarden settings show
+$ dbwarden settings show primary
+$ dbwarden settings show --all
 ```
 
 ### Options

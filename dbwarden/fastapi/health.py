@@ -55,10 +55,10 @@ def DBWardenHealthRouter(
 
     Endpoints:
 
-    - ``GET /`` — overall health across all databases (200/503).
-    - ``GET /{database_name}`` — health for a single database.
-    - ``GET /liveness`` — always returns 200 (app is alive).
-    - ``GET /readiness`` — returns 200 when all databases are
+    - ``GET /``: overall health across all databases (200/503).
+    - ``GET /{database_name}``: health for a single database.
+    - ``GET /liveness``: always returns 200 (app is alive).
+    - ``GET /readiness``: returns 200 when all databases are
       reachable, 503 otherwise.
 
     Args:

@@ -311,16 +311,6 @@ create_async_engine(
 - Pro: Prevents errors from stale connections
 - Con: Adds latency to every request
 
-## Recap
-
- Engines are created once and cached per database  
- Each engine manages a connection pool  
- Default pool size is 5 + 10 overflow  
- Sessions are request-scoped and auto-closed  
- `expire_on_commit=False` for FastAPI compatibility  
- Monitor pool usage to diagnose connection issues  
- Recycle connections to prevent staleness  
-
 ## What's Next?
 
 - **[Production Patterns](production-patterns.md)** - Deploy and monitor

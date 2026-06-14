@@ -313,7 +313,7 @@ Check:
 
 If you see errors about accessing attributes after commit, ensure you are using the session from the handle (which sets `expire_on_commit=False`).
 
-## Using `get_session()` Directly
+## Using `get_session` Directly
 
 The `get_session()` function is also available from `dbwarden.fastapi` for advanced cases where you need to create session dependencies dynamically:
 
@@ -337,18 +337,6 @@ This is useful when:
 - You need programmatic database selection at the dependency level
 
 For most cases, the `DatabaseHandle` pattern (`.async_session` / `.sync_session`) is simpler and recommended.
-
-## Recap
-
-You learned:
-
-The `DatabaseHandle` pattern:
-- `primary.async_session`  async session for route parameters
-- `primary.sync_session`  sync session for synchronous routes
-- No `Annotated`, `Depends`, or type aliases needed
-- One handle per database, use the right handle in each route
-- Automatic engine caching and session lifecycle
-- `get_session()` available for advanced use cases
 
 ## What's Next?
 

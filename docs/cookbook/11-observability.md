@@ -47,7 +47,7 @@ seo:
 Install with metrics support:
 
 ```bash
-pip install "dbwarden[metrics]"
+uv add "dbwarden[metrics]"
 ```
 
 DBWarden exposes six Prometheus metric families:
@@ -201,7 +201,7 @@ In Grafana, add Prometheus data source (`http://prometheus:9090`) and create das
 
 ## Key Takeaways
 
-- Metrics are opt-in via `pip install "dbwarden[metrics]"`
+- Metrics are opt-in via `uv add "dbwarden[metrics]"`
 - Six metric families cover migration, schema, and error tracking
 - `DBWARDEN_LOG_JSON=1` switches to structured JSON logging
 - `QueryTracingMiddleware` logs every SQL query with duration

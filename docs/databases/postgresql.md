@@ -42,10 +42,10 @@ DBWarden treats PostgreSQL as a **first-class backend**: every natively supporte
 
 ```bash
 # Step 1: reverse-engineer your live PostgreSQL database
-dbwarden generate-models -d primary --tables users,orders,items
+$ dbwarden generate-models -d primary --tables users,orders,items
 
 # Step 2: feed the generated models back in, zero diff
-dbwarden make-migrations
+$ dbwarden make-migrations
 # → "No changes detected"  (output is empty; your models match the DB exactly)
 ```
 
@@ -71,7 +71,7 @@ The following PostgreSQL features are fully supported in this round-trip:
 | Enum Types | `CREATE TYPE ... AS ENUM`, `ALTER TYPE ... ADD VALUE ... AFTER ...` |
 | Comments | Table and column `COMMENT ON` |
 | Type Normalization | `SERIAL` → `integer` + autoincrement, `TIMESTAMPTZ`, `NUMERIC(p,s)`, `VARCHAR(n)`, `DOUBLE PRECISION`, `REAL`, `JSONB`, `UUID`, `ARRAY`, `ENUM`, `TSTZRANGE` |
-| Auto-increment Lifecycle | Toggle autoincrement on integer PKs via `autoincrement` field — generates `CREATE SEQUENCE` / `DROP SEQUENCE` + `SET DEFAULT nextval` |
+| Auto-increment Lifecycle | Toggle autoincrement on integer PKs via `autoincrement` field: generates `CREATE SEQUENCE` / `DROP SEQUENCE` + `SET DEFAULT nextval` |
 
 ## Declaring Metadata
 
@@ -84,7 +84,7 @@ Inherit from `PGTableMeta` on your `class Meta`:
 ```python
 from sqlalchemy import Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import PGTableMeta
+from dbwarden.databases.pgsql import PGTableMeta
 
 class Base(DeclarativeBase):
     pass
@@ -126,10 +126,10 @@ PostgreSQL-specific `PGTableMeta` attributes:
 | `pg_checks` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` (with `NO INHERIT`) |
 | `pg_uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` (with `DEFERRABLE`, `NULLS NOT DISTINCT`, `INCLUDE`) |
 
-The `pg_indexes` list uses `PgIndexSpec` objects (from `dbwarden.schema.pgsql` or `dbwarden`):
+The `pg_indexes` list uses `PgIndexSpec` objects (from `dbwarden.databases.pgsql` or `dbwarden`):
 
 ```python
-from dbwarden import PgIndexSpec
+from dbwarden.databases.pgsql import PgIndexSpec
 
 class Meta(PGTableMeta):
     pg_indexes = [
@@ -145,8 +145,7 @@ Use `PGColumnMeta` inner classes for per-column metadata. The inner class must b
 ```python
 from sqlalchemy import Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden import PGTableMeta, PGColumnMeta
-from dbwarden.schema import pg
+from dbwarden.databases.pgsql import PGTableMeta, PGColumnMeta, pg
 
 class Base(DeclarativeBase):
     pass
@@ -236,7 +235,7 @@ DBWarden supports toggling auto-increment on integer primary key columns. The `a
 class User(Base):
     __tablename__ = "users"
 
-    # Autoincrement enabled (SERIAL) — same as default behavior
+    # Autoincrement enabled (SERIAL): same as default behavior
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     class Meta(PGTableMeta):
@@ -249,7 +248,7 @@ To explicitly disable auto-increment on a PK column:
 class User(Base):
     __tablename__ = "users"
 
-    # Plain integer PK — no sequence, no auto-increment
+    # Plain integer PK: no sequence, no auto-increment
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
 ```
 
@@ -260,21 +259,21 @@ class User(Base):
 | Adding autoincrement | `CREATE SEQUENCE users_id_seq` + `ALTER COLUMN id SET DEFAULT nextval('users_id_seq')` + `ALTER SEQUENCE users_id_seq OWNED BY users.id` |
 | Removing autoincrement | `ALTER COLUMN id DROP DEFAULT` + `DROP SEQUENCE IF EXISTS users_id_seq` |
 
-The rollback SQL is the symmetric inverse — if an autoincrement addition is rolled back, the sequence is dropped and the default is removed.
+The rollback SQL is the symmetric inverse: if an autoincrement addition is rolled back, the sequence is dropped and the default is removed.
 
 **Detection from live databases:**
 
 When reverse-engineering a live PostgreSQL database, DBWarden detects autoincrement by:
-1. SERIAL/BIGSERIAL column types — type string contains `serial`
-2. SQLAlchemy's `.autoincrement` attribute — set by the PG dialect for SERIAL columns
-3. `nextval(...)` default patterns — PG SERIAL columns have `DEFAULT nextval('table_col_seq'::regclass)`
+1. SERIAL/BIGSERIAL column types: type string contains `serial`
+2. SQLAlchemy's `.autoincrement` attribute: set by the PG dialect for SERIAL columns
+3. `nextval(...)` default patterns: PG SERIAL columns have `DEFAULT nextval('table_col_seq'::regclass)`
 
 **Sequence lifecycle:**
 
 Sequences created by SERIAL auto-increment follow the naming convention `table_column_seq`. When autoincrement is removed:
 - The column default (`nextval(...)`) is dropped
 - The sequence is dropped via `DROP SEQUENCE IF EXISTS`
-- The column type remains `INTEGER` — no data is lost
+- The column type remains `INTEGER`; no data is lost
 
 When autoincrement is added to an existing integer column:
 - A new sequence is created starting at 1
@@ -363,13 +362,13 @@ FK comparison uses a 6-tuple signature: `(columns, ref_table, ref_columns, on_de
 `generate-models` queries `pg_class`, `pg_attribute`, `pg_constraint`, `pg_inherits`, `pg_tablespace`, `pg_partitioned_table`, and `pg_collation` to reverse-engineer all PostgreSQL metadata. The emitted model uses `class Meta` with `PGTableMeta` and `PGColumnMeta` inner classes.
 
 ```bash
-dbwarden generate-models -d primary
+$ dbwarden generate-models -d primary
 ```
 
 Generated output for a table with identity, storage, compression, collation, and fillfactor:
 
 ```python
-from dbwarden.schema import pg
+from dbwarden.databases.pgsql import pg
 
 class User(Base):
     __tablename__ = "users"

@@ -434,7 +434,7 @@ op.drop_column('users', 'old_field')
 
 ```bash
 # Automated backups before migrations
-dbwarden migrate --with-backup --backup-dir /backups
+$ dbwarden migrate --with-backup --backup-dir /backups
 ```
 
 ### Rollback Plan
@@ -513,19 +513,6 @@ jobs:
         run: |
           kubectl set image deployment/myapp myapp=myapp:${{ github.sha }}
 ```
-
-## Recap
-
- Run migrations before code deployment  
- Use init containers or separate jobs for migrations  
- Store secrets securely (Kubernetes Secrets, AWS Secrets Manager)  
- Configure liveness and readiness probes  
- Monitor with Prometheus, structured logging, tracing  
- Optimize connection pooling for high traffic  
- Use rolling updates for zero-downtime  
- Write backward-compatible migrations  
- Automate backups and test rollback procedures  
- Secure connections with SSL and least-privilege users  
 
 ## What's Next?
 

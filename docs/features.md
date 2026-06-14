@@ -94,7 +94,7 @@ PostgreSQL, MySQL/MariaDB, and ClickHouse support first-class metadata through `
 PostgreSQL
 
 ```python
-from dbwarden import PGTableMeta, PGColumnMeta
+from dbwarden.databases.pgsql import PGTableMeta, PGColumnMeta
 
 
 class Meta(PGTableMeta):
@@ -107,8 +107,7 @@ class Meta(PGTableMeta):
 MySQL
 
 ```python
-from dbwarden import MyTableMeta, MyColumnMeta
-from dbwarden.schema import my
+from dbwarden.databases.mysql import MyTableMeta, MyColumnMeta, my
 
 
 class Meta(MyTableMeta):
@@ -122,7 +121,7 @@ class Meta(MyTableMeta):
 ClickHouse example:
 
 ```python
-from dbwarden import CHTableMeta, ChEngineSpec, ChIndexSpec
+from dbwarden.databases.clickhouse import CHTableMeta, ChEngineSpec, ChIndexSpec
 
 
 class Meta(CHTableMeta):
@@ -151,7 +150,7 @@ Safety levels are `SAFE`, `INFO`, `WARN`, and `CRITICAL`.
 Use `diff` when you want to inspect differences without writing migration files.
 
 ```bash
-dbwarden diff --database primary
+$ dbwarden diff --database primary
 ```
 
 This is useful during reviews, debugging, and CI checks.
@@ -161,7 +160,7 @@ This is useful during reviews, debugging, and CI checks.
 Generate SQLAlchemy model code from a live database.
 
 ```bash
-dbwarden generate-models --database primary --tables users,posts
+$ dbwarden generate-models --database primary --tables users,posts
 ```
 
 This is useful when adopting DBWarden in an existing project, documenting an inherited schema, or recovering model definitions.
@@ -171,8 +170,8 @@ This is useful when adopting DBWarden in an existing project, documenting an inh
 DBWarden can generate migrations without connecting to a live database, by diffing current models against an exported model state.
 
 ```bash
-dbwarden export-models --database primary
-dbwarden make-migrations "offline change" --offline --database primary
+$ dbwarden export-models --database primary
+$ dbwarden make-migrations "offline change" --offline --database primary
 ```
 
 This is useful for CI pipelines and restricted environments.
@@ -182,14 +181,14 @@ This is useful for CI pipelines and restricted environments.
 Manage multiple backends from one repository, each with its own migration directory and model set.
 
 ```bash
-dbwarden migrate --database primary
-dbwarden migrate --database analytics
+$ dbwarden migrate --database primary
+$ dbwarden migrate --database analytics
 ```
 
 You can also show status across all configured databases:
 
 ```bash
-dbwarden status --all
+$ dbwarden status --all
 ```
 
 ## Dev Mode
@@ -208,8 +207,8 @@ primary = database_config(
 ```
 
 ```bash
-dbwarden --dev make-migrations "test locally" --database primary
-dbwarden --dev migrate --database primary
+$ dbwarden --dev make-migrations "test locally" --database primary
+$ dbwarden --dev migrate --database primary
 ```
 
 ## Seed Management
@@ -217,9 +216,9 @@ dbwarden --dev migrate --database primary
 DBWarden tracks SQL and Python seed files separately from schema migrations.
 
 ```bash
-dbwarden seed create "load countries" --type sql --database primary
-dbwarden seed apply --database primary
-dbwarden seed list --database primary
+$ dbwarden seed create "load countries" --type sql --database primary
+$ dbwarden seed apply --database primary
+$ dbwarden seed list --database primary
 ```
 
 This is useful for reference data, lookup tables, and repeatable environment setup.
@@ -248,7 +247,7 @@ This gives one shared source of truth for migrations, runtime connections, and s
 Apply migrations in a temporary sandbox database before applying them for real.
 
 ```bash
-dbwarden migrate --sandbox --database primary
+$ dbwarden migrate --sandbox --database primary
 ```
 
 This is useful when validating generated SQL against a throwaway environment.
@@ -258,9 +257,9 @@ This is useful when validating generated SQL against a throwaway environment.
 DBWarden includes built-in commands for operational visibility.
 
 ```bash
-dbwarden status --database primary
-dbwarden history --database primary
-dbwarden rollback --count 1 --database primary
+$ dbwarden status --database primary
+$ dbwarden history --database primary
+$ dbwarden rollback --count 1 --database primary
 ```
 
 These commands make the migration lifecycle inspectable and reversible.

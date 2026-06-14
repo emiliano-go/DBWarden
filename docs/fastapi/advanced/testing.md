@@ -175,7 +175,7 @@ def setup_test_db():
 
 This works with the `DatabaseHandle` pattern without any dependency overrides.
 
-### Method 2: `get_session()` Override
+### Method 2: `get_session` Override
 
 For apps that use the `Annotated[AsyncSession, Depends(get_session())]` pattern:
 
@@ -497,16 +497,6 @@ def test_user_with_external_service(client):
         assert response.status_code == 201
         mock.assert_called_once()
 ```
-
-## Recap
-
- Use in-memory SQLite for fast tests  
- Override session dependencies with test databases  
- Use fixtures for common test data  
- Test all CRUD operations  
- Test error cases (404, validation, duplicates)  
- Use pytest-asyncio for async tests  
- Mock external services  
 
 ## What's Next?
 
