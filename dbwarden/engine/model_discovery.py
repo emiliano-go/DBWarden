@@ -318,7 +318,7 @@ def _extract_table_args_dict(model_class: type) -> dict:
 
 
 def _ch_options_from_meta(model_class: type) -> dict:
-    from dbwarden.schema.clickhouse import ChTableSpec
+    from dbwarden.databases.clickhouse import ChTableSpec
 
     dw_meta = read_meta(model_class)
     if not dw_meta:

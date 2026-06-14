@@ -3,18 +3,21 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from dbwarden.schema.clickhouse.field import ChFieldSpec, field
-from dbwarden.schema.clickhouse.engine import (
+from dbwarden.databases.clickhouse.field import ChFieldSpec, field
+from dbwarden.databases.clickhouse.engine import (
     aggregating_merge_tree,
     merge_tree,
     replicated_merge_tree,
     replacing_merge_tree,
     summing_merge_tree,
 )
-from dbwarden.schema.clickhouse.index import skip_index
-from dbwarden.schema.clickhouse.projection import projection
-from dbwarden.schema.clickhouse.dictionary import dictionary
-from dbwarden.schema.clickhouse.materialized_view import materialized_view
+from dbwarden.databases.clickhouse.index import skip_index
+from dbwarden.databases.clickhouse.projection import projection
+from dbwarden.databases.clickhouse.dictionary import dictionary
+from dbwarden.databases.clickhouse.materialized_view import materialized_view
+from dbwarden.schema.engine import ChEngineSpec
+from dbwarden.schema.projection import ProjectionSpec
+from dbwarden.schema.table_meta import CHColumnMeta, CHTableMeta
 
 
 @dataclass
@@ -76,9 +79,13 @@ class ChTableSpec:
 
 
 __all__ = [
+    "CHColumnMeta",
+    "CHTableMeta",
+    "ChEngineSpec",
     "ChFieldSpec",
     "ChIndexSpec",
     "ChTableSpec",
+    "ProjectionSpec",
     "aggregating_merge_tree",
     "dictionary",
     "field",

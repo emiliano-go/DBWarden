@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from dbwarden.schema.sqlite.field import SqFieldSpec, field
+from dbwarden.databases.sqlite.field import SqFieldSpec, field
+from dbwarden.schema._meta import SqFieldMeta
 
 
 @dataclass
@@ -12,6 +13,7 @@ class SqTableSpec:
 
 
 __all__ = [
+    "SqFieldMeta",
     "SqFieldSpec",
     "SqTableSpec",
     "field",

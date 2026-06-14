@@ -2,13 +2,18 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
+from dbwarden.databases.pgsql.field import PgFieldSpec, field
 
-from dbwarden.schema.pgsql.field import PgFieldSpec, field
-from dbwarden.schema.pgsql.index import PgIndexSpec, index
-from dbwarden.schema.pgsql.constraint import ExcludeSpec, exclude
-from dbwarden.schema.pgsql.partition import partition_by_hash, partition_by_list, partition_by_range
+from dbwarden.databases.pgsql.index import PgIndexSpec, index
 
+from dbwarden.databases.pgsql.constraint import ExcludeSpec, exclude
 
+from dbwarden.databases.pgsql.partition import partition_by_hash, partition_by_list, partition_by_range
+
+from dbwarden.schema.table_meta import PGColumnMeta, PGTableMeta
+
+import sys as _sys
+pg = _sys.modules[__name__]
 @dataclass
 class PgTableSpec:
     tablespace: str | None = None
@@ -19,6 +24,8 @@ class PgTableSpec:
 
 __all__ = [
     "ExcludeSpec",
+    "PGColumnMeta",
+    "PGTableMeta",
     "PgFieldSpec",
     "PgIndexSpec",
     "PgTableSpec",

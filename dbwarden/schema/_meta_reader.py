@@ -172,11 +172,11 @@ def _to_dict(value: Any) -> Any:
 
 
 def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
-    from dbwarden.schema.pgsql import PgTableSpec
-    from dbwarden.schema.clickhouse import ChTableSpec
-    from dbwarden.schema.mysql import MyTableSpec
-    from dbwarden.schema.mariadb import MdbTableSpec
-    from dbwarden.schema.sqlite import SqTableSpec
+    from dbwarden.databases.pgsql import PgTableSpec
+    from dbwarden.databases.clickhouse import ChTableSpec
+    from dbwarden.databases.mysql import MyTableSpec
+    from dbwarden.databases.mariadb import MdbTableSpec
+    from dbwarden.databases.sqlite import SqTableSpec
 
     meta = DBWardenMeta()
     meta.comment = table_attrs.get("comment")

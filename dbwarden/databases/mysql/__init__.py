@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from dbwarden.schema.mysql.field import MyFieldSpec, field
+from dbwarden.databases.mysql.field import MyFieldSpec, field
+from dbwarden.schema.table_meta import MyColumnMeta, MyTableMeta
 
 
 @dataclass
@@ -16,7 +17,9 @@ class MyTableSpec:
 
 
 __all__ = [
+    "MyColumnMeta",
     "MyFieldSpec",
+    "MyTableMeta",
     "MyTableSpec",
     "field",
 ]
