@@ -627,56 +627,56 @@ class TestConfigSandboxClassification:
 
 class TestLogger:
     def test_logger_default_level(self):
-        logger = DBWardenLogger(verbose=False)
-        assert logger.verbose is False
+        logger = DBWardenLogger(debug_enabled=False)
+        assert logger.debug_enabled is False
         assert logger.logger.level == 20
 
-    def test_logger_verbose_level(self):
-        logger = DBWardenLogger(verbose=True)
-        assert logger.verbose is True
+    def test_logger_debug_enabled_level(self):
+        logger = DBWardenLogger(debug_enabled=True)
+        assert logger.debug_enabled is True
         assert logger.logger.level == 10
 
-    def test_logger_set_verbose(self):
-        logger = DBWardenLogger(verbose=False)
-        logger.set_verbose(True)
-        assert logger.verbose is True
+    def test_logger_set_debug_enabled(self):
+        logger = DBWardenLogger(debug_enabled=False)
+        logger.set_debug_enabled(True)
+        assert logger.debug_enabled is True
         assert logger.logger.level == 10
 
     def test_logger_info(self):
-        logger = DBWardenLogger(verbose=False)
+        logger = DBWardenLogger(debug_enabled=False)
         logger.info("Test message")
 
     def test_logger_debug(self):
-        logger = DBWardenLogger(verbose=True)
+        logger = DBWardenLogger(debug_enabled=True)
         logger.debug("Debug message")
         logger.log_sql_statement("SELECT * FROM users")
 
     def test_logger_log_connection_init(self):
-        logger = DBWardenLogger(verbose=False)
+        logger = DBWardenLogger(debug_enabled=False)
         logger.log_connection_init("postgresql")
 
     def test_logger_log_pending_migrations(self):
-        logger = DBWardenLogger(verbose=False)
+        logger = DBWardenLogger(debug_enabled=False)
         logger.log_pending_migrations(["V1__init.sql", "V2__add_users.sql"])
 
     def test_logger_log_migration_start(self):
-        logger = DBWardenLogger(verbose=False)
+        logger = DBWardenLogger(debug_enabled=False)
         logger.log_migration_start("0001", "V1__init.sql")
 
     def test_logger_log_migration_end(self):
-        logger = DBWardenLogger(verbose=False)
+        logger = DBWardenLogger(debug_enabled=False)
         logger.log_migration_end("0001", "V1__init.sql", 0.05)
 
     def test_logger_log_rollback_end(self):
-        logger = DBWardenLogger(verbose=False)
+        logger = DBWardenLogger(debug_enabled=False)
         logger.log_rollback_end("0001", "V1__init.sql", 0.03)
 
     def test_logger_log_backup_created(self):
-        logger = DBWardenLogger(verbose=False)
+        logger = DBWardenLogger(debug_enabled=False)
         logger.log_backup_created("/path/to/backup.db")
 
     def test_logger_log_baseline_set(self):
-        logger = DBWardenLogger(verbose=False)
+        logger = DBWardenLogger(debug_enabled=False)
         logger.log_baseline_set("0001")
 
     def test_get_logger_returns_same_instance(self):

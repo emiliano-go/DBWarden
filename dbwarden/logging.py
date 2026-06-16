@@ -1,11 +1,37 @@
+"""
+Logging utilities with severity-based levels and configurable verbosity.
+
+This module builds on Python's standard logging library rather than modifying it. Standard logging levels DEBUG, INFO, WARNING, ERROR, and CRITICAL continue to represent message severity.
+
+In addition to severity, this module introduces a seperate verbosity concept for user-facing INFO output. Verbosity controls how much detail is emitted without changing the semantic meaning of standard logging levels.
+
+The supported verbosity levels are:
+    QUIET: Emit only essential INFO messages and details.
+    NORMAL: Emit standard INFO progress messages.
+    VERBOSE: Emit additional explanatory or diagnostic informational messages.
+
+This seperation allows callers to distinguish between dev diagnostics (DEBUG) and detailed user-facing output (INFO gated by verbosity).
+
+Verbosity may be configured from multiple sources, such as constructor arguments, config files, env vars, or CLI options.
+
+"""
+
 import json
 import logging
 import os
 import re
 import sys
 from typing import Any, Optional
+from enum import IntEnum
 
 from dbwarden.constants import LOG_FORMAT
+
+
+class Verbosity(IntEnum):
+    QUIET = 0
+    NORMAL = 1
+    VERBOSE = 2
+
 
 ANSI_COLORS = {
     "reset": "\033[0m",
@@ -200,7 +226,11 @@ class JSONFormatter(logging.Formatter):
             payload["db_name"] = record.db_name
         if hasattr(record, "db_type") and record.db_type:
             payload["db_type"] = record.db_type
-        if record.exc_info and isinstance(record.exc_info, tuple) and record.exc_info[0]:
+        if (
+            record.exc_info
+            and isinstance(record.exc_info, tuple)
+            and record.exc_info[0]
+        ):
             payload["exception"] = self.formatException(record.exc_info)
         if record.exc_text:
             payload["exception"] = record.exc_text
@@ -227,33 +257,45 @@ class DBWardenLogger:
         self,
         name: str = "dbwarden",
         verbose: bool = False,
+        debug_enabled: bool = False,
+        verbosity: Verbosity = Verbosity.NORMAL,
         db_name: str | None = None,
         db_type: str | None = None,
-    ):
+    ) -> None:
         """
         Initialize the DBWarden logger.
 
         Args:
             name: Logger name (default: "dbwarden")
-            verbose: If True, sets level to DEBUG; otherwise INFO.
+            verbose: Only here to support current behavior until I learn enough rope to delete the class attribute across the codebase
+            debug_enabled: switches between log.level == log.DEBUG if true and log.level == log.INFO if false
+            verbosity: Enum that determines between the three different INFO logging verbosity settings
             db_name: Database name from multi-db config.
             db_type: Database type (sqlite, postgresql, mysql, mariadb, clickhouse).
         """
         self.logger = logging.getLogger(name)
         self.verbose = verbose
+        self.debug_enabled = debug_enabled
+
+        if not isinstance(verbosity, Verbosity):
+            raise TypeError(
+                f"verbosity must be a Verbosity member, got {type(verbosity)}"
+            )
+
+        self.verbosity = verbosity
         self.db_name = db_name
         self.db_type = db_type
         self._setup_logger()
 
     def _setup_logger(self) -> None:
         """Configure the logger with appropriate handlers and level."""
-        self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
+        self.logger.setLevel(logging.DEBUG if self.debug_enabled else logging.INFO)
 
         for handler in self.logger.handlers[:]:
             self.logger.removeHandler(handler)
 
         handler = logging.StreamHandler(sys.stdout)
-        handler.setLevel(logging.DEBUG if self.verbose else logging.INFO)
+        handler.setLevel(logging.DEBUG if self.debug_enabled else logging.INFO)
 
         if _use_json_logging():
             formatter: logging.Formatter = JSONFormatter()
@@ -262,17 +304,19 @@ class DBWardenLogger:
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
-    def set_verbose(self, verbose: bool) -> None:
-        """
-        Update verbosity level.
-
-        Args:
-            verbose: New verbosity setting.
-        """
-        self.verbose = verbose
-        self.logger.setLevel(logging.DEBUG if verbose else logging.INFO)
+    def set_debug_enabled(self, debug_enabled: bool) -> None:
+        self.debug_enabled = debug_enabled
+        self.logger.setLevel(logging.DEBUG if debug_enabled else logging.INFO)
         for handler in self.logger.handlers:
-            handler.setLevel(logging.DEBUG if verbose else logging.INFO)
+            handler.setLevel(logging.DEBUG if debug_enabled else logging.INFO)
+
+    def set_verbosity(self, verbosity: Verbosity) -> None:
+        if not isinstance(verbosity, Verbosity):
+            raise TypeError(
+                f"verbosity must be a Verbosity member, got {type(verbosity)}"
+            )
+
+        self.verbosity = verbosity
 
     def debug(self, msg: str, **kwargs) -> None:
         """Log a debug message."""
@@ -362,8 +406,8 @@ class DBWardenLogger:
         )
 
     def log_sql_statement(self, sql: str) -> None:
-        """Log SQL statement with syntax highlighting (verbose only)."""
-        if self.verbose:
+        """Log SQL statement with syntax highlighting (debug_enabled only)."""
+        if self.debug_enabled:
             ctx = self._format_db_context()
             prefix = f"{ctx} " if ctx else ""
             self.debug(
@@ -398,8 +442,8 @@ class DBWardenLogger:
         )
 
     def log_model_discovered(self, table_name: str, columns: list) -> None:
-        """Log model discovered from SQLAlchemy models (verbose only)."""
-        if self.verbose:
+        """Log model discovered from SQLAlchemy models (debug_enabled only)."""
+        if self.debug_enabled:
             ctx = self._format_db_context()
             prefix = f"{ctx} " if ctx else ""
             self.debug(
@@ -407,23 +451,23 @@ class DBWardenLogger:
             )
 
     def log_model_paths(self, paths: list[str]) -> None:
-        """Log model paths being used (verbose only)."""
-        if self.verbose:
+        """Log model paths being used (debug_enabled only)."""
+        if self.debug_enabled:
             ctx = self._format_db_context()
             prefix = f"{ctx} " if ctx else ""
             self.debug(f"{prefix}Using model paths: {paths}")
 
     def log_table_columns(self, table_name: str, columns: list) -> None:
-        """Log table columns (verbose only)."""
-        if self.verbose:
+        """Log table columns (debug_enabled only)."""
+        if self.debug_enabled:
             ctx = self._format_db_context()
             prefix = f"{ctx} " if ctx else ""
             col_info = ", ".join(c["name"] for c in columns)
             self.debug(f"{prefix}Table {table_name} columns: {col_info}")
 
     def log_migration_sql_gen(self, table_name: str, sql: str) -> None:
-        """Log generated migration SQL (verbose only)."""
-        if self.verbose:
+        """Log generated migration SQL (debug_enabled only)."""
+        if self.debug_enabled:
             highlighted = colorize_sql(sql)
             ctx = self._format_db_context()
             prefix = f"{ctx} " if ctx else ""
@@ -434,7 +478,9 @@ _global_logger: Optional[DBWardenLogger] = None
 
 
 def get_logger(
+    debug_enabled: bool = False,
     verbose: bool = False,
+    verbosity: Verbosity = Verbosity.NORMAL,
     db_name: str | None = None,
     db_type: str | None = None,
 ) -> DBWardenLogger:
@@ -442,7 +488,8 @@ def get_logger(
     Get the global DBWarden logger instance.
 
     Args:
-        verbose: If True, sets logger to DEBUG level.
+        debug_enabled: If True, sets logger to DEBUG level.
+        verbosity: determines the level of density for INFO logs
         db_name: Database name from multi-db config.
         db_type: Database type (sqlite, postgresql, mysql, mariadb, clickhouse).
 
@@ -452,11 +499,16 @@ def get_logger(
     global _global_logger
     if _global_logger is None:
         _global_logger = DBWardenLogger(
-            verbose=verbose, db_name=db_name, db_type=db_type
+            debug_enabled=debug_enabled,
+            verbosity=verbosity,
+            db_name=db_name,
+            db_type=db_type,
         )
     else:
-        if _global_logger.verbose != verbose:
-            _global_logger.set_verbose(verbose)
+        if _global_logger.debug_enabled != debug_enabled:
+            _global_logger.set_debug_enabled(debug_enabled)
+        if _global_logger.verbosity != verbosity:
+            _global_logger.set_verbosity(verbosity)
         if db_name is not None:
             _global_logger.db_name = db_name
         if db_type is not None:
