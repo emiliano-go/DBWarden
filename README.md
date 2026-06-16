@@ -5,7 +5,7 @@
   <strong style="font-size: 2.5em;">DBWarden</strong>
 </p>
 <p align="center">
-    <em>The SQL-first database toolkit for SQLAlchemy.</em>
+    <em>Your SQLAlchemy models are your migrations.</em>
 </p>
 <p align="center">
   <a href="https://www.python.org/downloads/">
@@ -23,53 +23,57 @@
 </p>
 
 <p align="center">
-  <strong><a href="https://emiliano-gandini-outeda.me/DBWarden/">Full documentation</a></strong>
+  <strong><a href="https://emiliano-gandini-outeda.github.io/DBWarden/">Full documentation</a></strong>
   &nbsp;|&nbsp;
   <strong><a href="https://github.com/emiliano-gandini-outeda/DBWarden">Source Code</a></strong>
 </p>
 
 ---
 
-DBWarden is a SQL-first migration system for SQLAlchemy that replaces Python-based migration workflows with explicit, reviewable SQL generated directly from your models.
+DBWarden is a database migration and schema management tool for SQLAlchemy. You define your schema in Python (in your SQLAlchemy models) and DBWarden derives everything else: migration SQL, rollbacks, snapshots, safety checks, and seed lifecycle.
 
-Unlike script-based migration tools, DBWarden does not introduce a migration runtime or require executing generated Python migration code. It produces plain SQL files that can be reviewed, versioned, and executed directly against any environment.
-
-All migrations are generated as plain SQL and can be reviewed before execution.
-
-FastAPI integration, offline generation, and migration safety tooling are built around that core model.
+There are no migration scripts to write or maintain. There is no migration runtime. Your models are the contract. The database is kept in sync with them.
 
 ## At a glance
 
-- SQL-first migrations from SQLAlchemy models
-- No migration runtime required
-- Offline CI migration generation
-- Built-in rollback in every migration
-- Schema snapshots for deterministic diffing
-- Pre-deploy impact analysis for code safety
+- Migrations generated from your models, not written by hand
+- Plain SQL output: reviewable, committable, executable anywhere
+- Built-in rollback in every migration file
+- Pre-deploy impact analysis: know what breaks before it ships
+- Offline migration generation for CI pipelines without a live database
+- Schema snapshots for deterministic diffs and rename detection
+- Typed `class Meta` system with import-time validation
+- Multi-database support: PostgreSQL, MySQL, ClickHouse, MariaDB, SQLite
+- Versioned seed lifecycle with checksum drift detection
+- Reverse-engineer live databases into models with `generate-models`
 
-## Why DBWarden?
+## Why DBWarden
 
-Most migration systems rely on one of two approaches:
+Most migration tools ask you to maintain two representations of your schema: your ORM models and your migration files. When they drift, you find out at deploy time.
 
-- Python-based migration scripts generated and executed at runtime
-- Manual SQL migrations written and maintained by hand
+DBWarden eliminates the second representation. Your SQLAlchemy models are the schema definition. DBWarden reads them, diffs them against the current database state, and generates the SQL to close the gap (including rollback) without you writing a line of migration code.
 
-Both introduce friction: migrations are tied to a runtime, changes are hard to audit in CI without a database, and schema drift is only discovered at deploy time.
+This also means:
 
-DBWarden removes this entire class of problems. It generates plain SQL migrations directly from SQLAlchemy models, with:
+- No migration runtime to install or version
+- No generated Python scripts that quietly do the wrong thing
+- No schema drift discovered in production: drift is caught at `make-migrations` time
+- Migrations that can be generated in CI without a database connection
 
-- no migration runtime required
-- no generated Python migration scripts
-- full rollback included in every migration file
-- schema snapshots for deterministic diffs over time
+DBWarden is not a wrapper around Alembic. It is a different approach to the same problem: Alembic asks you to describe *how* to change the database; DBWarden asks you to describe *what* the schema should be.
 
-This enables:
+## From zero to production
 
-- CI migration generation without a database
-- deterministic schema history via snapshots
-- pre-deploy detection of destructive or breaking changes
+Typical adoption path in an existing project:
 
-DBWarden is designed as a drop-in replacement for migration workflows built around Alembic or hand-written SQL, without introducing a migration runtime or script execution layer.
+1. Point DBWarden at your existing SQLAlchemy models
+2. Run initial `make-migrations` to generate a baseline schema
+3. Commit generated migrations as your source of truth
+4. Replace your current migration workflow with the DBWarden CLI
+5. Optionally enable:
+   - Migration impact analysis for safer deploys
+   - Offline mode for CI pipelines without a database service
+   - FastAPI integration for startup validation and health checks
 
 ## Installation
 
@@ -80,20 +84,25 @@ uv add "dbwarden[metrics]"   # Prometheus metrics
 uv add "dbwarden[sandbox]"   # Docker-backed test databases
 ```
 
-Requirements: Python 3.12.7+, SQLAlchemy 2.0+.
+Requirements: Python 3.12+, SQLAlchemy 2.0+.
 
 Optional dependency groups:
 
-| Group         | Default | Provides                    |
-|---------------|---------|-----------------------------|
-| `[postgres]`  | Yes     | asyncpg, psycopg            |
-| `[mysql]`     |         | asyncmy, pymysql            |
-| `[clickhouse]`|         | clickhouse-connect          |
-| `[mariadb]`   |         | mariadb (asyncmy compatible)|
+| Group        | Default | Provides                             |
+|--------------|---------|--------------------------------------|
+| `[postgres]` | Yes     | `psycopg2-binary`                    |
+| `[mysql]`    |         | `pymysql`                            |
+| `[clickhouse]` |       | `clickhouse-connect`, `aiohttp`      |
+| `[fastapi]`  |         | `fastapi`, `pydantic`, `asyncpg`, `aiosqlite` |
+| `[sandbox]`  |         | `testcontainers`                     |
+| `[metrics]`  |         | `prometheus-client`                  |
+| `[dev]`      |         | `pytest`, `zensical`, `seoslug`, `httpx2` |
 
 ## Quickstart
 
 ### 1. Configure
+
+Create a file named `dbwarden.py` in your project root:
 
 ```python
 from dbwarden import database_config
@@ -111,11 +120,10 @@ primary = database_config(
 
 ```python
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import declarative_base
 from dbwarden.databases import TableMeta, IndexSpec
 
-class Base(DeclarativeBase):
-    pass
+Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
@@ -146,12 +154,11 @@ class Post(Base):
 ### 3. Generate a migration
 
 ```bash
-$ dbwarden make-migrations
+dbwarden init
+dbwarden make-migrations "create initial tables"
 ```
 
-Every migration includes both upgrade and rollback SQL by default.
-
-Output:
+Output: both upgrade and rollback in the same file.
 
 ```sql
 -- upgrade
@@ -179,48 +186,45 @@ DROP TABLE users;
 ### 4. Apply
 
 ```bash
-$ dbwarden migrate
+dbwarden migrate
 ```
 
 ### 5. Check status
 
 ```bash
-$ dbwarden status
+dbwarden status
 ```
 
 ## Typical workflow
 
-1. Define your SQLAlchemy models with `class Meta` annotations
+1. Define or update your SQLAlchemy models with `class Meta` annotations
 2. Run `dbwarden make-migrations` to generate SQL
 3. Review the generated `.sql` file and its rollback section
 4. Run `dbwarden migrate` to apply
 5. Verify with `dbwarden status`
 
-## From zero to production
-
-Typical adoption path in an existing project:
-
-1. Point DBWarden at your existing SQLAlchemy models
-2. Run initial `make-migrations` to generate a baseline schema
-3. Commit generated migrations as your source of truth
-4. Replace your current migration workflow with the DBWarden CLI
-5. Optionally enable:
-   - migration impact analysis for safer deploys
-   - offline mode for CI pipelines without a database service
-   - FastAPI integration for startup validation and health checks
-
 ---
 
 ## Migration engine
 
-- **SQL-first**: Migrations are plain SQL files. No migration runtime required.
-- **Rollback included**: Every migration carries both upgrade and rollback SQL in the same file.
-- **Schema snapshots**: After every migration, a checksummed JSON snapshot is written. Snapshots power rename detection, offline diffing, and column-level comparisons without querying the live database.
-- **Column-level diffing**: Type, nullability, default, and comment changes generate precise `ALTER COLUMN` statements.
-- **Rich index support**: Advanced index features for PostgreSQL and ClickHouse use cases.
+**Model-driven generation**: DBWarden reads your SQLAlchemy models directly. When you change a model, it diffs the new state against the last snapshot and generates the SQL to reconcile them.
 
-<details>
-<summary>Supported index features</summary>
+**Plain SQL output**: Generated migrations are `.sql` files. No migration runtime, no generated Python. Review them, commit them, execute them directly against any environment.
+
+**Rollback included**: Every migration carries both upgrade and rollback SQL in the same file. Rollback SQL is generated automatically: you do not write it.
+
+**Schema snapshots**: After every migration, a checksummed JSON snapshot is written to `.dbwarden/schemas/`. Snapshots power rename detection, offline diffing, and column-level comparisons without querying the live database.
+
+**Column-level diffing**: Type, nullability, default, and comment changes generate precise `ALTER COLUMN` statements.
+
+**Typed `class Meta`**: The `_MetaValidator` metaclass validates every attribute on `class Meta` at import time. Typos that would have silently produced wrong DDL now raise `DBWardenConfigError` immediately.
+
+```python
+class Meta(MyTableMeta):
+    my_engin = "InnoDB"  # DBWardenConfigError: unknown attr 'my_engin'
+```
+
+Supported index features:
 
 - Partial indexes (`WHERE` clause)
 - Covering indexes (`INCLUDE` columns)
@@ -230,14 +234,14 @@ Typical adoption path in an existing project:
 - Storage parameters (`WITH (fillfactor=...)`)
 - ClickHouse skip indexes via `ChIndexSpec`
 
-</details>
+---
 
-## What will break if this ships?
+## Pre-deploy impact analysis
 
 Before applying schema changes, DBWarden can scan your codebase to identify what will be affected. It uses AST analysis with a grep fallback, so results reflect actual code structure rather than text matches.
 
 ```bash
-$ dbwarden check-impact 0042 --database primary
+dbwarden check-impact 0042 --database primary
 ```
 
 Output:
@@ -253,81 +257,122 @@ drop_column on users.username
 
 Run this before any destructive deploy to surface breaking changes before they reach production.
 
+---
+
 ## Offline migrations
 
-Export model state once, then generate migrations on any machine without a database connection. Useful for CI pipelines and local development without a running database.
+Export model state once, then generate migrations on any machine without a database connection. Designed for CI pipelines and local development without a running database.
 
 ```bash
-$ dbwarden export-models --database primary
+dbwarden export-models --database primary
 git add .dbwarden/model_state.json
 ```
 
 Then on any machine, with no database required:
 
 ```bash
-$ dbwarden make-migrations "add bio column" --offline
+dbwarden make-migrations "add bio column" --offline
 ```
 
 The model state file is updated in place after each migration.
 
 ---
 
-## PostgreSQL: primary backend
+## Reverse-engineer models
 
-First-class support with full round-trip schema fidelity. Reverse-engineer a live database, feed the output back into `make-migrations`, and get zero diff.
-
-```bash
-$ dbwarden generate-models -d primary --tables users
-$ dbwarden make-migrations
-# No changes detected
-```
-
-Supported features:
-
-- Identity columns and generated columns
-- Partitioning and table inheritance
-- Exclusion constraints and deferrable constraints
-- Advanced indexes via `PgIndexSpec` (INCLUDE, WHERE, USING, NULLS NOT DISTINCT, column sort order)
-- Per-column storage, compression, and collation
-- Enum type creation and value addition
-- Full type normalization: SERIAL, TIMESTAMPTZ, NUMERIC, VARCHAR, JSONB, UUID, ARRAY, TSTZRANGE
-
-## ClickHouse: analytics backend
-
-First-class support for ClickHouse analytics workloads, including schema generation and round-trip validation for supported features.
+Generate SQLAlchemy models from a live database with round-trip support (PostgreSQL, MySQL, ClickHouse, SQLite):
 
 ```bash
-$ dbwarden generate-models -d analytics
-$ dbwarden make-migrations
-# No changes detected
+dbwarden generate-models --database primary --tables users,posts
 ```
 
-Supported features:
+The generated output includes `class Meta` blocks with all detected backend-specific metadata.
 
-- MergeTree engine family via `ChEngineSpec`
-- Replicated engines with ZooKeeper path configuration
-- Projections via `ProjectionSpec`
-- Dictionaries and materialized views
-- Skip indexes via `ChIndexSpec`
-- Column codecs
-- `LowCardinality` and `Nullable` type wrappers
+---
+
+## Supported databases
+
+| Database   | Round-trip | Notes                                       |
+|------------|------------|---------------------------------------------|
+| PostgreSQL | Full       | Primary backend, full schema fidelity       |
+| MySQL      | Full       | DDL parity focus                            |
+| ClickHouse | Full       | Analytics backend, MergeTree engine family  |
+| SQLite     | Dev only   | Local development and SQL translation       |
+| MariaDB    | No         | Schema layer complete; snapshot gaps remain |
+
+### PostgreSQL
+
+First-class support with full round-trip schema fidelity. Supported features include identity and generated columns, partitioning, table inheritance, exclusion constraints, deferrable constraints, advanced indexes via `PgIndexSpec`, per-column storage and collation, enum type creation, and full type normalization (SERIAL, TIMESTAMPTZ, NUMERIC, JSONB, UUID, ARRAY, TSTZRANGE).
+
+### MySQL
+
+Full round-trip support with `MyTableMeta` / `MyColumnMeta` and `my.field()` spec objects. Engine-level options (`my_engine`, `my_charset`, `my_collate`, `my_row_format`), column-level options (`unsigned`, `charset`, `collate`, `on_update`), and model reverse-engineering via `generate-models`.
+
+```bash
+uv add "dbwarden[mysql]"
+```
+
+### ClickHouse
+
+First-class analytics backend support. MergeTree engine family via `ChEngineSpec`, replicated engines, projections, dictionaries, materialized views, skip indexes via `ChIndexSpec`, column codecs, `LowCardinality` and `Nullable` type wrappers.
+
+```bash
+uv add "dbwarden[clickhouse]"
+```
+
+### MariaDB
+
+Schema layer is complete with `MdbTableMeta` / `MdbColumnMeta` and `mdb.field()` spec objects including MariaDB-specific features (`page_compressed`, `invisible`, `without_overlaps`). Snapshot capture and reverse-engineering of MariaDB-specific features are not yet complete.
+
+---
+
+## Seed lifecycle
+
+DBWarden manages versioned database seeds alongside migrations. Seeds are defined as Python classes and applied with checksum drift detection.
+
+```python
+from dbwarden import Seed
+
+class CountrySeed(Seed):
+    __seed_database__ = "primary"
+    rows = [
+        Country(code="US", name="United States"),
+        Country(code="UY", name="Uruguay"),
+    ]
+```
+
+Rows take model instances: full IDE autocomplete on every field. Versions are assigned automatically by class order, no manual numbering.
+
+Conflict resolution, auto-apply after `dbwarden migrate`, and SQL export for stateless production deployment are all supported.
+
+```bash
+dbwarden seed export   # renders seeds as plain SQL for stateless deploy
+dbwarden seed list     # shows applied seeds and checksum status
+```
+
+---
+
+## Developer experience
+
+**Dev mode**: Run SQLite locally against a PostgreSQL production schema with automatic SQL translation.
+
+**Sandbox and dry-run**: Test migrations in a temporary database or preview SQL without touching anything.
+
+**Multi-database**: One project, multiple databases, full isolation between them. Use `model_tables` to assign table ownership per database when sharing model paths.
+
+**Observability**: Prometheus metrics (6 families), structured JSON logging, and health/status endpoints.
+
+**Generate models**: Reverse-engineer a live database (PostgreSQL, MySQL, ClickHouse) into SQLAlchemy models with `dbwarden generate-models`.
+
+**`dbwarden diff`**: Read-only comparison tool. Outputs as Rich table, JSON, or raw SQL. Supports `--offline` mode.
+
+**Graceful disconnection**: Automatic retry logic and clear error messages when a database is unreachable.
 
 ---
 
 ## FastAPI integration
 
-### Sessions
-
-DBWarden exposes database sessions directly from the configuration object, keeping route handlers declarative while avoiding dependency boilerplate.
-
-```python
-@app.get("/users")
-async def list_users(session: primary.async_session):
-    result = await session.execute(select(User))
-    return result.scalars().all()
-```
-
-### Lifespan
+DBWarden includes optional FastAPI integration for projects that use it. It is not required.
 
 ```python
 from contextlib import asynccontextmanager
@@ -342,9 +387,18 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 ```
 
-On startup: schema validation or auto-migration, readiness gate, connection pool warmup, and optional seed application. On shutdown: all engine pools and ClickHouse clients disposed.
+On startup: schema validation or auto-migration, readiness gate, connection pool warmup, optional seed application. On shutdown: engine pools and ClickHouse clients disposed.
 
-### Routers
+Sessions are exposed directly from the configuration object:
+
+```python
+@app.get("/users")
+async def list_users(session: primary.async_session):
+    result = await session.execute(select(User))
+    return result.scalars().all()
+```
+
+Health and management routers:
 
 ```python
 from dbwarden.fastapi import DBWardenHealthRouter, DBWardenRouter
@@ -353,11 +407,11 @@ app.include_router(DBWardenHealthRouter(), prefix="/health")
 app.include_router(DBWardenRouter(), prefix="/db")
 ```
 
-`DBWardenHealthRouter` exposes `/liveness`, `/readiness`, and per-database status endpoints. `DBWardenRouter` exposes `GET /status` and `POST /migrate`.
+`DBWardenHealthRouter` exposes `/liveness`, `/readiness`, and per-database status. `DBWardenRouter` exposes `GET /status` and `POST /migrate`.
 
-## Auto-generated Pydantic schemas
+### Auto-generated Pydantic schemas
 
-DBWarden can generate request and response schemas directly from model annotations, eliminating duplicated definitions between your ORM layer and your API layer. This keeps API schemas and ORM models in sync without duplication.
+`@auto_schema` generates `CreateSchema`, `UpdateSchema`, and `PublicSchema` from model annotations, eliminating duplicated definitions between your ORM layer and your API layer.
 
 ```python
 from dbwarden.databases import auto_schema
@@ -380,33 +434,6 @@ user = User.CreateSchema(email="a@b.com", password_hash="secret")
 user.to_schema()  # PublicSchema excludes password_hash automatically
 ```
 
-`@auto_schema` generates `CreateSchema`, `UpdateSchema`, and `PublicSchema` from model annotations. Fields marked `public = False` are excluded from `PublicSchema` without any additional filtering logic in your routes.
-
-Optional but powerful: derive your entire API schema layer directly from your SQLAlchemy models.
-
----
-
-## Developer experience
-
-- **Dev mode**: Run SQLite locally against a PostgreSQL production schema with automatic SQL translation.
-- **Sandbox and dry-run**: Test migrations in a temporary database or preview SQL without touching anything.
-- **Multi-database**: One project, multiple databases, full isolation between them.
-- **Versioned seeds**: SQL, Python, and in-code seeds with checksummed idempotent application via `@seed_data`.
-- **Observability**: Prometheus metrics (6 families), structured JSON logging, FastAPI routers for `/metrics`, `/status`, `/migrate`, `/health/liveness`, `/health/readiness`.
-- **Generate models**: Reverse-engineer a live database into SQLAlchemy models with `dbwarden generate-models`.
-
----
-
-## Supported databases
-
-| Database   | Role                          | Round-trip                       | Notes                            |
-|------------|-------------------------------|----------------------------------|----------------------------------|
-| PostgreSQL | Primary transactional backend | Yes                              | Full round-trip fidelity         |
-| MySQL      | General support               | Yes                              | DDL parity focus                 |
-| MariaDB    | General support               | No                               | MySQL-compatible mode            |
-| ClickHouse | Analytics backend             | Yes                              | Full round-trip for supported ops |
-| SQLite     | Dev and testing               | Dev mode only                    | Used in dev mode SQL translation |
-
 ---
 
 ## License
@@ -415,4 +442,4 @@ MIT
 
 ---
 
-DBWarden is designed for teams that want explicit, reviewable, and reproducible database changes without relying on a migration runtime.
+DBWarden is built for teams that want explicit, reviewable, reproducible database changes, derived from the models they already maintain, not from migration scripts they have to write.
