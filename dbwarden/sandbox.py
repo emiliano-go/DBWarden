@@ -4,7 +4,7 @@ import sys
 from importlib.abc import Loader, MetaPathFinder
 from importlib.machinery import ModuleSpec
 from pathlib import Path
-from typing import Any, Set
+from typing import Any, Optional, Set
 
 from dbwarden.exceptions import ConfigurationError
 
@@ -260,6 +260,12 @@ def _unsafe_load(path: Path) -> None:
     spec.loader.exec_module(module)
 
 
+def _module_name_for_path(filepath: Path, base_dir: Path) -> str:
+    """Derive a unique module name from the file path relative to base_dir."""
+    relative = filepath.resolve().relative_to(base_dir.resolve())
+    return relative.with_suffix('').as_posix().replace('/', '.')
+
+
 def load_model_module(filepath: Path, base_dir: Path) -> Any:
     """
     Load a model module with path validation.
@@ -278,12 +284,13 @@ def load_model_module(filepath: Path, base_dir: Path) -> Any:
 
     # Check DBWARDEN_DISABLE_SANDBOX env var
     if os.environ.get("DBWARDEN_DISABLE_SANDBOX"):
-        return _unsafe_load_model(filepath)
+        return _unsafe_load_model(filepath, base_dir)
 
     try:
         import importlib.util
 
-        spec = importlib.util.spec_from_file_location("models", filepath)
+        module_name = _module_name_for_path(filepath, base_dir)
+        spec = importlib.util.spec_from_file_location(module_name, filepath)
         if spec is None or spec.loader is None:
             logger.warning("Could not create module spec for model: %s", filepath)
             return None
@@ -297,11 +304,15 @@ def load_model_module(filepath: Path, base_dir: Path) -> Any:
         return None
 
 
-def _unsafe_load_model(filepath: Path) -> Any:
+def _unsafe_load_model(filepath: Path, base_dir: Optional[Path] = None) -> Any:
     """Unsandboxed model load."""
     import importlib.util
 
-    spec = importlib.util.spec_from_file_location("models", filepath)
+    module_name = "models"
+    if base_dir is not None:
+        module_name = _module_name_for_path(filepath, base_dir)
+
+    spec = importlib.util.spec_from_file_location(module_name, filepath)
     if spec is None or spec.loader is None:
         return None
 

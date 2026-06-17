@@ -842,7 +842,7 @@ def generate_migration_sql(
 
     When a schema snapshot exists, it uses the snapshot for rename detection
     and column-level change detection.
-    Otherwise falls back to diffing against the live database (no column-level changes).
+    Otherwise takes a fresh snapshot from the live database and diffs against it.
 
     Args:
         tables: List of ModelTable objects.
@@ -868,6 +868,7 @@ def generate_migration_sql(
     try:
         from dbwarden.engine.snapshot import (
             find_latest_snapshot,
+            extract_full_schema_snapshot,
             diff_models_against_snapshot,
             snapshot_diff_to_sql,
             _apply_rename_intents,
@@ -880,6 +881,17 @@ def generate_migration_sql(
         snapshot = find_latest_snapshot(database)
     except Exception:
         snapshot = None
+
+    if snapshot is None:
+        try:
+            config = get_database(database)
+            snapshot = extract_full_schema_snapshot(
+                database=database,
+                sqlalchemy_url=config.sqlalchemy_url,
+                database_type=config.database_type,
+            )
+        except Exception:
+            snapshot = None
 
     if snapshot is not None:
         try:
