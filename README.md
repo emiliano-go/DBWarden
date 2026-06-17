@@ -45,7 +45,7 @@ There are no migration scripts to write or maintain. There is no migration runti
 - Typed `class Meta` system with import-time validation
 - Multi-database support: PostgreSQL, MySQL, ClickHouse, MariaDB, SQLite
 - Versioned seed lifecycle with checksum drift detection
-- Reverse-engineer live databases into models with `generate-models`
+- Reverse-engineer live databases into models with `generate-models` (supports `--base` for custom imports)
 
 ## Why DBWarden
 
@@ -284,9 +284,10 @@ Generate SQLAlchemy models from a live database with round-trip support (Postgre
 
 ```bash
 dbwarden generate-models --database primary --tables users,posts
+dbwarden generate-models --database primary --base app.database:Base
 ```
 
-The generated output includes `class Meta` blocks with all detected backend-specific metadata.
+By default each generated file declares its own `Base = declarative_base()`. Use `--base` to import a custom Base class from your project instead (e.g. `--base app.database:Base` or `--base app.database:DeclarativeBase`). The generated output includes `class Meta` blocks with all detected backend-specific metadata.
 
 ---
 
