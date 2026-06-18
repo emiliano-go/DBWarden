@@ -98,6 +98,9 @@ def _parse_type(raw: str, dialect: str | None = None) -> str:
         return "JSON"
 
     if upper.startswith("ENUM"):
+        match = re.match(r"ENUM\((.*)\)$", raw_stripped, re.IGNORECASE)
+        if match:
+            return f"Enum({match.group(1)})"
         return "Enum"
 
     if upper.startswith("DECIMAL") or upper.startswith("NUMERIC"):
@@ -115,8 +118,8 @@ def _parse_type(raw: str, dialect: str | None = None) -> str:
     if upper.startswith("CHAR"):
         match = re.match(r"CHAR\((\d+)\)", raw_stripped, re.IGNORECASE)
         if match:
-            return f"String(length={match.group(1)})"
-        return "String"
+            return f"CHAR(length={match.group(1)})"
+        return "CHAR"
 
     if upper.startswith("FLOAT"):
         return "Float"
@@ -134,6 +137,9 @@ def _parse_type(raw: str, dialect: str | None = None) -> str:
         if upper == "TINYINT(1)":
             return "Boolean"
         return "SmallInteger"
+
+    if upper.startswith("MEDIUMTEXT"):
+        return "Text"
 
     if upper.startswith("BIGINT"):
         return "BigInteger"
@@ -226,6 +232,8 @@ def _resolve_imports(columns: list[dict], has_relationships: bool) -> set[str]:
         if base_type in ("STRING", "TEXT"):
             imports.add("String")
             imports.add("Text")
+        elif base_type == "CHAR":
+            imports.add("CHAR")
         elif base_type == "INTEGER":
             imports.add("Integer")
         elif base_type == "BIGINTEGER":
@@ -260,13 +268,17 @@ def _resolve_imports(columns: list[dict], has_relationships: bool) -> set[str]:
             elif inner.startswith("Integer"):
                 imports.add("Integer")
         if col.get("default"):
-            raw_default = str(col["default"]).upper()
-            if "func.now()" in raw_default or raw_default == "CURRENT_TIMESTAMP" or raw_default == "CURRENT_DATE" or raw_default == "CURRENT_TIME":
+            raw_default = str(col["default"]).strip()
+            raw_default_upper = raw_default.upper()
+            if raw_default.lower() == "func.now()" or raw_default_upper == "CURRENT_TIMESTAMP" or raw_default_upper == "CURRENT_DATE" or raw_default_upper == "CURRENT_TIME":
                 imports.add("func")
         if col.get("server_default"):
             imports.add("text")
         if col.get("foreign_key"):
             imports.add("ForeignKey")
+        my_meta = col.get("my_meta")
+        if my_meta and my_meta.get("my_on_update"):
+            imports.add("func")
     return imports
 
 
@@ -598,6 +610,18 @@ def _format_column(col: dict) -> str:
         col_args.append(f"server_default=text({col['server_default']!r})")
     if col.get("autoincrement") is False:
         col_args.append("autoincrement=False")
+
+    my_meta = col.get("my_meta")
+    if my_meta:
+        if my_meta.get("my_unsigned"):
+            col_args.append("mysql_unsigned=True")
+        if my_meta.get("my_charset"):
+            col_args.append(f"mysql_charset={my_meta['my_charset']!r}")
+        if my_meta.get("my_collate"):
+            col_args.append(f"mysql_collate={my_meta['my_collate']!r}")
+        if my_meta.get("my_on_update"):
+            col_args.append("server_onupdate=func.now()")
+
     col_args.append(")")
     return ",\n        ".join(col_args)
 
@@ -681,10 +705,10 @@ def _write_models(
             content += "from dbwarden.databases.pgsql import " + imports + "\n"
             content += "\n"
         if my_meta_imports or needs_my_spec:
-            imports = ", ".join(sorted(my_meta_imports))
             if needs_my_spec:
-                imports = ("my, " + imports) if my_meta_imports else "my"
-            content += "from dbwarden.databases.mysql import " + imports + "\n"
+                content += "from dbwarden.databases import my\n"
+            if my_meta_imports:
+                content += "from dbwarden.databases.mysql import " + ", ".join(sorted(my_meta_imports)) + "\n"
             content += "\n"
         if ch_meta_imports or needs_ch_spec:
             if ch_meta_imports:
@@ -1099,6 +1123,69 @@ def _resolve_base(base: str | None) -> tuple[str | None, str]:
     return base, "Base"
 
 
+def _infer_primary_key(
+    pk_columns: set[str],
+    unique_constraints: list[dict],
+    raw_columns: list[dict],
+) -> set[str]:
+    """Infer the best logical primary key when a table has no declared PK.
+
+    Priority:
+      1. Single-column UNIQUE constraint with NOT NULL
+      2. Any single-column UNIQUE constraint
+      3. Multi-column UNIQUE constraint (composite)
+      4. Column named ``id``
+      5. Column ending with ``_id``
+      6. First NOT NULL column
+      7. First column (last resort)
+    """
+    if pk_columns:
+        return pk_columns
+
+    inferred: list[str] | None = None
+
+    for uc in unique_constraints:
+        cols = uc.get("column_names", [])
+        if len(cols) == 1:
+            col_info = next((c for c in raw_columns if c["name"] == cols[0]), None)
+            if col_info and col_info.get("nullable") is False:
+                inferred = cols
+                break
+
+    if not inferred:
+        for uc in unique_constraints:
+            cols = uc.get("column_names", [])
+            if len(cols) == 1:
+                inferred = cols
+                break
+
+    if not inferred and unique_constraints:
+        inferred = list(unique_constraints[0].get("column_names", []))
+
+    if not inferred:
+        for col in raw_columns:
+            if col["name"].lower() == "id":
+                inferred = [col["name"]]
+                break
+
+    if not inferred:
+        for col in raw_columns:
+            if col["name"].lower().endswith("_id"):
+                inferred = [col["name"]]
+                break
+
+    if not inferred:
+        for col in raw_columns:
+            if col.get("nullable") is False:
+                inferred = [col["name"]]
+                break
+
+    if not inferred and raw_columns:
+        inferred = [raw_columns[0]["name"]]
+
+    return set(inferred) if inferred else set()
+
+
 def generate_models_cmd(
     output: str = "models",
     tables: str | None = None,
@@ -1156,6 +1243,10 @@ def generate_models_cmd(
                     unique_columns.update(cols)
 
             raw_columns = inspector.get_columns(table_name)
+
+            if not pk_columns:
+                pk_columns = _infer_primary_key(pk_columns, unique_constraints, raw_columns)
+
             foreign_keys_raw = inspector.get_foreign_keys(table_name)
 
             fk_map: dict[str, str] = {}
