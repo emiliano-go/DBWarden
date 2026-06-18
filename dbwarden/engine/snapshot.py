@@ -188,7 +188,7 @@ def _build_alter_type_sql(
         rollback_type = old_type
         rollback_comment = ""
     else:
-        rollback_type = "<original_type>"
+        rollback_type = _missing_def_placeholder(backend)
         rollback_comment = "-- "
 
     if backend == "postgresql":
@@ -199,7 +199,10 @@ def _build_alter_type_sql(
             upgrade += f"\n-- USING {column}::{new_type}"
         rollback = f"{rollback_comment}ALTER TABLE {table} ALTER COLUMN {column} TYPE {rollback_type}"
     elif backend in ("mysql", "mariadb"):
+        _assert_complete_mysql_type(new_type)
         upgrade = f"ALTER TABLE {table} MODIFY COLUMN {column} {new_type}"
+        if old_type:
+            _assert_complete_mysql_type(old_type)
         rollback = f"{rollback_comment}ALTER TABLE {table} MODIFY COLUMN {column} {rollback_type}"
     elif backend == "sqlite":
         upgrade = (
@@ -232,6 +235,7 @@ def _build_alter_nullable_sql(
             upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} SET NOT NULL"
             rollback = f"ALTER TABLE {table} ALTER COLUMN {column} DROP NOT NULL"
     elif backend in ("mysql", "mariadb"):
+        _assert_complete_mysql_type(col_type)
         null_clause = "NULL" if nullable else "NOT NULL"
         upgrade = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type} {null_clause}"
         rollback = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type} {'NOT NULL' if nullable else 'NULL'}"
@@ -253,14 +257,65 @@ def _build_alter_default_sql(
     column: str,
     default: Any,
     backend: str,
+    col_type: str | None = None,
+    nullable: bool | None = None,
+    my_meta: dict[str, Any] | None = None,
 ) -> tuple[str, str]:
+    if backend in ("mysql", "mariadb"):
+        return _build_mysql_alter_default_sql(
+            table, column, default,
+            col_type=col_type, nullable=nullable, my_meta=my_meta or {},
+        )
     if default is not None:
         safe_default = _quote_default_for_sql(str(default))
         upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT {safe_default}"
         rollback = f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT"
     else:
         upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT"
-        rollback = f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT <original_default>"
+        rollback = f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT {_missing_def_placeholder(backend)}"
+    return upgrade, rollback
+
+
+def _build_mysql_alter_default_sql(
+    table: str,
+    column: str,
+    default: Any,
+    col_type: str | None = None,
+    nullable: bool | None = None,
+    my_meta: dict[str, Any] | None = None,
+) -> tuple[str, str]:
+    """Emit MySQL-compatible MODIFY COLUMN for default changes.
+
+    Uses MODIFY COLUMN with full column definition instead of
+    ALTER COLUMN SET DEFAULT, which is more broadly compatible
+    across MySQL versions including 5.7.
+    """
+    if col_type:
+        _assert_complete_mysql_type(col_type)
+    if default is not None:
+        safe_default = _quote_default_for_sql(str(default))
+        if not col_type:
+            placeholder = _missing_def_placeholder(backend="mysql")
+            upgrade = f"-- MANUAL ACTION REQUIRED: ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT {safe_default} {placeholder}"
+            rollback = f"-- MANUAL ACTION REQUIRED: ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT {placeholder}"
+            return upgrade, rollback
+        upgrade_def = _mysql_column_definition_for_meta(
+            col_type, my_meta or {},
+            nullable=nullable, default=safe_default,
+        )
+        upgrade = f"ALTER TABLE {table} MODIFY COLUMN {column} {upgrade_def}"
+        rollback = f"ALTER TABLE {table} MODIFY COLUMN {column} {_missing_def_placeholder(backend='mysql')}"
+    else:
+        if not col_type:
+            placeholder = _missing_def_placeholder(backend="mysql")
+            upgrade = f"-- MANUAL ACTION REQUIRED: ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT {placeholder}"
+            rollback = f"-- MANUAL ACTION REQUIRED: ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT {placeholder}"
+            return upgrade, rollback
+        upgrade_def = _mysql_column_definition_for_meta(
+            col_type, my_meta or {}, nullable=nullable, default=None,
+        )
+        upgrade = f"ALTER TABLE {table} MODIFY COLUMN {column} {upgrade_def}"
+        rollback = f"ALTER TABLE {table} MODIFY COLUMN {column} {_missing_def_placeholder(backend='mysql')}"
     return upgrade, rollback
 
 
@@ -281,6 +336,39 @@ def _quote_default_for_sql(default: str) -> str:
         return stripped
     escaped = stripped.replace("'", "''")
     return f"'{escaped}'"
+
+
+def _missing_def_placeholder(backend: str) -> str:
+    """Return a hard-failure placeholder when column definition info is missing.
+
+    Previously used ??? or <original_type>/<original_default> which produced
+    misleading executable-looking SQL. Now emits an explicit SQL comment
+    that will cause a controlled failure if executed.
+    """
+    if backend == "mysql":
+        return "/* REQUIRES MANUAL COLUMN DEFINITION - type info unavailable */"
+    return "<original_def_unavailable>"
+
+
+_INCOMPLETE_MYSQL_TYPES = re.compile(
+    r"^(VARCHAR|CHAR|VARBINARY|BINARY|ENUM|SET)$",
+    re.IGNORECASE,
+)
+
+
+def _assert_complete_mysql_type(col_type: str) -> None:
+    """Raise ValueError if a MySQL column type is incomplete (e.g. bare VARCHAR).
+
+    MySQL requires length/values for VARCHAR, CHAR, VARBINARY, BINARY, ENUM, SET.
+    Bare VARCHAR without a length parameter is invalid MySQL.
+    """
+    stripped = col_type.strip()
+    if _INCOMPLETE_MYSQL_TYPES.match(stripped):
+        raise ValueError(
+            f"Incomplete MySQL column type '{col_type}' - "
+            f"{stripped} requires a length or value list (e.g. {stripped}(255)). "
+            f"Check the model column definition."
+        )
 
 
 def _build_pg_meta_sql(
@@ -1892,6 +1980,7 @@ def _mysql_column_definition_for_meta(
     comment: str | None = None,
     autoincrement: bool | None = None,
 ) -> str:
+    _assert_complete_mysql_type(col_type)
     definition = col_type
     if meta.get("my_unsigned") and "UNSIGNED" not in definition.upper():
         definition = f"{definition} UNSIGNED"
@@ -2091,23 +2180,34 @@ def diff_models_against_snapshot(
                 })
             snap_autoinc = snap_col.get("autoincrement", False)
             model_autoinc = model_col.autoincrement
+            # Suppress autoincrement diffs for composite PK columns (likely join tables)
+            # where autoincrement does not apply and emitting ALTERs is dangerous.
+            snap_pk_count = sum(
+                1 for existing_col in snap_table.get("columns", {}).values()
+                if existing_col.get("primary_key")
+            )
+            model_pk_count = sum(1 for c in table.columns if c.primary_key)
+            pk_count = max(snap_pk_count, model_pk_count)
             if model_autoinc is not None and bool(snap_autoinc) != bool(model_autoinc):
-                upgrade_ops.append({
-                    "type": "alter_column_autoincrement",
-                    "table": table.name,
-                    "column": col_name,
-                    "autoincrement": model_autoinc,
-                    "col_type": model_col.type,
-                    "nullable": model_col.nullable,
-                })
-                rollback_ops.append({
-                    "type": "alter_column_autoincrement",
-                    "table": table.name,
-                    "column": col_name,
-                    "autoincrement": bool(snap_autoinc),
-                    "col_type": snap_col.get("type", ""),
-                    "nullable": snap_nullable,
-                })
+                if pk_count > 1 and _get_backend(db_name) in ("mysql", "mariadb"):
+                    pass  # skip - composite PK columns should not get autoincrement ALTERs
+                else:
+                    upgrade_ops.append({
+                        "type": "alter_column_autoincrement",
+                        "table": table.name,
+                        "column": col_name,
+                        "autoincrement": model_autoinc,
+                        "col_type": model_col.type,
+                        "nullable": model_col.nullable,
+                    })
+                    rollback_ops.append({
+                        "type": "alter_column_autoincrement",
+                        "table": table.name,
+                        "column": col_name,
+                        "autoincrement": bool(snap_autoinc),
+                        "col_type": snap_col.get("type", ""),
+                        "nullable": snap_nullable,
+                    })
             snap_default = _normalize_default(snap_col.get("default"))
             model_default = _normalize_default(model_col.default)
             if _get_backend(db_name) in ("mysql", "mariadb"):
@@ -2123,12 +2223,18 @@ def diff_models_against_snapshot(
                     "table": table.name,
                     "column": col_name,
                     "default": model_default,
+                    "col_type": model_col.type,
+                    "nullable": model_col.nullable,
+                    "my_meta": model_col.my_meta or {},
                 })
                 rollback_ops.append({
                     "type": "alter_column_default",
                     "table": table.name,
                     "column": col_name,
                     "default": snap_default,
+                    "col_type": snap_col.get("type", ""),
+                    "nullable": snap_nullable,
+                    "my_meta": snap_col.get("my_column", {}),
                 })
             snap_col_comment = snap_col.get("comment")
             if snap_col_comment != model_col.comment:
@@ -2740,18 +2846,24 @@ def snapshot_diff_to_sql(
                 ))
             else:
                 col_def = op.get("definition", {})
+                col_type = col_def.get("type")
+                if not col_type:
+                    col_type = _missing_def_placeholder(backend)
                 statements.append(MigrationStatement(
                     order=StatementOrder.ADD_COLUMN,
-                    upgrade_sql=f"ALTER TABLE {op['table']} ADD COLUMN {op['column']} {col_def.get('type', '???')}",
+                    upgrade_sql=f"ALTER TABLE {op['table']} ADD COLUMN {op['column']} {col_type}",
                     rollback_sql=f"ALTER TABLE {op['table']} DROP COLUMN {op['column']}",
                 ))
             changes.append(Change(operation="add_column", table=op["table"], target=op["column"]))
         elif op["type"] == "drop_column":
             warning = f"-- WARNING: DROPPING COLUMN {op['table']}.{op['column']}\n"
+            col_type = op.get("definition", {}).get("type", "")
+            if not col_type:
+                col_type = _missing_def_placeholder(backend)
             statements.append(MigrationStatement(
                 order=StatementOrder.DROP_COLUMN,
                 upgrade_sql=f"{warning}ALTER TABLE {op['table']} DROP COLUMN {op['column']}",
-                rollback_sql=f"ALTER TABLE {op['table']} ADD COLUMN {op['column']} {op.get('definition', {}).get('type', '???')}",
+                rollback_sql=f"ALTER TABLE {op['table']} ADD COLUMN {op['column']} {col_type}",
             ))
             changes.append(Change(operation="drop_column", table=op["table"], target=op["column"]))
         elif op["type"] == "alter_column_type":
@@ -2782,7 +2894,13 @@ def snapshot_diff_to_sql(
             changes.append(Change(operation="alter_column_nullable", table=op["table"], target=op["column"]))
         elif op["type"] == "alter_column_default":
             default = op.get("default")
-            def_up, def_rb = _build_alter_default_sql(op["table"], op["column"], default, backend)
+            col_type = op.get("col_type")
+            nullable = op.get("nullable")
+            my_meta = op.get("my_meta", {})
+            def_up, def_rb = _build_alter_default_sql(
+                op["table"], op["column"], default, backend,
+                col_type=col_type, nullable=nullable, my_meta=my_meta,
+            )
             statements.append(MigrationStatement(
                 order=StatementOrder.ALTER_COLUMN_DEFAULT,
                 upgrade_sql=def_up,
@@ -3654,12 +3772,27 @@ def _build_safe_type_change_sql(
     ]
 
 
+def _normalize_sql(s: str) -> str:
+    return s.strip().rstrip(";").strip()
+
+
+def _sql_into_statements(sql: str) -> list[str]:
+    parts = [s.strip() for s in sql.split(";") if s.strip()]
+    return [_normalize_sql(p) for p in parts]
+
+
 def _filter_duplicates_from_snapshot_diff(
     upgrade_sql: str,
     rollback_sql: str,
     changes: list[Any],
     existing_statements: set[str],
 ) -> tuple[str, str, list[Any]]:
+    normalized_existing: set[str] = set()
+    for s in existing_statements:
+        s = _normalize_sql(s)
+        if s:
+            normalized_existing.add(s)
+
     upgrade_parts = [s.strip() for s in upgrade_sql.split("\n\n") if s.strip()]
     rollback_parts = [s.strip() for s in rollback_sql.split("\n\n") if s.strip()]
 
@@ -3677,7 +3810,11 @@ def _filter_duplicates_from_snapshot_diff(
     filtered_changes = []
 
     for i, (up_sql, rb_sql) in enumerate(zip(upgrade_parts, rollback_parts)):
-        if up_sql in existing_statements:
+        normalized = _normalize_sql(up_sql)
+        if normalized in normalized_existing:
+            continue
+        statements = _sql_into_statements(up_sql)
+        if statements and all(s in normalized_existing for s in statements):
             continue
         filtered_upgrade.append(up_sql)
         filtered_rollback.append(rb_sql)
