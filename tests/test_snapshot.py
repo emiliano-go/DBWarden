@@ -2524,3 +2524,187 @@ class TestClickHouseDiff:
         upgrade, rollback = diff_models_against_snapshot(model_tables, {"tables": {}, "indexes": {}, "constraints": {}})
         create_ops = [op for op in upgrade if op["type"] == "create_table"]
         assert len(create_ops) == 1
+
+
+class TestBugFixRegression:
+    """Regression tests for bug fixes in v0.12.1."""
+
+    @pytest.mark.parametrize("backend", ("mysql", "mariadb"))
+    def test_mysql_alter_default_with_col_type(self, backend):
+        """Bug 2c/5: MySQL default changes use MODIFY COLUMN when type is available."""
+        from dbwarden.engine.snapshot import _build_alter_default_sql
+        upgrade, rollback = _build_alter_default_sql(
+            "t", "c", "hello", backend,
+            col_type="VARCHAR(255)", nullable=False,
+        )
+        assert "MODIFY COLUMN" in upgrade
+        assert "VARCHAR(255)" in upgrade
+        assert "NOT NULL" in upgrade
+        assert "DEFAULT 'hello'" in upgrade
+        assert "MODIFY COLUMN" in rollback
+
+    @pytest.mark.parametrize("backend", ("postgresql", "sqlite", "clickhouse"))
+    def test_non_mysql_alter_default_unchanged(self, backend):
+        """Non-MySQL backends still use ALTER COLUMN SET DEFAULT."""
+        from dbwarden.engine.snapshot import _build_alter_default_sql
+        upgrade, rollback = _build_alter_default_sql(
+            "t", "c", "42", backend,
+        )
+        assert "ALTER COLUMN" in upgrade
+        assert "SET DEFAULT 42" in upgrade
+        assert "ALTER COLUMN" in rollback
+        assert "DROP DEFAULT" in rollback
+
+    def test_mysql_alter_default_fallback_no_col_type(self):
+        """MySQL emits a hard-failure comment when type info is missing."""
+        from dbwarden.engine.snapshot import _build_alter_default_sql
+        upgrade, rollback = _build_alter_default_sql(
+            "t", "c", "42", "mysql",
+        )
+        assert upgrade.startswith("-- MANUAL ACTION REQUIRED:")
+        assert rollback.startswith("-- MANUAL ACTION REQUIRED:")
+        assert "REQUIRES MANUAL COLUMN DEFINITION" in upgrade
+
+    def test_mysql_alter_default_drop_with_col_type(self):
+        """MySQL DROP DEFAULT emits MODIFY COLUMN with full definition."""
+        from dbwarden.engine.snapshot import _build_alter_default_sql
+        upgrade, rollback = _build_alter_default_sql(
+            "t", "c", None, "mysql",
+            col_type="INT", nullable=True,
+        )
+        assert "MODIFY COLUMN c INT NULL" in upgrade
+        assert "REQUIRES MANUAL COLUMN DEFINITION" in rollback
+
+    def test_mysql_alter_default_drop_without_col_type(self):
+        from dbwarden.engine.snapshot import _build_alter_default_sql
+        upgrade, rollback = _build_alter_default_sql("t", "c", None, "mysql")
+        assert upgrade.startswith("-- MANUAL ACTION REQUIRED:")
+        assert rollback.startswith("-- MANUAL ACTION REQUIRED:")
+
+    def test_missing_def_placeholder_returns_non_executable(self):
+        """Placeholder values should not look like valid SQL."""
+        from dbwarden.engine.snapshot import _missing_def_placeholder
+        mysql_pl = _missing_def_placeholder("mysql")
+        assert "/*" in mysql_pl and "*/" in mysql_pl
+        assert "???" not in mysql_pl
+        assert "REQUIRES" in mysql_pl
+        other_pl = _missing_def_placeholder("postgresql")
+        assert "<original_def_unavailable>" in other_pl
+        assert "???" not in other_pl
+
+    def test_assert_complete_mysql_type_valid(self):
+        """Valid MySQL types should not raise."""
+        from dbwarden.engine.snapshot import _assert_complete_mysql_type
+        _assert_complete_mysql_type("VARCHAR(255)")
+        _assert_complete_mysql_type("INT")
+        _assert_complete_mysql_type("BIGINT UNSIGNED")
+        _assert_complete_mysql_type("TEXT")
+        _assert_complete_mysql_type("DECIMAL(10,2)")
+        _assert_complete_mysql_type("ENUM('a','b')")
+
+    def test_assert_complete_mysql_type_invalid(self):
+        """Bare VARCHAR/CHAR without length should raise ValueError."""
+        from dbwarden.engine.snapshot import _assert_complete_mysql_type
+        with pytest.raises(ValueError, match="VARCHAR"):
+            _assert_complete_mysql_type("VARCHAR")
+        with pytest.raises(ValueError, match="CHAR"):
+            _assert_complete_mysql_type("CHAR")
+        with pytest.raises(ValueError, match="ENUM"):
+            _assert_complete_mysql_type("ENUM")
+
+    def test_quote_default_for_sql_string_literals(self):
+        """String literals are quoted; numbers/keywords/functions are not."""
+        from dbwarden.engine.snapshot import _quote_default_for_sql as q
+        assert q("hello") == "'hello'"
+        assert q("42") == "42"
+        assert q("TRUE") == "TRUE"
+        assert q("now()") == "now()"
+        assert q("CURRENT_TIMESTAMP") == "CURRENT_TIMESTAMP"
+        assert q("it's") == "'it''s'"
+        assert q("") == "NULL"
+        assert q("  ") == "NULL"
+
+    def test_mysql_alter_type_rejects_bare_varchar(self):
+        """MySQL type-change generation should reject bare VARCHAR."""
+        from dbwarden.engine.snapshot import _build_alter_type_sql
+        with pytest.raises(ValueError, match="VARCHAR"):
+            _build_alter_type_sql(
+                "t", "c", "VARCHAR", "mysql",
+                old_type="VARCHAR(255)",
+            )
+
+    def test_mysql_alter_type_rejects_bare_old_type(self):
+        from dbwarden.engine.snapshot import _build_alter_type_sql
+        with pytest.raises(ValueError, match="VARCHAR"):
+            _build_alter_type_sql(
+                "t", "c", "TEXT", "mysql",
+                old_type="VARCHAR",
+            )
+
+    def test_mysql_composite_pk_autoincrement_uses_snapshot_pk_count(self):
+        import dbwarden.engine.snapshot as snapshot_module
+        model_tables = [
+            ModelTable(
+                name="join_table",
+                columns=[
+                    ModelColumn("left_id", "BIGINT", False, True, False, None, None, autoincrement=False),
+                    ModelColumn("right_id", "BIGINT", False, True, False, None, None, autoincrement=False),
+                ],
+            )
+        ]
+        snapshot = {
+            "tables": {
+                "join_table": {
+                    "columns": {
+                        "left_id": {"type": "BIGINT", "nullable": False, "primary_key": True, "autoincrement": True},
+                        "right_id": {"type": "BIGINT", "nullable": False, "primary_key": True, "autoincrement": True},
+                    }
+                }
+            }
+        }
+        original_get_backend = snapshot_module._get_backend
+        snapshot_module._get_backend = lambda _name: "mysql"
+        try:
+            upgrade_ops, rollback_ops = diff_models_against_snapshot(model_tables, snapshot, db_name="primary")
+        finally:
+            snapshot_module._get_backend = original_get_backend
+        assert not any(op["type"] == "alter_column_autoincrement" for op in upgrade_ops)
+        assert not any(op["type"] == "alter_column_autoincrement" for op in rollback_ops)
+
+    def test_check_migration_scope_warns_large_drift(self):
+        """Large migrations produce warnings."""
+        from dbwarden.commands.make_migrations import _check_migration_scope
+        ops = []
+        for i in range(10):
+            ops.append({"type": "create_table", "table": f"t{i}"})
+        for i in range(8):
+            ops.append({"type": "drop_table", "table": f"t{i}"})
+        for i in range(6):
+            ops.append({"type": "drop_column", "table": "t", "column": f"c{i}"})
+        warnings = _check_migration_scope(ops)
+        assert any("creates 10 tables" in w for w in warnings)
+        assert any("drops 8 tables" in w for w in warnings)
+        assert any("drops 6 columns" in w for w in warnings)
+
+    def test_check_migration_scope_no_warnings_small(self):
+        """Small focused migrations produce no warnings."""
+        from dbwarden.commands.make_migrations import _check_migration_scope
+        ops = [{"type": "create_table", "table": "t"}]
+        warnings = _check_migration_scope(ops)
+        assert len(warnings) == 0
+
+    def test_build_migration_plan_has_summary(self):
+        """Migration plan includes summary with operation counts."""
+        from dbwarden.commands.make_migrations import build_migration_plan
+        from dbwarden.engine.migration_name import Change
+        changes = [
+            Change(operation="create_table", table="users"),
+            Change(operation="add_column", table="users", target="email"),
+        ]
+        plan = build_migration_plan("test_migration", changes, "SELECT 1")
+        assert "summary" in plan
+        summary = plan["summary"]
+        assert summary["total_operations"] == 2
+        assert summary["create_tables"] == 1
+        assert summary["drop_tables"] == 0
+        assert summary["drop_columns"] == 0

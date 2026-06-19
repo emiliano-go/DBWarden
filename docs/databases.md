@@ -114,6 +114,8 @@ def get_engine(config):
     return create_engine(url)
 ```
 
+Connections include retry logic: `get_db_connection()` wraps engine connections with up to 5 attempts and exponential backoff when the database is temporarily unavailable (e.g. during a restart or network hiccup). Engines are cached and reused across calls.
+
 For PostgreSQL schema support, DBWarden sets `search_path` on connection when `postgres_schema` is configured.
 
 ## Development Database Strategy

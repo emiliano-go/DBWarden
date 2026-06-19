@@ -144,7 +144,7 @@ Snapshots also enable `make-migrations` to detect when a column's **type**, **nu
 - **Nullable flag**: If nullable differs, `SET NOT NULL` or `DROP NOT NULL` is generated.
 - **Default value**: If the default differs, `SET DEFAULT` or `DROP DEFAULT` is generated.
 
-These operations are emitted only when a snapshot exists. Without a snapshot (the live-DB fallback path), only new and dropped columns are detected.
+When a cached snapshot exists, these operations are compared against the historical schema. Without a cached snapshot, `make-migrations` takes a full schema snapshot from the live database internally and detects column-level changes (type, nullability, default) from that live snapshot. Only rename detection requires a cached snapshot.
 
 ### Foreign key and index change detection
 
@@ -179,7 +179,7 @@ The snapshot is written **after** all pending migrations have been applied. If t
 
 `make-migrations` uses `find_latest_snapshot()` which scans `.dbwarden/schemas/` for snapshot files matching the current database name and picks the one with the highest version prefix (e.g., `0003` > `0002`).
 
-If no snapshot exists for the database, `make-migrations` falls back to diffing against the live database (which does not include rename detection).
+If no snapshot exists for the database, `make-migrations` takes a full schema snapshot from the live database internally and runs the standard diff pipeline against it. This enables column-level change detection (type, nullability, default). Only rename detection requires a cached snapshot.
 
 ## Snapshot lifecycle summary
 
@@ -233,7 +233,7 @@ This normalization is what powers the rename detection: two columns with the sam
 - **SQLite FKs**: A comment is emitted suggesting table recreation (not directly alterable).
 
 ### Column-level change detection
-- **Snapshot required**: Column-level diff (type, nullability, default) only works when a snapshot exists. Without a snapshot, only new and dropped columns are detected.
+- **Cached snapshot not required**: Column-level diff works with a live snapshot taken automatically by `make-migrations`. A cached snapshot enables rename detection in addition to column-level diff.
 - **Backend limits**: Type changes emit different SQL per backend. SQLite emits comment-only placeholders for type and nullable changes. ClickHouse auto-generates `MODIFY COLUMN` for type, nullable, and LowCardinality changes. Default changes work uniformly across all backends.
 
 ### Integrity

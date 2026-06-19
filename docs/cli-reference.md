@@ -109,7 +109,7 @@ $ dbwarden generate-models --database primary --tables users,posts
 $ dbwarden generate-models --database primary --exclude-tables logs,audit
 ```
 
-Options: `--output`/`-o` (default `models`), `--tables`, `--exclude-tables`, `--clickhouse-engines`, `--relationships`, `--dialect`, `--single-file`, `--database`/`-d`
+Options: `--output`/`-o` (default `models`), `--tables`, `--exclude-tables`, `--clickhouse-engines`, `--relationships`, `--dialect`, `--single-file`, `--base`, `--database`/`-d`
 
 ### `export-models`
 

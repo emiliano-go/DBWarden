@@ -13,8 +13,12 @@ def test_parse_integer():
 
 def test_parse_string():
     assert _parse_type("VARCHAR(100)") == "String(length=100)"
-    assert _parse_type("CHAR(10)") == "String(length=10)"
+    assert _parse_type("CHAR(10)") == "CHAR(length=10)"
     assert _parse_type("TEXT") == "Text"
+
+
+def test_parse_enum_values():
+    assert _parse_type("ENUM('user','agency')") == "Enum('user','agency')"
 
 
 def test_parse_boolean():
@@ -68,6 +72,58 @@ def test_generate_table_code_simple():
     assert "__tablename__ = 'users'" in code
     assert "primary_key=True" in code
     assert "String(length=100)" in code
+
+
+def test_generate_table_code_with_mysql_enum_and_char():
+    columns = [
+        {"name": "recipient_type", "type": "ENUM('user','agency')", "nullable": False, "default": None, "primary_key": False, "unique": False, "foreign_key": None, "dialect": "mysql"},
+        {"name": "token", "type": "CHAR(64)", "nullable": False, "default": None, "primary_key": False, "unique": False, "foreign_key": None, "dialect": "mysql"},
+    ]
+    code = _generate_table_code("notifications_sync_messages", columns)
+    assert "Enum('user','agency')" in code
+    assert "CHAR(length=64)" in code
+
+
+def test_parse_mediumtext():
+    assert _parse_type("MEDIUMTEXT") == "Text"
+
+
+def test_generate_table_code_mysql_unsigned():
+    columns = [
+        {"name": "id", "type": "INTEGER", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None, "my_meta": {"my_unsigned": True}},
+    ]
+    code = _generate_table_code("users", columns)
+    assert "mysql_unsigned=True" in code
+
+
+def test_generate_table_code_mysql_charset():
+    columns = [
+        {"name": "name", "type": "VARCHAR(100)", "nullable": True, "default": None, "primary_key": False, "unique": False, "foreign_key": None, "my_meta": {"my_charset": "utf8", "my_collate": "utf8_unicode_ci"}},
+    ]
+    code = _generate_table_code("users", columns)
+    assert "mysql_charset='utf8'" in code
+    assert "mysql_collate='utf8_unicode_ci'" in code
+
+
+def test_generate_table_code_mysql_on_update():
+    columns = [
+        {"name": "updated_at", "type": "DATETIME", "nullable": True, "default": None, "primary_key": False, "unique": False, "foreign_key": None, "my_meta": {"my_on_update": "CURRENT_TIMESTAMP"}},
+    ]
+    code = _generate_table_code("users", columns)
+    assert "server_onupdate=func.now()" in code
+
+
+def test_generate_table_code_mysql_all_attrs():
+    columns = [
+        {"name": "id", "type": "INTEGER", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None, "dialect": "mysql", "my_meta": {"my_unsigned": True}},
+        {"name": "name", "type": "VARCHAR(100)", "nullable": False, "default": None, "primary_key": False, "unique": False, "foreign_key": None, "dialect": "mysql", "my_meta": {"my_charset": "utf8", "my_collate": "utf8_unicode_ci"}},
+        {"name": "updated_at", "type": "DATETIME", "nullable": True, "default": None, "primary_key": False, "unique": False, "foreign_key": None, "dialect": "mysql", "my_meta": {"my_on_update": "CURRENT_TIMESTAMP"}},
+    ]
+    code = _generate_table_code("users", columns)
+    assert "mysql_unsigned=True" in code
+    assert "mysql_charset='utf8'" in code
+    assert "mysql_collate='utf8_unicode_ci'" in code
+    assert "server_onupdate=func.now()" in code
 
 
 def test_generate_table_code_with_foreign_key():
@@ -536,3 +592,101 @@ class TestClickHouseGenerateModels:
         assert "class MvName(Base):" in code
         assert "ch_select_statement" in code
         assert "__tablename__ = 'mv_name'" in code
+
+
+class TestPkFallbackInference:
+    def test_unique_not_null_becomes_pk(self):
+        from dbwarden.commands.generate_models import _infer_primary_key
+        result = _infer_primary_key(
+            set(),
+            [{"column_names": ["id_novedad"]}],
+            [{"name": "id_novedad", "nullable": False},
+             {"name": "titulo", "nullable": False}],
+        )
+        assert result == {"id_novedad"}
+
+    def test_unique_nullable_becomes_pk(self):
+        from dbwarden.commands.generate_models import _infer_primary_key
+        result = _infer_primary_key(
+            set(),
+            [{"column_names": ["slug"]}],
+            [{"name": "slug", "nullable": True},
+             {"name": "name", "nullable": False}],
+        )
+        assert result == {"slug"}
+
+    def test_id_column_fallback(self):
+        from dbwarden.commands.generate_models import _infer_primary_key
+        result = _infer_primary_key(
+            set(),
+            [],
+            [{"name": "id", "nullable": True},
+             {"name": "name", "nullable": False}],
+        )
+        assert result == {"id"}
+
+    def test_suffix_id_fallback(self):
+        from dbwarden.commands.generate_models import _infer_primary_key
+        result = _infer_primary_key(
+            set(),
+            [],
+            [{"name": "property_id", "nullable": False},
+             {"name": "name", "nullable": False}],
+        )
+        assert result == {"property_id"}
+
+    def test_first_non_nullable_column_fallback(self):
+        from dbwarden.commands.generate_models import _infer_primary_key
+        result = _infer_primary_key(
+            set(),
+            [],
+            [{"name": "a", "nullable": True},
+             {"name": "b", "nullable": False},
+             {"name": "c", "nullable": True}],
+        )
+        assert result == {"b"}
+
+    def test_first_column_last_resort(self):
+        from dbwarden.commands.generate_models import _infer_primary_key
+        result = _infer_primary_key(
+            set(),
+            [],
+            [{"name": "numero_raw", "nullable": True}],
+        )
+        assert result == {"numero_raw"}
+
+    def test_multi_column_unique_becomes_composite_pk(self):
+        from dbwarden.commands.generate_models import _infer_primary_key
+        result = _infer_primary_key(
+            set(),
+            [{"column_names": ["ip_from", "ip_to"]}],
+            [{"name": "ip_from", "nullable": True},
+             {"name": "ip_to", "nullable": True},
+             {"name": "country_code", "nullable": True}],
+        )
+        assert result == {"ip_from", "ip_to"}
+
+    def test_existing_pk_is_unchanged(self):
+        from dbwarden.commands.generate_models import _infer_primary_key
+        result = _infer_primary_key(
+            {"id"},
+            [{"column_names": ["slug"]}],
+            [{"name": "id", "nullable": False},
+             {"name": "slug", "nullable": False}],
+        )
+        assert result == {"id"}
+
+    def test_prefers_unique_not_null_over_id(self):
+        from dbwarden.commands.generate_models import _infer_primary_key
+        result = _infer_primary_key(
+            set(),
+            [{"column_names": ["code"]}],
+            [{"name": "id", "nullable": True},
+             {"name": "code", "nullable": False}],
+        )
+        assert result == {"code"}
+
+    def test_empty_returns_empty(self):
+        from dbwarden.commands.generate_models import _infer_primary_key
+        result = _infer_primary_key(set(), [], [])
+        assert result == set()

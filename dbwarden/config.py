@@ -79,6 +79,7 @@ class _ResolvedSource:
 _USE_DEV_DATABASE = False
 _STRICT_TRANSLATION = False
 _RESOLVED_SOURCE_CACHE: _ResolvedSource | None = None
+_MULTI_DB_CONFIG_CACHE: MultiDbConfig | None = None
 
 
 def set_dev_mode(enabled: bool) -> None:
@@ -100,8 +101,9 @@ def is_strict_translation() -> bool:
 
 
 def _clear_source_cache() -> None:
-    global _RESOLVED_SOURCE_CACHE
+    global _RESOLVED_SOURCE_CACHE, _MULTI_DB_CONFIG_CACHE
     _RESOLVED_SOURCE_CACHE = None
+    _MULTI_DB_CONFIG_CACHE = None
 
 
 register_reset_hook(_clear_source_cache)
@@ -584,6 +586,10 @@ def _finalize_entries(
 
 
 def get_multi_db_config() -> MultiDbConfig:
+    global _MULTI_DB_CONFIG_CACHE
+    if _MULTI_DB_CONFIG_CACHE is not None:
+        return _MULTI_DB_CONFIG_CACHE
+
     source = _resolve_source()
     variable_value_expressions: list[dict[str, str]] | None = None
     if source.kind == "file":
@@ -593,7 +599,8 @@ def get_multi_db_config() -> MultiDbConfig:
     reset_registry()
     base_dir = _import_source(source)
     entries = registered_entries()
-    return _finalize_entries(entries, base_dir, variable_value_expressions)
+    _MULTI_DB_CONFIG_CACHE = _finalize_entries(entries, base_dir, variable_value_expressions)
+    return _MULTI_DB_CONFIG_CACHE
 
 
 def display_value(db: DatabaseConfig, field_name: str, value: Any) -> Any:

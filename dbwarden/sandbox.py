@@ -282,6 +282,18 @@ def load_model_module(filepath: Path, base_dir: Path) -> Any:
     """
     validate_model_path(filepath, base_dir)
 
+    # Derive a module name for cache lookups and registration.
+    # Files outside base_dir (e.g. /tmp during tests) get no cache key.
+    try:
+        module_name = _module_name_for_path(filepath, base_dir)
+    except ValueError:
+        module_name = None
+
+    # Return cached module if already loaded to avoid duplicate table
+    # registration on the shared declarative Base.metadata.
+    if module_name is not None and module_name in sys.modules:
+        return sys.modules[module_name]
+
     # Check DBWARDEN_DISABLE_SANDBOX env var
     if os.environ.get("DBWARDEN_DISABLE_SANDBOX"):
         return _unsafe_load_model(filepath, base_dir)
@@ -289,18 +301,22 @@ def load_model_module(filepath: Path, base_dir: Path) -> Any:
     try:
         import importlib.util
 
-        module_name = _module_name_for_path(filepath, base_dir)
-        spec = importlib.util.spec_from_file_location(module_name, filepath)
+        name = module_name or f"_dbwarden_imported_{filepath.stem}"
+        spec = importlib.util.spec_from_file_location(name, filepath)
         if spec is None or spec.loader is None:
             logger.warning("Could not create module spec for model: %s", filepath)
             return None
 
         module = importlib.util.module_from_spec(spec)
+        if module_name is not None:
+            sys.modules[module_name] = module
         spec.loader.exec_module(module)
 
         return module
     except Exception as e:
         logger.warning("Failed to load model %s: %s", filepath, e)
+        if module_name is not None and module_name in sys.modules:
+            del sys.modules[module_name]
         return None
 
 
@@ -310,7 +326,10 @@ def _unsafe_load_model(filepath: Path, base_dir: Optional[Path] = None) -> Any:
 
     module_name = "models"
     if base_dir is not None:
-        module_name = _module_name_for_path(filepath, base_dir)
+        try:
+            module_name = _module_name_for_path(filepath, base_dir)
+        except ValueError:
+            pass  # file not under base_dir; use fallback name
 
     spec = importlib.util.spec_from_file_location(module_name, filepath)
     if spec is None or spec.loader is None:

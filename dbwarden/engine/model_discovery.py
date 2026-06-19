@@ -31,8 +31,45 @@ from dbwarden.schema import (
     apply_meta,
     read_meta,
 )
+from dbwarden.schema._base import attach_meta
+from dbwarden.schema._meta_reader import (
+    _build_dbwarden_meta,
+    _collect_meta_chain,
+    _get_backend_for_class,
+    _merge_meta_class,
+    _type_check_field_attrs,
+    _write_column_info,
+)
 
 Base = declarative_base()
+
+
+def _apply_meta_fast(cls: type) -> None:
+    if getattr(cls, "__dbwarden_meta_applied__", False):
+        return
+
+    meta_chain = _collect_meta_chain(cls)
+    if not meta_chain:
+        return
+
+    backend = _get_backend_for_class(cls)
+    merged_table: dict[str, Any] = {}
+    merged_fields: dict[str, dict[str, Any]] = {}
+
+    for meta_cls in reversed(meta_chain):
+        _merge_meta_class(meta_cls, merged_table, merged_fields, backend=backend)
+
+    table_obj = getattr(cls, "__table__", None)
+    if table_obj is not None:
+        column_names = {c.name for c in table_obj.columns}
+        for field_name, attrs in merged_fields.items():
+            if field_name not in column_names:
+                continue
+            _type_check_field_attrs(field_name, attrs, cls)
+            _write_column_info(table_obj.c[field_name], attrs)
+
+    attach_meta(cls, _build_dbwarden_meta(merged_table))
+    cls.__dbwarden_meta_applied__ = True
 
 VALID_IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
@@ -75,6 +112,7 @@ def _get_backend_name(db_name: str | None = None) -> str:
 def _map_sqlalchemy_type_to_backend(
     type_str: str, is_primary_key: bool = False, db_name: str | None = None,
     autoincrement: bool | None = None,
+    backend: str | None = None,
 ) -> str:
     """
     Map SQLAlchemy type strings to backend-specific types.
@@ -88,7 +126,7 @@ def _map_sqlalchemy_type_to_backend(
     Returns:
         Backend-specific type string.
     """
-    backend = _get_backend_name(db_name)
+    backend = backend or _get_backend_name(db_name)
 
     if backend == "postgresql":
         type_upper = type_str.upper()
@@ -786,20 +824,21 @@ def get_all_model_tables(
             if module is None:
                 continue
 
-            for attr_name in dir(module):
-                attr = getattr(module, attr_name)
-                if (
-                    isinstance(attr, type)
-                    and hasattr(attr, "__tablename__")
-                    and hasattr(attr, "__table__")
-                    and attr.__tablename__ is not None
-                ):
-                    if attr.__tablename__ in seen_tables:
-                        continue
-                    seen_tables.add(attr.__tablename__)
-                    table = extract_table_from_model(attr, db_name=db_name)
-                    if table:
-                        tables.append(table)
+            for attr in module.__dict__.values():
+                if not isinstance(attr, type):
+                    continue
+                if getattr(attr, "__module__", None) != getattr(module, "__name__", None):
+                    continue
+                tablename = getattr(attr, "__tablename__", None)
+                table_obj = getattr(attr, "__table__", None)
+                if tablename is None or table_obj is None:
+                    continue
+                if tablename in seen_tables:
+                    continue
+                seen_tables.add(tablename)
+                table = extract_table_from_model(attr, db_name=db_name)
+                if table:
+                    tables.append(table)
 
     return tables
 
@@ -916,15 +955,30 @@ def extract_table_from_model(
         ModelTable object or None if extraction fails.
     """
     try:
-        apply_meta(model_class)
+        import os
+        import time
+
+        debug_timing = os.environ.get("DBWARDEN_DEBUG_TIMING")
+        start = time.time()
+        _apply_meta_fast(model_class)
+        if debug_timing:
+            print(f"TIMING {model_class.__name__} apply_meta {time.time() - start:.3f}s", flush=True)
+            start = time.time()
         dw_meta = read_meta(model_class)
+        if debug_timing:
+            print(f"TIMING {model_class.__name__} read_meta {time.time() - start:.3f}s", flush=True)
+            start = time.time()
+        backend = _get_backend_name(db_name)
         table_name = model_class.__tablename__
         columns = []
 
         for column in model_class.__table__.columns:
-            col = extract_column_info(column, db_name=db_name)
+            col = extract_column_info(column, db_name=db_name, backend=backend)
             if col:
                 columns.append(col)
+        if debug_timing:
+            print(f"TIMING {model_class.__name__} columns {len(columns)} {time.time() - start:.3f}s", flush=True)
+            start = time.time()
 
         # Extract FK info from parsed column.foreign_key strings
         foreign_keys: list[dict[str, Any]] = []
@@ -972,10 +1026,13 @@ def extract_table_from_model(
                         if info.column_sorting is None:
                             info.column_sorting = {}
                         info.column_sorting[expr.name] = " ".join(sorting_parts)
-            if _get_backend_name(db_name) == "clickhouse":
+            if backend == "clickhouse":
                 info.clickhouse_type = idx.info.get("clickhouse_type", "minmax")
                 info.clickhouse_granularity = idx.info.get("clickhouse_granularity", 1)
             indexes.append(info)
+        if debug_timing:
+            print(f"TIMING {model_class.__name__} indexes {len(indexes)} {time.time() - start:.3f}s", flush=True)
+            start = time.time()
 
         clickhouse_options = {}
         object_type = "table"
@@ -1031,9 +1088,11 @@ def extract_table_from_model(
                     if k.startswith("my_") and k != "my_indexes" and v is not None
                 }
 
-        if _get_backend_name(db_name) == "clickhouse":
+        if backend == "clickhouse":
             clickhouse_options = _ch_options_from_meta(model_class)
             object_type = _detect_ch_object_type(clickhouse_options)
+        if debug_timing:
+            print(f"TIMING {model_class.__name__} finalize {time.time() - start:.3f}s", flush=True)
 
         return ModelTable(
             name=table_name,
@@ -1055,7 +1114,11 @@ def extract_table_from_model(
         return None
 
 
-def extract_column_info(column, db_name: str | None = None) -> Optional[ModelColumn]:
+def extract_column_info(
+    column,
+    db_name: str | None = None,
+    backend: str | None = None,
+) -> Optional[ModelColumn]:
     """
     Extract column information from a SQLAlchemy column.
 
@@ -1069,7 +1132,7 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
     try:
         name = column.name
         type_str = str(column.type)
-        backend = _get_backend_name(db_name)
+        backend = backend or _get_backend_name(db_name)
         if backend == "postgresql":
             item_type = getattr(column.type, "item_type", None)
             if item_type is not None:
@@ -1080,7 +1143,7 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
                 type_str = "jsonb"
             elif getattr(column.type, "timezone", False):
                 type_str = "timestamptz"
-        if _get_backend_name(db_name) == "clickhouse":
+        if backend == "clickhouse":
             clickhouse_type_override = column.info.get("clickhouse_type")
             if isinstance(clickhouse_type_override, str) and clickhouse_type_override.strip():
                 type_str = clickhouse_type_override.strip()
@@ -1135,14 +1198,32 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
                     match = re.search(r"CallableColumnDefault\((.+)\)", default_str)
                     if match:
                         default = None
+            elif default_str.startswith("ColumnElementColumnDefault"):
+                # Handle ColumnElementColumnDefault wrapping SQL expressions like func.now()
+                # String repr looks like: ColumnElementColumnDefault(<sqlalchemy.sql.functions.now at 0x...; now>)
+                import re
+
+                match = re.search(r";\s*(\w+)\s*>", default_str)
+                if match:
+                    extracted = match.group(1)
+                    # Wrap in parens if it looks like a function call
+                    if extracted.upper() in ("CURRENT_TIMESTAMP", "CURRENT_DATE", "CURRENT_TIME"):
+                        default = extracted.upper()
+                    else:
+                        default = f"{extracted}()"
+                else:
+                    default = default_str
             else:
                 default = default_str
-        elif backend == "postgresql" and column.server_default is not None:
+        if column.server_default is not None and default is None:
             default = str(column.server_default.arg)
 
         type_str = _map_sqlalchemy_type_to_backend(
-            type_str, is_primary_key=primary_key, db_name=db_name,
+            type_str,
+            is_primary_key=primary_key,
+            db_name=db_name,
             autoincrement=autoincrement,
+            backend=backend,
         )
 
         if _get_backend_name(db_name) == "sqlite":
@@ -1183,7 +1264,7 @@ def extract_column_info(column, db_name: str | None = None) -> Optional[ModelCol
         pg_meta: dict[str, Any] = {}
         ch_meta: dict[str, Any] = {}
         my_meta: dict[str, Any] = {}
-        if _get_backend_name(db_name) == "clickhouse":
+        if backend == "clickhouse":
             ch_codec = column.info.get("ch_codec")
             if isinstance(ch_codec, str) and ch_codec.strip():
                 codec = ch_codec.strip()

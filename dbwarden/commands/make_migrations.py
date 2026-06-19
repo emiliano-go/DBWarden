@@ -20,6 +20,7 @@ from dbwarden.engine.model_discovery import (
     generate_add_column_sql,
     extract_tables_from_migrations,
     extract_tables_from_database,
+    _extract_create_table_columns,
 )
 from dbwarden.engine.migration_name import Change, autogenerate_migration_name
 from dbwarden.engine.version import (
@@ -702,6 +703,18 @@ def make_migrations_cmd(
     state_path.write_text(json.dumps(state, indent=2, default=str) + "\n")
     logger.info(f"Model state written: {state_path}")
 
+    try:
+        from dbwarden.engine.snapshot import write_snapshot
+        snapshot = model_state_to_dict(tables, dbwarden_version=__version__)
+        snapshot["format_version"] = 1
+        write_snapshot(
+            snapshot,
+            database=database,
+            migration_id=Path(filename).stem,
+        )
+    except Exception:
+        logger.exception("Failed to write schema snapshot")
+
 
 def _resolve_migration_description(
     description: str | None,
@@ -722,9 +735,24 @@ def build_migration_plan(
 ) -> dict[str, object]:
     operations = [_build_plan_operation(change) for change in changes]
     checksum = calculate_checksum([upgrade_sql]) if upgrade_sql.strip() else calculate_checksum([])
+
+    op_types: dict[str, int] = {}
+    for op in operations:
+        t = op["type"]
+        op_types[t] = op_types.get(t, 0) + 1
+
+    summary = {
+        "total_operations": len(operations),
+        "operation_counts": op_types,
+        "create_tables": op_types.get("create_table", 0),
+        "drop_tables": op_types.get("drop_table", 0),
+        "drop_columns": op_types.get("drop_column", 0),
+    }
+
     return {
         "migration_id": migration_id,
         "operations": operations,
+        "summary": summary,
         "required_flags": [],
         "checksum": checksum,
     }
@@ -777,6 +805,43 @@ def _check_recreate_rename_conflict(
         )
 
 
+def _check_migration_scope(upgrade_ops: list[dict[str, Any]],
+                           database: str | None = None) -> list[str]:
+    """Warn about unusually large or destructive migrations.
+
+    Returns a list of warning messages. Does not block generation.
+    """
+    warnings: list[str] = []
+    create_tables = [op for op in upgrade_ops if op["type"] == "create_table"]
+    drop_tables = [op for op in upgrade_ops if op["type"] == "drop_table"]
+    drop_cols = [op for op in upgrade_ops if op["type"] == "drop_column"]
+    total_ops = len(upgrade_ops)
+
+    if len(create_tables) > 5:
+        warnings.append(
+            f"Migration creates {len(create_tables)} tables ({create_tables[0]['table']}, ...). "
+            "Large schema additions may indicate un-scoped model diffing."
+        )
+    if len(drop_tables) > 3:
+        tables_list = ", ".join(t["table"] for t in drop_tables[:5])
+        warnings.append(
+            f"Migration drops {len(drop_tables)} tables ({tables_list}, ...). "
+            "This may include tables that should be excluded via model_tables."
+        )
+    if len(drop_cols) > 3:
+        cols_list = ", ".join(f"{c['table']}.{c['column']}" for c in drop_cols[:5])
+        warnings.append(
+            f"Migration drops {len(drop_cols)} columns ({cols_list}, ...). "
+            "Dropping many columns can cause application failures."
+        )
+    if total_ops > 30:
+        warnings.append(
+            f"Migration has {total_ops} operations. Consider splitting into smaller, "
+            "focused migrations."
+        )
+    return warnings
+
+
 def _build_table_rename_ops(
     confirmed_table_intents: set[tuple[str, str]],
     table_resolved_from_map: dict[tuple[str, str], str] | None = None,
@@ -815,6 +880,75 @@ def _build_plan_operation(change: Change) -> dict[str, str]:
     if change.operation == "rename_table":
         operation["old_table"] = change.table
     return operation
+
+
+_ALTER_ADD_COLUMN_RE = re.compile(
+    r"ALTER\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(\S+)\s+ADD\s+(?:COLUMN\s+)?(\S+)",
+    re.IGNORECASE,
+)
+
+
+def _merge_pending_migrations_into_snapshot(
+    snapshot: dict[str, Any],
+    migrations_dir: str,
+) -> None:
+    from dbwarden.engine.file_parser import parse_upgrade_statements
+
+    if not os.path.exists(migrations_dir):
+        return
+
+    tables = snapshot.setdefault("tables", {})
+
+    for filename in sorted(os.listdir(migrations_dir)):
+        if not filename.endswith(".sql"):
+            continue
+        filepath = os.path.join(migrations_dir, filename)
+        statements = parse_upgrade_statements(filepath)
+
+        for stmt in statements:
+            stmt = stmt.strip()
+            if not stmt:
+                continue
+            table_name, col_names = _extract_create_table_columns(stmt)
+            if table_name and col_names and table_name not in tables:
+                col_dict: dict[str, dict[str, Any]] = {}
+                for col_name in col_names:
+                    col_dict[col_name] = {
+                        "type": "unknown",
+                        "nullable": True,
+                        "primary_key": False,
+                    }
+                tables[table_name] = {
+                    "columns": col_dict,
+                    "primary_key": [],
+                    "comment": None,
+                }
+                continue
+
+            m = _ALTER_ADD_COLUMN_RE.match(stmt)
+            if m:
+                tbl_name = m.group(1).strip('"`\'')
+                col_name = m.group(2).strip('"`\'')
+                if tbl_name in tables:
+                    existing_cols = tables[tbl_name].setdefault("columns", {})
+                    if col_name not in existing_cols:
+                        existing_cols[col_name] = {
+                            "type": "unknown",
+                            "nullable": True,
+                            "primary_key": False,
+                        }
+                else:
+                    tables[tbl_name] = {
+                        "columns": {
+                            col_name: {
+                                "type": "unknown",
+                                "nullable": True,
+                                "primary_key": False,
+                            }
+                        },
+                        "primary_key": [],
+                        "comment": None,
+                    }
 
 
 def generate_migration_sql(
@@ -893,6 +1027,9 @@ def generate_migration_sql(
         except Exception:
             snapshot = None
 
+    if snapshot is not None and migrations_dir:
+        _merge_pending_migrations_into_snapshot(snapshot, migrations_dir)
+
     if snapshot is not None:
         try:
             upgrade_ops, rollback_ops = diff_models_against_snapshot(
@@ -905,6 +1042,10 @@ def generate_migration_sql(
                 )
 
             _check_recreate_rename_conflict(upgrade_ops, confirmed_table_intents)
+
+            # Warn about unusually large or destructive migrations
+            for warn in _check_migration_scope(upgrade_ops, database=database):
+                logger.warning(warn)
 
             # Prepend table rename ops to the diff output
             table_rename_ops = _build_table_rename_ops(confirmed_table_intents, table_resolved_from_map)

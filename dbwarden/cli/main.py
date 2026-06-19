@@ -114,6 +114,10 @@ def generate_models(
     single_file: bool = typer.Option(
         False, "--single-file", help="Generate a single models.py file"
     ),
+    base: str | None = typer.Option(
+        None, "--base",
+        help="Custom Base class import path (e.g. 'app.core.database:Base' or 'app.database:DeclarativeBase')",
+    ),
     database: str | None = typer.Option(
         None, "--database", "-d", help="Target database name"
     ),
@@ -128,6 +132,7 @@ def generate_models(
         relationships=relationships,
         dialect=dialect,
         single_file=single_file,
+        base=base,
         database=database,
     )
 

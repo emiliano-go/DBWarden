@@ -8,6 +8,11 @@ from dbwarden.database.queries import QueryMethod, get_query
 from dbwarden.models import MigrationRecord
 
 
+def _is_mysql_ddl(statement: str) -> bool:
+    s = statement.strip().upper()
+    return any(s.startswith(kw) for kw in ("ALTER", "CREATE", "DROP", "TRUNCATE", "RENAME", "LOCK"))
+
+
 def run_migration(
     sql_statements: list[str],
     version: Optional[str],
@@ -20,13 +25,50 @@ def run_migration(
     
     All statements are executed in a single transaction.
     If any statement fails, the entire migration is rolled back.
+
+    Note: MySQL/MariaDB DDL statements (ALTER, CREATE, DROP, etc.)
+    implicitly commit the current transaction and destroy any
+    active savepoints. For MySQL/MariaDB, savepoints are disabled
+    and DDL statements are executed individually (they auto-commit).
     """
     from dbwarden.engine.checksum import calculate_checksum
     from dbwarden.engine.file_parser import get_description_from_filename
     from dbwarden.logging import get_logger
 
     with get_db_connection(db_name) as connection:
-        # Use savepoint for all-or-nothing behavior (not supported by ClickHouse)
+        is_mysql = connection.dialect.name in ("mysql", "mariadb")
+
+        if is_mysql:
+            try:
+                for statement in sql_statements:
+                    connection.execute(text(statement))
+
+                if migration_operation == "upgrade":
+                    description = get_description_from_filename(filename)
+                    checksum = calculate_checksum(sql_statements)
+
+                    connection.execute(
+                        text(get_query(QueryMethod.INSERT_VERSION, db_name)),
+                        parameters={
+                            "version": version,
+                            "description": description,
+                            "filename": filename,
+                            "migration_type": migration_type,
+                            "checksum": checksum,
+                        },
+                    )
+                elif migration_operation == "rollback":
+                    connection.execute(
+                        text(get_query(QueryMethod.DELETE_VERSION, db_name)),
+                        parameters={"version": version},
+                    )
+                    optimize_sql = get_query(QueryMethod.OPTIMIZE_MIGRATIONS_TABLE, db_name)
+                    if optimize_sql:
+                        connection.execute(text(optimize_sql))
+            except Exception:
+                raise
+            return
+
         try:
             savepoint = connection.begin_nested()
             has_savepoint = True
@@ -64,7 +106,6 @@ def run_migration(
                 if optimize_sql:
                     connection.execute(text(optimize_sql))
 
-            # All statements succeeded - commit the savepoint
             if has_savepoint:
                 savepoint.commit()
         except Exception:
@@ -251,7 +292,26 @@ def run_repeatable_migration(
     description = get_description_from_filename(filename)
 
     with get_db_connection(db_name) as connection:
-        # Use savepoint for all-or-nothing behavior
+        is_mysql = connection.dialect.name in ("mysql", "mariadb")
+
+        if is_mysql:
+            try:
+                for statement in sql_statements:
+                    connection.execute(text(statement))
+
+                connection.execute(
+                    text(get_query(QueryMethod.UPSERT_REPEATABLE_MIGRATION, db_name)),
+                    parameters={
+                        "description": description,
+                        "filename": filename,
+                        "migration_type": migration_type,
+                        "checksum": checksum,
+                    },
+                )
+            except Exception:
+                raise
+            return
+
         savepoint = connection.begin_nested()
         try:
             for statement in sql_statements:
@@ -267,9 +327,7 @@ def run_repeatable_migration(
                 },
             )
 
-            # All statements succeeded - commit the savepoint
             savepoint.commit()
         except Exception:
-            # Any failure - rollback the savepoint
             savepoint.rollback()
             raise

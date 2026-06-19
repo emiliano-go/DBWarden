@@ -220,6 +220,7 @@ def handle_generate_models(
     relationships: bool = False,
     dialect: str | None = None,
     single_file: bool = False,
+    base: str | None = None,
     database: str | None = None,
 ) -> None:
     if not clickhouse_engines:
@@ -238,6 +239,7 @@ def handle_generate_models(
         relationships=relationships,
         dialect=dialect,
         single_file=single_file,
+        base=base,
         database=database,
     )
 

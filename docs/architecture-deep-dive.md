@@ -104,10 +104,10 @@ Rollback uses the same lock discipline, selecting rollback SQL from applied file
    - optionally use multi-step safe type change (`--safe-type-change`)
    - order all operations by `StatementOrder` (RENAME_TABLE first) and assemble upgrade/rollback
    - generate upgrade and rollback SQL from the ops
-6. if no snapshot: **live-DB fallback path**
-   - extract known columns from database + existing migration files
-   - compare model columns against known columns
-   - emit `CREATE TABLE` / `ADD COLUMN` only (no rename detection)
+ 6. if no snapshot: **live-DB fallback path**
+    - take a full schema snapshot from the live database via `extract_full_schema_snapshot()`
+    - run standard snapshot-diff pipeline against it (type, nullability, default, FK, index changes)
+    - only rename detection is unavailable without a cached snapshot
 7. deduplicate against existing migration statements
 8. write migration file
 9. write companion `.plan.json` metadata file (with `resolved_from` on rename ops)

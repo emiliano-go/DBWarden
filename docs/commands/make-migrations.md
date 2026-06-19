@@ -613,8 +613,8 @@ $ dbwarden make-migrations --database primary --plan
 - If no models are discovered, configure `model_paths` explicitly.
 - With `--dev`, translation can target dev SQLite behavior.
 - Schema snapshots are written to `.dbwarden/schemas/` after each successful `migrate`: see [Schema Snapshots](schema-snapshots.md).
-- Column-level diff (type/null/default changes) only works with a schema snapshot.
-- Without a snapshot, `make-migrations` falls back to live-DB diffing which only detects new/dropped columns.
+- Column-level diff (type/null/default changes) works with a cached schema snapshot, or via a live snapshot taken automatically by `make-migrations` when no cached snapshot exists.
+- Without a cached snapshot, `make-migrations` takes a full schema snapshot from the live database internally and detects column-level changes. Only rename detection requires a cached snapshot.
 - For authoring guidelines and the review checklist, see [Migration File Format](../migration-files.md).
 
 See also: [Migration File Format](../migration-files.md), [Schema Snapshots](schema-snapshots.md)

@@ -37,6 +37,7 @@ Reverse-engineer SQLAlchemy model code from a live database.
 ```bash
 $ dbwarden generate-models --output ./models/ --database primary
 $ dbwarden generate-models --output ./models/ --database primary --single-file
+$ dbwarden generate-models --output ./models/ --database primary --base app.database:Base
 $ dbwarden generate-models --database primary --tables users,posts
 $ dbwarden generate-models --database primary --exclude-tables logs,audit
 ```
@@ -54,13 +55,14 @@ $ dbwarden generate-models --database primary --exclude-tables logs,audit
 | `--relationships` | Generate `relationship()` attributes for foreign keys |
 | `--dialect` | SQL dialect for type mapping (auto-detected from database type) |
 | `--single-file` | Generate a single `models.py` instead of one file per table |
+| `--base` | Custom Base class import path (e.g. `app.database:Base`). Default: generates `declarative_base()` in each file |
 | `--database`, `-d` | Target database name |
 
 ## Output rules
 
 - **Default**: one `.py` file per table (e.g., `users.py`, `posts.py`)
 - **`--single-file`**: generates `models.py` with all models
-- Each file imports `declarative_base()` and defines `Base`
+- Each file imports `declarative_base()` and defines `Base` (or imports from the path given by `--base`)
 
 ## Type mapping
 
