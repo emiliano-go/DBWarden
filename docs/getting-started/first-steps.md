@@ -6,7 +6,7 @@ seo:
   description: 'Get started with DBWarden: initialize your project, define your database
     configuration, and learn the migration workflow from model changes to applied
     SQL.'
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/first-steps/
+  canonical: https://emiliano-go.github.io/DBWarden/getting-started/first-steps/
   robots: index,follow
   og:
     type: website
@@ -14,8 +14,8 @@ seo:
     description: 'Get started with DBWarden: initialize your project, define your
       database configuration, and learn the migration workflow from model changes
       to applied SQL.'
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/first-steps/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/getting-started/first-steps/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -23,16 +23,16 @@ seo:
     description: 'Get started with DBWarden: initialize your project, define your
       database configuration, and learn the migration workflow from model changes
       to applied SQL.'
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: First Steps - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/first-steps/
+    url: https://emiliano-go.github.io/DBWarden/getting-started/first-steps/
     description: 'Get started with DBWarden: initialize your project, define your
       database configuration, and learn the migration workflow from model changes
       to applied SQL.'
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

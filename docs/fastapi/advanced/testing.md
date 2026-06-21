@@ -2,27 +2,27 @@
 seo:
   title: Testing - DBWarden Documentation
   description: Learn how to test FastAPI applications that use DBWarden.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/testing/
+  canonical: https://emiliano-go.github.io/DBWarden/fastapi/advanced/testing/
   robots: index,follow
   og:
     type: website
     title: Testing - DBWarden Documentation
     description: Learn how to test FastAPI applications that use DBWarden.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/testing/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/fastapi/advanced/testing/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Testing - DBWarden Documentation
     description: Learn how to test FastAPI applications that use DBWarden.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Testing - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/testing/
+    url: https://emiliano-go.github.io/DBWarden/fastapi/advanced/testing/
     description: Learn how to test FastAPI applications that use DBWarden.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

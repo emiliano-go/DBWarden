@@ -7,7 +7,7 @@ seo:
   description: Integrate DBWarden with FastAPI for automatic schema migration on startup,
     async database sessions, health endpoints, readiness gates, Prometheus metrics,
     and distributed locking.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/
+  canonical: https://emiliano-go.github.io/DBWarden/fastapi/
   robots: index,follow
   og:
     type: website
@@ -15,8 +15,8 @@ seo:
     description: Integrate DBWarden with FastAPI for automatic schema migration on
       startup, async database sessions, health endpoints, readiness gates, Prometheus
       metrics, and distributed locking.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/fastapi/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -24,16 +24,16 @@ seo:
     description: Integrate DBWarden with FastAPI for automatic schema migration on
       startup, async database sessions, health endpoints, readiness gates, Prometheus
       metrics, and distributed locking.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: FastAPI Integration - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/
+    url: https://emiliano-go.github.io/DBWarden/fastapi/
     description: Integrate DBWarden with FastAPI for automatic schema migration on
       startup, async database sessions, health endpoints, readiness gates, Prometheus
       metrics, and distributed locking.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

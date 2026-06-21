@@ -3,30 +3,30 @@ seo:
   title: check - DBWarden Documentation
   description: Analyze schema differences between your SQLAlchemy models and the live
     database.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/check/
+  canonical: https://emiliano-go.github.io/DBWarden/commands/check/
   robots: index,follow
   og:
     type: website
     title: check - DBWarden Documentation
     description: Analyze schema differences between your SQLAlchemy models and the
       live database.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/check/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/commands/check/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: check - DBWarden Documentation
     description: Analyze schema differences between your SQLAlchemy models and the
       live database.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: check - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/check/
+    url: https://emiliano-go.github.io/DBWarden/commands/check/
     description: Analyze schema differences between your SQLAlchemy models and the
       live database.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

@@ -2,27 +2,27 @@
 seo:
   title: 7. Seeds - DBWarden Documentation
   description: What You'll Learn
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/07-seeds/
+  canonical: https://emiliano-go.github.io/DBWarden/cookbook/07-seeds/
   robots: index,follow
   og:
     type: website
     title: 7. Seeds - DBWarden Documentation
     description: What You'll Learn
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/07-seeds/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/cookbook/07-seeds/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: 7. Seeds - DBWarden Documentation
     description: What You'll Learn
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: 7. Seeds - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/07-seeds/
+    url: https://emiliano-go.github.io/DBWarden/cookbook/07-seeds/
     description: What You'll Learn
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

@@ -2,27 +2,27 @@
 seo:
   title: Transaction Management - DBWarden Documentation
   description: Learn how to manage database transactions in FastAPI with DBWarden.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/transaction-management/
+  canonical: https://emiliano-go.github.io/DBWarden/fastapi/advanced/transaction-management/
   robots: index,follow
   og:
     type: website
     title: Transaction Management - DBWarden Documentation
     description: Learn how to manage database transactions in FastAPI with DBWarden.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/transaction-management/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/fastapi/advanced/transaction-management/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Transaction Management - DBWarden Documentation
     description: Learn how to manage database transactions in FastAPI with DBWarden.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Transaction Management - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/advanced/transaction-management/
+    url: https://emiliano-go.github.io/DBWarden/fastapi/advanced/transaction-management/
     description: Learn how to manage database transactions in FastAPI with DBWarden.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

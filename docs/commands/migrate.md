@@ -2,27 +2,27 @@
 seo:
   title: migrate - DBWarden Documentation
   description: Apply pending migrations.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/migrate/
+  canonical: https://emiliano-go.github.io/DBWarden/commands/migrate/
   robots: index,follow
   og:
     type: website
     title: migrate - DBWarden Documentation
     description: Apply pending migrations.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/migrate/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/commands/migrate/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: migrate - DBWarden Documentation
     description: Apply pending migrations.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: migrate - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/migrate/
+    url: https://emiliano-go.github.io/DBWarden/commands/migrate/
     description: Apply pending migrations.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

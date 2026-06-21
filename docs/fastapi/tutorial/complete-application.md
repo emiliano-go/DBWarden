@@ -3,30 +3,30 @@ seo:
   title: Complete Application - DBWarden Documentation
   description: A full, production-ready FastAPI application using all of DBWarden's
     features.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/complete-application/
+  canonical: https://emiliano-go.github.io/DBWarden/fastapi/tutorial/complete-application/
   robots: index,follow
   og:
     type: website
     title: Complete Application - DBWarden Documentation
     description: A full, production-ready FastAPI application using all of DBWarden's
       features.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/complete-application/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/fastapi/tutorial/complete-application/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Complete Application - DBWarden Documentation
     description: A full, production-ready FastAPI application using all of DBWarden's
       features.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Complete Application - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/tutorial/complete-application/
+    url: https://emiliano-go.github.io/DBWarden/fastapi/tutorial/complete-application/
     description: A full, production-ready FastAPI application using all of DBWarden's
       features.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

@@ -2,27 +2,27 @@
 seo:
   title: Connection URLs - DBWarden Documentation
   description: Complete reference for database connection URL formats.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/connection-urls/
+  canonical: https://emiliano-go.github.io/DBWarden/configuration/connection-urls/
   robots: index,follow
   og:
     type: website
     title: Connection URLs - DBWarden Documentation
     description: Complete reference for database connection URL formats.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/connection-urls/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/configuration/connection-urls/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Connection URLs - DBWarden Documentation
     description: Complete reference for database connection URL formats.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Connection URLs - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/connection-urls/
+    url: https://emiliano-go.github.io/DBWarden/configuration/connection-urls/
     description: Complete reference for database connection URL formats.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

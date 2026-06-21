@@ -3,30 +3,30 @@ seo:
   title: SQL Translation - DBWarden Documentation
   description: DBWarden includes a SQL translation layer to support development workflows
     where your primary database differs from your development database.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/sql-translation/
+  canonical: https://emiliano-go.github.io/DBWarden/sql-translation/
   robots: index,follow
   og:
     type: website
     title: SQL Translation - DBWarden Documentation
     description: DBWarden includes a SQL translation layer to support development
       workflows where your primary database differs from your development database.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/sql-translation/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/sql-translation/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: SQL Translation - DBWarden Documentation
     description: DBWarden includes a SQL translation layer to support development
       workflows where your primary database differs from your development database.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: SQL Translation - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/sql-translation/
+    url: https://emiliano-go.github.io/DBWarden/sql-translation/
     description: DBWarden includes a SQL translation layer to support development
       workflows where your primary database differs from your development database.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

@@ -4,7 +4,7 @@ seo:
   description: DBWarden uses a database-level lock to prevent concurrent schema mutation.
     This page explains how it works, what happens when it fails, and how to recover
     from...
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/migration-locking/
+  canonical: https://emiliano-go.github.io/DBWarden/advanced/migration-locking/
   robots: index,follow
   og:
     type: website
@@ -12,8 +12,8 @@ seo:
     description: DBWarden uses a database-level lock to prevent concurrent schema
       mutation. This page explains how it works, what happens when it fails, and how
       to recover from...
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/migration-locking/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/advanced/migration-locking/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -21,16 +21,16 @@ seo:
     description: DBWarden uses a database-level lock to prevent concurrent schema
       mutation. This page explains how it works, what happens when it fails, and how
       to recover from...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Migration Locking - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/migration-locking/
+    url: https://emiliano-go.github.io/DBWarden/advanced/migration-locking/
     description: DBWarden uses a database-level lock to prevent concurrent schema
       mutation. This page explains how it works, what happens when it fails, and how
       to recover from...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

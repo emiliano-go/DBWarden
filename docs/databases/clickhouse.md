@@ -3,30 +3,30 @@ seo:
   title: ClickHouse - DBWarden Documentation
   description: 'DBWarden treats ClickHouse as a first-class backend: every natively
     supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/databases/clickhouse/
+  canonical: https://emiliano-go.github.io/DBWarden/databases/clickhouse/
   robots: index,follow
   og:
     type: website
     title: ClickHouse - DBWarden Documentation
     description: 'DBWarden treats ClickHouse as a first-class backend: every natively
       supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/databases/clickhouse/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/databases/clickhouse/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: ClickHouse - DBWarden Documentation
     description: 'DBWarden treats ClickHouse as a first-class backend: every natively
       supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: ClickHouse - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/databases/clickhouse/
+    url: https://emiliano-go.github.io/DBWarden/databases/clickhouse/
     description: 'DBWarden treats ClickHouse as a first-class backend: every natively
       supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

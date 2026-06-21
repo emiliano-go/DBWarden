@@ -2,27 +2,27 @@
 seo:
   title: Cookbook & Examples - DBWarden Documentation
   description: "Practical, runnable examples that walk through the entire DBWarden workflow: from project setup through advanced observability patterns."
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/
+  canonical: https://emiliano-go.github.io/DBWarden/cookbook/
   robots: index,follow
   og:
     type: website
     title: Cookbook & Examples - DBWarden Documentation
     description: "Practical, runnable examples that walk through the entire DBWarden workflow: from project setup through advanced observability patterns."
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/cookbook/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Cookbook & Examples - DBWarden Documentation
     description: "Practical, runnable examples that walk through the entire DBWarden workflow: from project setup through advanced observability patterns."
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Cookbook & Examples - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/
+    url: https://emiliano-go.github.io/DBWarden/cookbook/
     description: "Practical, runnable examples that walk through the entire DBWarden workflow: from project setup through advanced observability patterns."
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

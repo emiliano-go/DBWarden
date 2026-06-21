@@ -3,7 +3,7 @@ seo:
   title: Migrate from TOML - DBWarden Documentation
   description: If your project currently uses warden.toml for DBWarden configuration,
     this guide walks through transitioning to the Python-based databaseconfig... approach.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/reference/migrate-from-toml/
+  canonical: https://emiliano-go.github.io/DBWarden/reference/migrate-from-toml/
   robots: index,follow
   og:
     type: website
@@ -11,8 +11,8 @@ seo:
     description: If your project currently uses warden.toml for DBWarden configuration,
       this guide walks through transitioning to the Python-based databaseconfig...
       approach.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/reference/migrate-from-toml/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/reference/migrate-from-toml/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -20,16 +20,16 @@ seo:
     description: If your project currently uses warden.toml for DBWarden configuration,
       this guide walks through transitioning to the Python-based databaseconfig...
       approach.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Migrate from TOML - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/reference/migrate-from-toml/
+    url: https://emiliano-go.github.io/DBWarden/reference/migrate-from-toml/
     description: If your project currently uses warden.toml for DBWarden configuration,
       this guide walks through transitioning to the Python-based databaseconfig...
       approach.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

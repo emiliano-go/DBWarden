@@ -2,27 +2,27 @@
 seo:
   title: rollback - DBWarden Documentation
   description: Rollback applied migrations using -- rollback SQL sections.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/rollback/
+  canonical: https://emiliano-go.github.io/DBWarden/commands/rollback/
   robots: index,follow
   og:
     type: website
     title: rollback - DBWarden Documentation
     description: Rollback applied migrations using -- rollback SQL sections.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/rollback/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/commands/rollback/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: rollback - DBWarden Documentation
     description: Rollback applied migrations using -- rollback SQL sections.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: rollback - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/rollback/
+    url: https://emiliano-go.github.io/DBWarden/commands/rollback/
     description: Rollback applied migrations using -- rollback SQL sections.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

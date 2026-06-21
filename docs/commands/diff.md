@@ -2,27 +2,27 @@
 seo:
   title: diff - DBWarden Documentation
   description: "Show structural differences between SQLAlchemy models and a live database. Read-only: no files are written."
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/diff/
+  canonical: https://emiliano-go.github.io/DBWarden/commands/diff/
   robots: index,follow
   og:
     type: website
     title: diff - DBWarden Documentation
     description: "Show structural differences between SQLAlchemy models and a live database. Read-only: no files are written."
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/diff/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/commands/diff/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: diff - DBWarden Documentation
     description: "Show structural differences between SQLAlchemy models and a live database. Read-only: no files are written."
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: diff - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/diff/
+    url: https://emiliano-go.github.io/DBWarden/commands/diff/
     description: "Show structural differences between SQLAlchemy models and a live database. Read-only: no files are written."
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

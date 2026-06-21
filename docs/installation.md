@@ -3,30 +3,30 @@ seo:
   title: Installation - DBWarden Documentation
   description: This guide covers installing DBWarden in your project and verifying
     it works correctly.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/installation/
+  canonical: https://emiliano-go.github.io/DBWarden/installation/
   robots: index,follow
   og:
     type: website
     title: Installation - DBWarden Documentation
     description: This guide covers installing DBWarden in your project and verifying
       it works correctly.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/installation/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/installation/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Installation - DBWarden Documentation
     description: This guide covers installing DBWarden in your project and verifying
       it works correctly.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Installation - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/installation/
+    url: https://emiliano-go.github.io/DBWarden/installation/
     description: This guide covers installing DBWarden in your project and verifying
       it works correctly.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

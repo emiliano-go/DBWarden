@@ -2,27 +2,27 @@
 seo:
   title: Modeling Guide - DBWarden Documentation
   description: This guide walks through the process of defining SQLAlchemy models that DBWarden can read to generate migration SQL. For the complete reference of all supported Meta attributes, see the SQLAlchemy Models Reference.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/modeling/
+  canonical: https://emiliano-go.github.io/DBWarden/getting-started/modeling/
   robots: index,follow
   og:
     type: website
     title: Modeling Guide - DBWarden Documentation
     description: This guide walks through the process of defining SQLAlchemy models that DBWarden can read to generate migration SQL. For the complete reference of all supported Meta attributes, see the SQLAlchemy Models Reference.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/modeling/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/getting-started/modeling/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Modeling Guide - DBWarden Documentation
     description: This guide walks through the process of defining SQLAlchemy models that DBWarden can read to generate migration SQL. For the complete reference of all supported Meta attributes, see the SQLAlchemy Models Reference.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Modeling Guide - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/getting-started/modeling/
+    url: https://emiliano-go.github.io/DBWarden/getting-started/modeling/
     description: This guide walks through the process of defining SQLAlchemy models that DBWarden can read to generate migration SQL. For the complete reference of all supported Meta attributes, see the SQLAlchemy Models Reference.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

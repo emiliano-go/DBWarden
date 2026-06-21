@@ -2,27 +2,27 @@
 seo:
   title: seed - DBWarden Documentation
   description: Manage seed data for a database.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/seed/
+  canonical: https://emiliano-go.github.io/DBWarden/commands/seed/
   robots: index,follow
   og:
     type: website
     title: seed - DBWarden Documentation
     description: Manage seed data for a database.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/seed/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/commands/seed/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: seed - DBWarden Documentation
     description: Manage seed data for a database.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: seed - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/seed/
+    url: https://emiliano-go.github.io/DBWarden/commands/seed/
     description: Manage seed data for a database.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

@@ -2,27 +2,27 @@
 seo:
   title: Multi-Database - DBWarden Documentation
   description: Configure and manage multiple databases in a single project.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/multi-database/
+  canonical: https://emiliano-go.github.io/DBWarden/configuration/multi-database/
   robots: index,follow
   og:
     type: website
     title: Multi-Database - DBWarden Documentation
     description: Configure and manage multiple databases in a single project.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/multi-database/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/configuration/multi-database/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Multi-Database - DBWarden Documentation
     description: Configure and manage multiple databases in a single project.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Multi-Database - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/multi-database/
+    url: https://emiliano-go.github.io/DBWarden/configuration/multi-database/
     description: Configure and manage multiple databases in a single project.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

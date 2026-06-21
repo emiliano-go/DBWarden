@@ -4,7 +4,7 @@ seo:
   description: View DBWarden configuration. All database settings are defined in Python
     code via databaseconfig, so settings show is a read-only command for inspecting
     the...
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/settings/
+  canonical: https://emiliano-go.github.io/DBWarden/commands/settings/
   robots: index,follow
   og:
     type: website
@@ -12,8 +12,8 @@ seo:
     description: View DBWarden configuration. All database settings are defined in
       Python code via databaseconfig, so settings show is a read-only command for
       inspecting the...
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/settings/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/commands/settings/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -21,16 +21,16 @@ seo:
     description: View DBWarden configuration. All database settings are defined in
       Python code via databaseconfig, so settings show is a read-only command for
       inspecting the...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: settings - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/settings/
+    url: https://emiliano-go.github.io/DBWarden/commands/settings/
     description: View DBWarden configuration. All database settings are defined in
       Python code via databaseconfig, so settings show is a read-only command for
       inspecting the...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

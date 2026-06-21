@@ -3,7 +3,7 @@ seo:
   title: Schema Snapshots - DBWarden Documentation
   description: Schema snapshots are JSON files that record the full DDL state of a
     database at the point a migration was applied. They enable offline migration generation,...
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/schema-snapshots/
+  canonical: https://emiliano-go.github.io/DBWarden/commands/schema-snapshots/
   robots: index,follow
   og:
     type: website
@@ -11,8 +11,8 @@ seo:
     description: Schema snapshots are JSON files that record the full DDL state of
       a database at the point a migration was applied. They enable offline migration
       generation,...
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/schema-snapshots/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://emiliano-go.github.io/DBWarden/commands/schema-snapshots/
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -20,16 +20,16 @@ seo:
     description: Schema snapshots are JSON files that record the full DDL state of
       a database at the point a migration was applied. They enable offline migration
       generation,...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Schema Snapshots - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/schema-snapshots/
+    url: https://emiliano-go.github.io/DBWarden/commands/schema-snapshots/
     description: Schema snapshots are JSON files that record the full DDL state of
       a database at the point a migration was applied. They enable offline migration
       generation,...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
