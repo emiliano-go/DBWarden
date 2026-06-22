@@ -23,6 +23,8 @@ import re
 import sys
 from typing import Any, Optional
 from enum import IntEnum
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 
 from dbwarden.constants import LOG_FORMAT
 
@@ -245,6 +247,15 @@ def _use_json_logging() -> bool:
     )
 
 
+LogMessage = Callable[[], str]
+
+@dataclass(frozen=True)
+class LogCandidate:
+    log_severity_level: int
+    message_factory: LogMessage
+    log_verbosity_level: Verbosity = Verbosity.NORMAL
+
+
 class DBWardenLogger:
     """
     Structured logging for DBWarden operations.
@@ -348,22 +359,57 @@ class DBWardenLogger:
             return f"[{colorize(self.db_type, ANSI_COLORS['magenta'])}]"
         return ""
 
+    def _prefixed(self, msg: str) -> str:
+        ctx = self._format_db_context()
+        return f"{ctx} {msg}" if ctx else msg
+
+    def _log_best_candidate(self, candidates: Sequence[LogCandidate]) -> None:
+        """Log the selected message variant for the current logger state.
+
+        This helper currently assumes there is one log format for each of these
+        cases: DEBUG, INFO at VERBOSE verbosity, INFO at NORMAL verbosity, and
+        INFO at QUIET verbosity. It only considers DEBUG and INFO candidates
+        today. WARNING, ERROR, and CRITICAL candidates could be added here
+        later, but they are not part of the current selection logic.
+        """
+        if self.logger.isEnabledFor(logging.DEBUG):
+            for candidate in candidates:
+                if candidate.log_severity_level == logging.DEBUG:
+                    message = candidate.message_factory()
+                    self.debug(self._prefixed(message))
+                    return
+
+        if not self.logger.isEnabledFor(logging.INFO):
+            return
+
+        info_candidates = [
+                candidate
+                for candidate in candidates
+                if candidate.log_severity_level == logging.INFO
+                and self.verbosity >= candidate.log_verbosity_level
+        ]
+
+        if not info_candidates:
+            return
+
+        selected = max(
+                info_candidates,
+                key=lambda candidate: candidate.log_verbosity_level,
+        )
+
+        message = selected.message_factory()
+        self.info(self._prefixed(message))
+
     def log_connection_init(self, db_type: str | None = None) -> None:
         """Log database connection initialization."""
         if db_type:
             self.db_type = db_type
-        ctx = self._format_db_context()
-        if ctx:
-            self.info(f"Connected to {ctx}")
-        else:
-            self.info("Database connection initialized")
+        self.info(self._prefixed("Database connection initialized"))
 
     def log_pending_migrations(self, migrations: list[str]) -> None:
         """Log list of pending migrations."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
         if migrations:
-            self.info(f"{prefix}Pending migrations ({len(migrations)}):")
+            self.info(self._prefixed(f"Pending migrations ({len(migrations)}):"))
             for m in migrations:
                 self.info(
                     f"  {colorize('[PENDING]', ANSI_COLORS['yellow'])} {colorize(m, ANSI_COLORS['white'])}"
@@ -371,47 +417,49 @@ class DBWardenLogger:
 
     def log_migration_start(self, version: str, filename: str) -> None:
         """Log migration start."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
-        self.info(f"{prefix}Starting migration: {filename} (version: {version})")
+        self.info(
+            self._prefixed(f"Starting migration: {filename} (version: {version})")
+        )
 
     def log_migration_end(self, version: str, filename: str, duration: float) -> None:
         """Log migration end with duration."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
+        message = (
+            f"{colorize('[APPLIED]', ANSI_COLORS['green'])} "
+            f"Completed migration: {colorize(filename, ANSI_COLORS['white'])} "
+            f"(version: {colorize(version, ANSI_COLORS['dim'] + ANSI_COLORS['cyan'])}) "
+            f"in {colorize(f'{duration:.2f}s', ANSI_COLORS['dim'])}"
+        )
         self.info(
-            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Completed migration: {colorize(filename, ANSI_COLORS['white'])} (version: {colorize(version, ANSI_COLORS['dim'] + ANSI_COLORS['cyan'])}) in {colorize(f'{duration:.2f}s', ANSI_COLORS['dim'])}"
+            self._prefixed(message)
         )
 
     def log_migration_skipped(self, version: str, filename: str, checksum: str) -> None:
         """Log migration skipped because checksum already applied."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
         self.info(
-            f"{prefix}{colorize('[SKIPPED]', STATUS_COLORS['SKIPPED'])} Migration already applied: {colorize(filename, ANSI_COLORS['white'])} (version: {version}, checksum: {checksum[:16]}...)"
+            self._prefixed(
+                f"{colorize('[SKIPPED]', STATUS_COLORS['SKIPPED'])} Migration already applied: {colorize(filename, ANSI_COLORS['white'])} (version: {version}, checksum: {checksum[:16]}...)"
+            )
         )
 
     def log_rollback_start(self, version: str, filename: str) -> None:
         """Log rollback start."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
-        self.info(f"{prefix}Rolling back migration: {filename} (version: {version})")
+        self.info(self._prefixed(f"Rolling back migration: {filename} (version: {version})"))
 
     def log_rollback_end(self, version: str, filename: str, duration: float) -> None:
         """Log rollback end with duration."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
         self.info(
-            f"{prefix}{colorize('[ROLLED_BACK]', ANSI_COLORS['red'])} Rollback completed: {filename} (version: {version}) in {duration:.2f}s"
+            self._prefixed(
+                f"{colorize('[ROLLED_BACK]', ANSI_COLORS['red'])} Rollback completed: {filename} (version: {version}) in {duration:.2f}s"
+            )
         )
 
     def log_sql_statement(self, sql: str) -> None:
         """Log SQL statement with syntax highlighting (debug_enabled only)."""
         if self.debug_enabled:
-            ctx = self._format_db_context()
-            prefix = f"{ctx} " if ctx else ""
             self.debug(
-                f"{prefix}{colorize('SQL:', ANSI_COLORS['bold'] + ANSI_COLORS['blue'])}"
+                self._prefixed(
+                    colorize('SQL:', ANSI_COLORS['bold'] + ANSI_COLORS['blue'])
+                )
             )
             for line in sql.strip().split("\n"):
                 if line.strip():
@@ -419,59 +467,55 @@ class DBWardenLogger:
 
     def log_backup_created(self, backup_path: str) -> None:
         """Log backup creation."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
         self.info(
-            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Backup created: {backup_path}"
+            self._prefixed(
+                f"{colorize('[APPLIED]', ANSI_COLORS['green'])} Backup created: {backup_path}"
+            )
         )
 
     def log_baseline_set(self, version: str) -> None:
         """Log baseline migration set."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
         self.info(
-            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Baseline set at version: {version}"
+            self._prefixed(
+                f"{colorize('[APPLIED]', ANSI_COLORS['green'])} Baseline set at version: {version}"
+            )
         )
 
     def log_seed_migration(self, filename: str) -> None:
         """Log seed migration."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
         self.info(
-            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Seed data applied: {filename}"
+            self._prefixed(
+                f"{colorize('[APPLIED]', ANSI_COLORS['green'])} Seed data applied: {filename}"
+            )
         )
 
     def log_model_discovered(self, table_name: str, columns: list) -> None:
         """Log model discovered from SQLAlchemy models (debug_enabled only)."""
         if self.debug_enabled:
-            ctx = self._format_db_context()
-            prefix = f"{ctx} " if ctx else ""
             self.debug(
-                f"{prefix}Discovered model: {table_name} with {len(columns)} columns"
+                self._prefixed(
+                    f"Discovered model: {table_name} with {len(columns)} columns"
+                )
             )
 
     def log_model_paths(self, paths: list[str]) -> None:
         """Log model paths being used (debug_enabled only)."""
         if self.debug_enabled:
-            ctx = self._format_db_context()
-            prefix = f"{ctx} " if ctx else ""
-            self.debug(f"{prefix}Using model paths: {paths}")
+            self.debug(self._prefixed(f"Using model paths: {paths}"))
 
     def log_table_columns(self, table_name: str, columns: list) -> None:
         """Log table columns (debug_enabled only)."""
         if self.debug_enabled:
-            ctx = self._format_db_context()
-            prefix = f"{ctx} " if ctx else ""
             col_info = ", ".join(c["name"] for c in columns)
-            self.debug(f"{prefix}Table {table_name} columns: {col_info}")
+            self.debug(self._prefixed(f"Table {table_name} columns: {col_info}"))
 
     def log_migration_sql_gen(self, table_name: str, sql: str) -> None:
         """Log generated migration SQL (debug_enabled only)."""
         if self.debug_enabled:
             highlighted = colorize_sql(sql)
-            ctx = self._format_db_context()
-            prefix = f"{ctx} " if ctx else ""
-            self.debug(f"{prefix}Generated SQL for {table_name}:\n{highlighted}")
+            self.debug(
+                self._prefixed(f"Generated SQL for {table_name}:\n{highlighted}")
+            )
 
 
 _global_logger: Optional[DBWardenLogger] = None
