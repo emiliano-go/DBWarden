@@ -57,18 +57,18 @@ Create your first FastAPI app with DBWarden:
 
 ```python
 from fastapi import FastAPI
-from dbwarden.fastapi import get_session, migration_context
+from dbwarden.fastapi import dbwarden_lifespan
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with migration_context(mode="check"):
+    async with dbwarden_lifespan(mode="migrate", allow_in_production=True):
         yield
 
 app = FastAPI(lifespan=lifespan)
 ```
 
-That's it! **5 lines** to integrate DBWarden.
+That's it! **5 lines** to integrate DBWarden. For fine-grained control, use `migration_context()` instead of `dbwarden_lifespan()`.
 
 ## Tutorial - First Steps
 

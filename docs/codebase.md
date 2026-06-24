@@ -58,18 +58,18 @@ site/            # Built documentation output (gitignored)
 The `dbwarden/schema/` package is the abstract metadata layer. It defines dialect-agnostic constructs that make no assumptions about the target database:
 
 - `TableMeta` and `*ColumnMeta` classes (e.g. `PGColumnMeta`, `CHColumnMeta`, `MyColumnMeta`)
-- `DBWardenMeta` -- the runtime metadata container attached to each model
-- `_MetaValidator` -- metaclass that validates `class Meta` attribute names at import time
-- `IndexSpec`, `CheckSpec`, `UniqueSpec` -- cross-database object specs
-- `_meta_reader.py` -- logic that reads `class Meta` from user models and populates `DBWardenMeta`
+- `DBWardenMeta`: the runtime metadata container attached to each model
+- `_MetaValidator`: metaclass that validates `class Meta` attribute names at import time
+- `IndexSpec`, `CheckSpec`, `UniqueSpec`: cross-database object specs
+- `_meta_reader.py`: logic that reads `class Meta` from user models and populates `DBWardenMeta`
 
 The `dbwarden/databases/` package is the concrete backend layer. It contains dialect-specific specs and helpers:
 
-- `clickhouse/` -- `ChEngineSpec`, `ProjectionSpec`, `ChIndexSpec`, `ChTableSpec`, merge-tree helpers, `ChFieldSpec`
-- `mysql/` -- `MyFieldSpec`, `MyTableSpec`
-- `pgsql/` -- `PgFieldSpec`, `PgIndexSpec`, `PgTableSpec`, exclude/partition helpers
-- `mariadb/` -- `MdbFieldSpec`, `MdbTableSpec`
-- `sqlite/` -- `SqFieldSpec`, `SqTableSpec`
+- `clickhouse/`: `ChEngineSpec`, `ProjectionSpec`, `ChIndexSpec`, `ChTableSpec`, merge-tree helpers, `ChFieldSpec`
+- `mysql/`: `MyFieldSpec`, `MyTableSpec`
+- `pgsql/`: `PgFieldSpec`, `PgIndexSpec`, `PgTableSpec`, exclude/partition helpers
+- `mariadb/`: `MdbFieldSpec`, `MdbTableSpec`
+- `sqlite/`: `SqFieldSpec`, `SqTableSpec`
 
 ### The Import Contract
 
@@ -90,9 +90,9 @@ Consequences of this boundary:
 
 The refactor tightened this boundary. Previously, `ChEngineSpec`, `ProjectionSpec`, and the `*FieldMeta` hierarchy lived in `schema/`. They were moved to their correct locations:
 
-- `ChEngineSpec`, `_split_engine_args` -- now in `databases/clickhouse/engine.py`
-- `ProjectionSpec` -- now in `databases/clickhouse/projection.py`
-- `*FieldMeta` classes (`PGFieldMeta`, `CHFieldMeta`, etc.) -- deleted; fields inlined directly into `*ColumnMeta` in `table_meta.py`
+- `ChEngineSpec`, `_split_engine_args`: now in `databases/clickhouse/engine.py`
+- `ProjectionSpec`: now in `databases/clickhouse/projection.py`
+- `*FieldMeta` classes (`PGFieldMeta`, `CHFieldMeta`, etc.): deleted; fields inlined directly into `*ColumnMeta` in `table_meta.py`
 
 The orphan `__pycache__` directories under `schema/{clickhouse,mysql,pgsql,mariadb,sqlite}/` were removed.
 

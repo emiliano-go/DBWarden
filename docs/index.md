@@ -43,7 +43,7 @@ seo:
     <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white&style=for-the-badge" alt="Python">
   </a>
   <a href="https://pypi.org/project/dbwarden">
-    <img src="https://img.shields.io/badge/PyPI-0.11.2-34D058?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
+    <img src="https://img.shields.io/badge/PyPI-0.12.3-34D058?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
   </a>
   <a href="https://github.com/emiliano-gandini-outeda/DBWarden/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
@@ -65,7 +65,7 @@ It is built for teams that want schema changes to remain explicit, reviewable, a
 
 ## What DBWarden Does
 
-- Generates migration files as plain SQL, with `--upgrade` and `--rollback` sections
+- Generates migration files as plain SQL, with `-- upgrade` and `-- rollback` sections
 - Reads SQLAlchemy models and backend-specific metadata from `class Meta`
 - Supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse
 - Manages one or many databases from one typed config source

@@ -44,6 +44,8 @@ Canonical filename pattern:
 {database_name}__{version}_{description}.sql
 ```
 
+A legacy format without the `{database_name}__` prefix (e.g. `0001_create_users_table.sql`) is also accepted for backward compatibility.
+
 Examples:
 
 ```text

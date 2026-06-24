@@ -48,8 +48,8 @@ CLI (Typer)
 
 ## Responsibilities
 
-- CLI: parse args, global flags (`--dev`, `--strict-translation`)
-- Commands: orchestrate workflows (`migrate`, `rollback`, `make-migrations`)
+- CLI: parse args, global flags (`--dev`, `--strict-translation`, `--help`)
+- Commands: orchestrate workflows (`migrate`, `rollback`, `make-migrations`, `status`, `history`, `check`, `diff`, `generate-models`, `export-models`, `seed`, `lock-status`, `unlock`, `init`, `snapshot`, `settings`, `database`, `version`)
 - Engine: parse files, resolve ordering, checksums, model discovery
 - Repositories: read/write migration and lock metadata
 - Database: execute SQL with backend-aware connections

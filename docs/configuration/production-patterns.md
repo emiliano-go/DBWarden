@@ -92,8 +92,6 @@ primary = database_config(
 
 ```yaml
 # docker-compose.yml
-version: '3.8'
-
 services:
   app:
     build: .
@@ -126,7 +124,7 @@ primary = database_config(
 ### Dockerfile
 
 ```dockerfile
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -523,13 +521,13 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       
       - name: Install dependencies
         run: uv add dbwarden
       
       - name: Run migrations
-        run: dbwarden migrate
+        run: dbwarden migrate --database primary
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 ```
@@ -541,7 +539,7 @@ migrate:
   stage: deploy
   script:
     - uv add dbwarden
-    - dbwarden migrate
+    - dbwarden migrate --database primary
   environment:
     name: production
   only:

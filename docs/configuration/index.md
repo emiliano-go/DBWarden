@@ -189,7 +189,8 @@ DBWarden discovers your configuration automatically:
 
 1. **Looks for `dbwarden.py`** in current directory or parents
 2. **Checks `DBWARDEN_CONFIG_MODULE`** environment variable
-3. **Scans for `database_config()` calls** in your codebase
+3. **Scans for `database_config()` calls** in your codebase (full project tree walk)
+4. **Looks for `warden.toml`** as an alternative TOML-based config file
 
 `dbwarden.py` is the default convention and the file created by `dbwarden init`, but `database_config(...)` can live in any discovered Python file inside your project.
 

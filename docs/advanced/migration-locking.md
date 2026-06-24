@@ -44,7 +44,7 @@ DBWarden uses a database-level lock to prevent concurrent schema mutation. This 
 
 When `dbwarden migrate` runs, it:
 
-1. Acquires a lock row in the `dbwarden_lock` table (created on first use)
+1. Acquires a lock row in the `dbwarden_lock` table (created on first use; the table name is `dbwarden_lock`, not `_dbwarden_lock`)
 2. Executes all pending migrations within that lock
 3. Releases the lock on success or failure
 
@@ -200,7 +200,7 @@ to serialize migration requests across application instances.
 | Aspect | Database lock | Redis lock |
 |--------|---------------|------------|
 | Scope | CLI commands (`migrate`, `seed`) | FastAPI `POST /migrate` endpoint |
-| Storage | `_dbwarden_lock` table in the target database | Redis key |
+| Storage | `dbwarden_lock` table in the target database | Redis key |
 | TTL | No TTL: manual `unlock` required after crash | 60-second default TTL |
 | Failure mode | Blocks other CLI commands until released | Auto-released after TTL |
 | External dependency | None (uses the database itself) | Redis required |

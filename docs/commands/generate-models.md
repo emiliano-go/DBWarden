@@ -42,7 +42,7 @@ $ dbwarden generate-models --database primary --tables users,posts
 $ dbwarden generate-models --database primary --exclude-tables logs,audit
 ```
 
-> **Note:** `generate-models` only works for fully supported databases (PostgreSQL, MySQL, MariaDB). For ClickHouse and SQLite, use `make-migrations` or manual schema definition.
+> **Note:** `generate-models` works for all supported databases: PostgreSQL, MySQL, MariaDB, ClickHouse, and SQLite. For ClickHouse, use `--clickhouse-engines` or rely on auto-detection from `database_type="clickhouse"`. SQLite produces basic table models without backend-specific metadata.
 
 ## Options
 
