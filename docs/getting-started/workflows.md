@@ -3,27 +3,27 @@ description: Organize larger DBWarden workflows, including multi-database projec
 seo:
   title: Workflows - DBWarden Documentation
   description: Organize larger DBWarden workflows, including multi-database projects, CI patterns, sandbox validation, and command conventions across environments.
-  canonical: https://emiliano-go.github.io/DBWarden/getting-started/workflows/
+  canonical: https://dbwarden.emiliano-go.com/getting-started/workflows/
   robots: index,follow
   og:
     type: website
     title: Workflows - DBWarden Documentation
     description: Organize larger DBWarden workflows, including multi-database projects, CI patterns, sandbox validation, and command conventions across environments.
-    url: https://emiliano-go.github.io/DBWarden/getting-started/workflows/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/getting-started/workflows/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Workflows - DBWarden Documentation
     description: Organize larger DBWarden workflows, including multi-database projects, CI patterns, sandbox validation, and command conventions across environments.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Workflows - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/getting-started/workflows/
+    url: https://dbwarden.emiliano-go.com/getting-started/workflows/
     description: Organize larger DBWarden workflows, including multi-database projects, CI patterns, sandbox validation, and command conventions across environments.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

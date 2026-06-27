@@ -37,9 +37,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://emiliano-go.github.io/DBWarden/"
+Homepage = "https://dbwarden.emiliano-go.com/"
 Repository = "https://github.com/emiliano-go/DBWarden"
-Documentation = "https://emiliano-go.github.io/DBWarden/"
+Documentation = "https://dbwarden.emiliano-go.com/"
 "Bug Tracker" = "https://github.com/emiliano-go/DBWarden/issues"
 
 [project.scripts]

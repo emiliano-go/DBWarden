@@ -3,27 +3,27 @@ description: Use DBWarden locally with dev mode, SQLite translation, reverse-eng
 seo:
   title: Developing Locally - DBWarden Documentation
   description: Use DBWarden locally with dev mode, SQLite translation, reverse-engineering, diffing, safety checks, and offline migrations.
-  canonical: https://emiliano-go.github.io/DBWarden/getting-started/developing-locally/
+  canonical: https://dbwarden.emiliano-go.com/getting-started/developing-locally/
   robots: index,follow
   og:
     type: website
     title: Developing Locally - DBWarden Documentation
     description: Use DBWarden locally with dev mode, SQLite translation, reverse-engineering, diffing, safety checks, and offline migrations.
-    url: https://emiliano-go.github.io/DBWarden/getting-started/developing-locally/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/getting-started/developing-locally/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Developing Locally - DBWarden Documentation
     description: Use DBWarden locally with dev mode, SQLite translation, reverse-engineering, diffing, safety checks, and offline migrations.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Developing Locally - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/getting-started/developing-locally/
+    url: https://dbwarden.emiliano-go.com/getting-started/developing-locally/
     description: Use DBWarden locally with dev mode, SQLite translation, reverse-engineering, diffing, safety checks, and offline migrations.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

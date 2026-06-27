@@ -3,30 +3,30 @@ seo:
   title: Startup Checks - DBWarden Documentation
   description: Learn how to validate your database before your FastAPI app accepts
     traffic.
-  canonical: https://emiliano-go.github.io/DBWarden/fastapi/tutorial/startup-checks/
+  canonical: https://dbwarden.emiliano-go.com/fastapi/tutorial/startup-checks/
   robots: index,follow
   og:
     type: website
     title: Startup Checks - DBWarden Documentation
     description: Learn how to validate your database before your FastAPI app accepts
       traffic.
-    url: https://emiliano-go.github.io/DBWarden/fastapi/tutorial/startup-checks/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/startup-checks/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Startup Checks - DBWarden Documentation
     description: Learn how to validate your database before your FastAPI app accepts
       traffic.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Startup Checks - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/fastapi/tutorial/startup-checks/
+    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/startup-checks/
     description: Learn how to validate your database before your FastAPI app accepts
       traffic.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

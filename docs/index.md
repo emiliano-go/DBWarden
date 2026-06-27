@@ -3,27 +3,27 @@ description: DBWarden is a SQL-first database migration system for Python and SQ
 seo:
   title: DBWarden - DBWarden Documentation
   description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-  canonical: https://emiliano-go.github.io/DBWarden/
+  canonical: https://dbwarden.emiliano-go.com/
   robots: index,follow
   og:
     type: website
     title: DBWarden - DBWarden Documentation
     description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-    url: https://emiliano-go.github.io/DBWarden/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: DBWarden - DBWarden Documentation
     description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: DBWarden - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/
+    url: https://dbwarden.emiliano-go.com/
     description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
@@ -54,7 +54,7 @@ seo:
 </p>
 
 <p align="center">
-  <strong><a href="https://emiliano-go.github.io/DBWarden/">Full documentation</a></strong>
+  <strong><a href="https://dbwarden.emiliano-go.com/">Full documentation</a></strong>
   &nbsp;|&nbsp;
   <strong><a href="https://github.com/emiliano-gandini-outeda/DBWarden">Source Code</a></strong>
 </p>

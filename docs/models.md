@@ -3,30 +3,30 @@ seo:
   title: SQLAlchemy Models Reference - DBWarden Documentation
   description: This page is the reference for all supported Meta attributes across
     every backend. For a step-by-step walkthrough of defining models, see the Modeling...
-  canonical: https://emiliano-go.github.io/DBWarden/models/
+  canonical: https://dbwarden.emiliano-go.com/models/
   robots: index,follow
   og:
     type: website
     title: SQLAlchemy Models Reference - DBWarden Documentation
     description: This page is the reference for all supported Meta attributes across
       every backend. For a step-by-step walkthrough of defining models, see the Modeling...
-    url: https://emiliano-go.github.io/DBWarden/models/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/models/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: SQLAlchemy Models Reference - DBWarden Documentation
     description: This page is the reference for all supported Meta attributes across
       every backend. For a step-by-step walkthrough of defining models, see the Modeling...
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: SQLAlchemy Models Reference - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/models/
+    url: https://dbwarden.emiliano-go.com/models/
     description: This page is the reference for all supported Meta attributes across
       every backend. For a step-by-step walkthrough of defining models, see the Modeling...
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

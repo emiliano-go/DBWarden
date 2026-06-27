@@ -2,27 +2,27 @@
 seo:
   title: API Reference - DBWarden Documentation
   description: Complete API documentation for DBWarden's FastAPI integration.
-  canonical: https://emiliano-go.github.io/DBWarden/fastapi/reference/
+  canonical: https://dbwarden.emiliano-go.com/fastapi/reference/
   robots: index,follow
   og:
     type: website
     title: API Reference - DBWarden Documentation
     description: Complete API documentation for DBWarden's FastAPI integration.
-    url: https://emiliano-go.github.io/DBWarden/fastapi/reference/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/fastapi/reference/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: API Reference - DBWarden Documentation
     description: Complete API documentation for DBWarden's FastAPI integration.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: API Reference - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/fastapi/reference/
+    url: https://dbwarden.emiliano-go.com/fastapi/reference/
     description: Complete API documentation for DBWarden's FastAPI integration.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <strong><a href="https://emiliano-go.github.io/DBWarden/">Full documentation</a></strong>
+  <strong><a href="https://dbwarden.emiliano-go.com/">Full documentation</a></strong>
   &nbsp;|&nbsp;
   <strong><a href="https://github.com/emiliano-go/DBWarden">Source Code</a></strong>
 </p>

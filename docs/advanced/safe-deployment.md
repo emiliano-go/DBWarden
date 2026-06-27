@@ -7,7 +7,7 @@ seo:
   description: 'Deploy database schema changes safely with DBWarden: pre-flight checks,
     impact analysis, sandbox validation, migration locking, rollback planning, and
     CI/CD integration patterns.'
-  canonical: https://emiliano-go.github.io/DBWarden/advanced/safe-deployment/
+  canonical: https://dbwarden.emiliano-go.com/advanced/safe-deployment/
   robots: index,follow
   og:
     type: website
@@ -15,8 +15,8 @@ seo:
     description: 'Deploy database schema changes safely with DBWarden: pre-flight
       checks, impact analysis, sandbox validation, migration locking, rollback planning,
       and CI/CD integration patterns.'
-    url: https://emiliano-go.github.io/DBWarden/advanced/safe-deployment/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/advanced/safe-deployment/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -24,16 +24,16 @@ seo:
     description: 'Deploy database schema changes safely with DBWarden: pre-flight
       checks, impact analysis, sandbox validation, migration locking, rollback planning,
       and CI/CD integration patterns.'
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Safe Deployment - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/advanced/safe-deployment/
+    url: https://dbwarden.emiliano-go.com/advanced/safe-deployment/
     description: 'Deploy database schema changes safely with DBWarden: pre-flight
       checks, impact analysis, sandbox validation, migration locking, rollback planning,
       and CI/CD integration patterns.'
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

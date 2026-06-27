@@ -2,27 +2,27 @@
 seo:
   title: status - DBWarden Documentation
   description: Show migration status applied vs pending.
-  canonical: https://emiliano-go.github.io/DBWarden/commands/status/
+  canonical: https://dbwarden.emiliano-go.com/commands/status/
   robots: index,follow
   og:
     type: website
     title: status - DBWarden Documentation
     description: Show migration status applied vs pending.
-    url: https://emiliano-go.github.io/DBWarden/commands/status/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/commands/status/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: status - DBWarden Documentation
     description: Show migration status applied vs pending.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: status - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/commands/status/
+    url: https://dbwarden.emiliano-go.com/commands/status/
     description: Show migration status applied vs pending.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

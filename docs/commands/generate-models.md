@@ -2,27 +2,27 @@
 seo:
   title: generate-models - DBWarden Documentation
   description: Reverse-engineer SQLAlchemy model code from a live database.
-  canonical: https://emiliano-go.github.io/DBWarden/commands/generate-models/
+  canonical: https://dbwarden.emiliano-go.com/commands/generate-models/
   robots: index,follow
   og:
     type: website
     title: generate-models - DBWarden Documentation
     description: Reverse-engineer SQLAlchemy model code from a live database.
-    url: https://emiliano-go.github.io/DBWarden/commands/generate-models/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/commands/generate-models/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: generate-models - DBWarden Documentation
     description: Reverse-engineer SQLAlchemy model code from a live database.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: generate-models - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/commands/generate-models/
+    url: https://dbwarden.emiliano-go.com/commands/generate-models/
     description: Reverse-engineer SQLAlchemy model code from a live database.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

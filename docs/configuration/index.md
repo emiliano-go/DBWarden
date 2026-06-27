@@ -7,7 +7,7 @@ seo:
   description: 'Learn how to configure DBWarden for single and multi-database setups:
     connection URLs, model discovery, dev mode with SQLite translation, credential
     management, and production patterns.'
-  canonical: https://emiliano-go.github.io/DBWarden/configuration/
+  canonical: https://dbwarden.emiliano-go.com/configuration/
   robots: index,follow
   og:
     type: website
@@ -15,8 +15,8 @@ seo:
     description: 'Learn how to configure DBWarden for single and multi-database setups:
       connection URLs, model discovery, dev mode with SQLite translation, credential
       management, and production patterns.'
-    url: https://emiliano-go.github.io/DBWarden/configuration/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/configuration/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -24,16 +24,16 @@ seo:
     description: 'Learn how to configure DBWarden for single and multi-database setups:
       connection URLs, model discovery, dev mode with SQLite translation, credential
       management, and production patterns.'
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Configuration - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/configuration/
+    url: https://dbwarden.emiliano-go.com/configuration/
     description: 'Learn how to configure DBWarden for single and multi-database setups:
       connection URLs, model discovery, dev mode with SQLite translation, credential
       management, and production patterns.'
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

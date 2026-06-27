@@ -3,7 +3,7 @@ seo:
   title: SQL Databases - DBWarden Documentation
   description: DBWarden supports PostgreSQL, MySQL, MariaDB, and SQLite. While all
     four share standard SQL DDL, each backend has distinct behaviors that affect generated...
-  canonical: https://emiliano-go.github.io/DBWarden/databases/sql-databases/
+  canonical: https://dbwarden.emiliano-go.com/databases/sql-databases/
   robots: index,follow
   og:
     type: website
@@ -11,8 +11,8 @@ seo:
     description: DBWarden supports PostgreSQL, MySQL, MariaDB, and SQLite. While all
       four share standard SQL DDL, each backend has distinct behaviors that affect
       generated...
-    url: https://emiliano-go.github.io/DBWarden/databases/sql-databases/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/databases/sql-databases/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -20,16 +20,16 @@ seo:
     description: DBWarden supports PostgreSQL, MySQL, MariaDB, and SQLite. While all
       four share standard SQL DDL, each backend has distinct behaviors that affect
       generated...
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: SQL Databases - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/databases/sql-databases/
+    url: https://dbwarden.emiliano-go.com/databases/sql-databases/
     description: DBWarden supports PostgreSQL, MySQL, MariaDB, and SQLite. While all
       four share standard SQL DDL, each backend has distinct behaviors that affect
       generated...
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

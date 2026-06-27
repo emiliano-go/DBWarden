@@ -3,30 +3,30 @@ seo:
   title: Observability - DBWarden Documentation
   description: DBWarden provides Prometheus metrics and structured JSON logging for
     monitoring and debugging.
-  canonical: https://emiliano-go.github.io/DBWarden/observability/
+  canonical: https://dbwarden.emiliano-go.com/observability/
   robots: index,follow
   og:
     type: website
     title: Observability - DBWarden Documentation
     description: DBWarden provides Prometheus metrics and structured JSON logging
       for monitoring and debugging.
-    url: https://emiliano-go.github.io/DBWarden/observability/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/observability/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Observability - DBWarden Documentation
     description: DBWarden provides Prometheus metrics and structured JSON logging
       for monitoring and debugging.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Observability - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/observability/
+    url: https://dbwarden.emiliano-go.com/observability/
     description: DBWarden provides Prometheus metrics and structured JSON logging
       for monitoring and debugging.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

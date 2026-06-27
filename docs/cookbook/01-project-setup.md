@@ -2,27 +2,27 @@
 seo:
   title: 1. Project Setup - DBWarden Documentation
   description: What You'll Learn
-  canonical: https://emiliano-go.github.io/DBWarden/cookbook/01-project-setup/
+  canonical: https://dbwarden.emiliano-go.com/cookbook/01-project-setup/
   robots: index,follow
   og:
     type: website
     title: 1. Project Setup - DBWarden Documentation
     description: What You'll Learn
-    url: https://emiliano-go.github.io/DBWarden/cookbook/01-project-setup/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/cookbook/01-project-setup/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: 1. Project Setup - DBWarden Documentation
     description: What You'll Learn
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: 1. Project Setup - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/cookbook/01-project-setup/
+    url: https://dbwarden.emiliano-go.com/cookbook/01-project-setup/
     description: What You'll Learn
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

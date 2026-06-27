@@ -2,30 +2,30 @@
 seo:
   title: Model Discovery - DBWarden Documentation
   description: Learn how DBWarden discovers your SQLAlchemy models for migration generation.
-  canonical: https://emiliano-go.github.io/DBWarden/configuration/model-discovery/
+  canonical: https://dbwarden.emiliano-go.com/configuration/model-discovery/
   robots: index,follow
   og:
     type: website
     title: Model Discovery - DBWarden Documentation
     description: Learn how DBWarden discovers your SQLAlchemy models for migration
       generation.
-    url: https://emiliano-go.github.io/DBWarden/configuration/model-discovery/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/configuration/model-discovery/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Model Discovery - DBWarden Documentation
     description: Learn how DBWarden discovers your SQLAlchemy models for migration
       generation.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Model Discovery - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/configuration/model-discovery/
+    url: https://dbwarden.emiliano-go.com/configuration/model-discovery/
     description: Learn how DBWarden discovers your SQLAlchemy models for migration
       generation.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

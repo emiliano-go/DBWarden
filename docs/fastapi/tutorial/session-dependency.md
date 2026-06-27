@@ -2,27 +2,27 @@
 seo:
   title: Session Dependency - DBWarden Documentation
   description: Learn how to get database sessions in your FastAPI routes using DatabaseHandle.
-  canonical: https://emiliano-go.github.io/DBWarden/fastapi/tutorial/session-dependency/
+  canonical: https://dbwarden.emiliano-go.com/fastapi/tutorial/session-dependency/
   robots: index,follow
   og:
     type: website
     title: Session Dependency - DBWarden Documentation
     description: Learn how to get database sessions in your FastAPI routes using DatabaseHandle.
-    url: https://emiliano-go.github.io/DBWarden/fastapi/tutorial/session-dependency/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/session-dependency/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Session Dependency - DBWarden Documentation
     description: Learn how to get database sessions in your FastAPI routes using DatabaseHandle.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Session Dependency - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/fastapi/tutorial/session-dependency/
+    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/session-dependency/
     description: Learn how to get database sessions in your FastAPI routes using DatabaseHandle.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

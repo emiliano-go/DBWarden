@@ -2,27 +2,27 @@
 seo:
   title: Multi-Database - DBWarden Documentation
   description: Learn how to work with multiple databases in your FastAPI application.
-  canonical: https://emiliano-go.github.io/DBWarden/fastapi/advanced/multi-database/
+  canonical: https://dbwarden.emiliano-go.com/fastapi/advanced/multi-database/
   robots: index,follow
   og:
     type: website
     title: Multi-Database - DBWarden Documentation
     description: Learn how to work with multiple databases in your FastAPI application.
-    url: https://emiliano-go.github.io/DBWarden/fastapi/advanced/multi-database/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/fastapi/advanced/multi-database/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Multi-Database - DBWarden Documentation
     description: Learn how to work with multiple databases in your FastAPI application.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Multi-Database - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/fastapi/advanced/multi-database/
+    url: https://dbwarden.emiliano-go.com/fastapi/advanced/multi-database/
     description: Learn how to work with multiple databases in your FastAPI application.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

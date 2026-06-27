@@ -19,7 +19,7 @@ from seoslug import SEOConfig, URLPolicy, SEOEntity, build_seo_payload
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = PROJECT_ROOT / "docs"
-SITE_URL = "https://emiliano-go.github.io/DBWarden"
+SITE_URL = "https://dbwarden.emiliano-go.com"
 SITE_NAME = "DBWarden Documentation"
 
 # Extract base path from SITE_URL (e.g. "/DBWarden") for canonical URL construction.

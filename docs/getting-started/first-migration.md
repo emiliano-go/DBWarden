@@ -3,27 +3,27 @@ description: Define your first SQLAlchemy models, generate a migration, review t
 seo:
   title: Your First Migration - DBWarden Documentation
   description: Define your first SQLAlchemy models, generate a migration, review the generated SQL, apply it, verify the result, and roll it back.
-  canonical: https://emiliano-go.github.io/DBWarden/getting-started/first-migration/
+  canonical: https://dbwarden.emiliano-go.com/getting-started/first-migration/
   robots: index,follow
   og:
     type: website
     title: Your First Migration - DBWarden Documentation
     description: Define your first SQLAlchemy models, generate a migration, review the generated SQL, apply it, verify the result, and roll it back.
-    url: https://emiliano-go.github.io/DBWarden/getting-started/first-migration/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/getting-started/first-migration/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Your First Migration - DBWarden Documentation
     description: Define your first SQLAlchemy models, generate a migration, review the generated SQL, apply it, verify the result, and roll it back.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Your First Migration - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/getting-started/first-migration/
+    url: https://dbwarden.emiliano-go.com/getting-started/first-migration/
     description: Define your first SQLAlchemy models, generate a migration, review the generated SQL, apply it, verify the result, and roll it back.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

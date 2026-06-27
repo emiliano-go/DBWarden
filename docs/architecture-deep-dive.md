@@ -3,30 +3,30 @@ seo:
   title: Architecture - DBWarden Documentation
   description: This page explains DBWarden internals for contributors and advanced
     debugging.
-  canonical: https://emiliano-go.github.io/DBWarden/architecture-deep-dive/
+  canonical: https://dbwarden.emiliano-go.com/architecture-deep-dive/
   robots: index,follow
   og:
     type: website
     title: Architecture - DBWarden Documentation
     description: This page explains DBWarden internals for contributors and advanced
       debugging.
-    url: https://emiliano-go.github.io/DBWarden/architecture-deep-dive/
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/architecture-deep-dive/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Architecture - DBWarden Documentation
     description: This page explains DBWarden internals for contributors and advanced
       debugging.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Architecture - DBWarden Documentation
-    url: https://emiliano-go.github.io/DBWarden/architecture-deep-dive/
+    url: https://dbwarden.emiliano-go.com/architecture-deep-dive/
     description: This page explains DBWarden internals for contributors and advanced
       debugging.
-    image: https://emiliano-go.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
