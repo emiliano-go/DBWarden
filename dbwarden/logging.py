@@ -404,118 +404,228 @@ class DBWardenLogger:
         """Log database connection initialization."""
         if db_type:
             self.db_type = db_type
-        self.info(self._prefixed("Database connection initialized"))
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: "Database connection initialized",
+                    Verbosity.NORMAL,
+                ),
+            ]
+        )
 
     def log_pending_migrations(self, migrations: list[str]) -> None:
         """Log list of pending migrations."""
         if migrations:
-            self.info(self._prefixed(f"Pending migrations ({len(migrations)}):"))
+            self._log_best_candidate(
+                [
+                    LogCandidate(
+                        logging.INFO,
+                        lambda: f"Pending migrations ({len(migrations)}):",
+                        Verbosity.NORMAL,
+                    ),
+                ]
+            )
             for m in migrations:
-                self.info(
-                    f"  {colorize('[PENDING]', ANSI_COLORS['yellow'])} {colorize(m, ANSI_COLORS['white'])}"
+                self._log_best_candidate(
+                    [
+                        LogCandidate(
+                            logging.INFO,
+                            lambda m=m: (
+                                f"  {colorize('[PENDING]', ANSI_COLORS['yellow'])} "
+                                f"{colorize(m, ANSI_COLORS['white'])}"
+                            ),
+                            Verbosity.NORMAL,
+                        ),
+                    ]
                 )
 
     def log_migration_start(self, version: str, filename: str) -> None:
         """Log migration start."""
-        self.info(
-            self._prefixed(f"Starting migration: {filename} (version: {version})")
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: f"Starting migration: {filename} (version: {version})",
+                    Verbosity.NORMAL,
+                ),
+            ]
         )
 
     def log_migration_end(self, version: str, filename: str, duration: float) -> None:
         """Log migration end with duration."""
-        message = (
-            f"{colorize('[APPLIED]', ANSI_COLORS['green'])} "
-            f"Completed migration: {colorize(filename, ANSI_COLORS['white'])} "
-            f"(version: {colorize(version, ANSI_COLORS['dim'] + ANSI_COLORS['cyan'])}) "
-            f"in {colorize(f'{duration:.2f}s', ANSI_COLORS['dim'])}"
-        )
-        self.info(
-            self._prefixed(message)
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[APPLIED]', ANSI_COLORS['green'])} "
+                        f"Completed migration: {colorize(filename, ANSI_COLORS['white'])} "
+                        f"(version: {colorize(version, ANSI_COLORS['dim'] + ANSI_COLORS['cyan'])}) "
+                        f"in {colorize(f'{duration:.2f}s', ANSI_COLORS['dim'])}"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ]
         )
 
     def log_migration_skipped(self, version: str, filename: str, checksum: str) -> None:
         """Log migration skipped because checksum already applied."""
-        self.info(
-            self._prefixed(
-                f"{colorize('[SKIPPED]', STATUS_COLORS['SKIPPED'])} Migration already applied: {colorize(filename, ANSI_COLORS['white'])} (version: {version}, checksum: {checksum[:16]}...)"
-            )
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[SKIPPED]', STATUS_COLORS['SKIPPED'])} "
+                        f"Migration already applied: {colorize(filename, ANSI_COLORS['white'])} "
+                        f"(version: {version}, checksum: {checksum[:16]}...)"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ]
         )
 
     def log_rollback_start(self, version: str, filename: str) -> None:
         """Log rollback start."""
-        self.info(self._prefixed(f"Rolling back migration: {filename} (version: {version})"))
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: f"Rolling back migration: {filename} (version: {version})",
+                    Verbosity.NORMAL,
+                ),
+            ]
+        )
 
     def log_rollback_end(self, version: str, filename: str, duration: float) -> None:
         """Log rollback end with duration."""
-        self.info(
-            self._prefixed(
-                f"{colorize('[ROLLED_BACK]', ANSI_COLORS['red'])} Rollback completed: {filename} (version: {version}) in {duration:.2f}s"
-            )
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[ROLLED_BACK]', ANSI_COLORS['red'])} "
+                        f"Rollback completed: {filename} (version: {version}) "
+                        f"in {duration:.2f}s"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ]
         )
 
     def log_sql_statement(self, sql: str) -> None:
-        """Log SQL statement with syntax highlighting (debug_enabled only)."""
-        if self.debug_enabled:
-            self.debug(
-                self._prefixed(
-                    colorize('SQL:', ANSI_COLORS['bold'] + ANSI_COLORS['blue'])
-                )
-            )
-            for line in sql.strip().split("\n"):
-                if line.strip():
-                    self.debug(colorize_sql(line))
+        """Log SQL statement with syntax highlighting."""
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.DEBUG,
+                    lambda: "\n".join(
+                        [
+                            colorize("SQL:", ANSI_COLORS["bold"] + ANSI_COLORS["blue"]),
+                            *[
+                                colorize_sql(line)
+                                for line in sql.strip().split("\n")
+                                if line.strip()
+                            ],
+                        ]
+                    ),
+                ),
+            ]
+        )
 
     def log_backup_created(self, backup_path: str) -> None:
         """Log backup creation."""
-        self.info(
-            self._prefixed(
-                f"{colorize('[APPLIED]', ANSI_COLORS['green'])} Backup created: {backup_path}"
-            )
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[APPLIED]', ANSI_COLORS['green'])} "
+                        f"Backup created: {backup_path}"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ]
         )
 
     def log_baseline_set(self, version: str) -> None:
         """Log baseline migration set."""
-        self.info(
-            self._prefixed(
-                f"{colorize('[APPLIED]', ANSI_COLORS['green'])} Baseline set at version: {version}"
-            )
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[APPLIED]', ANSI_COLORS['green'])} "
+                        f"Baseline set at version: {version}"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ]
         )
 
     def log_seed_migration(self, filename: str) -> None:
         """Log seed migration."""
-        self.info(
-            self._prefixed(
-                f"{colorize('[APPLIED]', ANSI_COLORS['green'])} Seed data applied: {filename}"
-            )
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[APPLIED]', ANSI_COLORS['green'])} "
+                        f"Seed data applied: {filename}"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ]
         )
 
     def log_model_discovered(self, table_name: str, columns: list) -> None:
         """Log model discovered from SQLAlchemy models (debug_enabled only)."""
-        if self.debug_enabled:
-            self.debug(
-                self._prefixed(
-                    f"Discovered model: {table_name} with {len(columns)} columns"
-                )
-            )
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.DEBUG,
+                    lambda: f"Discovered model: {table_name} with {len(columns)} columns",
+                ),
+            ]
+        )
 
     def log_model_paths(self, paths: list[str]) -> None:
         """Log model paths being used (debug_enabled only)."""
-        if self.debug_enabled:
-            self.debug(self._prefixed(f"Using model paths: {paths}"))
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.DEBUG,
+                    lambda: f"Using model paths: {paths}",
+                ),
+            ]
+        )
 
     def log_table_columns(self, table_name: str, columns: list) -> None:
         """Log table columns (debug_enabled only)."""
-        if self.debug_enabled:
-            col_info = ", ".join(c["name"] for c in columns)
-            self.debug(self._prefixed(f"Table {table_name} columns: {col_info}"))
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.DEBUG,
+                    lambda: (
+                        f"Table {table_name} columns: "
+                        f"{', '.join(c['name'] for c in columns)}"
+                    ),
+                ),
+            ]
+        )
 
     def log_migration_sql_gen(self, table_name: str, sql: str) -> None:
         """Log generated migration SQL (debug_enabled only)."""
-        if self.debug_enabled:
-            highlighted = colorize_sql(sql)
-            self.debug(
-                self._prefixed(f"Generated SQL for {table_name}:\n{highlighted}")
-            )
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.DEBUG,
+                    lambda: (
+                        f"Generated SQL for {table_name}:\n{colorize_sql(sql)}"
+                    ),
+                ),
+            ]
+        )
 
 
 _global_logger: Optional[DBWardenLogger] = None
