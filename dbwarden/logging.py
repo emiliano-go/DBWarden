@@ -167,16 +167,12 @@ def colorize_sql(sql: str) -> str:
     if not supports_color():
         return sql
 
-    result = sql
-
-    for keyword in SQL_KEYWORDS:
-        pattern = rf"\b{keyword}\b"
-        result = re.sub(
-            pattern,
-            lambda m: colorize(m.group(0), ANSI_COLORS["magenta"]),
-            result,
-            flags=re.IGNORECASE,
-        )
+    result = re.sub(
+        r"\b(" + "|".join(re.escape(keyword) for keyword in SQL_KEYWORDS) + r")\b",
+        lambda m: colorize(m.group(0), ANSI_COLORS["magenta"]),
+        sql,
+        flags=re.IGNORECASE,
+    )
 
     result = re.sub(
         r"'[^']*'",
@@ -251,6 +247,15 @@ LogMessage = Callable[[], str]
 
 @dataclass(frozen=True)
 class LogCandidate:
+    """Candidate log entry keyed by a stdlib Python logging level.
+
+    log_severity_level intentionally uses int because Python's logging
+    module defines levels like logging.DEBUG and logging.INFO as integer
+    constants. Storing the raw stdlib level keeps this class directly
+    compatible with logging APIs and avoids wrapping or translating
+    those values through a separate enum.
+    """
+
     log_severity_level: int
     message_factory: LogMessage
     log_verbosity_level: Verbosity = Verbosity.NORMAL
@@ -371,6 +376,12 @@ class DBWardenLogger:
         INFO at QUIET verbosity. It only considers DEBUG and INFO candidates
         today. WARNING, ERROR, and CRITICAL candidates could be added here
         later, but they are not part of the current selection logic.
+
+        LogCandidate.log_severity_level is treated as a Python stdlib
+        logging level integer here on purpose. Call sites can pass
+        logging.DEBUG or logging.INFO directly, which matches what
+        logging.Logger expects and keeps severity selection aligned with
+        the standard library's level model.
         """
         if self.logger.isEnabledFor(logging.DEBUG):
             for candidate in candidates:
@@ -389,6 +400,9 @@ class DBWardenLogger:
                 and self.verbosity >= candidate.log_verbosity_level
         ]
 
+        # No try/except here: each logging helper defines its LogCandidate
+        # set statically, so this branch expects well-formed internal
+        # candidates rather than arbitrary user-provided input.
         if not info_candidates:
             return
 
