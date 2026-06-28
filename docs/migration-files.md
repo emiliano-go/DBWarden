@@ -2,27 +2,27 @@
 seo:
   title: Migration File Format - DBWarden Documentation
   description: Migration files are the execution contract in DBWarden.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/migration-files/
+  canonical: https://dbwarden.emiliano-go.com/migration-files/
   robots: index,follow
   og:
     type: website
     title: Migration File Format - DBWarden Documentation
     description: Migration files are the execution contract in DBWarden.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/migration-files/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/migration-files/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Migration File Format - DBWarden Documentation
     description: Migration files are the execution contract in DBWarden.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Migration File Format - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/migration-files/
+    url: https://dbwarden.emiliano-go.com/migration-files/
     description: Migration files are the execution contract in DBWarden.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
@@ -43,6 +43,8 @@ Canonical filename pattern:
 ```text
 {database_name}__{version}_{description}.sql
 ```
+
+A legacy format without the `{database_name}__` prefix (e.g. `0001_create_users_table.sql`) is also accepted for backward compatibility.
 
 Examples:
 

@@ -79,7 +79,9 @@ class _ResolvedSource:
 _USE_DEV_DATABASE = False
 _STRICT_TRANSLATION = False
 _RESOLVED_SOURCE_CACHE: _ResolvedSource | None = None
+_RESOLVED_CWD: str | None = None
 _MULTI_DB_CONFIG_CACHE: MultiDbConfig | None = None
+_MULTI_DB_CONFIG_CWD: str | None = None
 
 
 def set_dev_mode(enabled: bool) -> None:
@@ -101,9 +103,11 @@ def is_strict_translation() -> bool:
 
 
 def _clear_source_cache() -> None:
-    global _RESOLVED_SOURCE_CACHE, _MULTI_DB_CONFIG_CACHE
+    global _RESOLVED_SOURCE_CACHE, _RESOLVED_CWD, _MULTI_DB_CONFIG_CACHE, _MULTI_DB_CONFIG_CWD
     _RESOLVED_SOURCE_CACHE = None
+    _RESOLVED_CWD = None
     _MULTI_DB_CONFIG_CACHE = None
+    _MULTI_DB_CONFIG_CWD = None
 
 
 register_reset_hook(_clear_source_cache)
@@ -323,9 +327,11 @@ def _extract_variable_value_expressions(path: Path) -> list[dict[str, str]]:
 
 
 def _resolve_source() -> _ResolvedSource:
-    global _RESOLVED_SOURCE_CACHE
-    if _RESOLVED_SOURCE_CACHE is not None:
+    global _RESOLVED_SOURCE_CACHE, _RESOLVED_CWD
+    current_cwd = str(Path.cwd().resolve())
+    if _RESOLVED_SOURCE_CACHE is not None and _RESOLVED_CWD == current_cwd:
         return _RESOLVED_SOURCE_CACHE
+    _RESOLVED_CWD = current_cwd
 
     root = _workspace_root()
 
@@ -586,9 +592,11 @@ def _finalize_entries(
 
 
 def get_multi_db_config() -> MultiDbConfig:
-    global _MULTI_DB_CONFIG_CACHE
-    if _MULTI_DB_CONFIG_CACHE is not None:
+    global _MULTI_DB_CONFIG_CACHE, _MULTI_DB_CONFIG_CWD
+    current_cwd = str(Path.cwd().resolve())
+    if _MULTI_DB_CONFIG_CACHE is not None and _MULTI_DB_CONFIG_CWD == current_cwd:
         return _MULTI_DB_CONFIG_CACHE
+    _MULTI_DB_CONFIG_CWD = current_cwd
 
     source = _resolve_source()
     variable_value_expressions: list[dict[str, str]] | None = None

@@ -793,7 +793,7 @@ class TestClickHouseTypeMapping:
         assert d["ch_meta"] == {"ch_codec": "ZSTD(3)", "ch_default": "now()"}
 
     def test_engine_spec_from_engine_string(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec.from_engine_string("ReplicatedMergeTree('/clickhouse/tables/{shard}', '{replica}')")
         assert spec.name == "ReplicatedMergeTree"
         assert len(spec.args) == 0  # zk_path and replica extracted separately
@@ -801,13 +801,13 @@ class TestClickHouseTypeMapping:
         assert spec.replica_name == "{replica}"
 
     def test_engine_spec_from_engine_string_no_params(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec.from_engine_string("MergeTree")
         assert spec.name == "MergeTree"
         assert spec.args == ()
 
     def test_engine_spec_from_engine_string_with_args(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec.from_engine_string("Distributed('my_cluster', 'default', 'hits')")
         assert spec.name == "Distributed"
         assert spec.args == ("'my_cluster'", "'default'", "'hits'")

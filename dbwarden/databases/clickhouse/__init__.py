@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from dbwarden.databases.clickhouse.field import ChFieldSpec, field
+
+import sys as _sys
+ch = _sys.modules[__name__]
 from dbwarden.databases.clickhouse.engine import (
     aggregating_merge_tree,
     merge_tree,
@@ -15,8 +18,8 @@ from dbwarden.databases.clickhouse.index import skip_index
 from dbwarden.databases.clickhouse.projection import projection
 from dbwarden.databases.clickhouse.dictionary import dictionary
 from dbwarden.databases.clickhouse.materialized_view import materialized_view
-from dbwarden.schema.engine import ChEngineSpec
-from dbwarden.schema.projection import ProjectionSpec
+from dbwarden.databases.clickhouse.engine import ChEngineSpec
+from dbwarden.databases.clickhouse.projection import ProjectionSpec
 from dbwarden.schema.table_meta import CHColumnMeta, CHTableMeta
 
 
@@ -87,6 +90,7 @@ __all__ = [
     "ChTableSpec",
     "ProjectionSpec",
     "aggregating_merge_tree",
+    "ch",
     "dictionary",
     "field",
     "materialized_view",

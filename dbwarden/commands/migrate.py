@@ -391,8 +391,9 @@ def migrate_single(
             if metrics_enabled():
                 set_schema_version(actual_db_name, latest_version)
                 set_pending_migrations(actual_db_name, 0)
-
-        _write_model_state(config=config, db_name=db_name)
+            _write_model_state(config=config, db_name=db_name)
+        elif runs_always_filepaths or runs_on_change_filepaths:
+            _write_model_state(config=config, db_name=db_name)
 
     except Exception:
         if metrics_enabled():

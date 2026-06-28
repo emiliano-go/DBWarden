@@ -2,27 +2,27 @@
 seo:
   title: Configuration API Reference - DBWarden Documentation
   description: Complete reference for the databaseconfig function.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/reference/configuration-api/
+  canonical: https://dbwarden.emiliano-go.com/reference/configuration-api/
   robots: index,follow
   og:
     type: website
     title: Configuration API Reference - DBWarden Documentation
     description: Complete reference for the databaseconfig function.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/reference/configuration-api/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/reference/configuration-api/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Configuration API Reference - DBWarden Documentation
     description: Complete reference for the databaseconfig function.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Configuration API Reference - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/reference/configuration-api/
+    url: https://dbwarden.emiliano-go.com/reference/configuration-api/
     description: Complete reference for the databaseconfig function.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

@@ -7,7 +7,7 @@ seo:
   description: 'Learn how to configure DBWarden for single and multi-database setups:
     connection URLs, model discovery, dev mode with SQLite translation, credential
     management, and production patterns.'
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/
+  canonical: https://dbwarden.emiliano-go.com/configuration/
   robots: index,follow
   og:
     type: website
@@ -15,8 +15,8 @@ seo:
     description: 'Learn how to configure DBWarden for single and multi-database setups:
       connection URLs, model discovery, dev mode with SQLite translation, credential
       management, and production patterns.'
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/configuration/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -24,16 +24,16 @@ seo:
     description: 'Learn how to configure DBWarden for single and multi-database setups:
       connection URLs, model discovery, dev mode with SQLite translation, credential
       management, and production patterns.'
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Configuration - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/
+    url: https://dbwarden.emiliano-go.com/configuration/
     description: 'Learn how to configure DBWarden for single and multi-database setups:
       connection URLs, model discovery, dev mode with SQLite translation, credential
       management, and production patterns.'
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
@@ -189,7 +189,8 @@ DBWarden discovers your configuration automatically:
 
 1. **Looks for `dbwarden.py`** in current directory or parents
 2. **Checks `DBWARDEN_CONFIG_MODULE`** environment variable
-3. **Scans for `database_config()` calls** in your codebase
+3. **Scans for `database_config()` calls** in your codebase (full project tree walk)
+4. **Looks for `warden.toml`** as an alternative TOML-based config file
 
 `dbwarden.py` is the default convention and the file created by `dbwarden init`, but `database_config(...)` can live in any discovered Python file inside your project.
 

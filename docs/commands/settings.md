@@ -4,7 +4,7 @@ seo:
   description: View DBWarden configuration. All database settings are defined in Python
     code via databaseconfig, so settings show is a read-only command for inspecting
     the...
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/settings/
+  canonical: https://dbwarden.emiliano-go.com/commands/settings/
   robots: index,follow
   og:
     type: website
@@ -12,8 +12,8 @@ seo:
     description: View DBWarden configuration. All database settings are defined in
       Python code via databaseconfig, so settings show is a read-only command for
       inspecting the...
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/settings/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/commands/settings/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -21,16 +21,16 @@ seo:
     description: View DBWarden configuration. All database settings are defined in
       Python code via databaseconfig, so settings show is a read-only command for
       inspecting the...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: settings - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/settings/
+    url: https://dbwarden.emiliano-go.com/commands/settings/
     description: View DBWarden configuration. All database settings are defined in
       Python code via databaseconfig, so settings show is a read-only command for
       inspecting the...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

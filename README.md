@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/emiliano-gandini-outeda/DBWarden/refs/heads/main/assets/icon.png" alt="DBWarden" width="128"/>
+  <img src="https://raw.githubusercontent.com/emiliano-go/DBWarden/refs/heads/main/assets/icon.png" alt="DBWarden" width="128"/>
 </p>
 <p align="center">
   <strong style="font-size: 2.5em;">DBWarden</strong>
@@ -12,20 +12,20 @@
     <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white&style=for-the-badge" alt="Python">
   </a>
   <a href="https://pypi.org/project/dbwarden">
-    <img src="https://img.shields.io/badge/PyPI-0.12.1-34D058?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
+    <img src="https://img.shields.io/badge/PyPI-0.12.4-34D058?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
   </a>
-  <a href="https://deepwiki.com/emiliano-gandini-outeda/DBWarden/">
+  <a href="https://deepwiki.com/emiliano-go/DBWarden/">
     <img src="https://img.shields.io/badge/DeepWiki-8A2BE2?logo=readthedocs&logoColor=white&style=for-the-badge" alt="DeepWiki">
   </a>
 </p>
 
 <p align="center">
-  <strong><a href="https://emiliano-gandini-outeda.github.io/DBWarden/">Full documentation</a></strong>
+  <strong><a href="https://dbwarden.emiliano-go.com/">Full documentation</a></strong>
   &nbsp;|&nbsp;
-  <strong><a href="https://github.com/emiliano-gandini-outeda/DBWarden">Source Code</a></strong>
+  <strong><a href="https://github.com/emiliano-go/DBWarden">Source Code</a></strong>
 </p>
 
 ---

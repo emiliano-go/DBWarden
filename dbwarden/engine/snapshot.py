@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import os
@@ -140,6 +141,17 @@ def _strip_ch_type_wrappers(raw_type: str) -> str:
     return result
 
 
+def _model_type_str(sa_type) -> str:
+    """Render a SQLAlchemy type to a string suitable for comparing with snapshot types.
+
+    Handles Enum types correctly (str() returns VARCHAR without dialect context).
+    """
+    if hasattr(sa_type, "enums") and sa_type.enums:
+        return f"Enum({', '.join(repr(v) for v in sa_type.enums)})"
+    return str(sa_type)
+
+
+@functools.lru_cache(maxsize=512)
 def normalize_type(raw_type: str) -> dict[str, Any]:
     # Strip COLLATE clause for normalization purposes
     raw_type = re.sub(r'\s+COLLATE\s+"[^"]*"', "", raw_type, flags=re.IGNORECASE)
@@ -181,7 +193,7 @@ def _build_alter_type_sql(
     column: str,
     new_type: str,
     backend: str,
-    old_type: str = "",
+    old_type: str | None = None,
     postgres_auto_using: bool = False,
 ) -> tuple[str, str]:
     if old_type:
@@ -573,6 +585,11 @@ def extract_full_schema_snapshot(
             if "scale" in normalized:
                 col_entry["scale"] = normalized["scale"]
 
+            # For MySQL/MariaDB ENUM, store the full type with values
+            if hasattr(col_type, "enums") and col_type.enums:
+                enum_values = ", ".join(repr(v) for v in col_type.enums)
+                col_entry["type"] = f"enum({enum_values})"
+
             comment = col.get("comment")
             if comment is not None:
                 col_entry["comment"] = comment
@@ -921,6 +938,7 @@ def extract_full_schema_snapshot(
                 continue
             idx_entry: dict[str, Any] = {
                 "table": table_name,
+                "name": idx_name,
                 "columns": list(idx.get("column_names", [])),
                 "unique": bool(idx.get("unique", False)),
             }
@@ -988,14 +1006,14 @@ def extract_full_schema_snapshot(
                             idx_entry["column_sorting"] = sorting
                 except Exception:
                     pass
-            indexes[idx_name] = idx_entry
+            indexes[f"{table_name}.{idx_name}"] = idx_entry
 
         for fk in inspector.get_foreign_keys(table_name):
             fk_name = fk.get("name", "")
             if not fk_name:
                 fk_name = f"fk_{table_name}_{'_'.join(fk.get('constrained_columns', []))}"
             fk_options = fk.get("options", {})
-            constraints[fk_name] = {
+            constraints[f"{table_name}.{fk_name}"] = {
                 "type": "foreign_key",
                 "name": fk_name,
                 "table": table_name,
@@ -1011,7 +1029,7 @@ def extract_full_schema_snapshot(
             uq_name = uq.get("name", "")
             if not uq_name:
                 continue
-            constraints[uq_name] = {
+            constraints[f"{table_name}.{uq_name}"] = {
                 "type": "unique",
                 "name": uq_name,
                 "table": table_name,
@@ -1022,7 +1040,7 @@ def extract_full_schema_snapshot(
             ck_name = ck.get("name", "")
             if not ck_name:
                 ck_name = f"ck_{table_name}_{hash(ck.get('sqltext', ''))}"
-            constraints[ck_name] = {
+            constraints[f"{table_name}.{ck_name}"] = {
                 "type": "check",
                 "name": ck_name,
                 "table": table_name,
@@ -1039,7 +1057,7 @@ def extract_full_schema_snapshot(
                 ).fetchall()
                 for r in no_inherit_rows:
                     if r[1]:
-                        cname = r[0]
+                        cname = f"{table_name}.{r[0]}"
                         if cname in constraints:
                             constraints[cname]["no_inherit"] = True
             except Exception:
@@ -1050,7 +1068,7 @@ def extract_full_schema_snapshot(
                     {"t": table_name},
                 ).fetchall()
                 for r in defer_rows:
-                    cname = r[0]
+                    cname = f"{table_name}.{r[0]}"
                     if cname in constraints:
                         constraints[cname]["deferrable"] = bool(r[1])
                         constraints[cname]["initially_deferred"] = bool(r[2])
@@ -1089,7 +1107,7 @@ def extract_full_schema_snapshot(
 
 def _extract_clickhouse_schema_snapshot(connection: Any, db_name: str) -> dict[str, Any]:
     from sqlalchemy import text
-    from dbwarden.schema.engine import ChEngineSpec
+    from dbwarden.databases.clickhouse.engine import ChEngineSpec
 
     tables: dict[str, Any] = {}
     enums: dict[str, Any] = {}
@@ -2130,6 +2148,12 @@ def diff_models_against_snapshot(
                 "new_name": old_name,
             })
 
+        snap_pk_count_table = sum(
+            1 for ec in snap_table.get("columns", {}).values()
+            if ec.get("primary_key")
+        )
+        model_pk_count_table = sum(1 for c in table.columns if c.primary_key)
+
         for col_name in snap_columns:
             if col_name not in model_columns:
                 continue
@@ -2143,7 +2167,7 @@ def diff_models_against_snapshot(
                 model_raw = model_col.ch_meta.get("ch_type", str(model_col.type))
                 model_raw = _strip_ch_type_wrappers(model_raw)
             else:
-                model_raw = str(model_col.type)
+                model_raw = _model_type_str(model_col.type)
             snap_type = normalize_type(snap_raw)["type"]
             model_type = normalize_type(model_raw)["type"]
             if snap_type != model_type:
@@ -2182,12 +2206,7 @@ def diff_models_against_snapshot(
             model_autoinc = model_col.autoincrement
             # Suppress autoincrement diffs for composite PK columns (likely join tables)
             # where autoincrement does not apply and emitting ALTERs is dangerous.
-            snap_pk_count = sum(
-                1 for existing_col in snap_table.get("columns", {}).values()
-                if existing_col.get("primary_key")
-            )
-            model_pk_count = sum(1 for c in table.columns if c.primary_key)
-            pk_count = max(snap_pk_count, model_pk_count)
+            pk_count = max(snap_pk_count_table, model_pk_count_table)
             if model_autoinc is not None and bool(snap_autoinc) != bool(model_autoinc):
                 if pk_count > 1 and _get_backend(db_name) in ("mysql", "mariadb"):
                     pass  # skip - composite PK columns should not get autoincrement ALTERs
@@ -2364,7 +2383,7 @@ def diff_models_against_snapshot(
         # --- Constraint diff (unique, check, exclude) ---
         table_constraints = snapshot.get("constraints", {})
         snap_uniques = {
-            name: c for name, c in table_constraints.items()
+            c.get("name", name): c for name, c in table_constraints.items()
             if c.get("type") == "unique" and c.get("table") == table.name
         }
         model_uniques = {u.get("name") or f"uq_{table.name}_{'_'.join(u.get('columns', []))}": u for u in (table.uniques or [])}
@@ -2409,7 +2428,7 @@ def diff_models_against_snapshot(
                 rollback_ops.append({"type": "drop_unique_constraint", "table": table.name, "name": name, **payload})
 
         snap_checks = {
-            name: c for name, c in table_constraints.items()
+            c.get("name", name): c for name, c in table_constraints.items()
             if c.get("type") == "check" and c.get("table") == table.name
         }
         model_checks = {c.get("name") or f"ck_{table.name}_{i}": c for i, c in enumerate(table.checks or [])}
@@ -2558,7 +2577,7 @@ def diff_models_against_snapshot(
 
         # Snapshot indexes for this table
         snap_idxs = [
-            (name, idx) for name, idx in snapshot_indexes.items()
+            (idx.get("name", ""), idx) for _, idx in snapshot_indexes.items()
             if idx.get("table") == table.name
         ]
         snap_idx_sigs = {_index_sig(idx) for _, idx in snap_idxs}
@@ -2628,10 +2647,12 @@ def diff_models_against_snapshot(
         to_values = model_enum_values.get(enum_name)
         if to_values is None:
             continue
-        new_values = [v for v in to_values if v not in snap_values]
+        snap_set = set(snap_values)
+        new_values = [v for v in to_values if v not in snap_set]
         if new_values:
+            pos_map = {v: i for i, v in enumerate(to_values)}
             for v in new_values:
-                idx = to_values.index(v)
+                idx = pos_map[v]
                 after = to_values[idx - 1] if idx > 0 else None
                 upgrade_ops.append({
                     "type": "alter_enum_add_value",
@@ -2868,6 +2889,8 @@ def snapshot_diff_to_sql(
             changes.append(Change(operation="drop_column", table=op["table"], target=op["column"]))
         elif op["type"] == "alter_column_type":
             model_type = op.get("model_type", "")
+            if not isinstance(model_type, str):
+                model_type = _model_type_str(model_type)
             if safe_type_change:
                 temp_col = f"{op['column']}_new"
                 stmts = _build_safe_type_change_sql(op["table"], op["column"], model_type, backend)
@@ -3825,6 +3848,7 @@ def _filter_duplicates_from_snapshot_diff(
 
 def _find_model_table(table_name: str, db_name: str | None = None) -> ModelTable | None:
     from dbwarden.config import get_database
+    from dbwarden.engine.model_discovery import get_model_table_by_name
 
     config = get_database(db_name)
     model_paths = config.model_paths
@@ -3833,14 +3857,7 @@ def _find_model_table(table_name: str, db_name: str | None = None) -> ModelTable
         model_paths = auto_discover_model_paths()
     if not model_paths:
         return None
-    from dbwarden.engine.model_discovery import (
-        get_all_model_tables,
-        filter_model_tables_by_name,
-    )
 
-    tables = get_all_model_tables(model_paths, db_name=db_name)
-    tables = filter_model_tables_by_name(tables, config.model_tables)
-    for t in tables:
-        if t.name == table_name:
-            return t
-    return None
+    if config.model_tables is not None and table_name not in config.model_tables:
+        return None
+    return get_model_table_by_name(table_name, model_paths, db_name=db_name)

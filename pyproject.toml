@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dbwarden"
-version = "0.12.1"
+version = "0.12.4"
 description = "The SQL-first database toolkit for SQLAlchemy." 
 readme = "README.md"
 license = "MIT"
@@ -37,10 +37,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://emiliano-gandini-outeda.github.io/DBWarden/"
-Repository = "https://github.com/emiliano-gandini-outeda/DBWarden"
-Documentation = "https://emiliano-gandini-outeda.github.io/DBWarden/"
-"Bug Tracker" = "https://github.com/emiliano-gandini-outeda/DBWarden/issues"
+Homepage = "https://dbwarden.emiliano-go.com/"
+Repository = "https://github.com/emiliano-go/DBWarden"
+Documentation = "https://dbwarden.emiliano-go.com/"
+"Bug Tracker" = "https://github.com/emiliano-go/DBWarden/issues"
 
 [project.scripts]
 dbwarden = "dbwarden.cli.main:main"

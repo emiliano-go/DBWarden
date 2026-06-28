@@ -12,12 +12,15 @@ _LIST_FIELDS = {
     "indexes",
     "checks",
     "uniques",
+    "primary_key",
     "pg_indexes",
     "pg_checks",
     "pg_uniques",
     "pg_excludes",
     "ch_indexes",
     "my_indexes",
+    "my_checks",
+    "my_uniques",
     "sq_indexes",
     "pg_inherits",
 }
@@ -28,7 +31,7 @@ _KNOWN_FIELD_ATTRS = frozenset({
 })
 
 _KNOWN_TABLE_ATTRS = frozenset({
-    "comment", "indexes", "checks", "uniques", "partition",
+    "comment", "indexes", "checks", "uniques", "partition", "primary_key",
     "pg_tablespace", "pg_fillfactor", "pg_unlogged", "pg_inherits",
     "pg_indexes", "pg_checks", "pg_uniques", "pg_excludes", "pg_partition",
     "ch_engine", "ch_order_by", "ch_primary_key", "ch_partition_by",
@@ -38,7 +41,7 @@ _KNOWN_TABLE_ATTRS = frozenset({
     "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key",
     "ch_projections",
     "my_engine", "my_charset", "my_collate", "my_row_format",
-    "my_auto_increment", "my_indexes",
+    "my_auto_increment", "my_indexes", "my_checks", "my_uniques",
     "mdb_page_compressed", "mdb_page_compression_level",
     "sq_without_rowid", "sq_strict", "sq_indexes",
 })
@@ -190,6 +193,9 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
     meta.pg_excludes = list(table_attrs.get("pg_excludes", []))
     meta.ch_indexes = [_to_dict(i) for i in table_attrs.get("ch_indexes", [])]
     meta.my_indexes = list(table_attrs.get("my_indexes", []))
+    meta.my_checks = list(table_attrs.get("my_checks", []))
+    meta.my_uniques = list(table_attrs.get("my_uniques", []))
+    meta.primary_key = list(table_attrs.get("primary_key", []))
     meta.sq_indexes = list(table_attrs.get("sq_indexes", []))
     meta.table_attrs = dict(table_attrs)
 
@@ -215,7 +221,7 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
             select_statement=table_attrs.get("ch_select_statement"),
             to_table=table_attrs.get("ch_to_table"),
         )
-    elif any(k.startswith("mdb_") and k not in ("mdb_page_compressed", "mdb_page_compression_level") or k.startswith("my_") and k not in ("my_indexes",) for k in table_attrs):
+    elif any(k.startswith("mdb_") and k not in ("mdb_page_compressed", "mdb_page_compression_level") or k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques") for k in table_attrs):
         is_mariadb = any(k.startswith("mdb_") for k in table_attrs)
         cls = MdbTableSpec if is_mariadb else MyTableSpec
         meta.backend_table = cls(

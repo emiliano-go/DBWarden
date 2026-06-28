@@ -7,7 +7,7 @@ seo:
   description: Integrate DBWarden with FastAPI for automatic schema migration on startup,
     async database sessions, health endpoints, readiness gates, Prometheus metrics,
     and distributed locking.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/
+  canonical: https://dbwarden.emiliano-go.com/fastapi/
   robots: index,follow
   og:
     type: website
@@ -15,8 +15,8 @@ seo:
     description: Integrate DBWarden with FastAPI for automatic schema migration on
       startup, async database sessions, health endpoints, readiness gates, Prometheus
       metrics, and distributed locking.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/fastapi/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -24,16 +24,16 @@ seo:
     description: Integrate DBWarden with FastAPI for automatic schema migration on
       startup, async database sessions, health endpoints, readiness gates, Prometheus
       metrics, and distributed locking.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: FastAPI Integration - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/
+    url: https://dbwarden.emiliano-go.com/fastapi/
     description: Integrate DBWarden with FastAPI for automatic schema migration on
       startup, async database sessions, health endpoints, readiness gates, Prometheus
       metrics, and distributed locking.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
@@ -57,18 +57,18 @@ Create your first FastAPI app with DBWarden:
 
 ```python
 from fastapi import FastAPI
-from dbwarden.fastapi import get_session, migration_context
+from dbwarden.fastapi import dbwarden_lifespan
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with migration_context(mode="check"):
+    async with dbwarden_lifespan(mode="migrate", allow_in_production=True):
         yield
 
 app = FastAPI(lifespan=lifespan)
 ```
 
-That's it! **5 lines** to integrate DBWarden.
+That's it! **5 lines** to integrate DBWarden. For fine-grained control, use `migration_context()` instead of `dbwarden_lifespan()`.
 
 ## Tutorial - First Steps
 

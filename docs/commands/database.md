@@ -3,30 +3,30 @@ seo:
   title: database - DBWarden Documentation
   description: Display configured databases. Config is defined in Python code via
     databaseconfig, so database list is a read-only command for viewing what's registered.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/database/
+  canonical: https://dbwarden.emiliano-go.com/commands/database/
   robots: index,follow
   og:
     type: website
     title: database - DBWarden Documentation
     description: Display configured databases. Config is defined in Python code via
       databaseconfig, so database list is a read-only command for viewing what's registered.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/database/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/commands/database/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: database - DBWarden Documentation
     description: Display configured databases. Config is defined in Python code via
       databaseconfig, so database list is a read-only command for viewing what's registered.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: database - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/database/
+    url: https://dbwarden.emiliano-go.com/commands/database/
     description: Display configured databases. Config is defined in Python code via
       databaseconfig, so database list is a read-only command for viewing what's registered.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

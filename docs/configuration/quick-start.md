@@ -2,27 +2,27 @@
 seo:
   title: Quick Start - DBWarden Documentation
   description: Configure your first database in 2 minutes.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/quick-start/
+  canonical: https://dbwarden.emiliano-go.com/configuration/quick-start/
   robots: index,follow
   og:
     type: website
     title: Quick Start - DBWarden Documentation
     description: Configure your first database in 2 minutes.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/quick-start/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/configuration/quick-start/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Quick Start - DBWarden Documentation
     description: Configure your first database in 2 minutes.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Quick Start - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/quick-start/
+    url: https://dbwarden.emiliano-go.com/configuration/quick-start/
     description: Configure your first database in 2 minutes.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

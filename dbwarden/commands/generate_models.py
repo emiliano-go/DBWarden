@@ -138,7 +138,13 @@ def _parse_type(raw: str, dialect: str | None = None) -> str:
             return "Boolean"
         return "SmallInteger"
 
+    if upper.startswith("LONGTEXT"):
+        return "Text"
+
     if upper.startswith("MEDIUMTEXT"):
+        return "Text"
+
+    if upper.startswith("TINYTEXT"):
         return "Text"
 
     if upper.startswith("BIGINT"):
@@ -276,9 +282,6 @@ def _resolve_imports(columns: list[dict], has_relationships: bool) -> set[str]:
             imports.add("text")
         if col.get("foreign_key"):
             imports.add("ForeignKey")
-        my_meta = col.get("my_meta")
-        if my_meta and my_meta.get("my_on_update"):
-            imports.add("func")
     return imports
 
 
@@ -445,6 +448,15 @@ def _generate_table_code(
         col_line = _format_column(col)
         if col_line:
             lines.append(f"    {col_line}")
+
+    primary_key_cols = None
+    if my_meta and my_meta.get("primary_key"):
+        primary_key_cols = my_meta["primary_key"]
+    elif pg_meta and pg_meta.get("primary_key"):
+        primary_key_cols = pg_meta["primary_key"]
+    if primary_key_cols:
+        lines.append(f"    __mapper_args__ = {{'primary_key': {primary_key_cols!r}}}")
+
     if clickhouse_options:
         lines.append("")
         lines.append("    class Meta(CHTableMeta):")
@@ -611,17 +623,6 @@ def _format_column(col: dict) -> str:
     if col.get("autoincrement") is False:
         col_args.append("autoincrement=False")
 
-    my_meta = col.get("my_meta")
-    if my_meta:
-        if my_meta.get("my_unsigned"):
-            col_args.append("mysql_unsigned=True")
-        if my_meta.get("my_charset"):
-            col_args.append(f"mysql_charset={my_meta['my_charset']!r}")
-        if my_meta.get("my_collate"):
-            col_args.append(f"mysql_collate={my_meta['my_collate']!r}")
-        if my_meta.get("my_on_update"):
-            col_args.append("server_onupdate=func.now()")
-
     col_args.append(")")
     return ",\n        ".join(col_args)
 
@@ -705,16 +706,16 @@ def _write_models(
             content += "from dbwarden.databases.pgsql import " + imports + "\n"
             content += "\n"
         if my_meta_imports or needs_my_spec:
+            imports = ", ".join(sorted(my_meta_imports))
             if needs_my_spec:
-                content += "from dbwarden.databases import my\n"
-            if my_meta_imports:
-                content += "from dbwarden.databases.mysql import " + ", ".join(sorted(my_meta_imports)) + "\n"
+                imports = ("my, " + imports) if my_meta_imports else "my"
+            content += "from dbwarden.databases.mysql import " + imports + "\n"
             content += "\n"
         if ch_meta_imports or needs_ch_spec:
-            if ch_meta_imports:
-                content += "from dbwarden.databases.clickhouse import " + ", ".join(sorted(ch_meta_imports)) + "\n"
+            imports = ", ".join(sorted(ch_meta_imports))
             if needs_ch_spec:
-                content += "from dbwarden.databases.clickhouse import ch\n"
+                imports = ("ch, " + imports) if ch_meta_imports else "ch"
+            content += "from dbwarden.databases.clickhouse import " + imports + "\n"
             content += "\n"
         content += "\n\n".join(all_classes)
         (out_path / "models.py").write_text(content, encoding="utf-8")
@@ -763,9 +764,11 @@ def _write_models(
             content_lines.append("from dbwarden.databases.mysql import " + imports + "\n")
             content_lines.append("\n")
         if table.get("clickhouse_options"):
-            content_lines.append("from dbwarden.databases.clickhouse import CHColumnMeta, CHTableMeta, ChEngineSpec, ProjectionSpec\n")
-            if any(col.get("ch_meta") for col in table["columns"]):
-                content_lines.append("from dbwarden.databases.clickhouse import ch\n")
+            ch_imports_set: set[str] = {"CHColumnMeta", "CHTableMeta", "ChEngineSpec", "ProjectionSpec"}
+            needs_ch_spec = any(col.get("ch_meta") for col in table["columns"])
+            if needs_ch_spec:
+                ch_imports_set.add("ch")
+            content_lines.append("from dbwarden.databases.clickhouse import " + ", ".join(sorted(ch_imports_set)) + "\n")
             content_lines.append("\n")
         content_lines.append(
             _generate_table_code(
@@ -1038,7 +1041,12 @@ def _extract_postgresql_meta(inspector, connection, table_name: str, raw_columns
     return table_meta, column_meta
 
 
-def _extract_mysql_meta(connection, table_name: str) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
+def _extract_mysql_meta(
+    connection, table_name: str,
+    indexes: list[dict] | None = None,
+    checks: list[dict] | None = None,
+    uniques: list[dict] | None = None,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]]]:
     from sqlalchemy import text
 
     table_meta: dict[str, Any] = {}
@@ -1105,6 +1113,38 @@ def _extract_mysql_meta(connection, table_name: str) -> tuple[dict[str, Any], di
             connection.rollback()
         except Exception:
             pass
+
+    if indexes:
+        my_indexes: list[dict[str, Any]] = []
+        for idx in indexes:
+            entry: dict[str, Any] = {
+                "name": idx.get("name"),
+                "columns": list(idx.get("column_names", [])),
+                "unique": bool(idx.get("unique", False)),
+            }
+            dialect_options = idx.get("dialect_options", {})
+            for k in ("mysql_using", "mariadb_using"):
+                val = dialect_options.get(k)
+                if val:
+                    entry["using"] = val
+                    break
+            if "using" not in entry:
+                entry["using"] = "btree"
+            my_indexes.append(entry)
+        if my_indexes:
+            table_meta["my_indexes"] = my_indexes
+
+    if checks:
+        table_meta["my_checks"] = [
+            {"name": ck.get("name"), "expression": ck.get("sqltext", "")}
+            for ck in checks
+        ]
+
+    if uniques:
+        table_meta["my_uniques"] = [
+            {"name": uq.get("name"), "columns": list(uq.get("column_names", []))}
+            for uq in uniques
+        ]
 
     return table_meta, column_meta
 
@@ -1232,6 +1272,7 @@ def generate_models_cmd(
 
             pk_constraint = inspector.get_pk_constraint(table_name)
             pk_columns = set(pk_constraint.get("constrained_columns", []))
+            pk_was_inferred = False
 
             unique_constraints = inspector.get_unique_constraints(table_name)
             indexes_info = inspector.get_indexes(table_name)
@@ -1245,6 +1286,7 @@ def generate_models_cmd(
             raw_columns = inspector.get_columns(table_name)
 
             if not pk_columns:
+                pk_was_inferred = True
                 pk_columns = _infer_primary_key(pk_columns, unique_constraints, raw_columns)
 
             foreign_keys_raw = inspector.get_foreign_keys(table_name)
@@ -1263,7 +1305,7 @@ def generate_models_cmd(
                 col_type_str = str(col["type"])
                 col_nullable = col.get("nullable", True)
                 col_default = col.get("default")
-                col_primary = col_name in pk_columns
+                col_primary = col_name in pk_columns and not pk_was_inferred
                 col_unique = col_name in unique_columns
                 col_fk = fk_map.get(col_name)
 
@@ -1304,6 +1346,12 @@ def generate_models_cmd(
                         entry["pg_type"] = {"kind": "range"}
                     if col_name in fk_options_map:
                         entry["fk_options"] = fk_options_map[col_name]
+
+                if actual_dialect in ("mysql", "mariadb"):
+                    type_obj = col["type"]
+                    if getattr(type_obj, "enums", None):
+                        enum_values = ", ".join(repr(v) for v in type_obj.enums)
+                        entry["type"] = f"ENUM({enum_values})"
 
                 columns_info.append(entry)
 
@@ -1373,7 +1421,12 @@ def generate_models_cmd(
 
             my_meta: dict[str, Any] | None = None
             if actual_dialect in ("mysql", "mariadb"):
-                my_meta, column_meta = _extract_mysql_meta(connection, table_name)
+                my_meta, column_meta = _extract_mysql_meta(
+                    connection, table_name,
+                    indexes=indexes_info,
+                    checks=checks_info,
+                    uniques=unique_constraints,
+                )
                 for col in columns_info:
                     if col["name"] in column_meta:
                         meta = dict(column_meta[col["name"]])
@@ -1382,6 +1435,13 @@ def generate_models_cmd(
                             col["comment"] = comment
                         if meta:
                             col["my_meta"] = meta
+
+            if pk_was_inferred and pk_columns:
+                inferred_pk = list(pk_columns)
+                if my_meta is not None:
+                    my_meta["primary_key"] = inferred_pk
+                elif pg_meta is not None:
+                    pg_meta["primary_key"] = inferred_pk
 
             tables_data.append({
                 "name": table_name,
@@ -1474,7 +1534,7 @@ def _extract_ch_meta(connection, table_name: str) -> dict:
         _parse_zookeeper_path,
         _parse_replica_name,
     )
-    from dbwarden.schema.engine import ChEngineSpec
+    from dbwarden.databases.clickhouse.engine import ChEngineSpec
 
     options: dict = {}
     engine = getattr(row, "engine", "") or ""

@@ -3,7 +3,7 @@ seo:
   title: Seed Management - DBWarden Documentation
   description: DBWarden provides built-in seed data management for populating databases
     with initial or reference data. Seeds complement migrations by handling data that...
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/seeds/
+  canonical: https://dbwarden.emiliano-go.com/seeds/
   robots: index,follow
   og:
     type: website
@@ -11,8 +11,8 @@ seo:
     description: DBWarden provides built-in seed data management for populating databases
       with initial or reference data. Seeds complement migrations by handling data
       that...
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/seeds/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/seeds/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -20,16 +20,16 @@ seo:
     description: DBWarden provides built-in seed data management for populating databases
       with initial or reference data. Seeds complement migrations by handling data
       that...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Seed Management - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/seeds/
+    url: https://dbwarden.emiliano-go.com/seeds/
     description: DBWarden provides built-in seed data management for populating databases
       with initial or reference data. Seeds complement migrations by handling data
       that...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

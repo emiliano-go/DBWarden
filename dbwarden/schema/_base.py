@@ -55,6 +55,7 @@ class DBWardenMeta:
     indexes: list[Any] = dc_field(default_factory=list)
     checks: list[Any] = dc_field(default_factory=list)
     uniques: list[Any] = dc_field(default_factory=list)
+    primary_key: list[str] = dc_field(default_factory=list)
     partition: Any = None
     backend_table: Any = None
     pg_indexes: list[Any] = dc_field(default_factory=list)
@@ -63,6 +64,8 @@ class DBWardenMeta:
     pg_excludes: list[Any] = dc_field(default_factory=list)
     ch_indexes: list[Any] = dc_field(default_factory=list)
     my_indexes: list[Any] = dc_field(default_factory=list)
+    my_checks: list[Any] = dc_field(default_factory=list)
+    my_uniques: list[Any] = dc_field(default_factory=list)
     sq_indexes: list[Any] = dc_field(default_factory=list)
     table_attrs: dict[str, Any] = dc_field(default_factory=dict)
 
@@ -77,12 +80,15 @@ def attach_meta(cls, incoming: DBWardenMeta) -> None:
         "indexes",
         "checks",
         "uniques",
+        "primary_key",
         "pg_indexes",
         "pg_checks",
         "pg_uniques",
         "pg_excludes",
         "ch_indexes",
         "my_indexes",
+        "my_checks",
+        "my_uniques",
         "sq_indexes",
     ):
         getattr(existing, list_field).extend(getattr(incoming, list_field))

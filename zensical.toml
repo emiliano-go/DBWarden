@@ -1,7 +1,7 @@
 [project]
 site_name = "DBWarden Documentation"
 site_description = "DBWarden: SQL-first database migration system for Python and SQLAlchemy projects. Multi-DB migrations, impact analysis, sandbox testing, FastAPI integration, seal data management, and production safety controls."
-site_url = "https://emiliano-gandini-outeda.github.io/DBWarden/"
+site_url = "https://dbwarden.emiliano-go.com"
 docs_dir = "docs"
 site_dir = "site"
 
@@ -46,7 +46,7 @@ toggle.name = "Switch to light mode"
 
 [[project.extra.social]]
 icon = "fontawesome/brands/github"
-link = "https://github.com/emiliano-gandini-outeda/DBWarden"
+link = "https://github.com/emiliano-go/DBWarden"
 name = "DBWarden on GitHub"
 
 [[project.extra.social]]

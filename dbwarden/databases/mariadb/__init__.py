@@ -6,6 +6,9 @@ from dbwarden.databases.mariadb.field import MdbFieldSpec, field
 from dbwarden.databases.mysql import MyTableSpec
 from dbwarden.schema.table_meta import MdbColumnMeta, MdbTableMeta
 
+import sys as _sys
+mdb = _sys.modules[__name__]
+
 
 @dataclass
 class MdbTableSpec(MyTableSpec):
@@ -19,4 +22,5 @@ __all__ = [
     "MdbTableMeta",
     "MdbTableSpec",
     "field",
+    "mdb",
 ]

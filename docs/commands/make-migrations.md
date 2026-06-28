@@ -2,27 +2,27 @@
 seo:
   title: make-migrations - DBWarden Documentation
   description: Generate SQL migration files from SQLAlchemy models.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/make-migrations/
+  canonical: https://dbwarden.emiliano-go.com/commands/make-migrations/
   robots: index,follow
   og:
     type: website
     title: make-migrations - DBWarden Documentation
     description: Generate SQL migration files from SQLAlchemy models.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/make-migrations/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/commands/make-migrations/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: make-migrations - DBWarden Documentation
     description: Generate SQL migration files from SQLAlchemy models.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: make-migrations - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/make-migrations/
+    url: https://dbwarden.emiliano-go.com/commands/make-migrations/
     description: Generate SQL migration files from SQLAlchemy models.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

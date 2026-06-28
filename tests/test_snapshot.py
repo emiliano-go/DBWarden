@@ -567,10 +567,18 @@ class TestExtractFullSchemaSnapshot:
             database_type="sqlite",
         )
 
-        assert "ix_t_a" in snapshot["indexes"]
-        assert snapshot["indexes"]["ix_t_a"]["unique"] is False
-        assert "ix_t_b" in snapshot["indexes"]
-        assert snapshot["indexes"]["ix_t_b"]["unique"] is True
+        assert any(
+            entry.get("name") == "ix_t_a"
+            for entry in snapshot["indexes"].values()
+        )
+        assert any(
+            entry.get("name") == "ix_t_b" and entry.get("unique") is True
+            for entry in snapshot["indexes"].values()
+        )
+        assert any(
+            entry.get("name") == "ix_t_a" and entry.get("unique") is False
+            for entry in snapshot["indexes"].values()
+        )
 
         os.unlink(db_path)
 

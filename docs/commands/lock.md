@@ -2,27 +2,27 @@
 seo:
   title: lock-status and unlock - DBWarden Documentation
   description: Inspect and recover migration lock state.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/commands/lock/
+  canonical: https://dbwarden.emiliano-go.com/commands/lock/
   robots: index,follow
   og:
     type: website
     title: lock-status and unlock - DBWarden Documentation
     description: Inspect and recover migration lock state.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/lock/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/commands/lock/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: lock-status and unlock - DBWarden Documentation
     description: Inspect and recover migration lock state.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: lock-status and unlock - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/commands/lock/
+    url: https://dbwarden.emiliano-go.com/commands/lock/
     description: Inspect and recover migration lock state.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

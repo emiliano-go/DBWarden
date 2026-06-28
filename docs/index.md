@@ -3,27 +3,27 @@ description: DBWarden is a SQL-first database migration system for Python and SQ
 seo:
   title: DBWarden - DBWarden Documentation
   description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/
+  canonical: https://dbwarden.emiliano-go.com/
   robots: index,follow
   og:
     type: website
     title: DBWarden - DBWarden Documentation
     description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: DBWarden - DBWarden Documentation
     description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: DBWarden - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/
+    url: https://dbwarden.emiliano-go.com/
     description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
@@ -43,7 +43,7 @@ seo:
     <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white&style=for-the-badge" alt="Python">
   </a>
   <a href="https://pypi.org/project/dbwarden">
-    <img src="https://img.shields.io/badge/PyPI-0.11.2-34D058?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
+    <img src="https://img.shields.io/badge/PyPI-0.12.3-34D058?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
   </a>
   <a href="https://github.com/emiliano-gandini-outeda/DBWarden/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
@@ -54,7 +54,7 @@ seo:
 </p>
 
 <p align="center">
-  <strong><a href="https://emiliano-gandini-outeda.github.io/DBWarden/">Full documentation</a></strong>
+  <strong><a href="https://dbwarden.emiliano-go.com/">Full documentation</a></strong>
   &nbsp;|&nbsp;
   <strong><a href="https://github.com/emiliano-gandini-outeda/DBWarden">Source Code</a></strong>
 </p>
@@ -65,7 +65,7 @@ It is built for teams that want schema changes to remain explicit, reviewable, a
 
 ## What DBWarden Does
 
-- Generates migration files as plain SQL, with `--upgrade` and `--rollback` sections
+- Generates migration files as plain SQL, with `-- upgrade` and `-- rollback` sections
 - Reads SQLAlchemy models and backend-specific metadata from `class Meta`
 - Supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse
 - Manages one or many databases from one typed config source

@@ -1,8 +1,8 @@
-from dbwarden.databases import clickhouse as ch
-from dbwarden.databases import pgsql as pg
-from dbwarden.databases import mysql as my
-from dbwarden.databases import mariadb as mdb
-from dbwarden.databases import sqlite as sq
+from dbwarden.databases.clickhouse import ch
+from dbwarden.databases.pgsql import pg
+from dbwarden.databases.mysql import my
+from dbwarden.databases.mariadb import mdb
+from dbwarden.databases.sqlite import sq
 
 from dbwarden.databases.clickhouse import (
     ChFieldSpec,
@@ -33,7 +33,6 @@ from dbwarden.databases.pgsql import (
 from dbwarden.databases.sqlite import SqFieldSpec, SqTableSpec
 from dbwarden.schema._auto_schema import SchemaConfig, auto_schema
 from dbwarden.schema._base import DBWardenMeta, attach_meta, read_meta
-from dbwarden.schema._meta import FieldMeta
 from dbwarden.schema._meta_reader import apply_meta
 from dbwarden.schema.constraint import CheckSpec, UniqueSpec, check, unique
 from dbwarden.schema.index import IndexSpec, index
@@ -43,7 +42,6 @@ from dbwarden.seed import SeedRow, Seed, seed_data
 __all__ = [
     "CheckSpec",
     "DBWardenMeta",
-    "FieldMeta",
     "IndexSpec",
     "Seed",
     "SeedRow",

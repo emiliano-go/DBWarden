@@ -2,27 +2,27 @@
 seo:
   title: 11. Observability - DBWarden Documentation
   description: What You'll Learn
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/11-observability/
+  canonical: https://dbwarden.emiliano-go.com/cookbook/11-observability/
   robots: index,follow
   og:
     type: website
     title: 11. Observability - DBWarden Documentation
     description: What You'll Learn
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/11-observability/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/cookbook/11-observability/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: 11. Observability - DBWarden Documentation
     description: What You'll Learn
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: 11. Observability - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/cookbook/11-observability/
+    url: https://dbwarden.emiliano-go.com/cookbook/11-observability/
     description: What You'll Learn
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

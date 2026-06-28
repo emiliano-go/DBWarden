@@ -6,6 +6,8 @@ from typing import Any
 from dbwarden.databases.mysql.field import MyFieldSpec, field
 from dbwarden.schema.table_meta import MyColumnMeta, MyTableMeta
 
+import sys as _sys
+my = _sys.modules[__name__]
 
 @dataclass
 class MyTableSpec:
@@ -22,4 +24,5 @@ __all__ = [
     "MyTableMeta",
     "MyTableSpec",
     "field",
+    "my",
 ]

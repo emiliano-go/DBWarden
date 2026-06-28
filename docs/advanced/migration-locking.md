@@ -4,7 +4,7 @@ seo:
   description: DBWarden uses a database-level lock to prevent concurrent schema mutation.
     This page explains how it works, what happens when it fails, and how to recover
     from...
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/migration-locking/
+  canonical: https://dbwarden.emiliano-go.com/advanced/migration-locking/
   robots: index,follow
   og:
     type: website
@@ -12,8 +12,8 @@ seo:
     description: DBWarden uses a database-level lock to prevent concurrent schema
       mutation. This page explains how it works, what happens when it fails, and how
       to recover from...
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/migration-locking/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/advanced/migration-locking/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -21,16 +21,16 @@ seo:
     description: DBWarden uses a database-level lock to prevent concurrent schema
       mutation. This page explains how it works, what happens when it fails, and how
       to recover from...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Migration Locking - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/advanced/migration-locking/
+    url: https://dbwarden.emiliano-go.com/advanced/migration-locking/
     description: DBWarden uses a database-level lock to prevent concurrent schema
       mutation. This page explains how it works, what happens when it fails, and how
       to recover from...
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
@@ -44,7 +44,7 @@ DBWarden uses a database-level lock to prevent concurrent schema mutation. This 
 
 When `dbwarden migrate` runs, it:
 
-1. Acquires a lock row in the `dbwarden_lock` table (created on first use)
+1. Acquires a lock row in the `dbwarden_lock` table (created on first use; the table name is `dbwarden_lock`, not `_dbwarden_lock`)
 2. Executes all pending migrations within that lock
 3. Releases the lock on success or failure
 
@@ -200,7 +200,7 @@ to serialize migration requests across application instances.
 | Aspect | Database lock | Redis lock |
 |--------|---------------|------------|
 | Scope | CLI commands (`migrate`, `seed`) | FastAPI `POST /migrate` endpoint |
-| Storage | `_dbwarden_lock` table in the target database | Redis key |
+| Storage | `dbwarden_lock` table in the target database | Redis key |
 | TTL | No TTL: manual `unlock` required after crash | 60-second default TTL |
 | Failure mode | Blocks other CLI commands until released | Auto-released after TTL |
 | External dependency | None (uses the database itself) | Redis required |

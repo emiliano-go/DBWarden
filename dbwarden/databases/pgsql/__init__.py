@@ -35,4 +35,5 @@ __all__ = [
     "partition_by_hash",
     "partition_by_list",
     "partition_by_range",
+    "pg",
 ]

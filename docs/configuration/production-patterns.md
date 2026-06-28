@@ -2,27 +2,27 @@
 seo:
   title: Production Patterns - DBWarden Documentation
   description: Real-world configuration patterns for production deployments.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/production-patterns/
+  canonical: https://dbwarden.emiliano-go.com/configuration/production-patterns/
   robots: index,follow
   og:
     type: website
     title: Production Patterns - DBWarden Documentation
     description: Real-world configuration patterns for production deployments.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/production-patterns/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/configuration/production-patterns/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Production Patterns - DBWarden Documentation
     description: Real-world configuration patterns for production deployments.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Production Patterns - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/configuration/production-patterns/
+    url: https://dbwarden.emiliano-go.com/configuration/production-patterns/
     description: Real-world configuration patterns for production deployments.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
@@ -92,8 +92,6 @@ primary = database_config(
 
 ```yaml
 # docker-compose.yml
-version: '3.8'
-
 services:
   app:
     build: .
@@ -126,7 +124,7 @@ primary = database_config(
 ### Dockerfile
 
 ```dockerfile
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
@@ -523,13 +521,13 @@ jobs:
   migrate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       
       - name: Install dependencies
         run: uv add dbwarden
       
       - name: Run migrations
-        run: dbwarden migrate
+        run: dbwarden migrate --database primary
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 ```
@@ -541,7 +539,7 @@ migrate:
   stage: deploy
   script:
     - uv add dbwarden
-    - dbwarden migrate
+    - dbwarden migrate --database primary
   environment:
     name: production
   only:

@@ -3,30 +3,30 @@ seo:
   title: PostgreSQL - DBWarden Documentation
   description: 'DBWarden treats PostgreSQL as a first-class backend: every natively
     supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/databases/postgresql/
+  canonical: https://dbwarden.emiliano-go.com/databases/postgresql/
   robots: index,follow
   og:
     type: website
     title: PostgreSQL - DBWarden Documentation
     description: 'DBWarden treats PostgreSQL as a first-class backend: every natively
       supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/databases/postgresql/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/databases/postgresql/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: PostgreSQL - DBWarden Documentation
     description: 'DBWarden treats PostgreSQL as a first-class backend: every natively
       supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: PostgreSQL - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/databases/postgresql/
+    url: https://dbwarden.emiliano-go.com/databases/postgresql/
     description: 'DBWarden treats PostgreSQL as a first-class backend: every natively
       supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

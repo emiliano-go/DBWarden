@@ -93,7 +93,9 @@ def test_generate_table_code_mysql_unsigned():
         {"name": "id", "type": "INTEGER", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None, "my_meta": {"my_unsigned": True}},
     ]
     code = _generate_table_code("users", columns)
-    assert "mysql_unsigned=True" in code
+    assert "class Meta(MyTableMeta):" in code
+    assert "class id(MyColumnMeta):" in code
+    assert "my = my.field(unsigned=True)" in code
 
 
 def test_generate_table_code_mysql_charset():
@@ -101,8 +103,9 @@ def test_generate_table_code_mysql_charset():
         {"name": "name", "type": "VARCHAR(100)", "nullable": True, "default": None, "primary_key": False, "unique": False, "foreign_key": None, "my_meta": {"my_charset": "utf8", "my_collate": "utf8_unicode_ci"}},
     ]
     code = _generate_table_code("users", columns)
-    assert "mysql_charset='utf8'" in code
-    assert "mysql_collate='utf8_unicode_ci'" in code
+    assert "class Meta(MyTableMeta):" in code
+    assert "class name(MyColumnMeta):" in code
+    assert "my = my.field(charset='utf8', collate='utf8_unicode_ci')" in code
 
 
 def test_generate_table_code_mysql_on_update():
@@ -110,7 +113,9 @@ def test_generate_table_code_mysql_on_update():
         {"name": "updated_at", "type": "DATETIME", "nullable": True, "default": None, "primary_key": False, "unique": False, "foreign_key": None, "my_meta": {"my_on_update": "CURRENT_TIMESTAMP"}},
     ]
     code = _generate_table_code("users", columns)
-    assert "server_onupdate=func.now()" in code
+    assert "class Meta(MyTableMeta):" in code
+    assert "class updated_at(MyColumnMeta):" in code
+    assert "my = my.field(on_update='CURRENT_TIMESTAMP')" in code
 
 
 def test_generate_table_code_mysql_all_attrs():
@@ -120,10 +125,13 @@ def test_generate_table_code_mysql_all_attrs():
         {"name": "updated_at", "type": "DATETIME", "nullable": True, "default": None, "primary_key": False, "unique": False, "foreign_key": None, "dialect": "mysql", "my_meta": {"my_on_update": "CURRENT_TIMESTAMP"}},
     ]
     code = _generate_table_code("users", columns)
-    assert "mysql_unsigned=True" in code
-    assert "mysql_charset='utf8'" in code
-    assert "mysql_collate='utf8_unicode_ci'" in code
-    assert "server_onupdate=func.now()" in code
+    assert "class Meta(MyTableMeta):" in code
+    assert "class id(MyColumnMeta):" in code
+    assert "my = my.field(unsigned=True)" in code
+    assert "class name(MyColumnMeta):" in code
+    assert "my = my.field(charset='utf8', collate='utf8_unicode_ci')" in code
+    assert "class updated_at(MyColumnMeta):" in code
+    assert "my = my.field(on_update='CURRENT_TIMESTAMP')" in code
 
 
 def test_generate_table_code_with_foreign_key():
@@ -454,7 +462,7 @@ class TestClickHouseGenerateModels:
 
     def test_render_ch_meta_with_engine_spec(self):
         from dbwarden.commands.generate_models import _render_ch_meta
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         engine = ChEngineSpec(name="ReplicatedMergeTree", args=("/zk/path", "{replica}"))
         meta_lines = _render_ch_meta(
             columns=[],
@@ -556,7 +564,7 @@ class TestClickHouseGenerateModels:
     def test_write_models_clickhouse_ch_engine_spec_import(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             from dbwarden.commands.generate_models import _write_models
-            from dbwarden.schema.engine import ChEngineSpec
+            from dbwarden.databases.clickhouse.engine import ChEngineSpec
 
             tables = [
                 {

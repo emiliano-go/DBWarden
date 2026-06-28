@@ -320,10 +320,10 @@ def _analyze_table(table_snapshot: dict[str, Any], model_table: ModelTable) -> l
     for column_name in sorted(snapshot_columns.keys() & model_columns.keys()):
         snapshot_column = snapshot_columns[column_name]
         model_column = model_columns[column_name]
-        from dbwarden.engine.snapshot import normalize_type
+        from dbwarden.engine.snapshot import normalize_type, _model_type_str
 
         snapshot_type = _snapshot_column_type_signature(snapshot_column)
-        model_type = normalize_type(str(model_column.type))
+        model_type = normalize_type(_model_type_str(model_column.type))
         model_pg_column = None
         if model_column.pg_meta:
             model_pg_column = {}

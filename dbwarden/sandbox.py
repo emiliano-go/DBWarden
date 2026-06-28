@@ -289,10 +289,25 @@ def load_model_module(filepath: Path, base_dir: Path) -> Any:
     except ValueError:
         module_name = None
 
-    # Return cached module if already loaded to avoid duplicate table
-    # registration on the shared declarative Base.metadata.
+    try:
+        file_stat = filepath.stat()
+    except OSError:
+        file_stat = None
+
+    # Reuse cached modules only when the source file is unchanged.
     if module_name is not None and module_name in sys.modules:
-        return sys.modules[module_name]
+        cached = sys.modules[module_name]
+        cached_mtime = getattr(cached, "__dbwarden_source_mtime_ns__", None)
+        cached_size = getattr(cached, "__dbwarden_source_size__", None)
+        cached_path = getattr(cached, "__dbwarden_source_path__", None)
+        if (
+            file_stat is not None
+            and cached_mtime == file_stat.st_mtime_ns
+            and cached_size == file_stat.st_size
+            and cached_path == str(filepath.resolve())
+        ):
+            return cached
+        del sys.modules[module_name]
 
     # Check DBWARDEN_DISABLE_SANDBOX env var
     if os.environ.get("DBWARDEN_DISABLE_SANDBOX"):
@@ -311,6 +326,11 @@ def load_model_module(filepath: Path, base_dir: Path) -> Any:
         if module_name is not None:
             sys.modules[module_name] = module
         spec.loader.exec_module(module)
+        if file_stat is None:
+            file_stat = filepath.stat()
+        module.__dbwarden_source_path__ = str(filepath.resolve())
+        module.__dbwarden_source_mtime_ns__ = file_stat.st_mtime_ns
+        module.__dbwarden_source_size__ = file_stat.st_size
 
         return module
     except Exception as e:

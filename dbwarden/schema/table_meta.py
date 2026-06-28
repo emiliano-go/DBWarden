@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from dbwarden.schema._base import _MetaValidator
-from dbwarden.schema._meta import CHFieldMeta, FieldMeta, MdbFieldMeta, MyFieldMeta, PGFieldMeta
 
 
 class TableMeta(metaclass=_MetaValidator):
@@ -18,6 +17,7 @@ class TableMeta(metaclass=_MetaValidator):
     indexes: list[Any] = []
     checks: list[Any] = []
     uniques: list[Any] = []
+    primary_key: list[str] = []
 
 
 class PGTableMeta(TableMeta):
@@ -34,7 +34,7 @@ class PGTableMeta(TableMeta):
     pg_partition: dict[str, Any] | None = None
 
 
-class PGColumnMeta(PGFieldMeta):
+class PGColumnMeta(metaclass=_MetaValidator):
     """PostgreSQL column-level metadata; inherit in ``Meta`` inner classes for autocomplete.
 
     Example::
@@ -44,6 +44,10 @@ class PGColumnMeta(PGFieldMeta):
                 comment = "Surrogate primary key"
                 pg = pg.field(identity="always", storage="PLAIN")
     """
+    __meta_root__ = True
+    comment: str | None = None
+    public: bool | None = None
+    pg: Any = None
 
 
 class CHTableMeta(TableMeta):
@@ -96,7 +100,7 @@ class CHTableMeta(TableMeta):
     ch_replica_name: str | None = None
 
 
-class CHColumnMeta(CHFieldMeta):
+class CHColumnMeta(metaclass=_MetaValidator):
     """ClickHouse column-level metadata; inherit in ``Meta`` inner classes for autocomplete.
 
     Example::
@@ -106,6 +110,10 @@ class CHColumnMeta(CHFieldMeta):
                 comment = "HTTP request body"
                 ch = ch.field(codec="ZSTD(3)", nullable=True)
     """
+    __meta_root__ = True
+    comment: str | None = None
+    public: bool | None = None
+    ch: Any = None
 
 
 class MyTableMeta(TableMeta):
@@ -121,9 +129,12 @@ class MyTableMeta(TableMeta):
     my_collate: str | None = None
     my_row_format: str | None = None
     my_auto_increment: int | None = None
+    my_indexes: list[Any] = []
+    my_checks: list[dict[str, Any]] = []
+    my_uniques: list[dict[str, Any]] = []
 
 
-class MyColumnMeta(MyFieldMeta):
+class MyColumnMeta(metaclass=_MetaValidator):
     """MySQL column-level metadata; inherit in ``Meta`` inner classes.
 
     Example::
@@ -132,6 +143,10 @@ class MyColumnMeta(MyFieldMeta):
             class id(MyColumnMeta):
                 my = my.field(unsigned=True)
     """
+    __meta_root__ = True
+    comment: str | None = None
+    public: bool | None = None
+    my: Any = None
 
 
 class MdbTableMeta(MyTableMeta):
@@ -141,5 +156,9 @@ class MdbTableMeta(MyTableMeta):
     mdb_page_compression_level: int | None = None
 
 
-class MdbColumnMeta(MdbFieldMeta):
+class MdbColumnMeta(metaclass=_MetaValidator):
     """MariaDB column-level metadata; inherit in ``Meta`` inner classes."""
+    __meta_root__ = True
+    comment: str | None = None
+    public: bool | None = None
+    mdb: Any = None

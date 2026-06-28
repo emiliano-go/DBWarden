@@ -420,7 +420,7 @@ def test_offline_clickhouse_table_crashes():
 
 def test_offline_recreate_preserves_projections():
     """Projections no longer block engine recreates."""
-    from dbwarden.schema.projection import ProjectionSpec
+    from dbwarden.databases.clickhouse.projection import ProjectionSpec
     proj = [ProjectionSpec("by_id", "SELECT id ORDER BY id").to_dict()]
     prev = model_state_to_dict([_make_table("events", ch_opts={"ch_engine": "MergeTree", "ch_projections": proj})])
     curr = model_state_to_dict([_make_table("events", ch_opts={"ch_engine": "ReplicatedMergeTree"})])

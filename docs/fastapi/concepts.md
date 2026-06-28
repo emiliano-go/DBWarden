@@ -2,27 +2,27 @@
 seo:
   title: Concepts - DBWarden Documentation
   description: High-level explanations of how DBWarden's FastAPI integration works.
-  canonical: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/concepts/
+  canonical: https://dbwarden.emiliano-go.com/fastapi/concepts/
   robots: index,follow
   og:
     type: website
     title: Concepts - DBWarden Documentation
     description: High-level explanations of how DBWarden's FastAPI integration works.
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/concepts/
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    url: https://dbwarden.emiliano-go.com/fastapi/concepts/
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Concepts - DBWarden Documentation
     description: High-level explanations of how DBWarden's FastAPI integration works.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
     name: Concepts - DBWarden Documentation
-    url: https://emiliano-gandini-outeda.github.io/DBWarden/fastapi/concepts/
+    url: https://dbwarden.emiliano-go.com/fastapi/concepts/
     description: High-level explanations of how DBWarden's FastAPI integration works.
-    image: https://emiliano-gandini-outeda.github.io/DBWarden/assets/icon.png
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda

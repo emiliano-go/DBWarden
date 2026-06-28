@@ -11,7 +11,6 @@ from dbwarden.schema import (
     CHColumnMeta,
     CHTableMeta,
     CheckSpec,
-    FieldMeta,
     PGColumnMeta,
     PGTableMeta,
     TableMeta,
@@ -20,8 +19,8 @@ from dbwarden.schema import (
     read_meta,
 )
 from dbwarden.databases import check, ch, index, pg, unique
-from dbwarden.schema.engine import ChEngineSpec
-from dbwarden.schema.projection import ProjectionSpec
+from dbwarden.databases.clickhouse.engine import ChEngineSpec
+from dbwarden.databases.clickhouse.projection import ProjectionSpec
 
 
 class Base(DeclarativeBase):
@@ -332,7 +331,7 @@ class TestCHTableMeta:
         assert table.clickhouse_options["ch_partition_by"] == ["toYYYYMM(created_at)"]
 
     def test_ch_projections_meta(self, monkeypatch):
-        from dbwarden.schema import ProjectionSpec
+        from dbwarden.databases.clickhouse.projection import ProjectionSpec
 
         class Event(Base):
             __tablename__ = "events3"
@@ -462,7 +461,7 @@ class TestIndexSpecExtensions:
 
 class TestChEngineSpec:
     def test_basic_construction(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec("MergeTree")
         assert spec.name == "MergeTree"
         assert spec.args == ()
@@ -471,26 +470,26 @@ class TestChEngineSpec:
         assert spec.settings is None
 
     def test_with_args(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec("ReplacingMergeTree", args=("version_col",))
         assert spec.name == "ReplacingMergeTree"
         assert spec.args == ("version_col",)
 
     def test_with_zk_and_replica(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec("ReplicatedMergeTree",
             zookeeper_path="/zk/path", replica_name="{replica}")
         assert spec.zookeeper_path == "/zk/path"
         assert spec.replica_name == "{replica}"
 
     def test_with_settings(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec("MergeTree",
             settings={"index_granularity": "8192"})
         assert spec.settings == {"index_granularity": "8192"}
 
     def test_to_dict_roundtrip(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec("ReplicatedMergeTree",
             args=("ver",), zookeeper_path="/zk", replica_name="{r}",
             settings={"s": "1"})
@@ -503,7 +502,7 @@ class TestChEngineSpec:
         assert restored.settings == spec.settings
 
     def test_to_dict_omits_defaults(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         d = ChEngineSpec("MergeTree").to_dict()
         assert "args" not in d
         assert "zookeeper_path" not in d
@@ -511,19 +510,19 @@ class TestChEngineSpec:
         assert "settings" not in d
 
     def test_from_engine_string_simple(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec.from_engine_string("MergeTree")
         assert spec.name == "MergeTree"
         assert spec.args == ()
 
     def test_from_engine_string_with_args(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec.from_engine_string("SummingMergeTree(col1, col2)")
         assert spec.name == "SummingMergeTree"
         assert spec.args == ("col1", "col2")
 
     def test_from_engine_string_replicated(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec.from_engine_string(
             "ReplicatedMergeTree('/zk/path', '{replica}', ver)")
         assert spec.name == "ReplicatedMergeTree"
@@ -532,20 +531,20 @@ class TestChEngineSpec:
         assert spec.args == ("ver",)
 
     def test_post_init_coerces_string_to_tuple(self):
-        from dbwarden.schema.engine import ChEngineSpec
+        from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec("CollapsingMergeTree", args="sign")
         assert spec.args == ("sign",)
 
 
 class TestProjectionSpec:
     def test_basic_construction(self):
-        from dbwarden.schema.projection import ProjectionSpec
+        from dbwarden.databases.clickhouse.projection import ProjectionSpec
         p = ProjectionSpec("by_date", "SELECT date, count() GROUP BY date")
         assert p.name == "by_date"
         assert p.query == "SELECT date, count() GROUP BY date"
 
     def test_to_dict_roundtrip(self):
-        from dbwarden.schema.projection import ProjectionSpec
+        from dbwarden.databases.clickhouse.projection import ProjectionSpec
         p = ProjectionSpec("by_date", "SELECT date, count() GROUP BY date")
         d = p.to_dict()
         restored = ProjectionSpec.from_dict(d)
@@ -553,7 +552,7 @@ class TestProjectionSpec:
         assert restored.query == p.query
 
     def test_from_dict_with_empty_query(self):
-        from dbwarden.schema.projection import ProjectionSpec
+        from dbwarden.databases.clickhouse.projection import ProjectionSpec
         p = ProjectionSpec.from_dict({"name": "by_date"})
         assert p.name == "by_date"
         assert p.query == ""
@@ -665,7 +664,7 @@ class TestMetaValidator:
             uniques = []
 
     def test_known_field_attrs_allowed(self):
-        class Okay(FieldMeta):
+        class Okay(PGColumnMeta):
             comment = "field comment"
             public = True
 

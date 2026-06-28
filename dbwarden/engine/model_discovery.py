@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from types import ModuleType
 from dataclasses import dataclass, field
@@ -26,8 +27,8 @@ from dbwarden.engine.sqlite_translation import (
 from dbwarden.exceptions import DBWardenConfigError
 from dbwarden.logging import get_logger
 from dbwarden.models import SchemaDifference
+from dbwarden.databases.clickhouse.projection import ProjectionSpec
 from dbwarden.schema import (
-    ProjectionSpec,
     apply_meta,
     read_meta,
 )
@@ -42,6 +43,9 @@ from dbwarden.schema._meta_reader import (
 )
 
 Base = declarative_base()
+
+_auto_discover_cache: dict[str, tuple[float, list[str]]] = {}
+_AUTO_DISCOVER_CACHE_TTL = 1.0
 
 
 def _apply_meta_fast(cls: type) -> None:
@@ -434,7 +438,7 @@ def _ch_options_from_meta(model_class: type) -> dict:
 
 
 def _serialize_ch_engine(engine: Any) -> str | tuple | None:
-    from dbwarden.schema.engine import ChEngineSpec
+    from dbwarden.databases.clickhouse.engine import ChEngineSpec
     if isinstance(engine, ChEngineSpec):
         args = [engine.name]
         if engine.zookeeper_path is not None:
@@ -781,6 +785,35 @@ def discover_models_in_directory(directory: str) -> List[str]:
     return model_files
 
 
+_get_all_model_tables_cache: dict[
+    tuple[str, tuple[str, ...], str | None],
+    tuple[tuple[tuple[str, int, int], ...], list[ModelTable]],
+] = {}
+
+
+def _collect_model_files(model_paths: list[str]) -> list[str]:
+    model_files: list[str] = []
+    for model_path in model_paths:
+        if not os.path.exists(model_path):
+            continue
+        if os.path.isdir(model_path):
+            model_files.extend(discover_models_in_directory(model_path))
+        else:
+            model_files.append(model_path)
+    return model_files
+
+
+def _model_files_signature(model_files: list[str]) -> tuple[tuple[str, int, int], ...]:
+    signature: list[tuple[str, int, int]] = []
+    for model_file in sorted(set(model_files)):
+        try:
+            stat = Path(model_file).resolve().stat()
+            signature.append((str(Path(model_file).resolve()), stat.st_mtime_ns, stat.st_size))
+        except OSError:
+            signature.append((str(Path(model_file).resolve()), -1, -1))
+    return tuple(signature)
+
+
 def get_all_model_tables(
     model_paths: Optional[List[str]] = None,
     db_name: str | None = None,
@@ -794,11 +827,18 @@ def get_all_model_tables(
     Returns:
         List of ModelTable objects representing all tables in the models.
     """
-    tables = []
-    seen_tables = set()
-
     if model_paths is None:
         model_paths = auto_discover_model_paths()
+    cwd = str(Path.cwd().resolve())
+    model_files = _collect_model_files(model_paths)
+    cache_key = (cwd, tuple(sorted(model_paths)), db_name)
+    signature = _model_files_signature(model_files)
+    cached = _get_all_model_tables_cache.get(cache_key)
+    if cached is not None and cached[0] == signature:
+        return list(cached[1])
+
+    tables = []
+    seen_tables = set()
 
     # Ensure project root is in sys.path for proper imports
     cwd = str(Path.cwd().resolve())
@@ -810,37 +850,60 @@ def get_all_model_tables(
         if potential_root not in sys.path:
             sys.path.insert(0, potential_root)
 
+    for model_file in model_files:
+        module = load_model_from_path(model_file)
+        if module is None:
+            continue
+
+        for attr in module.__dict__.values():
+            if not isinstance(attr, type):
+                continue
+            if getattr(attr, "__module__", None) != getattr(module, "__name__", None):
+                continue
+            tablename = getattr(attr, "__tablename__", None)
+            table_obj = getattr(attr, "__table__", None)
+            if tablename is None or table_obj is None:
+                continue
+            if tablename in seen_tables:
+                continue
+            seen_tables.add(tablename)
+            table = extract_table_from_model(attr, db_name=db_name)
+            if table:
+                tables.append(table)
+
+    _get_all_model_tables_cache[cache_key] = (signature, tables)
+    return tables
+
+
+def get_model_table_by_name(
+    table_name: str,
+    model_paths: list[str] | None = None,
+    db_name: str | None = None,
+) -> ModelTable | None:
+    if model_paths is None:
+        model_paths = auto_discover_model_paths()
+    cwd = str(Path.cwd().resolve())
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+    for p in [cwd, str(Path(cwd).parent)]:
+        if p not in sys.path:
+            sys.path.insert(0, p)
     for model_path in model_paths:
         if not os.path.exists(model_path):
             continue
-
-        if os.path.isdir(model_path):
-            model_files = discover_models_in_directory(model_path)
-        else:
-            model_files = [model_path]
-
+        model_files = discover_models_in_directory(model_path) if os.path.isdir(model_path) else [model_path]
         for model_file in model_files:
             module = load_model_from_path(model_file)
             if module is None:
                 continue
-
             for attr in module.__dict__.values():
                 if not isinstance(attr, type):
                     continue
                 if getattr(attr, "__module__", None) != getattr(module, "__name__", None):
                     continue
-                tablename = getattr(attr, "__tablename__", None)
-                table_obj = getattr(attr, "__table__", None)
-                if tablename is None or table_obj is None:
-                    continue
-                if tablename in seen_tables:
-                    continue
-                seen_tables.add(tablename)
-                table = extract_table_from_model(attr, db_name=db_name)
-                if table:
-                    tables.append(table)
-
-    return tables
+                if getattr(attr, "__tablename__", None) == table_name:
+                    return extract_table_from_model(attr, db_name=db_name)
+    return None
 
 
 def _find_project_root(start: Path) -> Path:
@@ -872,6 +935,11 @@ def auto_discover_model_paths() -> List[str]:
     Returns:
         List of directories that may contain models.
     """
+    cache_key = str(Path.cwd().resolve())
+    cached = _auto_discover_cache.get(cache_key)
+    if cached is not None and time.time() - cached[0] < _AUTO_DISCOVER_CACHE_TTL:
+        return list(cached[1])
+
     model_paths = []
     current = Path.cwd().resolve()
     project_root = _find_project_root(current)
@@ -938,6 +1006,7 @@ def auto_discover_model_paths() -> List[str]:
             break
         current = current.parent
 
+    _auto_discover_cache[cache_key] = (time.time(), model_paths)
     return model_paths
 
 
@@ -971,30 +1040,31 @@ def extract_table_from_model(
         backend = _get_backend_name(db_name)
         table_name = model_class.__tablename__
         columns = []
+        foreign_keys: list[dict[str, Any]] = []
 
         for column in model_class.__table__.columns:
             col = extract_column_info(column, db_name=db_name, backend=backend)
             if col:
                 columns.append(col)
+            if column.foreign_keys:
+                fk = list(column.foreign_keys)[0]
+                colspec = fk._colspec
+                if "(" in colspec and colspec.endswith(")"):
+                    ref_table, ref_col = colspec[:-1].split("(", 1)
+                elif "." in colspec:
+                    ref_table, ref_col = colspec.rsplit(".", 1)
+                else:
+                    ref_table, ref_col = colspec, "id"
+                foreign_keys.append({
+                    "columns": [column.name],
+                    "referred_table": ref_table,
+                    "referred_columns": [ref_col],
+                    "on_delete": fk.ondelete or "NO ACTION",
+                    "on_update": fk.onupdate or "NO ACTION",
+                })
         if debug_timing:
             print(f"TIMING {model_class.__name__} columns {len(columns)} {time.time() - start:.3f}s", flush=True)
             start = time.time()
-
-        # Extract FK info from parsed column.foreign_key strings
-        foreign_keys: list[dict[str, Any]] = []
-        for col in columns:
-            if col.foreign_key:
-                # Format: "referred_table(referred_column)"
-                fk = col.foreign_key
-                if "(" in fk and fk.endswith(")"):
-                    ref_table, ref_col = fk[:-1].split("(", 1)
-                else:
-                    ref_table, ref_col = fk, "id"
-                foreign_keys.append({
-                    "columns": [col.name],
-                    "referred_table": ref_table,
-                    "referred_columns": [ref_col],
-                })
 
         # Extract indexes from SQLAlchemy model
         indexes: list[IndexInfo] = []
@@ -1044,14 +1114,15 @@ def extract_table_from_model(
         my_table = {}
 
         if dw_meta:
-            checks = list(getattr(dw_meta, "pg_checks", []) or getattr(dw_meta, "checks", []))
-            uniques = list(getattr(dw_meta, "pg_uniques", []) or getattr(dw_meta, "uniques", []))
+            checks = list(getattr(dw_meta, "pg_checks", []) or getattr(dw_meta, "checks", []) or getattr(dw_meta, "my_checks", []))
+            uniques = list(getattr(dw_meta, "pg_uniques", []) or getattr(dw_meta, "uniques", []) or getattr(dw_meta, "my_uniques", []))
             excludes = list(getattr(dw_meta, "pg_excludes", []))
             indexes_meta = getattr(dw_meta, "indexes", []) or []
             pg_indexes_meta = getattr(dw_meta, "pg_indexes", []) or []
             ch_indexes_meta = getattr(dw_meta, "ch_indexes", []) or []
+            my_indexes_meta = getattr(dw_meta, "my_indexes", []) or []
             if not indexes:
-                for idx_entry in list(indexes_meta) + list(pg_indexes_meta) + list(ch_indexes_meta):
+                for idx_entry in list(indexes_meta) + list(pg_indexes_meta) + list(ch_indexes_meta) + list(my_indexes_meta):
                     if hasattr(idx_entry, "to_dict"):
                         idx_entry = idx_entry.to_dict()
                     if not isinstance(idx_entry, dict):
@@ -1075,7 +1146,7 @@ def extract_table_from_model(
             if isinstance(dw_meta.backend_table, dict):
                 excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
                 pg_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("pg_") and k not in excluded_pg_keys}
-                my_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("my_") and k != "my_indexes"}
+                my_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques")}
             elif any(k.startswith("pg_") for k in getattr(dw_meta, "table_attrs", {})):
                 excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
                 pg_table = {
@@ -1085,7 +1156,7 @@ def extract_table_from_model(
             if not my_table and any(k.startswith("my_") for k in getattr(dw_meta, "table_attrs", {})):
                 my_table = {
                     k: v for k, v in dw_meta.table_attrs.items()
-                    if k.startswith("my_") and k != "my_indexes" and v is not None
+                    if k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques") and v is not None
                 }
 
         if backend == "clickhouse":
@@ -1143,6 +1214,10 @@ def extract_column_info(
                 type_str = "jsonb"
             elif getattr(column.type, "timezone", False):
                 type_str = "timestamptz"
+        if backend in ("mysql", "mariadb"):
+            enums = getattr(column.type, "enums", None)
+            if enums:
+                type_str = f"Enum({', '.join(repr(v) for v in enums)})"
         if backend == "clickhouse":
             clickhouse_type_override = column.info.get("clickhouse_type")
             if isinstance(clickhouse_type_override, str) and clickhouse_type_override.strip():
@@ -1215,7 +1290,7 @@ def extract_column_info(
                     default = default_str
             else:
                 default = default_str
-        if column.server_default is not None and default is None:
+        if column.server_default is not None:
             default = str(column.server_default.arg)
 
         type_str = _map_sqlalchemy_type_to_backend(

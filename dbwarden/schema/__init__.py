@@ -1,11 +1,8 @@
 from dbwarden.schema._auto_schema import auto_schema, SchemaConfig
 from dbwarden.schema._base import DBWardenMeta, attach_meta, read_meta
-from dbwarden.schema._meta import CHFieldMeta, FieldMeta, MdbFieldMeta, MyFieldMeta, PGFieldMeta, SqFieldMeta
 from dbwarden.schema._meta_reader import apply_meta
 from dbwarden.schema.constraint import CheckSpec, UniqueSpec, check, unique
-from dbwarden.schema.engine import ChEngineSpec
 from dbwarden.schema.index import IndexSpec
-from dbwarden.schema.projection import ProjectionSpec
 from dbwarden.schema.table_meta import (
     CHColumnMeta,
     CHTableMeta,
@@ -21,12 +18,9 @@ from dbwarden.seed import SeedRow, Seed, seed_data
 
 __all__ = [
     "CHColumnMeta",
-    "CHFieldMeta",
     "CHTableMeta",
     "CheckSpec",
-    "ChEngineSpec",
     "DBWardenMeta",
-    "FieldMeta",
     "IndexSpec",
     "MdbColumnMeta",
     "MdbTableMeta",
@@ -34,7 +28,6 @@ __all__ = [
     "MyTableMeta",
     "PGColumnMeta",
     "PGTableMeta",
-    "ProjectionSpec",
     "SchemaConfig",
     "Seed",
     "SeedRow",
