@@ -139,9 +139,8 @@ def generate_models(
 
 @app.command()
 def export_models(
-    output: str = typer.Option(
-        ".dbwarden/model_state.json", "--output", "-o",
-        help="Output path for the model state JSON file",
+    output: str | None = typer.Option(
+        None, "--output", "-o", help="Output path for the model state JSON file",
     ),
     database: str | None = typer.Option(
         None, "--database", "-d", help="Target database name"

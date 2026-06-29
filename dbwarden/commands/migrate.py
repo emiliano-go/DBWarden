@@ -543,7 +543,7 @@ def _write_model_state(
     config=None,
     db_name: str | None = None,
 ) -> None:
-    """Export current model definitions to .dbwarden/model_state.json."""
+    """Export current model definitions to a database-specific model state file."""
     if config is None:
         from dbwarden.config import get_database
         config = get_database(db_name)
@@ -557,9 +557,18 @@ def _write_model_state(
         validate_model_tables_exist(tables, config.model_tables, db_name or "default")
         tables = filter_model_tables_by_name(tables, config.model_tables)
         state = model_state_to_dict(tables, dbwarden_version=__version__)
-        state_path = Path(".dbwarden/model_state.json")
+        from dbwarden.commands.make_migrations import get_model_state_path
+
+        legacy_path = get_model_state_path(db_name, legacy=True)
+        state_path = get_model_state_path(db_name)
         state_path.parent.mkdir(parents=True, exist_ok=True)
-        state_path.write_text(json.dumps(state, indent=2, default=str) + "\n")
+        file_state = dict(state)
+        file_state["database"] = db_name or "default"
+        payload = json.dumps(file_state, indent=2, default=str) + "\n"
+        if legacy_path != state_path:
+            legacy_path.parent.mkdir(parents=True, exist_ok=True)
+            legacy_path.write_text(payload)
+        state_path.write_text(payload)
         logger = get_logger(db_name=db_name)
         logger.info(f"Model state written: {state_path}")
     except Exception as exc:

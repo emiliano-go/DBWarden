@@ -4,7 +4,7 @@ import json
 
 from rich.table import Table
 
-from dbwarden.config import get_database
+from dbwarden.config import get_database, get_multi_db_config
 from dbwarden.engine.migration_name import Change
 from dbwarden.engine.version import get_migrations_directory
 from dbwarden.logging import get_logger
@@ -27,7 +27,7 @@ def diff_cmd(
         offline: Use model state file instead of live database snapshot.
     """
     config = get_database(database)
-    actual_db_name = database or "default"
+    actual_db_name = database or get_multi_db_config().default
     logger = get_logger(
         verbose=verbose, db_name=actual_db_name, db_type=config.database_type
     )
@@ -42,7 +42,7 @@ def diff_cmd(
         console.print("No model paths configured. Add model_paths to your dbwarden.py config.", style="yellow")
         return
 
-    tables = get_all_model_tables(config.model_paths, db_name=database)
+    tables = get_all_model_tables(config.model_paths, db_name=actual_db_name)
     validate_model_tables_exist(tables, config.model_tables, actual_db_name)
     tables = filter_model_tables_by_name(tables, config.model_tables)
     if not tables:
@@ -50,7 +50,7 @@ def diff_cmd(
         return
 
     if offline:
-        snapshot = _load_offline_snapshot(database)
+        snapshot = _load_offline_snapshot(actual_db_name)
         if snapshot is None:
             return
     else:
@@ -67,7 +67,7 @@ def diff_cmd(
     )
 
     upgrade_ops, rollback_ops = diff_models_against_snapshot(
-        tables, snapshot, database=database, db_name=database
+        tables, snapshot, database=database, db_name=actual_db_name
     )
 
     if not upgrade_ops:
@@ -79,7 +79,7 @@ def diff_cmd(
     upgrade_ops, rollback_ops = _apply_rename_intents(upgrade_ops, rollback_ops, set())
 
     upgrade_sql, rollback_sql, changes = snapshot_diff_to_sql(
-        upgrade_ops, rollback_ops, database=database, db_name=database,
+        upgrade_ops, rollback_ops, database=database, db_name=actual_db_name,
     )
 
     _filter_migration_snapshots(database, upgrade_sql, upgrade_ops, rollback_sql, rollback_ops, changes)
@@ -104,11 +104,14 @@ def _load_live_snapshot(database: str | None, logger) -> dict | None:
 
 def _load_offline_snapshot(database: str | None) -> dict | None:
     """Load the model state from an exported JSON file."""
-    from pathlib import Path
-    state_path = Path.cwd() / ".dbwarden" / "model_state.json"
+    from dbwarden.commands.make_migrations import get_current_model_state_path, get_model_state_path
+
+    state_path = get_current_model_state_path(database)
+    legacy_state_path = get_model_state_path(database, legacy=True)
+
     if not state_path.exists():
         console.print(
-            "No model state file found at .dbwarden/model_state.json. "
+            f"No model state file found at {get_model_state_path(database)}. "
             "Run 'dbwarden export-models' first.",
             style="yellow",
         )

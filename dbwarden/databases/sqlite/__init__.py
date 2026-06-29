@@ -14,8 +14,12 @@ class SqTableSpec:
     strict: bool = False
 
 
+SqTableMeta = SqTableSpec
+
+
 __all__ = [
     "SqFieldSpec",
+    "SqTableMeta",
     "SqTableSpec",
     "field",
     "sq",

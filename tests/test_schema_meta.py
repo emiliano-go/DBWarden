@@ -257,7 +257,7 @@ class TestMetaIndexes:
         assert table.indexes[0].name == "ix_posts_title"
         assert table.indexes[0].columns == ["title"]
 
-    def test_meta_indexes_empty_when_sa_indexes_exist(self, monkeypatch):
+    def test_meta_indexes_always_used_when_sa_indexes_exist(self, monkeypatch):
         from sqlalchemy import Index
 
         class BlogPost(Base):
@@ -280,7 +280,7 @@ class TestMetaIndexes:
         table = extract_table_from_model(BlogPost)
         assert table is not None
         assert len(table.indexes) == 1
-        assert table.indexes[0].name == "ix_sa_title"
+        assert table.indexes[0].name == "ix_meta_title"
 
 
 class TestCHTableMeta:
