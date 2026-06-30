@@ -643,6 +643,23 @@ class TestPgIndexSpec:
         assert "unique" not in d
         assert "using" not in d
         assert "where" not in d
+        assert "postgresql_ops" not in d
+
+    def test_postgresql_ops_roundtrip(self):
+        from dbwarden.databases.pgsql import PgIndexSpec
+        spec = PgIndexSpec("ix_data", ["data"],
+            using="gin", postgresql_ops={"data": "jsonb_path_ops"})
+        d = spec.to_dict()
+        assert d["postgresql_ops"] == {"data": "jsonb_path_ops"}
+        restored = PgIndexSpec.from_dict(d)
+        assert restored.postgresql_ops == {"data": "jsonb_path_ops"}
+
+    def test_index_factory_with_postgresql_ops(self):
+        from dbwarden.databases.pgsql import index
+        d = index("ix_data", ["data"],
+            using="gin", postgresql_ops={"data": "jsonb_path_ops"})
+        assert d["postgresql_ops"] == {"data": "jsonb_path_ops"}
+        assert d["using"] == "gin"
 
 
 class TestMetaValidator:

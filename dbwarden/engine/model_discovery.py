@@ -1372,6 +1372,8 @@ def extract_column_info(
                     if regconfig:
                         pg_type_entry["config"] = str(regconfig)
                     pg_meta["pg_type"] = pg_type_entry
+                elif type_str_upper == "JSONB":
+                    pg_meta["pg_type"] = {"kind": "jsonb"}
 
         for key in (
             "my_charset",

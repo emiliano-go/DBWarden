@@ -669,6 +669,20 @@ class TestColumnExtraction:
         assert col is not None
         assert col.type == "TEXT"
 
+    def test_extract_jsonb_column_sets_pg_type_for_postgres(self, monkeypatch):
+        from sqlalchemy import Column
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        col_obj = Column("payload", JSONB)
+
+        col = extract_column_info(col_obj)
+
+        assert col is not None
+        assert col.type == "jsonb"
+        assert col.pg_meta.get("pg_type") == {"kind": "jsonb"}
+
     def test_extract_column_falls_back_unknown_type_to_text_for_sqlite(self, monkeypatch):
         from sqlalchemy import Column
         from sqlalchemy.types import UserDefinedType

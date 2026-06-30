@@ -28,6 +28,7 @@ class PgIndexSpec:
     tablespace: str | None = None
     nulls_not_distinct: bool = False
     column_sorting: dict[str, str] | None = None
+    postgresql_ops: dict[str, str] | None = None
     concurrently: bool = True
 
     def to_dict(self) -> dict[str, Any]:
@@ -48,6 +49,8 @@ class PgIndexSpec:
             d["nulls_not_distinct"] = True
         if self.column_sorting is not None:
             d["column_sorting"] = dict(self.column_sorting)
+        if self.postgresql_ops is not None:
+            d["postgresql_ops"] = dict(self.postgresql_ops)
         if not self.concurrently:
             d["concurrently"] = False
         return d
@@ -65,6 +68,7 @@ class PgIndexSpec:
             tablespace=d.get("tablespace"),
             nulls_not_distinct=bool(d.get("nulls_not_distinct", False)),
             column_sorting=d.get("column_sorting"),
+            postgresql_ops=d.get("postgresql_ops"),
             concurrently=bool(d.get("concurrently", True)),
         )
 
@@ -81,6 +85,7 @@ def index(
     tablespace: str | None = None,
     nulls_not_distinct: bool = False,
     column_sorting: dict[str, str] | None = None,
+    postgresql_ops: dict[str, str] | None = None,
     concurrently: bool = True,
 ) -> dict[str, Any]:
     d: dict[str, Any] = {"name": name, "columns": list(columns)}
@@ -100,6 +105,8 @@ def index(
         d["nulls_not_distinct"] = True
     if column_sorting is not None:
         d["column_sorting"] = dict(column_sorting)
+    if postgresql_ops is not None:
+        d["postgresql_ops"] = dict(postgresql_ops)
     if not concurrently:
         d["concurrently"] = False
     return d

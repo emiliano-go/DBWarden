@@ -3672,6 +3672,7 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
     tablespace = op.get("tablespace")
     nulls_not_distinct = op.get("nulls_not_distinct", False)
     column_sorting = op.get("column_sorting")
+    postgresql_ops = op.get("postgresql_ops")
     concurrently = op.get("concurrently", True)
     clickhouse_type = op.get("clickhouse_type")
     clickhouse_granularity = op.get("clickhouse_granularity")
@@ -3706,10 +3707,13 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
         if using and using != "btree":
             parts.append(f"USING {using}")
 
-        # Column list with sort orders
+        # Column list with operator classes and sort orders
         col_parts = []
         for col in columns:
             col_sql = col
+            opclass = (postgresql_ops or {}).get(col, "")
+            if opclass and using:
+                col_sql += f" {opclass}"
             sorting = (column_sorting or {}).get(col, "")
             if sorting:
                 col_sql += f" {sorting}"
@@ -3777,6 +3781,9 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
         col_parts_rb = []
         for col in columns:
             col_sql = col
+            opclass = (postgresql_ops or {}).get(col, "")
+            if opclass and using:
+                col_sql += f" {opclass}"
             sorting = (column_sorting or {}).get(col, "")
             if sorting:
                 col_sql += f" {sorting}"

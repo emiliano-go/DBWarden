@@ -1725,6 +1725,29 @@ class TestIndexDiff:
         stmts = _build_index_sql(op, "postgresql")
         assert "DROP INDEX idx_users_email;" in stmts[0].upgrade_sql
 
+    def test_index_sql_with_postgresql_ops(self):
+        op = {"type": "add_index", "table": "users", "columns": ["data"],
+              "using": "gin", "postgresql_ops": {"data": "jsonb_path_ops"}}
+        stmts = _build_index_sql(op, "postgresql")
+        assert "USING gin" in stmts[0].upgrade_sql
+        assert "data jsonb_path_ops" in stmts[0].upgrade_sql
+
+    def test_index_drop_rollback_with_postgresql_ops(self):
+        op = {"type": "drop_index", "table": "users", "columns": ["data"],
+              "index_name": "idx_users_data", "using": "gin",
+              "postgresql_ops": {"data": "jsonb_path_ops"}}
+        stmts = _build_index_sql(op, "postgresql")
+        assert "data jsonb_path_ops" in stmts[0].rollback_sql
+
+    def test_index_sql_with_opclass_and_sorting(self):
+        op = {"type": "add_index", "table": "users", "columns": ["data"],
+              "using": "gin",
+              "postgresql_ops": {"data": "jsonb_path_ops"},
+              "column_sorting": {"data": "DESC"}}
+        stmts = _build_index_sql(op, "postgresql")
+        assert "data jsonb_path_ops DESC" in stmts[0].upgrade_sql
+        assert "data DESC jsonb_path_ops" not in stmts[0].upgrade_sql
+
     def test_index_name_generation_multi_column(self):
         name = _build_index_name("users", ["first_name", "last_name"], True)
         assert name == "uq_users_first_name_last_name"
