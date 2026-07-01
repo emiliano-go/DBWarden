@@ -138,6 +138,9 @@ venv.bak/
 # mkdocs documentation
 /site
 
+# DBWarden state
+.dbwarden/
+
 # Example project generated artifacts
 examples/**/*.db
 examples/**/.dbwarden/
