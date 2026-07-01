@@ -67,7 +67,7 @@ The following PostgreSQL features are fully supported in this round-trip:
 | Check Constraints | `CHECK (...)` with `NO INHERIT` support via `pg_checks` |
 | Unique Constraints | Full option diff: `NULLS NOT DISTINCT`, `DEFERRABLE INITIALLY DEFERRED`, `INCLUDE` via `pg_uniques` |
 | Deferrable FK | `DEFERRABLE INITIALLY DEFERRED` with `ON DELETE` / `ON UPDATE` options |
-| Index Options | `USING`, `WHERE`, `INCLUDE`, `WITH`, `TABLESPACE`, `NULLS NOT DISTINCT`, `CONCURRENTLY`, column sorting |
+| Index Options | `USING`, `WHERE`, `INCLUDE`, `WITH`, `TABLESPACE`, `NULLS NOT DISTINCT`, `CONCURRENTLY`, column sorting, operator classes via `postgresql_ops` |
 | Enum Types | `CREATE TYPE ... AS ENUM`, `ALTER TYPE ... ADD VALUE ... AFTER ...` |
 | Comments | Table and column `COMMENT ON` |
 | Type Normalization | `SERIAL` → `integer` + autoincrement, `TIMESTAMPTZ`, `NUMERIC(p,s)`, `VARCHAR(n)`, `DOUBLE PRECISION`, `REAL`, `JSONB`, `UUID`, `ARRAY`, `ENUM`, `TSTZRANGE` |
@@ -137,6 +137,79 @@ class Meta(PGTableMeta):
             unique=True, using="gin"),
     ]
 ```
+
+`PgIndexSpec` constructor fields:
+
+| Field | Type | Default | SQL |
+|-------|------|---------|-----|
+| `name` | `str` | (auto-generated) | Index name |
+| `columns` | `list[str]` | — | Indexed columns |
+| `unique` | `bool` | `False` | `CREATE UNIQUE INDEX` |
+| `using` | `str \| None` | `None` | `USING btree` (default), `gin`, `gist`, `hash`, `brin` |
+| `where` | `str \| None` | `None` | `WHERE predicate` |
+| `include` | `list[str] \| None` | `None` | `INCLUDE (cols)` |
+| `with_params` | `dict[str, Any] \| None` | `None` | `WITH (params)` |
+| `tablespace` | `str \| None` | `None` | `TABLESPACE name` |
+| `nulls_not_distinct` | `bool` | `False` | `NULLS NOT DISTINCT` |
+| `column_sorting` | `dict[str, str] \| None` | `None` | Per-column `ASC` / `DESC` / `NULLS FIRST` / `NULLS LAST` |
+| `postgresql_ops` | `dict[str, str] \| None` | `None` | Per-column operator class (e.g., `jsonb_path_ops`) |
+| `concurrently` | `bool` | `True` | `CREATE INDEX CONCURRENTLY` |
+
+Use `postgresql_ops` to specify operator classes for GIN, GiST, or BRIN indexes:
+
+```python
+PgIndexSpec("ix_users_data", ["data"],
+    using="gin",
+    postgresql_ops={"data": "jsonb_path_ops"})
+```
+
+This generates:
+
+```sql
+CREATE INDEX CONCURRENTLY ix_users_data ON users USING GIN (data jsonb_path_ops);
+```
+
+### JSONB Columns
+
+JSONB columns are fully supported. Declare them with `from sqlalchemy.dialects.postgresql import JSONB` and use `PgIndexSpec` with `using="gin"` for GIN indexes:
+
+```python
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, Integer, String
+from sqlalchemy.orm import declarative_base
+from dbwarden.databases.pgsql import PGTableMeta, PgIndexSpec
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100))
+    metadata = Column(JSONB)
+
+    class Meta(PGTableMeta):
+        pg_indexes = [
+            PgIndexSpec("ix_users_metadata", ["metadata"],
+                using="gin"),
+        ]
+```
+
+For advanced use with the `jsonb_path_ops` operator class (produces smaller indexes for path-based queries):
+
+```python
+PgIndexSpec("ix_users_metadata", ["metadata"],
+    using="gin",
+    postgresql_ops={"metadata": "jsonb_path_ops"})
+```
+
+Generated SQL:
+
+```sql
+CREATE INDEX CONCURRENTLY ix_users_metadata ON users USING GIN (metadata jsonb_path_ops);
+```
+
+JSONB column type changes (e.g., `json` → `jsonb`) are classified as **SAFE** by the safety analyzer. The `pg_type` annotation is automatically set on JSONB columns during model extraction and snapshot creation, ensuring zero-diff round-trips.
 
 ### Column-Level Meta
 

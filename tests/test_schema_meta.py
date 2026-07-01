@@ -257,7 +257,7 @@ class TestMetaIndexes:
         assert table.indexes[0].name == "ix_posts_title"
         assert table.indexes[0].columns == ["title"]
 
-    def test_meta_indexes_empty_when_sa_indexes_exist(self, monkeypatch):
+    def test_meta_indexes_always_used_when_sa_indexes_exist(self, monkeypatch):
         from sqlalchemy import Index
 
         class BlogPost(Base):
@@ -280,7 +280,7 @@ class TestMetaIndexes:
         table = extract_table_from_model(BlogPost)
         assert table is not None
         assert len(table.indexes) == 1
-        assert table.indexes[0].name == "ix_sa_title"
+        assert table.indexes[0].name == "ix_meta_title"
 
 
 class TestCHTableMeta:
@@ -643,6 +643,23 @@ class TestPgIndexSpec:
         assert "unique" not in d
         assert "using" not in d
         assert "where" not in d
+        assert "postgresql_ops" not in d
+
+    def test_postgresql_ops_roundtrip(self):
+        from dbwarden.databases.pgsql import PgIndexSpec
+        spec = PgIndexSpec("ix_data", ["data"],
+            using="gin", postgresql_ops={"data": "jsonb_path_ops"})
+        d = spec.to_dict()
+        assert d["postgresql_ops"] == {"data": "jsonb_path_ops"}
+        restored = PgIndexSpec.from_dict(d)
+        assert restored.postgresql_ops == {"data": "jsonb_path_ops"}
+
+    def test_index_factory_with_postgresql_ops(self):
+        from dbwarden.databases.pgsql import index
+        d = index("ix_data", ["data"],
+            using="gin", postgresql_ops={"data": "jsonb_path_ops"})
+        assert d["postgresql_ops"] == {"data": "jsonb_path_ops"}
+        assert d["using"] == "gin"
 
 
 class TestMetaValidator:

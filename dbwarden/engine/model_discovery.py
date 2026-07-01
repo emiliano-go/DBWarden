@@ -85,6 +85,13 @@ def _render_mysql_column_type(type_str: str, meta: dict[str, Any]) -> str:
     return rendered
 
 
+def _render_postgres_column_type(col: "ModelColumn") -> str:
+    pg_type = col.pg_meta.get("pg_type", {}) if col.pg_meta else {}
+    if pg_type.get("kind") == "enum" and pg_type.get("type_name"):
+        return str(pg_type["type_name"])
+    return col.type
+
+
 def _append_mysql_column_attrs(sql: str, meta: dict[str, Any]) -> str:
     if meta.get("my_charset"):
         sql += f" CHARACTER SET {meta['my_charset']}"
@@ -186,6 +193,8 @@ class ModelColumn:
         ch_meta: Optional[dict[str, Any]] = None,
         my_meta: Optional[dict[str, Any]] = None,
         autoincrement: Optional[bool] = None,
+        fk_on_delete: Optional[str] = None,
+        fk_on_update: Optional[str] = None,
     ):
         self.name = name
         self.type = type
@@ -200,6 +209,8 @@ class ModelColumn:
         self.ch_meta = ch_meta or {}
         self.my_meta = my_meta or {}
         self.autoincrement = autoincrement
+        self.fk_on_delete = fk_on_delete
+        self.fk_on_update = fk_on_update
 
     def to_dict(self) -> dict:
         d: dict[str, Any] = {
@@ -219,6 +230,10 @@ class ModelColumn:
             d["ch_meta"] = self.ch_meta
         if self.my_meta:
             d["my_meta"] = self.my_meta
+        if self.fk_on_delete is not None:
+            d["fk_on_delete"] = self.fk_on_delete
+        if self.fk_on_update is not None:
+            d["fk_on_update"] = self.fk_on_update
         return d
 
 
@@ -340,23 +355,6 @@ class ModelTable:
             "my_table": self.my_table,
         }
 
-
-def _extract_dialect_option(idx: Any, key: str, default: Any = None) -> Any:
-    """Extract a dialect option from a SQLAlchemy Index object, checking all backends."""
-    for prefix in ("postgresql", "mysql", "mariadb", "sqlite"):
-        val = idx.dialect_options.get(prefix, {}).get(key)
-        if val is not None:
-            return val
-    return default
-
-
-def _extract_table_args_dict(model_class: type) -> dict:
-    table_args = getattr(model_class, "__table_args__", None)
-    if isinstance(table_args, dict):
-        return table_args
-    if isinstance(table_args, tuple) and table_args and isinstance(table_args[-1], dict):
-        return table_args[-1]
-    return {}
 
 
 def _ch_options_from_meta(model_class: type) -> dict:
@@ -1068,42 +1066,6 @@ def extract_table_from_model(
 
         # Extract indexes from SQLAlchemy model
         indexes: list[IndexInfo] = []
-        for idx in model_class.__table__.indexes:
-            idx_cols = list(idx.columns.keys())
-            info = IndexInfo(
-                name=idx.name,
-                columns=idx_cols,
-                unique=bool(idx.unique),
-                using=_extract_dialect_option(idx, "using"),
-                where=_extract_dialect_option(idx, "where"),
-                include=list(idx.include_columns) if hasattr(idx, "include_columns") and idx.include_columns else None,
-                nulls_not_distinct=bool(_extract_dialect_option(idx, "nulls_not_distinct", False)),
-                with_params=_extract_dialect_option(idx, "with"),
-                tablespace=_extract_dialect_option(idx, "tablespace"),
-            )
-            # Extract per-column sort info from Index expressions
-            for expr in idx.expressions:
-                if hasattr(expr, "name") and expr.name:
-                    # Determine ASC/DESC and NULLS FIRST/LAST from the expression
-                    sorting_parts = []
-                    order = getattr(expr, "_order", None)
-                    if order is not None:
-                        sorting_parts.append(order)
-                    nulls = getattr(expr, "_nulls", None)
-                    if nulls is not None:
-                        sorting_parts.append(f"nulls {nulls}")
-                    if sorting_parts:
-                        if info.column_sorting is None:
-                            info.column_sorting = {}
-                        info.column_sorting[expr.name] = " ".join(sorting_parts)
-            if backend == "clickhouse":
-                info.clickhouse_type = idx.info.get("clickhouse_type", "minmax")
-                info.clickhouse_granularity = idx.info.get("clickhouse_granularity", 1)
-            indexes.append(info)
-        if debug_timing:
-            print(f"TIMING {model_class.__name__} indexes {len(indexes)} {time.time() - start:.3f}s", flush=True)
-            start = time.time()
-
         clickhouse_options = {}
         object_type = "table"
         comment = getattr(dw_meta, "comment", None) if dw_meta else None
@@ -1121,8 +1083,7 @@ def extract_table_from_model(
             pg_indexes_meta = getattr(dw_meta, "pg_indexes", []) or []
             ch_indexes_meta = getattr(dw_meta, "ch_indexes", []) or []
             my_indexes_meta = getattr(dw_meta, "my_indexes", []) or []
-            if not indexes:
-                for idx_entry in list(indexes_meta) + list(pg_indexes_meta) + list(ch_indexes_meta) + list(my_indexes_meta):
+            for idx_entry in list(indexes_meta) + list(pg_indexes_meta) + list(ch_indexes_meta) + list(my_indexes_meta):
                     if hasattr(idx_entry, "to_dict"):
                         idx_entry = idx_entry.to_dict()
                     if not isinstance(idx_entry, dict):
@@ -1312,9 +1273,13 @@ def extract_column_info(
             default = translated_default
 
         foreign_key = None
+        fk_on_delete = None
+        fk_on_update = None
         if column.foreign_keys:
             fk = list(column.foreign_keys)[0]
             colspec = fk._colspec
+            fk_on_delete = fk.ondelete
+            fk_on_update = fk.onupdate
             # SQLite doesn't support table.column in REFERENCES, convert to format
             # SQLite expects: REFERENCES table(column) instead of table.column
             if "." in colspec:
@@ -1407,6 +1372,8 @@ def extract_column_info(
                     if regconfig:
                         pg_type_entry["config"] = str(regconfig)
                     pg_meta["pg_type"] = pg_type_entry
+                elif type_str_upper == "JSONB":
+                    pg_meta["pg_type"] = {"kind": "jsonb"}
 
         for key in (
             "my_charset",
@@ -1431,6 +1398,8 @@ def extract_column_info(
             ch_meta=ch_meta,
             my_meta=my_meta,
             autoincrement=autoincrement,
+            fk_on_delete=fk_on_delete,
+            fk_on_update=fk_on_update,
         )
     except Exception:
         return None
@@ -1495,6 +1464,8 @@ def generate_add_column_sql(
         col_type = column.ch_meta.get("ch_type", column.type)
     elif backend in ("mysql", "mariadb"):
         col_type = _render_mysql_column_type(column.type, column.my_meta)
+    elif backend == "postgresql":
+        col_type = _render_postgres_column_type(column)
     else:
         col_type = column.type
     is_serial = (
@@ -1505,12 +1476,24 @@ def generate_add_column_sql(
 
     nullable_sql = "" if column.nullable or is_serial else "NOT NULL"
     default_sql = f" DEFAULT {column.default}" if column.default else ""
-    fk_sql = f" REFERENCES {column.foreign_key}" if column.foreign_key else ""
+    fk_sql = ""
+    if column.foreign_key:
+        fk_sql = f" REFERENCES {column.foreign_key}"
+        if column.fk_on_delete and column.fk_on_delete != "NO ACTION":
+            fk_sql += f" ON DELETE {column.fk_on_delete}"
+        if column.fk_on_update and column.fk_on_update != "NO ACTION":
+            fk_sql += f" ON UPDATE {column.fk_on_update}"
     sql = f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type}"
     if nullable_sql:
         sql += f" {nullable_sql}"
     if default_sql:
         sql += default_sql
+    if backend == "clickhouse" and column.comment:
+        sql += f" COMMENT '{column.comment.replace(chr(39), chr(39) + chr(39))}'"
+    if backend == "clickhouse":
+        ch_codec = column.codec or column.ch_meta.get("ch_codec")
+        if ch_codec:
+            sql += f" CODEC({ch_codec})"
     if backend in ("mysql", "mariadb"):
         sql = _append_mysql_column_attrs(sql, column.my_meta)
     if fk_sql:
@@ -1532,6 +1515,8 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             col_type = col.ch_meta.get("ch_type", col.type)
         elif backend in ("mysql", "mariadb"):
             col_type = _render_mysql_column_type(col.type, col.my_meta)
+        elif backend == "postgresql":
+            col_type = _render_postgres_column_type(col)
         else:
             col_type = col.type
         col_def = f"    {col.name} {col_type}"
@@ -1549,10 +1534,16 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             col_def += " UNIQUE"
         if col.default and not is_serial:
             col_def += f" DEFAULT {col.default}"
+        if backend == "clickhouse" and col.comment:
+            col_def += f" COMMENT '{col.comment.replace(chr(39), chr(39) + chr(39))}'"
         if backend in ("mysql", "mariadb"):
             col_def = _append_mysql_column_attrs(col_def, col.my_meta)
         if col.foreign_key:
             col_def += f" REFERENCES {col.foreign_key}"
+            if col.fk_on_delete and col.fk_on_delete != "NO ACTION":
+                col_def += f" ON DELETE {col.fk_on_delete}"
+            if col.fk_on_update and col.fk_on_update != "NO ACTION":
+                col_def += f" ON UPDATE {col.fk_on_update}"
         if backend == "clickhouse" and col.codec:
             col_def += f" CODEC({col.codec})"
         column_defs.append(col_def)
@@ -1568,6 +1559,8 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
     if backend == "clickhouse":
         if table.object_type == "table":
             sql += _render_clickhouse_table_suffix(table)
+        if table.comment:
+            sql += f" COMMENT '{table.comment.replace(chr(39), chr(39) + chr(39))}'"
     if backend in ("mysql", "mariadb") and table.my_table:
         parts: list[str] = []
         if table.my_table.get("my_engine"):
@@ -1588,6 +1581,8 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             strategy = pg_partition.get("strategy", "RANGE")
             columns = pg_partition.get("columns", [])
             sql += f"\nPARTITION BY {strategy} ({', '.join(columns)})"
+    if backend == "postgresql" and table.comment:
+        sql += f"\nCOMMENT ON TABLE {table.name} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}';"
     return sql
 
 

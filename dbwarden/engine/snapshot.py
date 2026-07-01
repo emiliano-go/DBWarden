@@ -20,17 +20,18 @@ class StatementOrder(IntEnum):
     ALTER_COLUMN_TYPE = 2
     ALTER_COLUMN_NULLABLE = 3
     ALTER_COLUMN_DEFAULT = 4
-    CREATE_TABLE = 5
-    ADD_COLUMN = 6
-    ALTER_FOREIGN_KEY = 7
-    ALTER_INDEX = 8
-    DROP_COLUMN = 9
-    DROP_TABLE = 10
-    ALTER_TABLE_COMMENT = 11
-    ALTER_COLUMN_COMMENT = 12
-    ALTER_TABLE_OPTIONS = 13
-    ALTER_TABLE_CONSTRAINT = 14
-    ALTER_COLUMN_AUTOINCREMENT = 15
+    CREATE_TYPE = 5
+    CREATE_TABLE = 6
+    ADD_COLUMN = 7
+    ALTER_FOREIGN_KEY = 8
+    ALTER_INDEX = 9
+    DROP_COLUMN = 10
+    DROP_TABLE = 11
+    ALTER_TABLE_COMMENT = 12
+    ALTER_COLUMN_COMMENT = 13
+    ALTER_TABLE_OPTIONS = 14
+    ALTER_TABLE_CONSTRAINT = 15
+    ALTER_COLUMN_AUTOINCREMENT = 16
 
 
 @dataclass
@@ -1731,6 +1732,8 @@ def _index_op_from_info(info: IndexInfo, table: str) -> dict[str, Any]:
         "columns": info.columns,
         "unique": info.unique,
     }
+    if info.name is not None:
+        op["index_name"] = info.name
     if info.using is not None:
         op["using"] = info.using
     if info.where is not None:
@@ -1752,6 +1755,28 @@ def _index_op_from_info(info: IndexInfo, table: str) -> dict[str, Any]:
     if info.clickhouse_granularity is not None:
         op["clickhouse_granularity"] = info.clickhouse_granularity
     return op
+
+
+def _build_create_table_sequence(table: ModelTable, db_name: str | None) -> list[MigrationStatement]:
+    from dbwarden.engine.model_discovery import generate_create_table_sql, generate_drop_object_sql
+
+    backend = _get_backend(db_name)
+    statements: list[MigrationStatement] = [
+        MigrationStatement(
+            order=StatementOrder.CREATE_TABLE,
+            upgrade_sql=generate_create_table_sql(table, db_name),
+            rollback_sql=generate_drop_object_sql(table),
+        )
+    ]
+
+    for idx in table.indexes:
+        statements.extend(_build_index_sql(_index_op_from_info(idx, table.name), backend))
+
+    return statements
+
+
+def _join_creation_sql(table: ModelTable, db_name: str | None) -> str:
+    return "\n\n".join(stmt.upgrade_sql for stmt in _build_create_table_sequence(table, db_name))
 
 
 _CH_OPTION_KEYS: frozenset[str] = frozenset({
@@ -2668,7 +2693,11 @@ def diff_models_against_snapshot(
                     "after": after,
                 })
 
-    # --- End Enum ADD VALUE diff ---
+    # --- Create TYPE for enums not in snapshot ---
+    for enum_name, curr_values in model_enum_values.items():
+        if enum_name not in snap_enums:
+            upgrade_ops.append({"type": "create_type", "enum_name": enum_name, "values": curr_values})
+            rollback_ops.insert(0, {"type": "drop_type", "enum_name": enum_name})
 
     # --- Annotate recreate_ch_table ops with dependent MVs ---
     for op in upgrade_ops + rollback_ops:
@@ -2684,7 +2713,7 @@ def diff_models_against_snapshot(
 
     recreate_tables = {op["table"] for op in upgrade_ops if op.get("type") == "recreate_ch_table"}
     if recreate_tables:
-        allowed = {"recreate_ch_table", "drop_table", "create_table", "rename_table", "alter_enum_add_value"}
+        allowed = {"recreate_ch_table", "drop_table", "create_table", "rename_table", "alter_enum_add_value", "create_type", "drop_type"}
         upgrade_ops = [op for op in upgrade_ops if op.get("table") not in recreate_tables or op.get("type") in allowed]
         rollback_ops = [op for op in rollback_ops if op.get("table") not in recreate_tables or op.get("type") in allowed]
 
@@ -2830,16 +2859,20 @@ def snapshot_diff_to_sql(
         elif op["type"] == "create_table":
             table = reconstruct_model_table(op["state_table"]) if op.get("state_table") else _find_model_table(op["table"], db_name=db_name)
             if table:
-                sql = generate_create_table_sql(table, db_name)
-                statements.append(MigrationStatement(
-                    order=StatementOrder.CREATE_TABLE,
-                    upgrade_sql=sql,
-                    rollback_sql=generate_drop_object_sql(table),
-                ))
+                table_statements = _build_create_table_sequence(table, db_name)
+                statements.extend(table_statements)
                 changes.append(Change(operation="create_table", table=op["table"]))
+                changes.extend(
+                    Change(operation="add_index", table=op["table"], target=",".join(idx.columns), index_type=idx.using)
+                    for idx in table.indexes
+                )
         elif op["type"] == "drop_table":
             drop_table = reconstruct_model_table(op["state_table"]) if op.get("state_table") else ModelTable(name=op["table"], columns=[], object_type=op.get("object_type", "table"))
-            rollback_sql = generate_create_table_sql(drop_table, db_name) if op.get("state_table") else f"CREATE TABLE {op['table']} (/* see .dbwarden/schemas/ for DDL */)"
+            rollback_sql = (
+                "\n\n".join(stmt.upgrade_sql for stmt in _build_create_table_sequence(drop_table, db_name))
+                if op.get("state_table")
+                else f"CREATE TABLE {op['table']} (/* see .dbwarden/schemas/ for DDL */)"
+            )
             statements.append(MigrationStatement(
                 order=StatementOrder.DROP_TABLE,
                 upgrade_sql=generate_drop_object_sql(drop_table),
@@ -3395,13 +3428,33 @@ def snapshot_diff_to_sql(
                 upgrade_sql=up, rollback_sql=rb,
             ))
             changes.append(Change(operation="alter_enum_add_value", table=enum_name, target=value))
+        elif op["type"] == "create_type":
+            enum_name = op["enum_name"]
+            values_sql = ", ".join(repr(v) for v in op.get("values", []))
+            up = f"CREATE TYPE {enum_name} AS ENUM ({values_sql});"
+            rb = f"DROP TYPE IF EXISTS {enum_name};"
+            statements.append(MigrationStatement(
+                order=StatementOrder.CREATE_TYPE,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation="create_type", table=enum_name))
+        elif op["type"] == "drop_type":
+            enum_name = op["enum_name"]
+            up = f"DROP TYPE IF EXISTS {enum_name};"
+            values_sql = ", ".join(repr(v) for v in op.get("values", []))
+            rb = f"CREATE TYPE {enum_name} AS ENUM ({values_sql});"
+            statements.append(MigrationStatement(
+                order=StatementOrder.CREATE_TYPE,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation="drop_type", table=enum_name))
 
     upgrade_sql, rollback_sql = _assemble_migration(statements)
     return upgrade_sql, rollback_sql, changes
 
 
 def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None) -> list[MigrationStatement]:
-    from dbwarden.engine.model_discovery import generate_create_table_sql, generate_drop_object_sql
+    from dbwarden.engine.model_discovery import generate_drop_object_sql
     from dbwarden.engine.offline import reconstruct_model_table
 
     table_name = op["table"]
@@ -3412,11 +3465,11 @@ def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None
     if from_table.object_type == "dictionary" or to_table.object_type == "dictionary":
         upgrade_sql = (
             f"{generate_drop_object_sql(from_table)};\n"
-            f"{generate_create_table_sql(to_table, db_name)};"
+            f"{_join_creation_sql(to_table, db_name)};"
         )
         rollback_sql = (
             f"{generate_drop_object_sql(to_table)};\n"
-            f"{generate_create_table_sql(from_table, db_name)};"
+            f"{_join_creation_sql(from_table, db_name)};"
         )
         return [
             MigrationStatement(
@@ -3430,11 +3483,11 @@ def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None
     if from_table.object_type == "materialized_view" or to_table.object_type == "materialized_view":
         upgrade_sql = (
             f"{generate_drop_object_sql(from_table)};\n"
-            f"{generate_create_table_sql(to_table, db_name)};"
+            f"{_join_creation_sql(to_table, db_name)};"
         )
         rollback_sql = (
             f"{generate_drop_object_sql(to_table)};\n"
-            f"{generate_create_table_sql(from_table, db_name)};"
+            f"{_join_creation_sql(from_table, db_name)};"
         )
         return [
             MigrationStatement(
@@ -3457,7 +3510,7 @@ def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None
     if dependent_mvs:
         upgrade_parts.append("; ".join(f"DETACH TABLE {mv}" for mv in dependent_mvs) + ";")
     upgrade_parts += [
-        generate_create_table_sql(ModelTable(
+        _join_creation_sql(ModelTable(
             name=new_name,
             columns=to_table.columns,
             clickhouse_options=to_table.clickhouse_options,
@@ -3484,7 +3537,7 @@ def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None
     rollback_parts = []
     if dependent_mvs:
         rollback_parts.append("; ".join(f"DETACH TABLE {mv}" for mv in dependent_mvs) + ";")
-    rollback_parts.append(generate_create_table_sql(ModelTable(
+    rollback_parts.append(_join_creation_sql(ModelTable(
         name=failed_name,
         columns=from_table.columns,
         clickhouse_options=from_table.clickhouse_options,
@@ -3619,6 +3672,7 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
     tablespace = op.get("tablespace")
     nulls_not_distinct = op.get("nulls_not_distinct", False)
     column_sorting = op.get("column_sorting")
+    postgresql_ops = op.get("postgresql_ops")
     concurrently = op.get("concurrently", True)
     clickhouse_type = op.get("clickhouse_type")
     clickhouse_granularity = op.get("clickhouse_granularity")
@@ -3653,10 +3707,13 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
         if using and using != "btree":
             parts.append(f"USING {using}")
 
-        # Column list with sort orders
+        # Column list with operator classes and sort orders
         col_parts = []
         for col in columns:
             col_sql = col
+            opclass = (postgresql_ops or {}).get(col, "")
+            if opclass and using:
+                col_sql += f" {opclass}"
             sorting = (column_sorting or {}).get(col, "")
             if sorting:
                 col_sql += f" {sorting}"
@@ -3724,6 +3781,9 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
         col_parts_rb = []
         for col in columns:
             col_sql = col
+            opclass = (postgresql_ops or {}).get(col, "")
+            if opclass and using:
+                col_sql += f" {opclass}"
             sorting = (column_sorting or {}).get(col, "")
             if sorting:
                 col_sql += f" {sorting}"

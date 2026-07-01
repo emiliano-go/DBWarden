@@ -94,7 +94,29 @@ def _collect_meta_chain(cls: type) -> list[type]:
 
 
 def _get_backend_for_class(cls: type) -> str:
+    from dbwarden.databases.clickhouse import CHTableMeta
+    from dbwarden.databases.pgsql import PGTableMeta
+    from dbwarden.databases.mysql import MyTableMeta
+    from dbwarden.databases.mariadb import MdbTableMeta
+    from dbwarden.databases.sqlite import SqTableMeta
     from dbwarden.engine.model_discovery import _get_backend_name
+
+    # Check the Meta class inheritance chain for backend-specific bases
+    for klass in cls.__mro__:
+        meta = klass.__dict__.get("Meta")
+        if meta is not None and isinstance(meta, type):
+            for base in meta.__mro__:
+                if base is CHTableMeta:
+                    return "clickhouse"
+                if base is PGTableMeta:
+                    return "postgresql"
+                if base is MyTableMeta:
+                    return "mysql"
+                if base is MdbTableMeta:
+                    return "mariadb"
+                if base is SqTableMeta:
+                    return "sqlite"
+
     return _get_backend_name()
 
 

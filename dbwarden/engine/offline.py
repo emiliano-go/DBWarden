@@ -225,6 +225,7 @@ def reconstruct_model_column(col_entry: dict[str, Any]) -> ModelColumn:
         unique=col_entry.get("unique", False),
         default=col_entry.get("default"),
         foreign_key=col_entry.get("foreign_key"),
+        codec=(col_entry.get("ch_column", {}) or {}).get("ch_codec"),
         comment=col_entry.get("comment"),
         pg_meta=dict(col_entry.get("pg_column", {}) or {}),
         ch_meta=dict(col_entry.get("ch_column", {}) or {}),
@@ -808,6 +809,11 @@ def _diff_indexes(prev_indexes: dict[str, Any], curr_indexes: dict[str, Any], up
 
 
 def _diff_enums(prev_enums: dict[str, list[str]], curr_enums: dict[str, list[str]], upgrade_ops: list[dict[str, Any]], rollback_ops: list[dict[str, Any]]) -> None:
+    for enum_name, curr_values in curr_enums.items():
+        if enum_name not in prev_enums:
+            upgrade_ops.append({"type": "create_type", "enum_name": enum_name, "values": curr_values})
+            rollback_ops.insert(0, {"type": "drop_type", "enum_name": enum_name})
+
     for enum_name, prev_values in prev_enums.items():
         curr_values = curr_enums.get(enum_name)
         if curr_values is None:

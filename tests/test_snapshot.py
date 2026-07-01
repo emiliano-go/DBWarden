@@ -31,7 +31,7 @@ from dbwarden.engine.snapshot import (
     snapshot_diff_to_sql,
     extract_full_schema_snapshot,
 )
-from dbwarden.engine.model_discovery import ModelColumn, ModelTable
+from dbwarden.engine.model_discovery import IndexInfo, ModelColumn, ModelTable
 from dbwarden.engine.migration_name import Change
 
 
@@ -1307,6 +1307,32 @@ class TestSnapshotDiffToSqlEdgeCases:
             assert "DROP TABLE" in sql
             assert len(changes) == 10
 
+    def test_create_table_emits_indexes_and_postgres_comment(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "postgresql")
+
+        table = ModelTable(
+            name="users",
+            columns=[
+                ModelColumn("id", "INTEGER", False, True, False, None, None),
+                ModelColumn("email", "VARCHAR", False, False, False, None, None),
+            ],
+            indexes=[IndexInfo(columns=["email"], name="ix_users_email")],
+            comment="User table",
+        )
+        monkeypatch.setattr(
+            "dbwarden.engine.snapshot._find_model_table",
+            lambda table_name, db_name=None: table if table_name == "users" else None,
+        )
+
+        sql, rb_sql, changes = snapshot_diff_to_sql([{"type": "create_table", "table": "users"}], [], db_name="primary")
+
+        assert "CREATE TABLE IF NOT EXISTS users" in sql
+        assert "CREATE INDEX CONCURRENTLY ix_users_email ON users (email);" in sql
+        assert "COMMENT ON TABLE users IS 'User table';" in sql
+        assert "DROP INDEX ix_users_email" in rb_sql
+        assert any(c.operation == "add_index" for c in changes)
+
     def test_rename_plus_type_change_combined(self):
         ops = [
             {"type": "rename_column", "table": "users", "old_name": "name", "new_name": "full_name"},
@@ -1698,6 +1724,29 @@ class TestIndexDiff:
         op = {"type": "drop_index", "table": "users", "index_name": "idx_users_email", "columns": ["email"], "unique": False}
         stmts = _build_index_sql(op, "postgresql")
         assert "DROP INDEX idx_users_email;" in stmts[0].upgrade_sql
+
+    def test_index_sql_with_postgresql_ops(self):
+        op = {"type": "add_index", "table": "users", "columns": ["data"],
+              "using": "gin", "postgresql_ops": {"data": "jsonb_path_ops"}}
+        stmts = _build_index_sql(op, "postgresql")
+        assert "USING gin" in stmts[0].upgrade_sql
+        assert "data jsonb_path_ops" in stmts[0].upgrade_sql
+
+    def test_index_drop_rollback_with_postgresql_ops(self):
+        op = {"type": "drop_index", "table": "users", "columns": ["data"],
+              "index_name": "idx_users_data", "using": "gin",
+              "postgresql_ops": {"data": "jsonb_path_ops"}}
+        stmts = _build_index_sql(op, "postgresql")
+        assert "data jsonb_path_ops" in stmts[0].rollback_sql
+
+    def test_index_sql_with_opclass_and_sorting(self):
+        op = {"type": "add_index", "table": "users", "columns": ["data"],
+              "using": "gin",
+              "postgresql_ops": {"data": "jsonb_path_ops"},
+              "column_sorting": {"data": "DESC"}}
+        stmts = _build_index_sql(op, "postgresql")
+        assert "data jsonb_path_ops DESC" in stmts[0].upgrade_sql
+        assert "data DESC jsonb_path_ops" not in stmts[0].upgrade_sql
 
     def test_index_name_generation_multi_column(self):
         name = _build_index_name("users", ["first_name", "last_name"], True)

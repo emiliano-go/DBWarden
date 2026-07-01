@@ -253,6 +253,45 @@ def get_pending_migration_statements(migrations_dir: str) -> set[str]:
     return all_statements
 
 
+def get_model_state_path(db_name: str | None = None, legacy: bool = False) -> Path:
+    base = Path(".dbwarden")
+    if legacy:
+        return base / "model_state.json"
+    return base / f"model_state.{db_name or 'default'}.json"
+
+
+def get_current_model_state_path(db_name: str | None = None) -> Path:
+    state_path = get_model_state_path(db_name)
+    legacy_state_path = get_model_state_path(db_name, legacy=True)
+    if state_path.exists():
+        if legacy_state_path.exists() and _legacy_state_should_override(db_name, state_path, legacy_state_path):
+            return legacy_state_path
+        return state_path
+    if legacy_state_path.exists():
+        return legacy_state_path
+    return state_path
+
+
+def _legacy_state_should_override(
+    db_name: str | None,
+    state_path: Path,
+    legacy_state_path: Path,
+) -> bool:
+    try:
+        legacy_state = json.loads(legacy_state_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return False
+
+    legacy_db = legacy_state.get("database")
+    if legacy_db:
+        return legacy_db == (db_name or "default")
+
+    try:
+        return legacy_state_path.stat().st_mtime >= state_path.stat().st_mtime
+    except OSError:
+        return False
+
+
 def _run_offline_migrations(
     description: str | None = None, database: str | None = None, migration_type: str = "versioned",
     clickhouse_engine_recreate: bool = False,
@@ -279,17 +318,19 @@ def _run_offline_migrations(
         console.print("  2. Or set model_paths in dbwarden config", style="white")
         return
 
-    state_path = Path(".dbwarden/model_state.json")
+    state_path = get_model_state_path(db_name)
+    legacy_state_path = get_model_state_path(db_name, legacy=True)
+    read_state_path = get_current_model_state_path(db_name)
 
-    if not state_path.exists():
-        console.print("Error: .dbwarden/model_state.json not found.", style="red")
+    if not read_state_path.exists():
+        console.print(f"Error: {get_model_state_path(db_name)} not found.", style="red")
         console.print("Run 'dbwarden export-models' first to establish a baseline.", style="yellow")
         return
 
     try:
-        prev_state = normalize_model_state(json.loads(state_path.read_text()))
+        prev_state = normalize_model_state(json.loads(read_state_path.read_text()))
     except json.JSONDecodeError:
-        console.print("Error: .dbwarden/model_state.json contains invalid JSON.", style="red")
+        console.print(f"Error: {read_state_path} contains invalid JSON.", style="red")
         console.print("Run 'dbwarden export-models' again to regenerate the state file.", style="yellow")
         return
     from dbwarden import __version__ as _dw_version
@@ -303,8 +344,11 @@ def _run_offline_migrations(
         _migrations_dir = str(Path.cwd() / config.migrations_dir)
     if not list(Path(_migrations_dir).glob("*.sql")):
         prev_state["tables"] = {}
+        prev_state["indexes"] = {}
+        prev_state["constraints"] = {}
+        prev_state["enums"] = {}
 
-    current_tables = get_all_model_tables(model_paths, db_name=database)
+    current_tables = get_all_model_tables(model_paths, db_name=db_name)
     validate_model_tables_exist(current_tables, config.model_tables, db_name)
     current_tables = filter_model_tables_by_name(current_tables, config.model_tables)
     current_state = model_state_to_dict(current_tables, dbwarden_version=_dw_version)
@@ -355,7 +399,7 @@ def _run_offline_migrations(
     )
 
     if not upgrade_ops:
-        console.print("No offline schema changes detected between model_state.json and current models.", style="cyan")
+        console.print("No offline schema changes detected between model state and current models.", style="cyan")
         return
 
     from dbwarden.engine.version import get_migration_filepaths_by_version
@@ -365,7 +409,7 @@ def _run_offline_migrations(
     )
 
     if not upgrade_sql.strip():
-        console.print("No offline schema changes detected between model_state.json and current models.", style="cyan")
+        console.print("No offline schema changes detected between model state and current models.", style="cyan")
         return
 
     from dbwarden.engine.version import get_migrations_directory as _get_migrations_dir
@@ -422,7 +466,14 @@ def _run_offline_migrations(
     console.print(f"Created migration plan: {plan_path}", style="green")
     console.print(f"Tables included: {', '.join(sorted(set(c.table for c in changes if hasattr(c, 'table') and c.table)))}", style="cyan")
 
-    state_path.write_text(json.dumps(current_state, indent=2, default=str) + "\n")
+    file_state = dict(current_state)
+    file_state["database"] = db_name or "default"
+    state_payload = json.dumps(file_state, indent=2, default=str) + "\n"
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(state_payload)
+    if legacy_state_path != state_path:
+        legacy_state_path.parent.mkdir(parents=True, exist_ok=True)
+        legacy_state_path.write_text(state_payload)
     logger = get_logger()
     logger.info(f"Updated model state: {state_path}")
 
@@ -487,7 +538,7 @@ def make_migrations_cmd(
 
     logger.log_model_paths(model_paths)
     logger.info(f"Discovering models in: {model_paths}")
-    tables = get_all_model_tables(model_paths, db_name=database)
+    tables = get_all_model_tables(model_paths, db_name=db_name)
     validate_model_tables_exist(tables, config.model_tables, db_name)
     tables = filter_model_tables_by_name(tables, config.model_tables)
 
@@ -532,7 +583,7 @@ def make_migrations_cmd(
             _compute_table_overlap,
             RENAME_TABLE_OVERLAP_THRESHOLD,
         )
-        snapshot = find_latest_snapshot(database)
+        snapshot = find_latest_snapshot(db_name)
     except Exception:
         snapshot = None
 
@@ -698,9 +749,14 @@ def make_migrations_cmd(
     console.print(f"Tables included: {', '.join(t.name for t in tables)}", style="cyan")
 
     state = model_state_to_dict(tables, dbwarden_version=__version__)
-    state_path = Path(".dbwarden/model_state.json")
+    state_payload = json.dumps(state, indent=2, default=str) + "\n"
+    state_path = get_model_state_path(db_name)
+    legacy_path = get_model_state_path(db_name, legacy=True)
+    if legacy_path != state_path:
+        legacy_path.parent.mkdir(parents=True, exist_ok=True)
+        legacy_path.write_text(state_payload)
     state_path.parent.mkdir(parents=True, exist_ok=True)
-    state_path.write_text(json.dumps(state, indent=2, default=str) + "\n")
+    state_path.write_text(state_payload)
     logger.info(f"Model state written: {state_path}")
 
     try:
@@ -1012,7 +1068,7 @@ def generate_migration_sql(
             MigrationStatement,
         )
 
-        snapshot = find_latest_snapshot(database)
+        snapshot = find_latest_snapshot(db_name)
     except Exception:
         snapshot = None
 
@@ -1020,7 +1076,7 @@ def generate_migration_sql(
         try:
             config = get_database(database)
             snapshot = extract_full_schema_snapshot(
-                database=database,
+                database=db_name,
                 sqlalchemy_url=config.sqlalchemy_url,
                 database_type=config.database_type,
             )
@@ -1093,10 +1149,27 @@ def generate_migration_sql(
         rollback_parts: list[str] = []
         changes: list[Change] = []
 
+        # Emit CREATE TYPE for PG enums before any table that uses them
+        enum_types: dict[str, list[str]] = {}
+        for table in tables:
+            for col in table.columns:
+                pg_type = col.pg_meta.get("pg_type", {})
+                if pg_type.get("kind") == "enum":
+                    type_name = pg_type.get("type_name", "")
+                    if type_name and type_name not in enum_types:
+                        enum_types[type_name] = pg_type.get("values", [])
+        for enum_name, values in enum_types.items():
+            values_sql = ", ".join(repr(v) for v in values)
+            upgrade_parts.append(f"CREATE TYPE {enum_name} AS ENUM ({values_sql});")
+            rollback_parts.append(f"DROP TYPE IF EXISTS {enum_name};")
+            changes.append(Change(operation="create_type", table=enum_name))
+
+        created_tables: set[str] = set()
         for table in tables:
             existing_columns = known_tables.get(table.name, set())
 
             if not existing_columns:
+                created_tables.add(table.name)
                 create_sql = generate_create_table_sql(table, db_name)
                 upgrade_parts.append(create_sql)
                 rollback_parts.append(generate_drop_object_sql(table))
@@ -1111,6 +1184,31 @@ def generate_migration_sql(
                         )
                         changes.append(Change(operation="add_column", table=table.name, target=column.name))
                         known_tables.setdefault(table.name, set()).add(column.name.lower())
+
+        # Emit indexes and constraints for newly created tables
+        for table in tables:
+            if table.name not in created_tables:
+                continue
+            for idx in table.indexes:
+                idx_cols = ", ".join(idx.columns)
+                upgrade_parts.append(f"CREATE INDEX IF NOT EXISTS {idx.name} ON {table.name} ({idx_cols});")
+                rollback_parts.append(f"DROP INDEX IF EXISTS {idx.name};")
+                changes.append(Change(operation="add_index", table=table.name, target=idx.name))
+            for fk in table.foreign_keys:
+                local_cols = ", ".join(fk.get("columns", []))
+                ref_table = fk.get("referred_table", "")
+                ref_cols = ", ".join(fk.get("referred_columns", ["id"]))
+                fk_sql = f"ALTER TABLE {table.name} ADD FOREIGN KEY ({local_cols}) REFERENCES {ref_table} ({ref_cols})"
+                on_delete = fk.get("on_delete", "NO ACTION")
+                on_update = fk.get("on_update", "NO ACTION")
+                if on_delete != "NO ACTION":
+                    fk_sql += f" ON DELETE {on_delete}"
+                if on_update != "NO ACTION":
+                    fk_sql += f" ON UPDATE {on_update}"
+                fk_sql += ";"
+                upgrade_parts.append(fk_sql)
+                rollback_parts.append(f"-- DROP FOREIGN KEY ({local_cols}) on {table.name} (name unknown)")
+                changes.append(Change(operation="add_foreign_key", table=table.name, target=local_cols))
 
         rollback_parts.reverse()
 

@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 from dbwarden import __version__
-from dbwarden.config import get_database
+from dbwarden.config import ConfigurationError, get_database, get_multi_db_config
 from dbwarden.engine.model_discovery import (
     get_all_model_tables,
     filter_model_tables_by_name,
@@ -15,7 +15,7 @@ from dbwarden.engine.offline import model_state_to_dict
 
 
 def export_models_cmd(
-    output: str = ".dbwarden/model_state.json",
+    output: str | None = None,
     database: str | None = None,
 ) -> None:
     """Export current model definitions to a JSON state file for offline diffs.
@@ -25,6 +25,10 @@ def export_models_cmd(
         database: Target database name.
     """
     config = get_database(database)
+    try:
+        db_name = database or get_multi_db_config().default
+    except ConfigurationError:
+        db_name = database or "default"
     model_paths = config.model_paths
 
     if not model_paths:
@@ -36,13 +40,29 @@ def export_models_cmd(
         raise ValueError(msg)
 
     tables = get_all_model_tables(model_paths, db_name=database)
-    validate_model_tables_exist(tables, config.model_tables, database or "default")
+    validate_model_tables_exist(tables, config.model_tables, db_name)
     tables = filter_model_tables_by_name(tables, config.model_tables)
     state = model_state_to_dict(tables, dbwarden_version=__version__)
 
-    out_path = Path(output)
+    if output is None:
+        from dbwarden.commands.make_migrations import get_model_state_path
+
+        out_path = get_model_state_path(db_name)
+    else:
+        out_path = Path(output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text(json.dumps(state, indent=2, default=str) + "\n")
+    file_state = dict(state)
+    if output is None:
+        file_state["database"] = db_name
+    payload = json.dumps(file_state, indent=2, default=str) + "\n"
+
+    from dbwarden.commands.make_migrations import get_model_state_path
+
+    legacy_path = get_model_state_path(db_name, legacy=True)
+    if legacy_path != out_path:
+        legacy_path.parent.mkdir(parents=True, exist_ok=True)
+        legacy_path.write_text(payload)
+    out_path.write_text(payload)
 
     from dbwarden.commands.make_migrations import console
     console.print(f"Exported {len(tables)} model(s) to {out_path}", style="green")

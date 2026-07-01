@@ -209,6 +209,18 @@ class Meta(PGTableMeta):
     ]
 ```
 
+`PgIndexSpec` supports operator classes via `postgresql_ops` for GIN indexes on JSONB columns:
+
+```python
+PgIndexSpec("ix_users_data", ["data"],
+    using="gin",
+    postgresql_ops={"data": "jsonb_path_ops"})
+```
+
+This generates `CREATE INDEX ... ON users USING GIN (data jsonb_path_ops)`.
+
+Full `PgIndexSpec` constructor fields: `name`, `columns`, `unique`, `using`, `where`, `include`, `with_params`, `tablespace`, `nulls_not_distinct`, `column_sorting`, `postgresql_ops`, `concurrently`. See [PostgreSQL Deep Dive](databases/postgresql.md) for details.
+
 ### Column-Level Meta
 
 Use `PGColumnMeta` inner classes named after the column. Use `pg = pg.field(...)` to set column-level options:

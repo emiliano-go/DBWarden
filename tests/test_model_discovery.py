@@ -16,6 +16,7 @@ from dbwarden.engine.model_discovery import (
     ModelTable,
 )
 from dbwarden.databases.pgsql import PGColumnMeta, PGTableMeta, pg
+from dbwarden.databases.clickhouse import CHColumnMeta, CHTableMeta, ChIndexSpec, ch
 
 
 class TestModelDiscovery:
@@ -238,6 +239,19 @@ class TestSQLGeneration:
         assert "PRIMARY KEY" in sql
         assert "UNIQUE" in sql
 
+    def test_generate_postgresql_create_table_sql_includes_comment(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        table = ModelTable(
+            name="users",
+            columns=[ModelColumn("id", "INTEGER", False, True, False, None, None)],
+            comment="User accounts",
+        )
+
+        sql = generate_create_table_sql(table)
+
+        assert "COMMENT ON TABLE users IS 'User accounts';" in sql
+
     def test_generate_drop_table_sql(self):
         """Test generating DROP TABLE SQL."""
         sql = generate_drop_table_sql("users")
@@ -321,6 +335,46 @@ class TestSQLGeneration:
 
         assert "ALTER TABLE users ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" in sql
 
+    def test_generate_clickhouse_add_column_sql_includes_codec(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        column = ModelColumn(
+            "payload",
+            "String",
+            False,
+            False,
+            False,
+            None,
+            None,
+            ch_meta={"ch_type": "String", "ch_codec": "ZSTD(3)"},
+        )
+
+        sql = model_discovery.generate_add_column_sql("events", column, db_name="primary")
+
+        assert "CODEC(ZSTD(3))" in sql
+
+    def test_generate_postgresql_create_table_sql_uses_enum_type_name(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        columns = [
+            ModelColumn(
+                "resource",
+                "enum",
+                False,
+                False,
+                False,
+                None,
+                None,
+                pg_meta={"pg_type": {"kind": "enum", "type_name": "keypermissionresource", "values": ["USER_PROFILE"]}},
+            ),
+        ]
+
+        table = ModelTable(name="key_permissions", columns=columns)
+        sql = generate_create_table_sql(table)
+
+        assert "resource keypermissionresource NOT NULL" in sql
+        assert "resource enum" not in sql
+
     def test_generate_clickhouse_create_table_sql_with_options(self, monkeypatch):
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
 
@@ -350,6 +404,27 @@ class TestSQLGeneration:
         assert "PARTITION BY toYYYYMM(event_time)" in sql
         assert "SAMPLE BY intHash64(region)" in sql
         assert "TTL event_time + INTERVAL 1 MONTH DELETE" in sql
+
+    def test_generate_clickhouse_create_table_sql_with_comments(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("id", "UInt64", False, True, False, None, None),
+            ModelColumn("url", "String", False, False, False, None, None, comment="Visited URL"),
+            ModelColumn("viewed_at", "DateTime", False, False, False, None, None, comment="Timestamp of the page view"),
+        ]
+
+        table = ModelTable(
+            name="page_views",
+            columns=columns,
+            comment="Page view events",
+        )
+
+        sql = generate_create_table_sql(table)
+
+        assert "COMMENT 'Page view events'" in sql
+        assert "url String NOT NULL COMMENT 'Visited URL'" in sql
+        assert "viewed_at DateTime NOT NULL COMMENT 'Timestamp of the page view'" in sql
 
     def test_generate_clickhouse_create_table_sql_with_composite_primary_key(self, monkeypatch):
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
@@ -593,6 +668,20 @@ class TestColumnExtraction:
 
         assert col is not None
         assert col.type == "TEXT"
+
+    def test_extract_jsonb_column_sets_pg_type_for_postgres(self, monkeypatch):
+        from sqlalchemy import Column
+        from sqlalchemy.dialects.postgresql import JSONB
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        col_obj = Column("payload", JSONB)
+
+        col = extract_column_info(col_obj)
+
+        assert col is not None
+        assert col.type == "jsonb"
+        assert col.pg_meta.get("pg_type") == {"kind": "jsonb"}
 
     def test_extract_column_falls_back_unknown_type_to_text_for_sqlite(self, monkeypatch):
         from sqlalchemy import Column

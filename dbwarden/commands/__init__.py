@@ -245,7 +245,7 @@ def handle_generate_models(
 
 
 def handle_export_models(
-    output: str = ".dbwarden/model_state.json",
+    output: str | None = None,
     database: str | None = None,
 ) -> None:
     """Handle export-models command."""

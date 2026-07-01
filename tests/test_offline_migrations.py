@@ -1,5 +1,5 @@
 from dbwarden.engine.model_discovery import ModelColumn, ModelTable
-from dbwarden.engine.offline import diff_model_states, model_state_to_dict, _table_to_state_entry, normalize_model_state
+from dbwarden.engine.offline import diff_model_states, model_state_to_dict, _table_to_state_entry, normalize_model_state, reconstruct_model_column
 
 
 def _make_col(name, type="integer", nullable=False, pk=False, default=None):
@@ -158,6 +158,27 @@ def test_column_ch_meta_in_state():
     col_entry = entry["columns"]["payload"]
     assert col_entry["ch_column"]["ch_codec"] == "ZSTD(3)"
     assert col_entry["ch_column"]["ch_nullable"] is True
+
+
+def test_reconstruct_model_column_restores_codec():
+    col = reconstruct_model_column(
+        {
+            "name": "payload",
+            "type": "String",
+            "nullable": False,
+            "primary_key": False,
+            "unique": False,
+            "default": None,
+            "foreign_key": None,
+            "comment": None,
+            "autoincrement": None,
+            "pg_column": {},
+            "ch_column": {"ch_codec": "ZSTD(3)", "ch_type": "String"},
+            "my_column": {},
+        }
+    )
+
+    assert col.codec == "ZSTD(3)"
 
 
 def test_table_to_state_entry_includes_mysql():
@@ -1564,15 +1585,15 @@ def test_offline_postgresql_complex_round_trip():
             # that rename flags resolve into RENAME COLUMN
             Path("models/models.py").write_text(
                 "from sqlalchemy import (Column, Integer, String, Text, Float, Boolean, BigInteger,\n"
-                "                         ForeignKey, UniqueConstraint, CheckConstraint, Index)\n"
-                "from sqlalchemy.orm import declarative_base\n\n"
+                "                         ForeignKey, UniqueConstraint, CheckConstraint)\n"
+                "from sqlalchemy.orm import declarative_base\n"
+                "from dbwarden.databases import index\n\n"
                 "Base = declarative_base()\n\n"
                 "class User(Base):\n"
                 "    __tablename__ = 'users'\n"
                 "    __table_args__ = (\n"
                 "        UniqueConstraint('email', name='uq_users_email'),\n"
                 "        CheckConstraint('age >= 0', name='ck_users_age'),\n"
-                "        Index('ix_users_name', 'name'),\n"
                 "    )\n"
                 "    id = Column(Integer, primary_key=True)\n"
                 "    email = Column(String(255), nullable=False, unique=True)\n"
@@ -1580,6 +1601,11 @@ def test_offline_postgresql_complex_round_trip():
                 "    age = Column(Integer, nullable=False, default=0)\n"
                 "    is_active = Column(Boolean, nullable=False, default=True)\n"
                 "    bio = Column(Text, nullable=True, comment='User biography')\n"
+                "\n"
+                "    class Meta:\n"
+                "        indexes = [\n"
+                "            index('ix_users_name', ['name']),\n"
+                "        ]\n"
                 "\n"
                 "class Order(Base):\n"
                 "    __tablename__ = 'orders'\n"
@@ -1629,7 +1655,7 @@ def test_offline_postgresql_complex_round_trip():
             assert "ALTER TABLE users ALTER COLUMN age SET NOT NULL" in offline_sql_content
 
             # New index
-            assert "idx_users_name" in offline_sql_content
+            assert "ix_users_name" in offline_sql_content
 
             # ── Step 5: Plan file matches ──
             plan_files_step2 = sorted(Path("migrations/primary").glob("*.plan.json"))
