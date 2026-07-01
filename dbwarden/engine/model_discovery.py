@@ -1715,6 +1715,8 @@ def generate_drop_table_sql(table_name: str, schema: str | None = None) -> str:
 
 def generate_drop_object_sql(table: ModelTable) -> str:
     qname = _qualified_name(table.name, table.schema)
+    if table.object_type == "materialized_view" and table.pg_view_materialized:
+        return f"DROP MATERIALIZED VIEW IF EXISTS {qname}"
     if table.object_type in ("view", "materialized_view"):
         return f"DROP VIEW IF EXISTS {qname}"
     if table.object_type == "dictionary":

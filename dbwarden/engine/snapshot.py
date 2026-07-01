@@ -1168,6 +1168,70 @@ def extract_full_schema_snapshot(
                     pass
 
                 tables[view_name] = view_entry
+
+            # Extract materialized views — invisible to both get_table_names() and get_view_names()
+            try:
+                matview_q = "SELECT relname FROM pg_class WHERE relkind = 'm'"
+                if pg_schema:
+                    matview_q += " AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = :schema)"
+                    matview_rows = _pg_conn.execute(text(matview_q), {"schema": pg_schema})
+                else:
+                    matview_rows = _pg_conn.execute(text(matview_q + " AND relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = current_schema())"))
+                for mrow in matview_rows:
+                    mv_name = mrow[0]
+                    if mv_name in tables:
+                        # Convert existing table entry to materialized view entry
+                        mv_entry = tables[mv_name]
+                        try:
+                            vdef_row = _pg_conn.execute(
+                                text("SELECT pg_get_viewdef(:t)"),
+                                {"t": mv_name},
+                            ).fetchone()
+                            mv_entry["pg_view_definition"] = vdef_row[0] if vdef_row else None
+                        except Exception:
+                            mv_entry["pg_view_definition"] = None
+                        mv_entry["pg_view_materialized"] = True
+                        mv_entry["object_type"] = "materialized_view"
+                        mv_entry["schema"] = pg_schema
+                        mv_entry.pop("options", None)
+                        mv_entry.pop("foreign_keys", None)
+                    else:
+                        # Extract from scratch (matview not returned by get_table_names)
+                        try:
+                            mv_columns = inspector.get_columns(mv_name, **inspect_kw)
+                            mv_pk = inspector.get_pk_constraint(mv_name, **inspect_kw)
+                            mv_pk_cols = set(mv_pk.get("constrained_columns", []) or [])
+                            mv_cols_dict = {}
+                            for col in mv_columns:
+                                cname = col["name"]
+                                ctype = col.get("type", "")
+                                norm = normalize_type(str(ctype))
+                                mv_cols_dict[cname] = {
+                                    "type": norm["type"],
+                                    "nullable": bool(col.get("nullable", True)),
+                                    "primary_key": cname in mv_pk_cols,
+                                    "default": col.get("default"),
+                                    "autoincrement": _is_autoincrement(col),
+                                }
+                            vdef_row = _pg_conn.execute(
+                                text("SELECT pg_get_viewdef(:t)"),
+                                {"t": mv_name},
+                            ).fetchone()
+                            vdef = vdef_row[0] if vdef_row else None
+                            tables[mv_name] = {
+                                "columns": mv_cols_dict,
+                                "primary_key": list(mv_pk_cols) if mv_pk_cols else [],
+                                "comment": None,
+                                "schema": pg_schema,
+                                "object_type": "materialized_view",
+                                "pg_view_definition": vdef,
+                                "pg_view_materialized": True,
+                            }
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
             if own_engine:
                 _pg_conn.close()
         except Exception:
@@ -3062,10 +3126,16 @@ def snapshot_diff_to_sql(
             mat = op.get("pg_view_materialized", False)
             snap_mat = op.get("snap_pg_view_materialized", False)
             rollback_def = op.get("snap_pg_view_definition") or ""
-            if mat:
+            # Upgrade: emit correct DROP type based on what exists + what we're creating
+            if mat and snap_mat:
+                upgrade_sql = f"DROP MATERIALIZED VIEW IF EXISTS {qname};\nCREATE MATERIALIZED VIEW {qname} AS {view_def}"
+            elif mat and not snap_mat:
                 upgrade_sql = f"DROP VIEW IF EXISTS {qname};\nCREATE MATERIALIZED VIEW {qname} AS {view_def}"
+            elif not mat and snap_mat:
+                upgrade_sql = f"DROP MATERIALIZED VIEW IF EXISTS {qname};\nCREATE VIEW {qname} AS {view_def}"
             else:
                 upgrade_sql = f"DROP VIEW IF EXISTS {qname};\nCREATE VIEW {qname} AS {view_def}"
+            # Rollback: restore the snapshot's view type
             if snap_mat:
                 rollback_sql = f"DROP MATERIALIZED VIEW IF EXISTS {qname};\nCREATE MATERIALIZED VIEW {qname} AS {rollback_def}"
             else:
