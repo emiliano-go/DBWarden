@@ -1096,6 +1096,17 @@ def extract_table_from_model(
         if dw_meta:
             checks = list(getattr(dw_meta, "pg_checks", []) or getattr(dw_meta, "checks", []) or getattr(dw_meta, "my_checks", []))
             uniques = list(getattr(dw_meta, "pg_uniques", []) or getattr(dw_meta, "uniques", []) or getattr(dw_meta, "my_uniques", []))
+            # Extract unique=True from SQLAlchemy column definitions (e.g. email = Column(unique=True))
+            # so the model-side uniques match the constraints PostgreSQL creates from inline UNIQUE.
+            for column in model_class.__table__.columns:
+                if getattr(column, "unique", False):
+                    col_name = column.name
+                    if not any(col_name in u.get("columns", []) for u in uniques):
+                        uniques.append({
+                            "columns": [col_name],
+                            "deferrable": False,
+                            "initially_deferred": False,
+                        })
             excludes = list(getattr(dw_meta, "pg_excludes", []))
             indexes_meta = getattr(dw_meta, "indexes", []) or []
             pg_indexes_meta = getattr(dw_meta, "pg_indexes", []) or []
@@ -1134,6 +1145,12 @@ def extract_table_from_model(
                 pg_view_materialized = dw_meta.backend_table.materialized
                 if dw_meta.backend_table.schema:
                     schema = dw_meta.backend_table.schema
+                # Views cannot have indexes, FKs, constraints, or excludes
+                indexes = []
+                foreign_keys = []
+                uniques = []
+                checks = []
+                excludes = []
             if not pg_table and any(k.startswith("pg_") for k in getattr(dw_meta, "table_attrs", {})):
                 excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques", "pg_view_query", "pg_view_materialized", "pg_schema"}
                 pg_table = {

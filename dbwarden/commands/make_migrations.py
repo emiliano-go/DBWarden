@@ -1265,14 +1265,22 @@ def generate_migration_sql(
     try:
         config = get_database(database or "default")
         if config.database_type == "postgresql" and config.pg_extensions:
-            ext_statements = "\n".join(
+            ext_upgrade = "\n".join(
                 f'CREATE EXTENSION IF NOT EXISTS "{ext}";'
                 for ext in config.pg_extensions
             )
+            ext_rollback = "\n".join(
+                f'DROP EXTENSION IF EXISTS "{ext}";'
+                for ext in reversed(config.pg_extensions)
+            )
             if upgrade_sql.strip():
-                upgrade_sql = ext_statements + "\n\n" + upgrade_sql
+                upgrade_sql = ext_upgrade + "\n\n" + upgrade_sql
             else:
-                upgrade_sql = ext_statements
+                upgrade_sql = ext_upgrade
+            if rollback_sql.strip():
+                rollback_sql = ext_rollback + "\n\n" + rollback_sql
+            else:
+                rollback_sql = ext_rollback
             for ext in config.pg_extensions:
                 changes.insert(0, Change(operation="create_extension", table=ext))
     except Exception:

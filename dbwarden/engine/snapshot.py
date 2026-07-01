@@ -2725,7 +2725,16 @@ def diff_models_against_snapshot(
 
     # --- Index diff ---
     snapshot_indexes = snapshot.get("indexes", {})
+    snapshot_constraints_all = snapshot.get("constraints", {})
+    # Build name -> entry map for constraints (keys are "table.name", use inner "name" field)
+    _con_by_name: dict[str, dict] = {}
+    for _key, _c in snapshot_constraints_all.items():
+        _cname = _c.get("name") or _key.split(".", 1)[-1]
+        _con_by_name[_cname] = _c
     for table in model_tables:
+        if table.object_type in ("view", "materialized_view"):
+            continue  # views cannot have indexes
+
         model_idxs = table.indexes or []
         model_idx_sigs = {_index_sig(idx) for idx in model_idxs}
 
@@ -2740,6 +2749,13 @@ def diff_models_against_snapshot(
         for name, idx in snap_idxs:
             sig = _index_sig(idx)
             if sig not in model_idx_sigs:
+                # Skip unique indexes that back a unique constraint with the same name.
+                # PostgreSQL creates an index to implement every unique constraint.
+                # Dropping the constraint cascades to the index automatically.
+                if idx.get("unique", False) and name:
+                    c = _con_by_name.get(name)
+                    if c and c.get("type") == "unique" and c.get("table") == table.name:
+                        continue
                 upgrade_ops.append({
                     "type": "drop_index",
                     "table": table.name,
@@ -3044,14 +3060,16 @@ def snapshot_diff_to_sql(
             qname = _qualified_name(op["table"], op.get("schema"))
             view_def = op.get("pg_view_definition") or ""
             mat = op.get("pg_view_materialized", False)
+            snap_mat = op.get("snap_pg_view_materialized", False)
+            rollback_def = op.get("snap_pg_view_definition") or ""
             if mat:
                 upgrade_sql = f"DROP VIEW IF EXISTS {qname};\nCREATE MATERIALIZED VIEW {qname} AS {view_def}"
-                rollback_def = op.get("snap_pg_view_definition") or ""
-                rollback_sql = f"DROP MATERIALIZED VIEW IF EXISTS {qname};\nCREATE VIEW {qname} AS {rollback_def}"
             else:
-                upgrade_sql = f"CREATE OR REPLACE VIEW {qname} AS {view_def}"
-                rollback_def = op.get("snap_pg_view_definition") or ""
-                rollback_sql = f"CREATE OR REPLACE VIEW {qname} AS {rollback_def}"
+                upgrade_sql = f"DROP VIEW IF EXISTS {qname};\nCREATE VIEW {qname} AS {view_def}"
+            if snap_mat:
+                rollback_sql = f"DROP MATERIALIZED VIEW IF EXISTS {qname};\nCREATE MATERIALIZED VIEW {qname} AS {rollback_def}"
+            else:
+                rollback_sql = f"DROP VIEW IF EXISTS {qname};\nCREATE VIEW {qname} AS {rollback_def}"
             statements.append(MigrationStatement(
                 order=StatementOrder.ALTER_VIEW,
                 upgrade_sql=upgrade_sql,
