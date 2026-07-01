@@ -169,18 +169,12 @@ def colorize_sql(sql: str) -> str:
 class ColoredFormatter(logging.Formatter):
     """Custom formatter that adds colors to log output."""
 
-    def format(self, record: logging.LogRecord) -> str:
-        level = record.levelno
-        color = LOG_COLORS.get(level, ANSI_COLORS["reset"])
-
-        msg = record.getMessage()
-
-        if not supports_color():
-            return super().format(record)
-
-        record.msg = colorize(msg, color)
-
-        return super().format(record)
+    def formatMessage(self, record: logging.LogRecord) -> str:
+        msg = super().formatMessage(record)
+        if supports_color():
+            color = LOG_COLORS.get(record.levelno, ANSI_COLORS["reset"])
+            msg = colorize(msg, color)
+        return msg
 
 
 class JSONFormatter(logging.Formatter):

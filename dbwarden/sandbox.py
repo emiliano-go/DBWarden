@@ -295,11 +295,24 @@ def load_model_module(filepath: Path, base_dir: Path) -> Any:
         file_stat = None
 
     # Reuse cached modules only when the source file is unchanged.
+    # If the module was pre-imported by the app (no cache attrs), set attrs
+    # and return it to avoid re-execution (which would crash on duplicate tables).
     if module_name is not None and module_name in sys.modules:
         cached = sys.modules[module_name]
         cached_mtime = getattr(cached, "__dbwarden_source_mtime_ns__", None)
         cached_size = getattr(cached, "__dbwarden_source_size__", None)
         cached_path = getattr(cached, "__dbwarden_source_path__", None)
+        if cached_mtime is None and file_stat is not None:
+            if cached_path is not None and cached_path != str(filepath.resolve()):
+                del sys.modules[module_name]
+            else:
+                cache_attrs0 = str(filepath.resolve())
+                cache_attrs1 = file_stat.st_mtime_ns
+                cache_attrs2 = file_stat.st_size
+                cached.__dbwarden_source_path__ = cache_attrs0
+                cached.__dbwarden_source_mtime_ns__ = cache_attrs1
+                cached.__dbwarden_source_size__ = cache_attrs2
+                return cached
         if (
             file_stat is not None
             and cached_mtime == file_stat.st_mtime_ns
@@ -334,7 +347,7 @@ def load_model_module(filepath: Path, base_dir: Path) -> Any:
 
         return module
     except Exception as e:
-        logger.warning("Failed to load model %s: %s", filepath, e)
+        logger.warning("Failed to load model %s: %s", filepath, str(e))
         if module_name is not None and module_name in sys.modules:
             del sys.modules[module_name]
         return None

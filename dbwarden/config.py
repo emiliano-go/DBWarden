@@ -608,6 +608,7 @@ def get_multi_db_config() -> MultiDbConfig:
     base_dir = _import_source(source)
     entries = registered_entries()
     _MULTI_DB_CONFIG_CACHE = _finalize_entries(entries, base_dir, variable_value_expressions)
+    _MULTI_DB_CONFIG_CWD = current_cwd
     return _MULTI_DB_CONFIG_CACHE
 
 
