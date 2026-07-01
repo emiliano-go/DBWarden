@@ -21,6 +21,7 @@ import logging
 import os
 import re
 import sys
+from datetime import datetime, timezone
 from typing import Any, Optional
 from enum import IntEnum
 from collections.abc import Callable, Sequence
@@ -212,6 +213,16 @@ class JSONFormatter(logging.Formatter):
 
     Activated when the ``DBWARDEN_LOG_JSON`` environment variable is set.
     """
+
+    def formatTime(
+        self,
+        record: logging.LogRecord,
+        datefmt: str | None = None,
+    ) -> str:
+        dt = datetime.fromtimestamp(record.created, timezone.utc)
+        if datefmt:
+            return dt.strftime(datefmt)
+        return dt.isoformat(timespec="milliseconds")
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
