@@ -111,6 +111,12 @@ def _validate_identifier(name: str, field: str = "identifier") -> None:
         )
 
 
+def _qualified_name(name: str, schema: str | None) -> str:
+    if schema:
+        return f"{schema}.{name}"
+    return name
+
+
 def _get_backend_name(db_name: str | None = None) -> str:
     """Get the database backend name from config."""
     try:
@@ -322,6 +328,9 @@ class ModelTable:
         excludes: Optional[list[dict[str, Any]]] = None,
         pg_table: Optional[dict[str, Any]] = None,
         my_table: Optional[dict[str, Any]] = None,
+        schema: str | None = None,
+        pg_view_definition: str | None = None,
+        pg_view_materialized: bool = False,
     ):
         self.name = name
         self.columns = columns
@@ -338,6 +347,9 @@ class ModelTable:
         self.excludes = excludes or []
         self.pg_table = pg_table or {}
         self.my_table = my_table or {}
+        self.schema = schema
+        self.pg_view_definition = pg_view_definition
+        self.pg_view_materialized = pg_view_materialized
 
     def to_dict(self) -> dict:
         return {
@@ -353,6 +365,9 @@ class ModelTable:
             "excludes": self.excludes,
             "pg_table": self.pg_table,
             "my_table": self.my_table,
+            "schema": self.schema,
+            "pg_view_definition": self.pg_view_definition,
+            "pg_view_materialized": self.pg_view_materialized,
         }
 
 
@@ -1074,6 +1089,9 @@ def extract_table_from_model(
         excludes = []
         pg_table = {}
         my_table = {}
+        schema = None
+        pg_view_definition = None
+        pg_view_materialized = False
 
         if dw_meta:
             checks = list(getattr(dw_meta, "pg_checks", []) or getattr(dw_meta, "checks", []) or getattr(dw_meta, "my_checks", []))
@@ -1108,12 +1126,25 @@ def extract_table_from_model(
                 excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
                 pg_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("pg_") and k not in excluded_pg_keys}
                 my_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques")}
-            elif any(k.startswith("pg_") for k in getattr(dw_meta, "table_attrs", {})):
+                schema = pg_table.pop("pg_schema", None)
+            if not pg_table and any(k.startswith("pg_") for k in getattr(dw_meta, "table_attrs", {})):
                 excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
                 pg_table = {
                     k: v for k, v in dw_meta.table_attrs.items()
                     if k.startswith("pg_") and k not in excluded_pg_keys and v is not None
                 }
+                if schema is None:
+                    schema = pg_table.pop("pg_schema", None)
+            # If using PgTableSpec, read schema from the typed object
+            if schema is None and type(dw_meta.backend_table).__name__ == "PgTableSpec":
+                schema = dw_meta.backend_table.schema
+            # If using PgViewSpec, read view definition and schema
+            if type(dw_meta.backend_table).__name__ == "PgViewSpec":
+                object_type = "materialized_view" if dw_meta.backend_table.materialized else "view"
+                pg_view_definition = dw_meta.backend_table.query
+                pg_view_materialized = dw_meta.backend_table.materialized
+                if dw_meta.backend_table.schema:
+                    schema = dw_meta.backend_table.schema
             if not my_table and any(k.startswith("my_") for k in getattr(dw_meta, "table_attrs", {})):
                 my_table = {
                     k: v for k, v in dw_meta.table_attrs.items()
@@ -1139,6 +1170,9 @@ def extract_table_from_model(
             excludes=excludes,
             pg_table=pg_table,
             my_table=my_table,
+            schema=schema,
+            pg_view_definition=pg_view_definition,
+            pg_view_materialized=pg_view_materialized,
         )
     except DBWardenConfigError:
         raise
@@ -1453,7 +1487,8 @@ def compare_model_to_database(
 
 
 def generate_add_column_sql(
-    table_name: str, column: ModelColumn, db_name: str | None = None
+    table_name: str, column: ModelColumn, db_name: str | None = None,
+    schema: str | None = None,
 ) -> str:
     """Generate SQL for adding a column."""
     _validate_identifier(table_name, "table_name")
@@ -1483,7 +1518,8 @@ def generate_add_column_sql(
             fk_sql += f" ON DELETE {column.fk_on_delete}"
         if column.fk_on_update and column.fk_on_update != "NO ACTION":
             fk_sql += f" ON UPDATE {column.fk_on_update}"
-    sql = f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type}"
+    qname = _qualified_name(table_name, schema)
+    sql = f"ALTER TABLE {qname} ADD COLUMN {column.name} {col_type}"
     if nullable_sql:
         sql += f" {nullable_sql}"
     if default_sql:
@@ -1552,10 +1588,13 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
         column_defs.extend(f"    {projection_sql}" for projection_sql in _render_clickhouse_projections(table))
 
     columns_sql = ",\n".join(column_defs)
+    qname = _qualified_name(table.name, table.schema)
     if backend == "clickhouse" and table.object_type == "materialized_view":
         sql = _generate_clickhouse_materialized_view_sql(table, columns_sql)
+    elif backend == "postgresql" and table.object_type in ("view", "materialized_view"):
+        return generate_create_view_sql(table)
     else:
-        sql = f"CREATE TABLE IF NOT EXISTS {table.name} (\n{columns_sql}\n)"
+        sql = f"CREATE TABLE IF NOT EXISTS {qname} (\n{columns_sql}\n)"
     if backend == "clickhouse":
         if table.object_type == "table":
             sql += _render_clickhouse_table_suffix(table)
@@ -1582,7 +1621,7 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             columns = pg_partition.get("columns", [])
             sql += f"\nPARTITION BY {strategy} ({', '.join(columns)})"
     if backend == "postgresql" and table.comment:
-        sql += f"\nCOMMENT ON TABLE {table.name} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}';"
+        sql += f"\nCOMMENT ON TABLE {qname} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}';"
     return sql
 
 
@@ -1639,19 +1678,31 @@ def _generate_clickhouse_materialized_view_sql(
     return "\n".join(parts)
 
 
-def generate_drop_table_sql(table_name: str) -> str:
+def generate_create_view_sql(table: ModelTable) -> str:
+    qname = _qualified_name(table.name, table.schema)
+    if table.pg_view_materialized:
+        sql = f"CREATE MATERIALIZED VIEW IF NOT EXISTS {qname} AS {table.pg_view_definition or ''}"
+    else:
+        sql = f"CREATE OR REPLACE VIEW {qname} AS {table.pg_view_definition or ''}"
+    if table.comment:
+        sql += f";\nCOMMENT ON VIEW {qname} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}'"
+    return sql
+
+
+def generate_drop_table_sql(table_name: str, schema: str | None = None) -> str:
     """Generate DROP TABLE SQL."""
     _validate_identifier(table_name, "table_name")
-    return f"DROP TABLE {table_name}"
+    qname = _qualified_name(table_name, schema)
+    return f"DROP TABLE {qname}"
 
 
 def generate_drop_object_sql(table: ModelTable) -> str:
-    _validate_identifier(table.name, "table_name")
-    if table.object_type == "materialized_view":
-        return f"DROP VIEW {table.name}"
+    qname = _qualified_name(table.name, table.schema)
+    if table.object_type in ("view", "materialized_view"):
+        return f"DROP VIEW IF EXISTS {qname}"
     if table.object_type == "dictionary":
-        return f"DROP DICTIONARY {table.name}"
-    return generate_drop_table_sql(table.name)
+        return f"DROP DICTIONARY {qname}"
+    return generate_drop_table_sql(table.name, table.schema)
 
 
 def generate_create_dictionary_sql(table: ModelTable) -> str:

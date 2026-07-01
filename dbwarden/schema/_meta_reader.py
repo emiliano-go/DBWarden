@@ -34,6 +34,7 @@ _KNOWN_TABLE_ATTRS = frozenset({
     "comment", "indexes", "checks", "uniques", "partition", "primary_key",
     "pg_tablespace", "pg_fillfactor", "pg_unlogged", "pg_inherits",
     "pg_indexes", "pg_checks", "pg_uniques", "pg_excludes", "pg_partition",
+    "pg_view_query", "pg_view_materialized", "pg_schema",
     "ch_engine", "ch_order_by", "ch_primary_key", "ch_partition_by",
     "ch_sample_by", "ch_ttl", "ch_settings", "ch_zookeeper_path",
     "ch_replica_name", "ch_object_type", "ch_select_statement",
@@ -95,7 +96,7 @@ def _collect_meta_chain(cls: type) -> list[type]:
 
 def _get_backend_for_class(cls: type) -> str:
     from dbwarden.databases.clickhouse import CHTableMeta
-    from dbwarden.databases.pgsql import PGTableMeta
+    from dbwarden.databases.pgsql import PGTableMeta, PGViewMeta
     from dbwarden.databases.mysql import MyTableMeta
     from dbwarden.databases.mariadb import MdbTableMeta
     from dbwarden.databases.sqlite import SqTableMeta
@@ -108,7 +109,7 @@ def _get_backend_for_class(cls: type) -> str:
             for base in meta.__mro__:
                 if base is CHTableMeta:
                     return "clickhouse"
-                if base is PGTableMeta:
+                if base is PGTableMeta or base is PGViewMeta:
                     return "postgresql"
                 if base is MyTableMeta:
                     return "mysql"
@@ -197,7 +198,7 @@ def _to_dict(value: Any) -> Any:
 
 
 def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
-    from dbwarden.databases.pgsql import PgTableSpec
+    from dbwarden.databases.pgsql import PgTableSpec, PgViewSpec
     from dbwarden.databases.clickhouse import ChTableSpec
     from dbwarden.databases.mysql import MyTableSpec
     from dbwarden.databases.mariadb import MdbTableSpec
@@ -221,12 +222,19 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
     meta.sq_indexes = list(table_attrs.get("sq_indexes", []))
     meta.table_attrs = dict(table_attrs)
 
-    if any(k.startswith("pg_") and k not in ("pg_indexes", "pg_checks", "pg_uniques", "pg_excludes", "pg_partition") for k in table_attrs):
+    if any(k.startswith("pg_view_") for k in table_attrs):
+        meta.backend_table = PgViewSpec(
+            query=table_attrs.get("pg_view_query"),
+            materialized=table_attrs.get("pg_view_materialized", False),
+            schema=table_attrs.get("pg_schema") or None,
+        )
+    elif any(k.startswith("pg_") and k not in ("pg_indexes", "pg_checks", "pg_uniques", "pg_excludes", "pg_partition", "pg_view_query", "pg_view_materialized") for k in table_attrs):
         meta.backend_table = PgTableSpec(
             tablespace=table_attrs.get("pg_tablespace"),
             fillfactor=table_attrs.get("pg_fillfactor"),
             unlogged=table_attrs.get("pg_unlogged", False),
             inherits=list(table_attrs.get("pg_inherits", [])) if table_attrs.get("pg_inherits") else None,
+            schema=table_attrs.get("pg_schema") or None,
         )
     elif any(k.startswith("ch_") and k not in ("ch_indexes", "ch_projections", "ch_settings", "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key") for k in table_attrs):
         meta.backend_table = ChTableSpec(

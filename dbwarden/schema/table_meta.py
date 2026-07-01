@@ -23,6 +23,7 @@ class TableMeta(metaclass=_MetaValidator):
 class PGTableMeta(TableMeta):
     """PostgreSQL table-level metadata; inherit in ``class Meta`` for autocomplete."""
     comment: str | None = None
+    pg_schema: str | None = None
     pg_fillfactor: int | None = None
     pg_tablespace: str | None = None
     pg_inherits: str | None = None
@@ -48,6 +49,24 @@ class PGColumnMeta(metaclass=_MetaValidator):
     comment: str | None = None
     public: bool | None = None
     pg: Any = None
+
+
+class PGViewMeta(TableMeta):
+    """PostgreSQL view-level metadata; inherit in ``class Meta`` for autocomplete.
+
+    Views use ``create or replace view`` semantics. Materialized views
+    additionally support ``with data`` / ``with no data`` on creation.
+
+    Example::
+
+        class Meta(PGViewMeta):
+            pg_view_query = "SELECT id, name FROM users WHERE active = true"
+            pg_view_materialized = False
+            pg_schema = "app"
+    """
+    pg_view_query: str | None = None
+    pg_view_materialized: bool = False
+    pg_schema: str | None = None
 
 
 class CHTableMeta(TableMeta):

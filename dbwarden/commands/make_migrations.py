@@ -21,6 +21,7 @@ from dbwarden.engine.model_discovery import (
     extract_tables_from_migrations,
     extract_tables_from_database,
     _extract_create_table_columns,
+    _qualified_name,
 )
 from dbwarden.engine.migration_name import Change, autogenerate_migration_name
 from dbwarden.engine.version import (
@@ -1177,10 +1178,13 @@ def generate_migration_sql(
             else:
                 for column in table.columns:
                     if column.name.lower() not in existing_columns:
-                        alter_sql = generate_add_column_sql(table.name, column, db_name)
+                        alter_sql = generate_add_column_sql(
+                            table.name, column, db_name, schema=table.schema
+                        )
                         upgrade_parts.append(alter_sql)
+                        qname = _qualified_name(table.name, table.schema)
                         rollback_parts.append(
-                            f"ALTER TABLE {table.name} DROP COLUMN {column.name}"
+                            f"ALTER TABLE {qname} DROP COLUMN {column.name}"
                         )
                         changes.append(Change(operation="add_column", table=table.name, target=column.name))
                         known_tables.setdefault(table.name, set()).add(column.name.lower())
@@ -1189,16 +1193,17 @@ def generate_migration_sql(
         for table in tables:
             if table.name not in created_tables:
                 continue
+            qname = _qualified_name(table.name, table.schema)
             for idx in table.indexes:
                 idx_cols = ", ".join(idx.columns)
-                upgrade_parts.append(f"CREATE INDEX IF NOT EXISTS {idx.name} ON {table.name} ({idx_cols});")
+                upgrade_parts.append(f"CREATE INDEX IF NOT EXISTS {idx.name} ON {qname} ({idx_cols});")
                 rollback_parts.append(f"DROP INDEX IF EXISTS {idx.name};")
                 changes.append(Change(operation="add_index", table=table.name, target=idx.name))
             for fk in table.foreign_keys:
                 local_cols = ", ".join(fk.get("columns", []))
                 ref_table = fk.get("referred_table", "")
                 ref_cols = ", ".join(fk.get("referred_columns", ["id"]))
-                fk_sql = f"ALTER TABLE {table.name} ADD FOREIGN KEY ({local_cols}) REFERENCES {ref_table} ({ref_cols})"
+                fk_sql = f"ALTER TABLE {qname} ADD FOREIGN KEY ({local_cols}) REFERENCES {ref_table} ({ref_cols})"
                 on_delete = fk.get("on_delete", "NO ACTION")
                 on_update = fk.get("on_update", "NO ACTION")
                 if on_delete != "NO ACTION":
@@ -1255,6 +1260,23 @@ def generate_migration_sql(
             upgrade_sql, rollback_sql, changes = _filter_duplicates_from_snapshot_diff(
                 upgrade_sql, rollback_sql, changes, existing_statements
             )
+
+    # Prepend PostgreSQL extensions to upgrade SQL
+    try:
+        config = get_database(database or "default")
+        if config.database_type == "postgresql" and config.pg_extensions:
+            ext_statements = "\n".join(
+                f'CREATE EXTENSION IF NOT EXISTS "{ext}";'
+                for ext in config.pg_extensions
+            )
+            if upgrade_sql.strip():
+                upgrade_sql = ext_statements + "\n\n" + upgrade_sql
+            else:
+                upgrade_sql = ext_statements
+            for ext in config.pg_extensions:
+                changes.insert(0, Change(operation="create_extension", table=ext))
+    except Exception:
+        pass
 
     return upgrade_sql, rollback_sql, changes
 

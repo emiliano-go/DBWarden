@@ -15,23 +15,29 @@ from dbwarden.engine.model_discovery import IndexInfo, ModelColumn, ModelTable
 
 
 class StatementOrder(IntEnum):
-    RENAME_TABLE = 0
-    RENAME_COLUMN = 1
-    ALTER_COLUMN_TYPE = 2
-    ALTER_COLUMN_NULLABLE = 3
-    ALTER_COLUMN_DEFAULT = 4
-    CREATE_TYPE = 5
-    CREATE_TABLE = 6
-    ADD_COLUMN = 7
-    ALTER_FOREIGN_KEY = 8
-    ALTER_INDEX = 9
-    DROP_COLUMN = 10
-    DROP_TABLE = 11
-    ALTER_TABLE_COMMENT = 12
-    ALTER_COLUMN_COMMENT = 13
-    ALTER_TABLE_OPTIONS = 14
-    ALTER_TABLE_CONSTRAINT = 15
-    ALTER_COLUMN_AUTOINCREMENT = 16
+    CREATE_EXTENSION = -3
+    CREATE_SCHEMA = -2
+    CREATE_DOMAIN = -1
+    CREATE_SEQUENCE = 0
+    RENAME_TABLE = 1
+    RENAME_COLUMN = 2
+    ALTER_COLUMN_TYPE = 3
+    ALTER_COLUMN_NULLABLE = 4
+    ALTER_COLUMN_DEFAULT = 5
+    CREATE_TYPE = 6
+    CREATE_TABLE = 7
+    CREATE_VIEW = 8
+    ADD_COLUMN = 9
+    ALTER_FOREIGN_KEY = 10
+    DROP_VIEW = 11
+    ALTER_INDEX = 12
+    DROP_COLUMN = 13
+    DROP_TABLE = 14
+    ALTER_TABLE_COMMENT = 15
+    ALTER_COLUMN_COMMENT = 16
+    ALTER_TABLE_OPTIONS = 17
+    ALTER_TABLE_CONSTRAINT = 18
+    ALTER_COLUMN_AUTOINCREMENT = 19
 
 
 @dataclass
@@ -556,9 +562,19 @@ def extract_full_schema_snapshot(
     indexes: dict[str, Any] = {}
     constraints: dict[str, Any] = {}
 
-    for table_name in inspector.get_table_names():
-        columns_info = inspector.get_columns(table_name)
-        pk_info = inspector.get_pk_constraint(table_name)
+    pg_schema = None
+    if database_type == "postgresql":
+        try:
+            from dbwarden.config import get_database
+            pg_schema = get_database(database).postgres_schema
+        except Exception:
+            pass
+
+    inspect_kw = {"schema": pg_schema} if pg_schema else {}
+    table_names = inspector.get_table_names(**inspect_kw)
+    for table_name in table_names:
+        columns_info = inspector.get_columns(table_name, **inspect_kw)
+        pk_info = inspector.get_pk_constraint(table_name, **inspect_kw)
 
         pk_columns = set(pk_info.get("constrained_columns", []) or [])
 
@@ -704,11 +720,12 @@ def extract_full_schema_snapshot(
             "columns": columns_dict,
             "primary_key": list(pk_columns) if pk_columns else [],
             "comment": None,
+            "schema": pg_schema,
         }
 
         if database_type == "postgresql":
             try:
-                table_comment = inspector.get_table_comment(table_name)
+                table_comment = inspector.get_table_comment(table_name, **inspect_kw)
                 if table_comment and table_comment.get("text"):
                     table_entry["comment"] = table_comment["text"]
             except Exception:
@@ -720,8 +737,8 @@ def extract_full_schema_snapshot(
 
                 try:
                     rows = _conn.execute(
-                        text("SELECT unnest(COALESCE(reloptions, '{}')) FROM pg_class WHERE relname = :t"),
-                        {"t": table_name},
+                        text("SELECT unnest(COALESCE(reloptions, '{}')) FROM pg_class WHERE oid = CAST(:t AS regclass)"),
+                        {"t": _regclass_name},
                     ).fetchall()
                     params: dict[str, Any] = {}
                     for row in rows:
@@ -739,8 +756,8 @@ def extract_full_schema_snapshot(
 
                 try:
                     row = _conn.execute(
-                        text("SELECT relpersistence FROM pg_class WHERE relname = :t"),
-                        {"t": table_name},
+                        text("SELECT relpersistence FROM pg_class WHERE oid = CAST(:t AS regclass)"),
+                        {"t": _regclass_name},
                     ).fetchone()
                     if row and row[0] == 'u':
                         pg_table["pg_unlogged"] = True
@@ -752,9 +769,9 @@ def extract_full_schema_snapshot(
                         text(
                             "SELECT spcname FROM pg_tablespace t "
                             "JOIN pg_class c ON c.reltablespace = t.oid "
-                            "WHERE c.relname = :t"
+                            "WHERE c.oid = CAST(:t AS regclass)"
                         ),
-                        {"t": table_name},
+                        {"t": _regclass_name},
                     ).fetchone()
                     if row:
                         pg_table["pg_tablespace"] = row[0]
@@ -783,10 +800,10 @@ def extract_full_schema_snapshot(
                             "FROM pg_partitioned_table p "
                             "JOIN pg_class c ON c.oid = p.partrelid "
                             "LEFT JOIN pg_attribute a ON a.attrelid = p.partrelid AND a.attnum = ANY(p.partattrs) "
-                            "WHERE c.relname = :t "
+                            "WHERE c.oid = CAST(:t AS regclass) "
                             "GROUP BY p.partstrat, p.partexprs, p.partrelid"
                         ),
-                        {"t": table_name},
+                        {"t": _regclass_name},
                     ).fetchone()
                     if part_row:
                         strat_map = {"r": "RANGE", "l": "LIST", "h": "HASH"}
@@ -825,7 +842,7 @@ def extract_full_schema_snapshot(
                             "WHERE a.attrelid = CAST(:t AS regclass) AND a.attnum > 0 AND NOT a.attisdropped "
                             "ORDER BY a.attnum"
                         ),
-                        {"t": table_name},
+                        {"t": _regclass_name},
                     ).fetchall()
                     storage_map = {'p': 'PLAIN', 'm': 'MAIN', 'e': 'EXTERNAL', 'x': 'EXTENDED'}
                     for r in rows:
@@ -931,7 +948,7 @@ def extract_full_schema_snapshot(
 
         tables[table_name] = table_entry
 
-        for idx in inspector.get_indexes(table_name):
+        for idx in inspector.get_indexes(table_name, **inspect_kw):
             idx_name = idx.get("name", "")
             if not idx_name:
                 continue
@@ -1009,7 +1026,7 @@ def extract_full_schema_snapshot(
                     pass
             indexes[f"{table_name}.{idx_name}"] = idx_entry
 
-        for fk in inspector.get_foreign_keys(table_name):
+        for fk in inspector.get_foreign_keys(table_name, **inspect_kw):
             fk_name = fk.get("name", "")
             if not fk_name:
                 fk_name = f"fk_{table_name}_{'_'.join(fk.get('constrained_columns', []))}"
@@ -1026,7 +1043,7 @@ def extract_full_schema_snapshot(
                 "deferrable": bool(fk_options.get("deferrable", False)),
             }
 
-        for uq in inspector.get_unique_constraints(table_name):
+        for uq in inspector.get_unique_constraints(table_name, **inspect_kw):
             uq_name = uq.get("name", "")
             if not uq_name:
                 continue
@@ -1037,7 +1054,7 @@ def extract_full_schema_snapshot(
                 "columns": list(uq.get("column_names", [])),
             }
 
-        for ck in inspector.get_check_constraints(table_name):
+        for ck in inspector.get_check_constraints(table_name, **inspect_kw):
             ck_name = ck.get("name", "")
             if not ck_name:
                 ck_name = f"ck_{table_name}_{hash(ck.get('sqltext', ''))}"
@@ -1051,10 +1068,11 @@ def extract_full_schema_snapshot(
 
         if database_type == "postgresql":
             _pg_conn = engine.connect() if own_engine else connection
+            _regclass_name = f"{pg_schema}.{table_name}" if pg_schema else table_name
             try:
                 no_inherit_rows = _pg_conn.execute(
                     text("SELECT conname, connoinherit FROM pg_constraint WHERE conrelid = CAST(:t AS regclass) AND contype = 'c'"),
-                    {"t": table_name},
+                    {"t": _regclass_name},
                 ).fetchall()
                 for r in no_inherit_rows:
                     if r[1]:
@@ -1066,7 +1084,7 @@ def extract_full_schema_snapshot(
             try:
                 defer_rows = _pg_conn.execute(
                     text("SELECT conname, condeferrable, condeferred FROM pg_constraint WHERE conrelid = CAST(:t AS regclass) AND contype = 'u'"),
-                    {"t": table_name},
+                    {"t": _regclass_name},
                 ).fetchall()
                 for r in defer_rows:
                     cname = f"{table_name}.{r[0]}"
@@ -1082,6 +1100,75 @@ def extract_full_schema_snapshot(
         try:
             for enum_info in inspector.get_enums():
                 enums[enum_info["name"]] = list(enum_info.get("labels", []))
+        except Exception:
+            pass
+
+        try:
+            view_names = inspector.get_view_names(**inspect_kw)
+            _pg_conn = engine.connect() if own_engine else connection
+            for view_name in view_names:
+                if view_name in tables:
+                    continue
+                view_columns = inspector.get_columns(view_name, **inspect_kw)
+                view_pk = inspector.get_pk_constraint(view_name, **inspect_kw)
+                view_pk_columns = set(view_pk.get("constrained_columns", []) or [])
+
+                view_columns_dict: dict[str, Any] = {}
+                for col in view_columns:
+                    col_name = col["name"]
+                    col_type = col.get("type", "")
+                    normalized = normalize_type(str(col_type))
+                    view_columns_dict[col_name] = {
+                        "type": normalized["type"],
+                        "nullable": bool(col.get("nullable", True)),
+                        "primary_key": col_name in view_pk_columns,
+                        "default": col.get("default"),
+                        "autoincrement": _is_autoincrement(col),
+                    }
+                    if normalized.get("raw"):
+                        view_columns_dict[col_name]["raw"] = True
+                    if "length" in normalized:
+                        view_columns_dict[col_name]["length"] = normalized["length"]
+                    if "precision" in normalized:
+                        view_columns_dict[col_name]["precision"] = normalized["precision"]
+                    if "scale" in normalized:
+                        view_columns_dict[col_name]["scale"] = normalized["scale"]
+                    comment = col.get("comment")
+                    if comment is not None:
+                        view_columns_dict[col_name]["comment"] = comment
+
+                view_definition = None
+                view_materialized = False
+                try:
+                    vrow = _pg_conn.execute(
+                        text("SELECT pg_get_viewdef(:t) AS vdef, relkind FROM pg_class WHERE oid = CAST(:t2 AS regclass)"),
+                        {"t": view_name, "t2": view_name},
+                    ).fetchone()
+                    if vrow:
+                        view_definition = vrow[0] if vrow[0] else None
+                        view_materialized = vrow[1] == 'm'
+                except Exception:
+                    pass
+
+                view_entry: dict[str, Any] = {
+                    "columns": view_columns_dict,
+                    "primary_key": list(view_pk_columns) if view_pk_columns else [],
+                    "comment": None,
+                    "schema": pg_schema,
+                    "object_type": "view",
+                    "pg_view_definition": view_definition,
+                    "pg_view_materialized": view_materialized,
+                }
+                try:
+                    view_comment = inspector.get_table_comment(view_name, **inspect_kw)
+                    if view_comment and view_comment.get("text"):
+                        view_entry["comment"] = view_comment["text"]
+                except Exception:
+                    pass
+
+                tables[view_name] = view_entry
+            if own_engine:
+                _pg_conn.close()
         except Exception:
             pass
 
@@ -2068,12 +2155,14 @@ def diff_models_against_snapshot(
                 "type": "create_table",
                 "table": table.name,
                 "object_type": table.object_type,
+                "schema": table.schema,
                 "sql": None,
             })
             rollback_ops.append({
                 "type": "drop_table",
                 "table": table.name,
                 "object_type": table.object_type,
+                "schema": table.schema,
             })
 
     for snap_table_name in list(snapshot_tables.keys()):
@@ -2081,15 +2170,18 @@ def diff_models_against_snapshot(
             continue
         if snap_table_name not in model_by_name:
             snap_object_type = snapshot_tables[snap_table_name].get("object_type", "table")
+            snap_schema = snapshot_tables[snap_table_name].get("schema")
             upgrade_ops.append({
                 "type": "drop_table",
                 "table": snap_table_name,
                 "object_type": snap_object_type,
+                "schema": snap_schema,
             })
             rollback_ops.append({
                 "type": "create_table",
                 "table": snap_table_name,
                 "object_type": snap_object_type,
+                "schema": snap_schema,
                 "sql": None,
             })
 
@@ -2524,6 +2616,30 @@ def diff_models_against_snapshot(
                     "expression": ex.get("expression", ""),
                 })
 
+        # --- View definition diff ---
+        if table.object_type in ("view", "materialized_view"):
+            snap_view_def = snapshot_tables[table.name].get("pg_view_definition")
+            snap_view_mat = snapshot_tables[table.name].get("pg_view_materialized", False)
+            if snap_view_def != table.pg_view_definition or snap_view_mat != table.pg_view_materialized:
+                upgrade_ops.append({
+                    "type": "alter_view",
+                    "table": table.name,
+                    "pg_view_definition": table.pg_view_definition,
+                    "pg_view_materialized": table.pg_view_materialized,
+                    "snap_pg_view_definition": snap_view_def,
+                    "snap_pg_view_materialized": snap_view_mat,
+                    "schema": table.schema,
+                })
+                rollback_ops.append({
+                    "type": "alter_view",
+                    "table": table.name,
+                    "pg_view_definition": snap_view_def,
+                    "pg_view_materialized": snap_view_mat,
+                    "snap_pg_view_definition": table.pg_view_definition,
+                    "snap_pg_view_materialized": table.pg_view_materialized,
+                    "schema": table.schema,
+                })
+
     # --- FK diff ---
     def _fk_sig(fk: dict) -> tuple:
         return (
@@ -2826,8 +2942,22 @@ def snapshot_diff_to_sql(
         generate_create_table_sql,
         generate_drop_object_sql,
         _format_clickhouse_expression,
+        _qualified_name,
     )
     from dbwarden.engine.offline import reconstruct_model_table
+
+    # Collect unique schemas from ops and emit CREATE SCHEMA IF NOT EXISTS
+    schemas: set[str] = set()
+    for op in upgrade_ops:
+        if "schema" in op and op["schema"]:
+            schemas.add(op["schema"])
+    if schemas:
+        ext_statements = "\n".join(
+            f'CREATE SCHEMA IF NOT EXISTS "{s}";'
+            for s in sorted(schemas)
+        )
+        upgrade_ops = [{"type": "create_schema", "schema": s, "sql": None} for s in sorted(schemas)] + upgrade_ops
+        rollback_ops = rollback_ops + [{"type": "drop_schema", "schema": s, "sql": None} for s in reversed(sorted(schemas))]
     from dbwarden.engine.migration_name import Change
 
     statements: list[MigrationStatement] = []
@@ -2852,6 +2982,24 @@ def snapshot_diff_to_sql(
                 operation="rename_table", table=op["old_table"], target=op["new_table"],
                 resolved_from=op.get("resolved_from"),
             ))
+        elif op["type"] == "create_schema":
+            s = op["schema"]
+            stmt = MigrationStatement(
+                order=StatementOrder.CREATE_SCHEMA,
+                upgrade_sql=f'CREATE SCHEMA IF NOT EXISTS "{s}";',
+                rollback_sql=f'DROP SCHEMA IF EXISTS "{s}";',
+            )
+            statements.append(stmt)
+            changes.append(Change(operation="create_schema", table=s))
+        elif op["type"] == "drop_schema":
+            s = op["schema"]
+            stmt = MigrationStatement(
+                order=StatementOrder.CREATE_SCHEMA,
+                upgrade_sql=f'DROP SCHEMA IF EXISTS "{s}";',
+                rollback_sql=f'CREATE SCHEMA IF NOT EXISTS "{s}";',
+            )
+            statements.append(stmt)
+            changes.append(Change(operation="drop_schema", table=s))
         elif op["type"] == "recreate_ch_table":
             for stmt in _build_clickhouse_recreate_table_sql(op, db_name):
                 statements.append(stmt)
@@ -2879,6 +3027,24 @@ def snapshot_diff_to_sql(
                 rollback_sql=rollback_sql,
             ))
             changes.append(Change(operation="drop_table", table=op["table"]))
+        elif op["type"] == "alter_view":
+            qname = _qualified_name(op["table"], op.get("schema"))
+            view_def = op.get("pg_view_definition") or ""
+            mat = op.get("pg_view_materialized", False)
+            if mat:
+                upgrade_sql = f"DROP VIEW IF EXISTS {qname};\nCREATE MATERIALIZED VIEW {qname} AS {view_def}"
+                rollback_def = op.get("snap_pg_view_definition") or ""
+                rollback_sql = f"DROP MATERIALIZED VIEW IF EXISTS {qname};\nCREATE VIEW {qname} AS {rollback_def}"
+            else:
+                upgrade_sql = f"CREATE OR REPLACE VIEW {qname} AS {view_def}"
+                rollback_def = op.get("snap_pg_view_definition") or ""
+                rollback_sql = f"CREATE OR REPLACE VIEW {qname} AS {rollback_def}"
+            statements.append(MigrationStatement(
+                order=StatementOrder.CREATE_VIEW,
+                upgrade_sql=upgrade_sql,
+                rollback_sql=rollback_sql,
+            ))
+            changes.append(Change(operation="alter_view", table=op["table"]))
         elif op["type"] == "rename_column":
             statements.append(MigrationStatement(
                 order=StatementOrder.RENAME_COLUMN,

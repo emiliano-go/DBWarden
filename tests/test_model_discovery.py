@@ -516,7 +516,7 @@ class TestSQLGeneration:
             object_type="materialized_view",
         )
 
-        assert generate_drop_object_sql(table) == "DROP VIEW mv_name"
+        assert generate_drop_object_sql(table) == "DROP VIEW IF EXISTS mv_name"
 
     def test_generate_replicated_clickhouse_engine_with_zookeeper(self, monkeypatch):
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")

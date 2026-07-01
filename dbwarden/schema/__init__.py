@@ -12,6 +12,7 @@ from dbwarden.schema.table_meta import (
     MyTableMeta,
     PGColumnMeta,
     PGTableMeta,
+    PGViewMeta,
     TableMeta,
 )
 from dbwarden.seed import SeedRow, Seed, seed_data
@@ -28,6 +29,7 @@ __all__ = [
     "MyTableMeta",
     "PGColumnMeta",
     "PGTableMeta",
+    "PGViewMeta",
     "SchemaConfig",
     "Seed",
     "SeedRow",

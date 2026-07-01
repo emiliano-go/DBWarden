@@ -50,6 +50,7 @@ class DatabaseConfig:
     dev_database_url: str | None = None
     dev_database_type: DatabaseType | None = None
     overlap_models: bool = False
+    pg_extensions: list[str] = field(default_factory=list)
 
     @property
     def sqlalchemy_url(self) -> str:
@@ -549,10 +550,11 @@ def _finalize_entries(
             migration_table=entry.migration_table or DEFAULT_MIGRATION_TABLE,
             seed_table=entry.seed_table or DEFAULT_SEEDS_TABLE,
             auto_apply_seeds=entry.auto_apply_seeds,
-            postgres_schema=None,
+            postgres_schema=entry.pg_schema,
             dev_database_url=entry.dev_database_url,
             dev_database_type=entry.dev_database_type,
             overlap_models=entry.overlap_models,
+            pg_extensions=entry.pg_extensions or [],
         )
 
     # model_paths overlap validation

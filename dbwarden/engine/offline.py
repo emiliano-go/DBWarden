@@ -213,6 +213,9 @@ def reconstruct_model_table(table_entry: dict[str, Any]) -> ModelTable:
         excludes=excludes,
         pg_table=pg_table,
         my_table=my_table,
+        schema=table_entry.get("schema"),
+        pg_view_definition=table_entry.get("pg_view_definition"),
+        pg_view_materialized=table_entry.get("pg_view_materialized", False),
     )
 
 
@@ -251,7 +254,7 @@ def _table_to_state_entry(table: ModelTable) -> dict[str, Any]:
         backend_table_spec["backend"] = "mysql"
         backend_table_spec.update({k: _serialize_value(v) for k, v in my_table.items() if v is not None})
 
-    return {
+    entry = {
         "name": table.name,
         "columns": {col.name: _column_to_entry(col) for col in table.columns},
         "indexes": [idx.to_dict() if hasattr(idx, "to_dict") else idx for idx in table.indexes],
@@ -262,7 +265,12 @@ def _table_to_state_entry(table: ModelTable) -> dict[str, Any]:
         "object_type": table.object_type,
         "backend": backend_table_spec.get("backend"),
         "backend_table_spec": backend_table_spec,
+        "schema": table.schema,
     }
+    if table.pg_view_definition is not None:
+        entry["pg_view_definition"] = table.pg_view_definition
+        entry["pg_view_materialized"] = table.pg_view_materialized
+    return entry
 
 
 def _column_to_entry(col: Any) -> dict[str, Any]:

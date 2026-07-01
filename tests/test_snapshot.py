@@ -694,16 +694,23 @@ class TestApplyRenameIntents:
 
 
 class TestStatementOrder:
-    def test_rename_table_is_first(self):
-        assert StatementOrder.RENAME_TABLE == 0
+    def test_ordering(self):
+        assert StatementOrder.CREATE_EXTENSION < StatementOrder.CREATE_SCHEMA
+        assert StatementOrder.CREATE_SCHEMA < StatementOrder.CREATE_DOMAIN
+        assert StatementOrder.CREATE_DOMAIN < StatementOrder.CREATE_SEQUENCE
+        assert StatementOrder.CREATE_SEQUENCE < StatementOrder.RENAME_TABLE
+        assert StatementOrder.RENAME_TABLE == 1
         assert StatementOrder.RENAME_TABLE < StatementOrder.RENAME_COLUMN
         assert StatementOrder.RENAME_COLUMN < StatementOrder.ALTER_COLUMN_TYPE
         assert StatementOrder.ALTER_COLUMN_TYPE < StatementOrder.ALTER_COLUMN_NULLABLE
         assert StatementOrder.ALTER_COLUMN_NULLABLE < StatementOrder.ALTER_COLUMN_DEFAULT
-        assert StatementOrder.ALTER_COLUMN_DEFAULT < StatementOrder.CREATE_TABLE
-        assert StatementOrder.CREATE_TABLE < StatementOrder.ADD_COLUMN
+        assert StatementOrder.ALTER_COLUMN_DEFAULT < StatementOrder.CREATE_TYPE
+        assert StatementOrder.CREATE_TYPE < StatementOrder.CREATE_TABLE
+        assert StatementOrder.CREATE_TABLE < StatementOrder.CREATE_VIEW
+        assert StatementOrder.CREATE_VIEW < StatementOrder.ADD_COLUMN
         assert StatementOrder.ADD_COLUMN < StatementOrder.ALTER_FOREIGN_KEY
-        assert StatementOrder.ALTER_FOREIGN_KEY < StatementOrder.ALTER_INDEX
+        assert StatementOrder.ALTER_FOREIGN_KEY < StatementOrder.DROP_VIEW
+        assert StatementOrder.DROP_VIEW < StatementOrder.ALTER_INDEX
         assert StatementOrder.ALTER_INDEX < StatementOrder.DROP_COLUMN
         assert StatementOrder.DROP_COLUMN < StatementOrder.DROP_TABLE
 

@@ -462,7 +462,7 @@ def test_offline_recreate_allows_inline_materialized_view(monkeypatch):
     assert recreate is not None
     from dbwarden.engine.snapshot import snapshot_diff_to_sql
     up_sql, rb_sql, _ = snapshot_diff_to_sql(up_ops, down_ops, db_name="primary")
-    assert "DROP VIEW events" in up_sql
+    assert "DROP VIEW IF EXISTS events" in up_sql
     assert "CREATE MATERIALIZED VIEW IF NOT EXISTS events" in up_sql
 
 
@@ -1804,7 +1804,7 @@ def test_offline_clickhouse_complex_round_trip(monkeypatch):
     assert recreate_mv is not None
 
     up_sql5, rb_sql5, _ = snapshot_diff_to_sql(up_ops5, down_ops5, db_name="primary")
-    assert "DROP VIEW my_mv" in up_sql5
+    assert "DROP VIEW IF EXISTS my_mv" in up_sql5
     assert "CREATE MATERIALIZED VIEW IF NOT EXISTS my_mv" in up_sql5
 
 
