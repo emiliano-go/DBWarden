@@ -38,6 +38,7 @@ class StatementOrder(IntEnum):
     ALTER_TABLE_OPTIONS = 17
     ALTER_TABLE_CONSTRAINT = 18
     ALTER_COLUMN_AUTOINCREMENT = 19
+    ALTER_VIEW = 99
 
 
 @dataclass
@@ -1848,9 +1849,10 @@ def _build_create_table_sequence(table: ModelTable, db_name: str | None) -> list
     from dbwarden.engine.model_discovery import generate_create_table_sql, generate_drop_object_sql
 
     backend = _get_backend(db_name)
+    order = StatementOrder.CREATE_VIEW if table.object_type in ("view", "materialized_view") else StatementOrder.CREATE_TABLE
     statements: list[MigrationStatement] = [
         MigrationStatement(
-            order=StatementOrder.CREATE_TABLE,
+            order=order,
             upgrade_sql=generate_create_table_sql(table, db_name),
             rollback_sql=generate_drop_object_sql(table),
         )
@@ -2236,6 +2238,31 @@ def diff_models_against_snapshot(
                     "to_value": snap_my_table.get(key),
                 })
 
+        # --- View definition diff (run before continue) ---
+        if table.object_type in ("view", "materialized_view"):
+            snap_view_def = snapshot_tables[table.name].get("pg_view_definition")
+            snap_view_mat = snapshot_tables[table.name].get("pg_view_materialized", False)
+            if snap_view_def != table.pg_view_definition or snap_view_mat != table.pg_view_materialized:
+                upgrade_ops.append({
+                    "type": "alter_view",
+                    "table": table.name,
+                    "pg_view_definition": table.pg_view_definition,
+                    "pg_view_materialized": table.pg_view_materialized,
+                    "snap_pg_view_definition": snap_view_def,
+                    "snap_pg_view_materialized": snap_view_mat,
+                    "schema": table.schema,
+                })
+                rollback_ops.append({
+                    "type": "alter_view",
+                    "table": table.name,
+                    "pg_view_definition": snap_view_def,
+                    "pg_view_materialized": snap_view_mat,
+                    "snap_pg_view_definition": table.pg_view_definition,
+                    "snap_pg_view_materialized": table.pg_view_materialized,
+                    "schema": table.schema,
+                })
+            continue  # skip column-level ALTER ops for views
+
         dropped_cols = []
         for col_name in snap_columns:
             if col_name not in model_columns:
@@ -2324,6 +2351,13 @@ def diff_models_against_snapshot(
             # Suppress autoincrement diffs for composite PK columns (likely join tables)
             # where autoincrement does not apply and emitting ALTERs is dangerous.
             pk_count = max(snap_pk_count_table, model_pk_count_table)
+            # Normalize "auto" to actual boolean: True only for single-column Integer PK
+            if model_autoinc == "auto":
+                model_autoinc = (
+                    model_col.primary_key
+                    and pk_count <= 1
+                    and "int" in str(model_col.type).lower()
+                )
             if model_autoinc is not None and bool(snap_autoinc) != bool(model_autoinc):
                 if pk_count > 1 and _get_backend(db_name) in ("mysql", "mariadb"):
                     pass  # skip - composite PK columns should not get autoincrement ALTERs
@@ -2352,6 +2386,9 @@ def diff_models_against_snapshot(
                 snap_my_col = snap_col.get("my_column") or {}
                 model_my_col = model_col.my_meta or {}
                 if snap_my_col.get("my_on_update") and model_my_col.get("my_on_update") and model_default is None and snap_default == "CURRENT_TIMESTAMP":
+                    snap_default = None
+            if _get_backend(db_name) == "postgresql":
+                if model_autoinc and snap_default is not None and snap_default.lower().startswith("nextval("):
                     snap_default = None
             if snap_default != model_default:
                 upgrade_ops.append({
@@ -2614,30 +2651,6 @@ def diff_models_against_snapshot(
                     "table": table.name,
                     "name": name,
                     "expression": ex.get("expression", ""),
-                })
-
-        # --- View definition diff ---
-        if table.object_type in ("view", "materialized_view"):
-            snap_view_def = snapshot_tables[table.name].get("pg_view_definition")
-            snap_view_mat = snapshot_tables[table.name].get("pg_view_materialized", False)
-            if snap_view_def != table.pg_view_definition or snap_view_mat != table.pg_view_materialized:
-                upgrade_ops.append({
-                    "type": "alter_view",
-                    "table": table.name,
-                    "pg_view_definition": table.pg_view_definition,
-                    "pg_view_materialized": table.pg_view_materialized,
-                    "snap_pg_view_definition": snap_view_def,
-                    "snap_pg_view_materialized": snap_view_mat,
-                    "schema": table.schema,
-                })
-                rollback_ops.append({
-                    "type": "alter_view",
-                    "table": table.name,
-                    "pg_view_definition": snap_view_def,
-                    "pg_view_materialized": snap_view_mat,
-                    "snap_pg_view_definition": table.pg_view_definition,
-                    "snap_pg_view_materialized": table.pg_view_materialized,
-                    "schema": table.schema,
                 })
 
     # --- FK diff ---
@@ -3040,7 +3053,7 @@ def snapshot_diff_to_sql(
                 rollback_def = op.get("snap_pg_view_definition") or ""
                 rollback_sql = f"CREATE OR REPLACE VIEW {qname} AS {rollback_def}"
             statements.append(MigrationStatement(
-                order=StatementOrder.CREATE_VIEW,
+                order=StatementOrder.ALTER_VIEW,
                 upgrade_sql=upgrade_sql,
                 rollback_sql=rollback_sql,
             ))

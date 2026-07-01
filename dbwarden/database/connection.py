@@ -178,7 +178,7 @@ def get_db_connection(db_name: str | None = None) -> Generator[Any, None, None]:
             postgres_schema = config.postgres_schema
             if postgres_schema:
                 connection.execute(
-                    text("SET search_path TO :postgres_schema"),
+                    text("SET search_path TO :postgres_schema, public"),
                     parameters={"postgres_schema": postgres_schema},
                 )
             yield connection

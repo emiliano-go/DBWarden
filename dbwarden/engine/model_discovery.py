@@ -1127,8 +1127,15 @@ def extract_table_from_model(
                 pg_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("pg_") and k not in excluded_pg_keys}
                 my_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques")}
                 schema = pg_table.pop("pg_schema", None)
+            # If using PgViewSpec, read view definition before pg_table extraction
+            if type(dw_meta.backend_table).__name__ == "PgViewSpec":
+                object_type = "materialized_view" if dw_meta.backend_table.materialized else "view"
+                pg_view_definition = dw_meta.backend_table.query
+                pg_view_materialized = dw_meta.backend_table.materialized
+                if dw_meta.backend_table.schema:
+                    schema = dw_meta.backend_table.schema
             if not pg_table and any(k.startswith("pg_") for k in getattr(dw_meta, "table_attrs", {})):
-                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
+                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques", "pg_view_query", "pg_view_materialized", "pg_schema"}
                 pg_table = {
                     k: v for k, v in dw_meta.table_attrs.items()
                     if k.startswith("pg_") and k not in excluded_pg_keys and v is not None
@@ -1138,13 +1145,6 @@ def extract_table_from_model(
             # If using PgTableSpec, read schema from the typed object
             if schema is None and type(dw_meta.backend_table).__name__ == "PgTableSpec":
                 schema = dw_meta.backend_table.schema
-            # If using PgViewSpec, read view definition and schema
-            if type(dw_meta.backend_table).__name__ == "PgViewSpec":
-                object_type = "materialized_view" if dw_meta.backend_table.materialized else "view"
-                pg_view_definition = dw_meta.backend_table.query
-                pg_view_materialized = dw_meta.backend_table.materialized
-                if dw_meta.backend_table.schema:
-                    schema = dw_meta.backend_table.schema
             if not my_table and any(k.startswith("my_") for k in getattr(dw_meta, "table_attrs", {})):
                 my_table = {
                     k: v for k, v in dw_meta.table_attrs.items()
@@ -1594,7 +1594,7 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
     elif backend == "postgresql" and table.object_type in ("view", "materialized_view"):
         return generate_create_view_sql(table)
     else:
-        sql = f"CREATE TABLE IF NOT EXISTS {qname} (\n{columns_sql}\n)"
+        sql = f"CREATE TABLE IF NOT EXISTS {qname} (\n{columns_sql}\n);"
     if backend == "clickhouse":
         if table.object_type == "table":
             sql += _render_clickhouse_table_suffix(table)
