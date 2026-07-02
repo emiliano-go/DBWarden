@@ -23,7 +23,7 @@ seo:
       to recover from...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Migration Locking - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/advanced/migration-locking/
@@ -34,6 +34,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Advanced
+      item: https://emiliano-go.github.io/DBWarden/advanced/
+    - '@type': ListItem
+      position: 2
+      name: Migration Locking
+      item: https://emiliano-go.github.io/DBWarden/advanced/migration-locking/
+    - '@type': ListItem
+      position: 3
+      name: Migration Locking
 ---
 
 # Migration Locking

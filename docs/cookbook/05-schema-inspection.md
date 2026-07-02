@@ -1,31 +1,48 @@
 ---
 seo:
   title: 5. Schema Inspection - DBWarden Documentation
-  description: What You'll Learn
+  description: Schema inspection allows you to compare your SQLAlchemy model definitions
+    against the live database, capture DDL snapshots of individual tables, and...
   canonical: https://dbwarden.emiliano-go.com/cookbook/05-schema-inspection/
   robots: index,follow
   og:
     type: website
     title: 5. Schema Inspection - DBWarden Documentation
-    description: What You'll Learn
+    description: Schema inspection allows you to compare your SQLAlchemy model definitions
+      against the live database, capture DDL snapshots of individual tables, and...
     url: https://dbwarden.emiliano-go.com/cookbook/05-schema-inspection/
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: 5. Schema Inspection - DBWarden Documentation
-    description: What You'll Learn
+    description: Schema inspection allows you to compare your SQLAlchemy model definitions
+      against the live database, capture DDL snapshots of individual tables, and...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: 5. Schema Inspection - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/cookbook/05-schema-inspection/
-    description: What You'll Learn
+    description: Schema inspection allows you to compare your SQLAlchemy model definitions
+      against the live database, capture DDL snapshots of individual tables, and...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Cookbook & Examples
+      item: https://emiliano-go.github.io/DBWarden/cookbook/
+    - '@type': ListItem
+      position: 2
+      name: 05 Schema Inspection
+      item: https://emiliano-go.github.io/DBWarden/cookbook/05-schema-inspection/
+    - '@type': ListItem
+      position: 3
+      name: 5. Schema Inspection
 ---
 
 # 5. Schema Inspection

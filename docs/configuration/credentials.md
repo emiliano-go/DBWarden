@@ -20,7 +20,7 @@ seo:
       how to inject secrets safely.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Credentials and Secrets - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/configuration/credentials/
@@ -30,6 +30,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Configuration
+      item: https://emiliano-go.github.io/DBWarden/configuration/
+    - '@type': ListItem
+      position: 2
+      name: Credentials and Secrets
+      item: https://emiliano-go.github.io/DBWarden/configuration/credentials/
+    - '@type': ListItem
+      position: 3
+      name: Credentials and Secrets
 ---
 
 # Credentials and Secrets

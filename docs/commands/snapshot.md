@@ -17,7 +17,7 @@ seo:
     description: Output the DDL schema of a specific database table.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: snapshot - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/commands/snapshot/
@@ -26,6 +26,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Commands
+      item: https://emiliano-go.github.io/DBWarden/commands/
+    - '@type': ListItem
+      position: 2
+      name: snapshot
+      item: https://emiliano-go.github.io/DBWarden/commands/snapshot/
+    - '@type': ListItem
+      position: 3
+      name: snapshot
 ---
 
 # `snapshot`

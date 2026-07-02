@@ -23,7 +23,7 @@ seo:
       means the...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Checksum Integrity - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/advanced/checksum-integrity/
@@ -34,6 +34,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Advanced
+      item: https://emiliano-go.github.io/DBWarden/advanced/
+    - '@type': ListItem
+      position: 2
+      name: Checksum Integrity
+      item: https://emiliano-go.github.io/DBWarden/advanced/checksum-integrity/
+    - '@type': ListItem
+      position: 3
+      name: Checksum Integrity
 ---
 
 # Checksum Integrity

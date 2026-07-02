@@ -17,7 +17,7 @@ seo:
     description: Pure command lookup for DBWarden CLI.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: CLI Reference - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/cli-reference/
@@ -26,6 +26,15 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: CLI Reference
+      item: https://emiliano-go.github.io/DBWarden/cli-reference/
+    - '@type': ListItem
+      position: 2
+      name: CLI Reference
 ---
 
 # CLI Reference

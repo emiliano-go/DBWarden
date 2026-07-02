@@ -29,7 +29,7 @@ _SITE_PARSE = urlparse(SITE_URL)
 SITE_BASE_PATH = _SITE_PARSE.path.rstrip("/")
 
 SEO_CONFIG = SEOConfig(
-    canonical_host="emiliano-go.github.io",
+    canonical_host="dbwarden.emiliano-go.com",
     public_base_url=SITE_URL,
     url_policy=URLPolicy(
         enforce_https=True,
@@ -144,7 +144,126 @@ def build_seo_frontmatter(
             if isinstance(item, dict):
                 item["url"] = correct_canonical
 
+    # Add BreadcrumbList structured data
+    crumbs = build_breadcrumbs(route_path, title)
+    if crumbs:
+        existing = payload.get("schema_jsonld", [])
+        if isinstance(existing, dict):
+            existing = [existing]
+        if isinstance(existing, list):
+            payload["schema_jsonld"] = existing + crumbs
+        else:
+            payload["schema_jsonld"] = crumbs
+
     return payload
+
+
+def build_breadcrumbs(route_path: str, page_title: str) -> list[dict]:
+    parts = [p for p in route_path.strip("/").split("/") if p]
+    if not parts:
+        return []
+
+    crumbs = []
+    base = "https://emiliano-go.github.io/DBWarden"
+    acc = ""
+
+    label_map = {
+        "": "Home",
+        "getting-started": "Get Started",
+        "first-migration": "Your First Migration",
+        "first-steps": "First Steps",
+        "developing-locally": "Developing Locally",
+        "cookbook": "Cookbook & Examples",
+        "configuration": "Configuration",
+        "quick-start": "Quick Start",
+        "connection-urls": "Connection URLs",
+        "model-discovery": "Model Discovery",
+        "multi-database": "Multi-Database",
+        "dev-mode": "Dev Mode",
+        "credentials": "Credentials and Secrets",
+        "production-patterns": "Production Patterns",
+        "troubleshooting": "Troubleshooting",
+        "migration-files": "Migration File Format",
+        "models": "SQLAlchemy Models Reference",
+        "seeds": "Seed Management",
+        "sql-translation": "SQL Translation",
+        "observability": "Observability",
+        "architecture-deep-dive": "Architecture",
+        "databases": "Databases",
+        "round-trip": "Round Trip Support",
+        "sql-databases": "SQL Databases",
+        "postgresql": "PostgreSQL",
+        "mysql": "MySQL & MariaDB",
+        "clickhouse": "ClickHouse",
+        "fastapi": "FastAPI Integration",
+        "concepts": "Concepts",
+        "tutorial": "Tutorial",
+        "session-dependency": "Session Dependency",
+        "startup-checks": "Startup Checks",
+        "health-endpoints": "Health Endpoints",
+        "complete-application": "Complete Application",
+        "advanced": "Advanced",
+        "engine-lifecycle": "Engine Lifecycle",
+        "transaction-management": "Transaction Management",
+        "testing": "Testing",
+        "cli-reference": "CLI Reference",
+        "commands": "Commands",
+        "init": "init",
+        "make-migrations": "make-migrations",
+        "migrate": "migrate",
+        "downgrade": "downgrade",
+        "rollback": "rollback",
+        "make-rollback": "make-rollback",
+        "generate-models": "generate-models",
+        "snapshot": "snapshot",
+        "schema-snapshots": "Schema Snapshots",
+        "status": "status",
+        "check": "check",
+        "check-db": "check-db",
+        "diff": "diff",
+        "history": "history",
+        "new": "new",
+        "lock": "lock-status/unlock",
+        "seed": "seed",
+        "settings": "settings",
+        "database": "database",
+        "version": "version",
+        "migration-locking": "Migration Locking",
+        "checksum-integrity": "Checksum Integrity",
+        "safe-deployment": "Safe Deployment",
+        "ci-cd-patterns": "CI/CD Patterns",
+        "reference": "Reference",
+        "configuration-api": "Configuration API Reference",
+        "migrate-from-toml": "Migrate from TOML",
+        "codebase": "Codebase Organization",
+        "installation": "Installation",
+        "features": "Features",
+        "setup": "Setup",
+        "modeling": "Modeling Guide",
+        "workflows": "Workflows",
+        "glossary": "Glossary",
+    }
+
+    for i, part in enumerate(parts):
+        acc += "/" + part
+        label = label_map.get(part, part.replace("-", " ").title())
+        crumb = {
+            "@type": "ListItem",
+            "position": i + 1,
+            "name": label,
+            "item": f"{base}{acc}/",
+        }
+        crumbs.append(crumb)
+
+    # Append the page itself as the final breadcrumb
+    crumb = {
+        "@type": "ListItem",
+        "position": len(parts) + 1,
+        "name": page_title,
+    }
+    crumbs.append(crumb)
+
+    return [{"@type": "BreadcrumbList", "itemListElement": crumbs}]
 
 
 def main() -> int:

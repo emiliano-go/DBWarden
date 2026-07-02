@@ -22,7 +22,9 @@ from dbwarden.engine.model_discovery import (
     extract_tables_from_database,
     _extract_create_table_columns,
     _qualified_name,
+    _quote_pg,
 )
+from dbwarden.engine.model_discovery import _get_backend_name as _get_backend_name_md
 from dbwarden.engine.migration_name import Change, autogenerate_migration_name
 from dbwarden.engine.version import (
     get_migrations_directory,
@@ -1149,6 +1151,7 @@ def generate_migration_sql(
         upgrade_parts: list[str] = []
         rollback_parts: list[str] = []
         changes: list[Change] = []
+        backend = _get_backend_name_md(database)
 
         # Emit CREATE TYPE for PG enums before any table that uses them
         enum_types: dict[str, list[str]] = {}
@@ -1182,9 +1185,17 @@ def generate_migration_sql(
                             table.name, column, db_name, schema=table.schema
                         )
                         upgrade_parts.append(alter_sql)
-                        qname = _qualified_name(table.name, table.schema)
+                        if backend == "postgresql":
+                            qtable = _quote_pg(table.name)
+                            qschema = _quote_pg(table.schema) if table.schema else None
+                            col_name_q = _quote_pg(column.name)
+                        else:
+                            qtable = table.name
+                            qschema = table.schema
+                            col_name_q = column.name
+                        qname = _qualified_name(qtable, qschema)
                         rollback_parts.append(
-                            f"ALTER TABLE {qname} DROP COLUMN {column.name}"
+                            f"ALTER TABLE {qname} DROP COLUMN {col_name_q}"
                         )
                         changes.append(Change(operation="add_column", table=table.name, target=column.name))
                         known_tables.setdefault(table.name, set()).add(column.name.lower())
@@ -1193,17 +1204,37 @@ def generate_migration_sql(
         for table in tables:
             if table.name not in created_tables:
                 continue
-            qname = _qualified_name(table.name, table.schema)
+            if backend == "postgresql":
+                qtable = _quote_pg(table.name)
+                qschema = _quote_pg(table.schema) if table.schema else None
+            else:
+                qtable = table.name
+                qschema = table.schema
+            qname = _qualified_name(qtable, qschema)
             for idx in table.indexes:
                 idx_cols = ", ".join(idx.columns)
-                upgrade_parts.append(f"CREATE INDEX IF NOT EXISTS {idx.name} ON {qname} ({idx_cols});")
-                rollback_parts.append(f"DROP INDEX IF EXISTS {idx.name};")
+                if backend == "clickhouse":
+                    ch_type = idx.clickhouse_type or "minmax"
+                    ch_granularity = idx.clickhouse_granularity or 1
+                    upgrade_parts.append(
+                        f"ALTER TABLE {qname} ADD INDEX IF NOT EXISTS {idx.name} "
+                        f"({idx_cols}) "
+                        f"TYPE {ch_type} "
+                        f"GRANULARITY {ch_granularity};"
+                    )
+                    rollback_parts.append(
+                        f"ALTER TABLE {qname} DROP INDEX {idx.name};"
+                    )
+                else:
+                    upgrade_parts.append(f"CREATE INDEX IF NOT EXISTS {idx.name} ON {qname} ({idx_cols});")
+                    rollback_parts.append(f"DROP INDEX IF EXISTS {idx.name};")
                 changes.append(Change(operation="add_index", table=table.name, target=idx.name))
             for fk in table.foreign_keys:
                 local_cols = ", ".join(fk.get("columns", []))
-                ref_table = fk.get("referred_table", "")
-                ref_cols = ", ".join(fk.get("referred_columns", ["id"]))
-                fk_sql = f"ALTER TABLE {qname} ADD FOREIGN KEY ({local_cols}) REFERENCES {ref_table} ({ref_cols})"
+                ref_table = _quote_pg(fk.get("referred_table", "")) if backend == "postgresql" else fk.get("referred_table", "")
+                ref_cols = ", ".join(_quote_pg(c) if backend == "postgresql" else c for c in fk.get("referred_columns", ["id"]))
+                loc_cols_q = ", ".join(_quote_pg(c) if backend == "postgresql" else c for c in fk.get("columns", []))
+                fk_sql = f"ALTER TABLE {qname} ADD FOREIGN KEY ({loc_cols_q}) REFERENCES {ref_table} ({ref_cols})"
                 on_delete = fk.get("on_delete", "NO ACTION")
                 on_update = fk.get("on_update", "NO ACTION")
                 if on_delete != "NO ACTION":

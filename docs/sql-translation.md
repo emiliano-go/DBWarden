@@ -20,7 +20,7 @@ seo:
       workflows where your primary database differs from your development database.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: SQL Translation - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/sql-translation/
@@ -30,6 +30,15 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: SQL Translation
+      item: https://emiliano-go.github.io/DBWarden/sql-translation/
+    - '@type': ListItem
+      position: 2
+      name: SQL Translation
 ---
 
 # SQL Translation

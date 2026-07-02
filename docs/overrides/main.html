@@ -4,7 +4,6 @@
 {{ super() }}
 {% if page.meta and page.meta.seo %}
 <meta name="description" content="{{ page.meta.seo.description }}">
-<link rel="canonical" href="{{ page.meta.seo.canonical }}">
 <meta name="robots" content="{{ page.meta.seo.robots }}">
 
 <meta property="og:type" content="{{ page.meta.seo.og.type }}">
@@ -20,9 +19,19 @@
 <meta name="twitter:image" content="{{ page.meta.seo.twitter.image }}">
 
 {% if page.meta.seo.schema_jsonld %}
+  {% if page.meta.seo.schema_jsonld is mapping %}
+    {% set schemas = [page.meta.seo.schema_jsonld] %}
+  {% else %}
+    {% set schemas = page.meta.seo.schema_jsonld %}
+  {% endif %}
+  {% for schema in schemas %}
 <script type="application/ld+json">
-{{ page.meta.seo.schema_jsonld | tojson }}
+{{ schema | tojson }}
 </script>
+  {% endfor %}
 {% endif %}
+
+<link rel="alternate" type="text/plain" title="LLMs TXT" href="/llms.txt">
+<link rel="alternate" type="text/plain" title="LLMs Full" href="/llms-full.txt">
 {% endif %}
 {% endblock %}
