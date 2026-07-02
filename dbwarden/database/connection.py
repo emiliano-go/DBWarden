@@ -13,7 +13,11 @@ from dbwarden.logging import get_logger
 
 
 def _convert_url_to_clickhouse_dialect(url: str) -> str:
-    """Convert HTTP URL or clickhousedb URL to clickhouse-connect dialect format."""
+    """Convert HTTP URL or clickhousedb URL to clickhouse-connect dialect format.
+
+    Supports both HTTP (port 8123) and native TCP (port 9000) protocols.
+    Port 9000 triggers native protocol; all other ports use HTTP.
+    """
     from sqlalchemy.engine import make_url
 
     if url.startswith(("http://", "https://", "clickhousedb://")):
@@ -23,9 +27,10 @@ def _convert_url_to_clickhouse_dialect(url: str) -> str:
         username = parsed.username or "default"
         password = parsed.password or ""
         database = parsed.database or "default"
-        if password:
-            return f"clickhousedb://{username}:{password}@{host}:{port}/{database}"
-        return f"clickhousedb://{username}@{host}:{port}/{database}"
+        creds = f"{username}:{password}@" if password else f"{username}@"
+        if port == 9000:
+            return f"clickhousedb://{creds}{host}:{port}/{database}?protocol=native"
+        return f"clickhousedb://{creds}{host}:{port}/{database}"
 
     return f"clickhousedb://{url}"
 

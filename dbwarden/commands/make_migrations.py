@@ -21,7 +21,9 @@ from dbwarden.engine.model_discovery import (
     extract_tables_from_migrations,
     extract_tables_from_database,
     _extract_create_table_columns,
+    _quote_pg,
 )
+from dbwarden.engine.model_discovery import _get_backend_name as _get_backend_name_md
 from dbwarden.engine.migration_name import Change, autogenerate_migration_name
 from dbwarden.engine.version import (
     get_migrations_directory,
@@ -1148,6 +1150,7 @@ def generate_migration_sql(
         upgrade_parts: list[str] = []
         rollback_parts: list[str] = []
         changes: list[Change] = []
+        backend = _get_backend_name_md(database)
 
         # Emit CREATE TYPE for PG enums before any table that uses them
         enum_types: dict[str, list[str]] = {}
@@ -1179,8 +1182,10 @@ def generate_migration_sql(
                     if column.name.lower() not in existing_columns:
                         alter_sql = generate_add_column_sql(table.name, column, db_name)
                         upgrade_parts.append(alter_sql)
+                        col_name_q = _quote_pg(column.name) if backend == "postgresql" else column.name
+                        tbl_name_q = _quote_pg(table.name) if backend == "postgresql" else table.name
                         rollback_parts.append(
-                            f"ALTER TABLE {table.name} DROP COLUMN {column.name}"
+                            f"ALTER TABLE {tbl_name_q} DROP COLUMN {col_name_q}"
                         )
                         changes.append(Change(operation="add_column", table=table.name, target=column.name))
                         known_tables.setdefault(table.name, set()).add(column.name.lower())
@@ -1189,16 +1194,31 @@ def generate_migration_sql(
         for table in tables:
             if table.name not in created_tables:
                 continue
+            tbl_name_q = _quote_pg(table.name) if backend == "postgresql" else table.name
             for idx in table.indexes:
                 idx_cols = ", ".join(idx.columns)
-                upgrade_parts.append(f"CREATE INDEX IF NOT EXISTS {idx.name} ON {table.name} ({idx_cols});")
-                rollback_parts.append(f"DROP INDEX IF EXISTS {idx.name};")
+                if backend == "clickhouse":
+                    ch_type = idx.clickhouse_type or "minmax"
+                    ch_granularity = idx.clickhouse_granularity or 1
+                    upgrade_parts.append(
+                        f"ALTER TABLE {tbl_name_q} ADD INDEX IF NOT EXISTS {idx.name} "
+                        f"({idx_cols}) "
+                        f"TYPE {ch_type} "
+                        f"GRANULARITY {ch_granularity};"
+                    )
+                    rollback_parts.append(
+                        f"ALTER TABLE {tbl_name_q} DROP INDEX {idx.name};"
+                    )
+                else:
+                    upgrade_parts.append(f"CREATE INDEX IF NOT EXISTS {idx.name} ON {tbl_name_q} ({idx_cols});")
+                    rollback_parts.append(f"DROP INDEX IF EXISTS {idx.name};")
                 changes.append(Change(operation="add_index", table=table.name, target=idx.name))
             for fk in table.foreign_keys:
                 local_cols = ", ".join(fk.get("columns", []))
-                ref_table = fk.get("referred_table", "")
-                ref_cols = ", ".join(fk.get("referred_columns", ["id"]))
-                fk_sql = f"ALTER TABLE {table.name} ADD FOREIGN KEY ({local_cols}) REFERENCES {ref_table} ({ref_cols})"
+                ref_table = _quote_pg(fk.get("referred_table", "")) if backend == "postgresql" else fk.get("referred_table", "")
+                ref_cols = ", ".join(_quote_pg(c) if backend == "postgresql" else c for c in fk.get("referred_columns", ["id"]))
+                loc_cols_q = ", ".join(_quote_pg(c) if backend == "postgresql" else c for c in fk.get("columns", []))
+                fk_sql = f"ALTER TABLE {tbl_name_q} ADD FOREIGN KEY ({loc_cols_q}) REFERENCES {ref_table} ({ref_cols})"
                 on_delete = fk.get("on_delete", "NO ACTION")
                 on_update = fk.get("on_update", "NO ACTION")
                 if on_delete != "NO ACTION":

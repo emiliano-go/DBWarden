@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import time
+import enum as _enum
 from pathlib import Path
 from types import ModuleType
 from dataclasses import dataclass, field
@@ -76,6 +77,53 @@ def _apply_meta_fast(cls: type) -> None:
     cls.__dbwarden_meta_applied__ = True
 
 VALID_IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+_POSTGRES_RESERVED_WORDS: set[str] = {
+    "ALL", "ANALYSE", "ANALYZE", "AND", "ANY", "ARRAY", "AS", "ASC",
+    "ASYMMETRIC", "AUTHORIZATION", "BETWEEN", "BINARY", "BOTH",
+    "CASE", "CAST", "CHECK", "COLLATE", "COLLATION", "COLUMN",
+    "CONCURRENTLY", "CONSTRAINT", "CREATE", "CROSS", "CURRENT_CATALOG",
+    "CURRENT_DATE", "CURRENT_ROLE", "CURRENT_SCHEMA", "CURRENT_TIME",
+    "CURRENT_TIMESTAMP", "CURRENT_USER", "DEFAULT", "DEFERRABLE",
+    "DESC", "DISTINCT", "DO", "ELSE", "END", "EXCEPT", "EXISTS",
+    "EXTRACT", "FALSE", "FETCH", "FILTER", "FOR", "FOREIGN", "FROM",
+    "FULL", "FUNCTION", "GRANT", "GROUP", "GROUPING", "HAVING", "IF",
+    "ILIKE", "IN", "INOUT", "INTERSECT", "INTERVAL", "INTO", "IS",
+    "ISNULL", "JOIN", "LATERAL", "LEADING", "LEFT", "LIKE", "LIMIT",
+    "LOCALTIME", "LOCALTIMESTAMP", "NATURAL", "NEW", "NOT", "NOTNULL",
+    "NULL", "NULLIF", "OF", "OFFSET", "OLD", "ON", "ONLY", "OR",
+    "ORDER", "OUT", "OUTER", "OVER", "OVERLAPS", "PARTITION", "PATH",
+    "PLACING", "PRIMARY", "REFERENCES", "RETURNING", "RIGHT", "ROW",
+    "ROWS", "RULES", "SCHEMA", "SELECT", "SESSION_USER", "SET",
+    "SHOW", "SIMILAR", "SOME", "SYMMETRIC", "TABLE", "TABLESAMPLE",
+    "THEN", "TO", "TRAILING", "TRUE", "UNION", "UNIQUE", "USER",
+    "USING", "VARIADIC", "VERBOSE", "VIEW", "WHEN", "WHERE",
+    "WINDOW", "WITH", "WITHIN", "WITHOUT", "XMLATTRIBUTES",
+    "XMLCONCAT", "XMLELEMENT", "XMLEXISTS", "XMLFOREST",
+    "XMLNAMESPACES", "XMLPARSE", "XMLPI", "XMLROOT", "XMLSERIALIZE",
+    "XMLTABLE", "YEAR", "MONTH", "DAY", "HOUR", "MINUTE", "SECOND",
+    "ZONE", "TYPE", "ADMIN", "AGGREGATE", "BACKWARD", "CACHE",
+    "CLUSTER", "COMMENT", "COMMIT", "COPY", "DEALLOCATE", "DECLARE",
+    "DISCARD", "DOMAIN", "EXTENSION", "FETCH", "FREEZE", "GLOBAL",
+    "HANDLER", "IDENTITY", "IMPORT", "INDEX", "INHERIT", "LANGUAGE",
+    "LISTEN", "LOAD", "LOCK", "LOGIN", "MAPPING", "MOVE", "NAME",
+    "NAMESPACE", "NOTIFY", "OPTIONS", "OWNED", "OWNER", "PARALLEL",
+    "PASSWORD", "PREPARE", "PREPARED", "PRIVILEGES", "PUBLIC",
+    "PUBLICATION", "RECURSIVE", "REF", "REFRESH", "REINDEX",
+    "RELEASE", "RENAME", "REPLACE", "RESET", "REVOKE", "ROLE",
+    "ROLLBACK", "RULE", "SAVEPOINT", "SECURITY", "SEQUENCE",
+    "SERVER", "SESSION", "SIGNAL", "SUBSCRIPTION", "TABLESPACE",
+    "TEMP", "TEMPORARY", "TEXT", "TRANSACTION", "TRIGGER", "TRUNCATE",
+    "TRUSTED", "UNLISTEN", "UNLOGGED", "VACUUM", "VALID", "VALIDATOR",
+    "VALUE", "VOLATILE", "WHITESPACE", "WORK", "WRITE",
+}
+
+def _quote_pg(name: str) -> str:
+    if not name:
+        return name
+    if name.upper() in _POSTGRES_RESERVED_WORDS:
+        return f'"{name}"'
+    return name
 
 
 def _render_mysql_column_type(type_str: str, meta: dict[str, Any]) -> str:
@@ -1188,9 +1236,24 @@ def extract_column_info(
         unique = column.unique
         autoincrement = column.autoincrement
         default = None
+        default_str = None
         if column.default:
-            default_str = str(column.default)
-            # SQLite doesn't support complex default expressions
+            # Detect Python enum defaults
+            default_arg = getattr(column.default, "arg", None)
+            if default_arg is not None and isinstance(default_arg, _enum.Enum):
+                enum_member = default_arg
+                member_name = enum_member.name  # e.g., "SUCCESS" (matches SQL ENUM)
+                if backend == "postgresql":
+                    type_name = getattr(column.type, "name", None)
+                    if type_name:
+                        default = f"'{member_name}'::{type_name}"
+                    else:
+                        default = f"'{member_name}'"
+                else:
+                    default = f"'{member_name}'"
+            else:
+                default_str = str(column.default)
+        if default_str is not None:
             if default_str.startswith("ScalarElementColumnDefault"):
                 # Extract the actual value from ScalarElementColumnDefault(True/False)
                 import re
@@ -1477,23 +1540,25 @@ def generate_add_column_sql(
     nullable_sql = "" if column.nullable or is_serial else "NOT NULL"
     default_sql = f" DEFAULT {column.default}" if column.default else ""
     fk_sql = ""
-    if column.foreign_key:
+    if column.foreign_key and backend != "postgresql":
         fk_sql = f" REFERENCES {column.foreign_key}"
         if column.fk_on_delete and column.fk_on_delete != "NO ACTION":
             fk_sql += f" ON DELETE {column.fk_on_delete}"
         if column.fk_on_update and column.fk_on_update != "NO ACTION":
             fk_sql += f" ON UPDATE {column.fk_on_update}"
-    sql = f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type}"
+    tbl = _quote_pg(table_name) if backend == "postgresql" else table_name
+    col_name = _quote_pg(column.name) if backend == "postgresql" else column.name
+    sql = f"ALTER TABLE {tbl} ADD COLUMN {col_name} {col_type}"
     if nullable_sql:
         sql += f" {nullable_sql}"
     if default_sql:
         sql += default_sql
-    if backend == "clickhouse" and column.comment:
-        sql += f" COMMENT '{column.comment.replace(chr(39), chr(39) + chr(39))}'"
     if backend == "clickhouse":
         ch_codec = column.codec or column.ch_meta.get("ch_codec")
         if ch_codec:
             sql += f" CODEC({ch_codec})"
+        if column.comment:
+            sql += f" COMMENT '{column.comment.replace(chr(39), chr(39) + chr(39))}'"
     if backend in ("mysql", "mariadb"):
         sql = _append_mysql_column_attrs(sql, column.my_meta)
     if fk_sql:
@@ -1519,7 +1584,8 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             col_type = _render_postgres_column_type(col)
         else:
             col_type = col.type
-        col_def = f"    {col.name} {col_type}"
+        col_name = _quote_pg(col.name) if backend == "postgresql" else col.name
+        col_def = f"    {col_name} {col_type}"
         is_serial = (
             col.type.upper() in ("SERIAL", "BIGSERIAL")
             if backend == "postgresql"
@@ -1538,7 +1604,7 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             col_def += f" COMMENT '{col.comment.replace(chr(39), chr(39) + chr(39))}'"
         if backend in ("mysql", "mariadb"):
             col_def = _append_mysql_column_attrs(col_def, col.my_meta)
-        if col.foreign_key:
+        if col.foreign_key and backend != "postgresql":
             col_def += f" REFERENCES {col.foreign_key}"
             if col.fk_on_delete and col.fk_on_delete != "NO ACTION":
                 col_def += f" ON DELETE {col.fk_on_delete}"
@@ -1546,6 +1612,8 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
                 col_def += f" ON UPDATE {col.fk_on_update}"
         if backend == "clickhouse" and col.codec:
             col_def += f" CODEC({col.codec})"
+        if backend == "clickhouse" and col.comment:
+            col_def += f" COMMENT '{col.comment.replace(chr(39), chr(39) + chr(39))}'"
         column_defs.append(col_def)
 
     if backend == "clickhouse":
@@ -1555,7 +1623,8 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
     if backend == "clickhouse" and table.object_type == "materialized_view":
         sql = _generate_clickhouse_materialized_view_sql(table, columns_sql)
     else:
-        sql = f"CREATE TABLE IF NOT EXISTS {table.name} (\n{columns_sql}\n)"
+        tbl_name = _quote_pg(table.name) if backend == "postgresql" else table.name
+        sql = f"CREATE TABLE IF NOT EXISTS {tbl_name} (\n{columns_sql}\n)"
     if backend == "clickhouse":
         if table.object_type == "table":
             sql += _render_clickhouse_table_suffix(table)
@@ -1580,9 +1649,10 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
         if pg_partition:
             strategy = pg_partition.get("strategy", "RANGE")
             columns = pg_partition.get("columns", [])
-            sql += f"\nPARTITION BY {strategy} ({', '.join(columns)})"
+            quoted_cols = ", ".join(_quote_pg(c) for c in columns)
+            sql += f"\nPARTITION BY {_quote_pg(strategy)} ({quoted_cols})"
     if backend == "postgresql" and table.comment:
-        sql += f"\nCOMMENT ON TABLE {table.name} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}';"
+        sql += f";\nCOMMENT ON TABLE {_quote_pg(table.name)} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}';"
     return sql
 
 
