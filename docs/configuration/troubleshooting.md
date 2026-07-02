@@ -17,7 +17,7 @@ seo:
     description: Solutions to common configuration issues.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Troubleshooting - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/configuration/troubleshooting/
@@ -26,6 +26,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Configuration
+      item: https://emiliano-go.github.io/DBWarden/configuration/
+    - '@type': ListItem
+      position: 2
+      name: Troubleshooting
+      item: https://emiliano-go.github.io/DBWarden/configuration/troubleshooting/
+    - '@type': ListItem
+      position: 3
+      name: Troubleshooting
 ---
 
 # Troubleshooting

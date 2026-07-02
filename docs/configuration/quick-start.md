@@ -17,7 +17,7 @@ seo:
     description: Configure your first database in 2 minutes.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Quick Start - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/configuration/quick-start/
@@ -26,6 +26,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Configuration
+      item: https://emiliano-go.github.io/DBWarden/configuration/
+    - '@type': ListItem
+      position: 2
+      name: Quick Start
+      item: https://emiliano-go.github.io/DBWarden/configuration/quick-start/
+    - '@type': ListItem
+      position: 3
+      name: Quick Start
 ---
 
 # Quick Start

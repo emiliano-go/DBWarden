@@ -17,7 +17,7 @@ seo:
     description: What You'll Learn
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: 1. Project Setup - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/cookbook/01-project-setup/
@@ -26,6 +26,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Cookbook & Examples
+      item: https://emiliano-go.github.io/DBWarden/cookbook/
+    - '@type': ListItem
+      position: 2
+      name: 01 Project Setup
+      item: https://emiliano-go.github.io/DBWarden/cookbook/01-project-setup/
+    - '@type': ListItem
+      position: 3
+      name: 1. Project Setup
 ---
 
 # 1. Project Setup

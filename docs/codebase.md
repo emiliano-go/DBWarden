@@ -1,24 +1,40 @@
 ---
 seo:
   title: Codebase Organization - DBWarden Documentation
-  description: This page explains how the DBWarden codebase is organized and the
-    boundary between the schema and databases packages.
+  description: Top-Level Layout
   canonical: https://dbwarden.emiliano-go.com/codebase/
   robots: index,follow
   og:
     type: website
     title: Codebase Organization - DBWarden Documentation
-    description: This page explains how the DBWarden codebase is organized and the
-      boundary between the schema and databases packages.
+    description: Top-Level Layout
     url: https://dbwarden.emiliano-go.com/codebase/
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Codebase Organization - DBWarden Documentation
-    description: This page explains how the DBWarden codebase is organized and the
-      boundary between the schema and databases packages.
+    description: Top-Level Layout
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  schema_jsonld:
+  - '@context': https://schema.org
+    '@type': WebPage
+    name: Codebase Organization - DBWarden Documentation
+    url: https://dbwarden.emiliano-go.com/codebase/
+    description: Top-Level Layout
+    image: https://dbwarden.emiliano-go.com/assets/icon.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Codebase Organization
+      item: https://emiliano-go.github.io/DBWarden/codebase/
+    - '@type': ListItem
+      position: 2
+      name: Codebase Organization
 ---
 
 # Codebase Organization

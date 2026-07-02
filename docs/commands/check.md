@@ -20,7 +20,7 @@ seo:
       live database.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: check - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/commands/check/
@@ -30,6 +30,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Commands
+      item: https://emiliano-go.github.io/DBWarden/commands/
+    - '@type': ListItem
+      position: 2
+      name: check
+      item: https://emiliano-go.github.io/DBWarden/commands/check/
+    - '@type': ListItem
+      position: 3
+      name: check
 ---
 
 # `check`

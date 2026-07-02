@@ -26,7 +26,7 @@ seo:
       and CI/CD integration patterns.'
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Safe Deployment - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/advanced/safe-deployment/
@@ -37,6 +37,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Advanced
+      item: https://emiliano-go.github.io/DBWarden/advanced/
+    - '@type': ListItem
+      position: 2
+      name: Safe Deployment
+      item: https://emiliano-go.github.io/DBWarden/advanced/safe-deployment/
+    - '@type': ListItem
+      position: 3
+      name: Safe Deployment
 ---
 
 # Safe Deployment

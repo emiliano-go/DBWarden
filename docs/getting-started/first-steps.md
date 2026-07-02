@@ -25,7 +25,7 @@ seo:
       to applied SQL.'
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: First Steps - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/getting-started/first-steps/
@@ -36,6 +36,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Get Started
+      item: https://emiliano-go.github.io/DBWarden/getting-started/
+    - '@type': ListItem
+      position: 2
+      name: First Steps
+      item: https://emiliano-go.github.io/DBWarden/getting-started/first-steps/
+    - '@type': ListItem
+      position: 3
+      name: First Steps
 ---
 
 # First Steps

@@ -1,32 +1,50 @@
 ---
-description: Define your first SQLAlchemy models, generate a migration, review the generated SQL, apply it, verify the result, and roll it back.
+description: Define your first SQLAlchemy models, generate a migration, review the
+  generated SQL, apply it, verify the result, and roll it back.
 seo:
   title: Your First Migration - DBWarden Documentation
-  description: Define your first SQLAlchemy models, generate a migration, review the generated SQL, apply it, verify the result, and roll it back.
+  description: Define your first SQLAlchemy models, generate a migration, review the
+    generated SQL, apply it, verify the result, and roll it back.
   canonical: https://dbwarden.emiliano-go.com/getting-started/first-migration/
   robots: index,follow
   og:
     type: website
     title: Your First Migration - DBWarden Documentation
-    description: Define your first SQLAlchemy models, generate a migration, review the generated SQL, apply it, verify the result, and roll it back.
+    description: Define your first SQLAlchemy models, generate a migration, review
+      the generated SQL, apply it, verify the result, and roll it back.
     url: https://dbwarden.emiliano-go.com/getting-started/first-migration/
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Your First Migration - DBWarden Documentation
-    description: Define your first SQLAlchemy models, generate a migration, review the generated SQL, apply it, verify the result, and roll it back.
+    description: Define your first SQLAlchemy models, generate a migration, review
+      the generated SQL, apply it, verify the result, and roll it back.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Your First Migration - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/getting-started/first-migration/
-    description: Define your first SQLAlchemy models, generate a migration, review the generated SQL, apply it, verify the result, and roll it back.
+    description: Define your first SQLAlchemy models, generate a migration, review
+      the generated SQL, apply it, verify the result, and roll it back.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Get Started
+      item: https://emiliano-go.github.io/DBWarden/getting-started/
+    - '@type': ListItem
+      position: 2
+      name: Your First Migration
+      item: https://emiliano-go.github.io/DBWarden/getting-started/first-migration/
+    - '@type': ListItem
+      position: 3
+      name: Your First Migration
 ---
 
 # Your First Migration

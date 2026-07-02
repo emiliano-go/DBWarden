@@ -22,7 +22,7 @@ seo:
       approach.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Migrate from TOML - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/reference/migrate-from-toml/
@@ -33,6 +33,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Reference
+      item: https://emiliano-go.github.io/DBWarden/reference/
+    - '@type': ListItem
+      position: 2
+      name: Migrate from TOML
+      item: https://emiliano-go.github.io/DBWarden/reference/migrate-from-toml/
+    - '@type': ListItem
+      position: 3
+      name: Migrate from TOML
 ---
 
 # Migrate from TOML

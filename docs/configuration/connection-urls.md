@@ -17,7 +17,7 @@ seo:
     description: Complete reference for database connection URL formats.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Connection URLs - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/configuration/connection-urls/
@@ -26,6 +26,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Configuration
+      item: https://emiliano-go.github.io/DBWarden/configuration/
+    - '@type': ListItem
+      position: 2
+      name: Connection URLs
+      item: https://emiliano-go.github.io/DBWarden/configuration/connection-urls/
+    - '@type': ListItem
+      position: 3
+      name: Connection URLs
 ---
 
 # Connection URLs

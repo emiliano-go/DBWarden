@@ -20,7 +20,7 @@ seo:
       every backend. For a step-by-step walkthrough of defining models, see the Modeling...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: SQLAlchemy Models Reference - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/models/
@@ -30,6 +30,15 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: SQLAlchemy Models Reference
+      item: https://emiliano-go.github.io/DBWarden/models/
+    - '@type': ListItem
+      position: 2
+      name: SQLAlchemy Models Reference
 ---
 
 # SQLAlchemy Models Reference

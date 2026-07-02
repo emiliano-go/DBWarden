@@ -17,7 +17,7 @@ seo:
     description: Real-world configuration patterns for production deployments.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Production Patterns - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/configuration/production-patterns/
@@ -26,6 +26,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Configuration
+      item: https://emiliano-go.github.io/DBWarden/configuration/
+    - '@type': ListItem
+      position: 2
+      name: Production Patterns
+      item: https://emiliano-go.github.io/DBWarden/configuration/production-patterns/
+    - '@type': ListItem
+      position: 3
+      name: Production Patterns
 ---
 
 # Production Patterns

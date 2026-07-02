@@ -17,7 +17,7 @@ seo:
     description: Patterns for running DBWarden migrations in automated pipelines.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: CI/CD Patterns - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns/
@@ -26,6 +26,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Advanced
+      item: https://emiliano-go.github.io/DBWarden/advanced/
+    - '@type': ListItem
+      position: 2
+      name: CI/CD Patterns
+      item: https://emiliano-go.github.io/DBWarden/advanced/ci-cd-patterns/
+    - '@type': ListItem
+      position: 3
+      name: CI/CD Patterns
 ---
 
 # CI/CD Patterns

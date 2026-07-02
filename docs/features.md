@@ -1,32 +1,50 @@
 ---
-description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
+description: Overview of DBWarden features, with short examples for migrations, safety
+  checks, multi-database configs, FastAPI integration, seed management, and more.
 seo:
   title: Features - DBWarden Documentation
-  description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
+  description: Overview of DBWarden features, with short examples for migrations,
+    safety checks, multi-database configs, FastAPI integration, seed management, and
+    more.
   canonical: https://dbwarden.emiliano-go.com/features/
   robots: index,follow
   og:
     type: website
     title: Features - DBWarden Documentation
-    description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
+    description: Overview of DBWarden features, with short examples for migrations,
+      safety checks, multi-database configs, FastAPI integration, seed management,
+      and more.
     url: https://dbwarden.emiliano-go.com/features/
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Features - DBWarden Documentation
-    description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
+    description: Overview of DBWarden features, with short examples for migrations,
+      safety checks, multi-database configs, FastAPI integration, seed management,
+      and more.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Features - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/features/
-    description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
+    description: Overview of DBWarden features, with short examples for migrations,
+      safety checks, multi-database configs, FastAPI integration, seed management,
+      and more.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Features
+      item: https://emiliano-go.github.io/DBWarden/features/
+    - '@type': ListItem
+      position: 2
+      name: Features
 ---
 
 # Features

@@ -22,7 +22,7 @@ seo:
       that...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Seed Management - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/seeds/
@@ -33,6 +33,15 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Seed Management
+      item: https://emiliano-go.github.io/DBWarden/seeds/
+    - '@type': ListItem
+      position: 2
+      name: Seed Management
 ---
 
 # Seed Management

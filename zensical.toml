@@ -167,6 +167,9 @@ Advanced = [
   {"Migrate from TOML" = "reference/migrate-from-toml.md"}
 ]
 
+[[project.nav]]
+"Glossary" = "glossary.md"
+
 [project.markdown_extensions.tables]
 
 [project.markdown_extensions.admonition]

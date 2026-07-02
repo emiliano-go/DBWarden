@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dbwarden.emiliano-go.com/sitemap.xml

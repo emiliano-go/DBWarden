@@ -20,7 +20,7 @@ seo:
       supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: ClickHouse - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/databases/clickhouse/
@@ -30,6 +30,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Databases
+      item: https://emiliano-go.github.io/DBWarden/databases/
+    - '@type': ListItem
+      position: 2
+      name: ClickHouse
+      item: https://emiliano-go.github.io/DBWarden/databases/clickhouse/
+    - '@type': ListItem
+      position: 3
+      name: ClickHouse
 ---
 
 # ClickHouse

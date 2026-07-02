@@ -17,7 +17,7 @@ seo:
     description: Configure and manage multiple databases in a single project.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: Multi-Database - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/configuration/multi-database/
@@ -26,6 +26,19 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Configuration
+      item: https://emiliano-go.github.io/DBWarden/configuration/
+    - '@type': ListItem
+      position: 2
+      name: Multi-Database
+      item: https://emiliano-go.github.io/DBWarden/configuration/multi-database/
+    - '@type': ListItem
+      position: 3
+      name: Multi-Database
 ---
 
 # Multi-Database
