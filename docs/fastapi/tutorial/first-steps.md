@@ -1,31 +1,77 @@
 ---
 seo:
   title: First Steps - DBWarden Documentation
-  description: Let's create a FastAPI app with DBWarden in 2 minutes.
-  canonical: https://dbwarden.emiliano-go.com/fastapi/tutorial/first-steps/
+  canonical: https://dbwarden.emiliano-go.com/fastapi/tutorial/first-steps
   robots: index,follow
   og:
     type: website
     title: First Steps - DBWarden Documentation
     description: Let's create a FastAPI app with DBWarden in 2 minutes.
-    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/first-steps/
+    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/first-steps
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: First Steps - DBWarden Documentation
     description: Let's create a FastAPI app with DBWarden in 2 minutes.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Let's create a FastAPI app with DBWarden in 2 minutes.
   schema_jsonld:
-    '@context': https://schema.org
+  - '@context': https://schema.org
     '@type': WebPage
     name: First Steps - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/first-steps/
+    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/first-steps
     description: Let's create a FastAPI app with DBWarden in 2 minutes.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: FastAPI Integration
+      item: https://dbwarden.emiliano-go.com/fastapi
+    - '@type': ListItem
+      position: 2
+      name: Tutorial
+      item: https://dbwarden.emiliano-go.com/fastapi/tutorial
+    - '@type': ListItem
+      position: 3
+      name: First Steps
+      item: https://dbwarden.emiliano-go.com/fastapi/tutorial/first-steps
+seo_html: "<title>First Steps - DBWarden Documentation</title>\n<meta name=\"description\"\
+  \ content=\"Let&#x27;s create a FastAPI app with DBWarden in 2 minutes.\">\n<link\
+  \ rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/fastapi/tutorial/first-steps\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"First Steps - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"Let&#x27;s create a FastAPI app with\
+  \ DBWarden in 2 minutes.\">\n<meta property=\"og:url\" content=\"https://dbwarden.emiliano-go.com/fastapi/tutorial/first-steps\"\
+  >\n<meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"First Steps - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"Let&#x27;s create a FastAPI app with DBWarden in 2 minutes.\">\n<meta\
+  \ name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"First Steps - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/fastapi/tutorial/first-steps\"\
+  ,\n    \"description\": \"Let's create a FastAPI app with DBWarden in 2 minutes.\"\
+  ,\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\",\n    \"\
+  publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"Emiliano Gandini\
+  \ Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\",\n    \"\
+  @type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n        \"@type\"\
+  : \"ListItem\",\n        \"position\": 1,\n        \"name\": \"FastAPI Integration\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/fastapi\"\n      },\n  \
+  \    {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"name\"\
+  : \"Tutorial\",\n        \"item\": \"https://dbwarden.emiliano-go.com/fastapi/tutorial\"\
+  \n      },\n      {\n        \"@type\": \"ListItem\",\n        \"position\": 3,\n\
+  \        \"name\": \"First Steps\",\n        \"item\": \"https://dbwarden.emiliano-go.com/fastapi/tutorial/first-steps\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # First Steps
