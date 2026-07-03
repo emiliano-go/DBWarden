@@ -170,6 +170,17 @@ Advanced = [
 [[project.nav]]
 "Glossary" = "glossary.md"
 
+[project.markdown_extensions]
+"seoslug.contrib.zensical" = {
+  canonical_host = "dbwarden.emiliano-go.com",
+  public_base_url = "https://dbwarden.emiliano-go.com/",
+  site_name = "DBWarden Documentation",
+  title_template = "{title} - DBWarden",
+  publisher_name = "Emiliano Gandini Outeda",
+  locale = "en_US",
+  auto_generate_schema = true,
+}
+
 [project.markdown_extensions.tables]
 
 [project.markdown_extensions.admonition]

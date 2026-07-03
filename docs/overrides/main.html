@@ -1,7 +1,9 @@
 {% extends "base.html" %}
 
 {% block site_meta %}
-{% if page.meta and page.meta.seo_html %}
+{% if page.meta and page.meta._seo_head %}
+{{ page.meta._seo_head | safe }}
+{% elif page.meta and page.meta.seo_html %}
 {{ page.meta.seo_html | safe }}
 {% else %}
 {{ super() }}
