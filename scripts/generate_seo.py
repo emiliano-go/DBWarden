@@ -39,13 +39,18 @@ SEO_CONFIG = SEOConfig(
     ),
     site_name=SITE_NAME,
     default_og_image=OGImage(
-        url=f"{SITE_URL}/assets/icon.png",
-        width=128,
-        height=128,
+        url=f"{SITE_URL}/assets/images/og-image.png",
+        width=1376,
+        height=768,
+        alt="DBWarden documentation",
     ),
     publisher_name="Emiliano Gandini Outeda",
+    publisher_logo=f"{SITE_URL}/assets/images/og-image.png",
+    locale="en_US",
+    twitter_site="@emiliano_go_",
     title_template="{title} - DBWarden Documentation",
     default_robots=Robots(index=True, follow=True),
+    emit_warnings=True,
 )
 
 FM_RE = re.compile(
