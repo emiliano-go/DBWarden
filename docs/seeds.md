@@ -148,6 +148,37 @@ class CountrySeed(Seed):
 | `"update"` | Updates existing rows with new values |
 | `"error"` | Raises an error on conflict |
 
+### PostgreSQL Schema Resolution
+
+When a model uses `pg_schema` in its Meta (via `PGTableMeta` or `PGViewMeta`), code seeds automatically qualify the table name with that schema:
+
+```python
+from dbwarden.databases.pgsql import PGTableMeta
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    class Meta(PGTableMeta):
+        pg_schema = "app"
+
+class UserSeed(Seed):
+    __seed_database__ = "primary"
+    __seed_description__ = "initial users"
+
+    model = User
+    rows = [User(email="alice@example.com", name="Alice")]
+```
+
+The generated INSERT becomes:
+
+```sql
+INSERT INTO app.users (email, name) VALUES ('alice@example.com', 'Alice')
+```
+
+The schema is resolved in this order: `Meta.pg_schema`, then `Meta.backend_table.schema`, then `__table__.schema`. The seed tracking table (default `_dbwarden_seeds`) stays in the schema set by the connection's `search_path` (config-level `pg_schema`).
+
 ### Logic-Based Seeds
 
 Define a `generate(session)` static/class method for programmatic data:

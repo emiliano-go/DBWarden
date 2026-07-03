@@ -134,6 +134,50 @@ class User(Base):
 
 See the [reference](../models.md#postgresql-model-metadata) for the full list of `PGTableMeta` and `PGColumnMeta` attributes, or the [PostgreSQL Deep Dive](../databases/postgresql.md) for DDL behavior and snapshot format.
 
+### PostgreSQL Views and Schemas
+
+DBWarden supports PostgreSQL views and materialized views via `PGViewMeta`. Define a view as a model with `__tablename__` matching the view name:
+
+```python
+from dbwarden.databases.pgsql import PGViewMeta
+
+class ActiveUser(Base):
+    __tablename__ = "active_users"
+
+    id: Mapped[int] = mapped_column(Integer)
+    email: Mapped[str] = mapped_column(String(255))
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT id, email FROM users WHERE active = true"
+        pg_view_materialized = False
+```
+
+For materialized views, set `pg_view_materialized = True` and `pg_view_auto_refresh = True` to emit `REFRESH MATERIALIZED VIEW` automatically:
+
+```python
+class OrderSummary(Base):
+    __tablename__ = "order_summary"
+
+    user_id: Mapped[int] = mapped_column(Integer)
+    total: Mapped[float] = mapped_column(Integer)
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT user_id, count(*) AS total FROM orders GROUP BY user_id"
+        pg_view_materialized = True
+        pg_view_auto_refresh = True
+```
+
+Scope tables or views to a PostgreSQL schema with `pg_schema`:
+
+```python
+class Meta(PGTableMeta):
+    pg_schema = "app"
+
+# DDL uses app.users instead of public.users
+```
+
+At the config level, set `pg_schema` in `database_config(...)` to set the connection `search_path`. See [Schema Support](../databases/postgresql.md#schema-support) for details.
+
 
 ## Using `generate-models` as a Starting Point
 

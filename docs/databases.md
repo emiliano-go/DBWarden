@@ -129,7 +129,19 @@ def get_engine(config):
 
 Connections include retry logic: `get_db_connection()` wraps engine connections with up to 5 attempts and exponential backoff when the database is temporarily unavailable (e.g. during a restart or network hiccup). Engines are cached and reused across calls.
 
-For PostgreSQL schema support, DBWarden sets `search_path` on connection when `postgres_schema` is configured.
+For PostgreSQL schema support, set `pg_schema` in `database_config(...)`. DBWarden sets `search_path` on connection so all unqualified references use that schema:
+
+```python
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://user:pass@localhost:5432/main",
+    pg_schema="app",
+)
+```
+
+At the model level, set `pg_schema` on `PGTableMeta` or `PGViewMeta` to scope a specific table or view to a schema. This takes precedence over the config-level `search_path`. See [PostgreSQL Deep Dive](databases/postgresql.md) for full details.
 
 ## Development Database Strategy
 

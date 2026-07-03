@@ -297,6 +297,54 @@ COMMENT ON TABLE orders IS 'Customer orders';
 COMMENT ON COLUMN orders.id IS 'Order ID';
 ```
 
+For PostgreSQL views, use `PGViewMeta` instead of `PGTableMeta`:
+
+```python
+from dbwarden.databases.pgsql import PGViewMeta
+
+class ActiveUser(Base):
+    __tablename__ = "active_users"
+
+    id: Mapped[int] = mapped_column(Integer)
+    email: Mapped[str] = mapped_column(String(255))
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT id, email FROM users WHERE active = true"
+        pg_view_materialized = False
+```
+
+The generated DDL creates a regular view:
+
+```sql
+CREATE OR REPLACE VIEW active_users AS SELECT id, email FROM users WHERE active = true;
+```
+
+For a materialized view with auto-refresh:
+
+```python
+class OrderSummary(Base):
+    __tablename__ = "order_summary"
+
+    user_id: Mapped[int] = mapped_column(Integer)
+    total: Mapped[float] = mapped_column(Integer)
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT user_id, count(*) AS total FROM orders GROUP BY user_id"
+        pg_view_materialized = True
+        pg_view_auto_refresh = True
+```
+
+The first migration generates `CREATE MATERIALIZED VIEW order_summary AS ...`. Subsequent migrations include `REFRESH MATERIALIZED VIEW order_summary;`.
+
+To scope a table or view to a PostgreSQL schema, set `pg_schema`:
+
+```python
+class Meta(PGTableMeta):
+    pg_schema = "app"
+```
+
+The generated DDL uses the fully qualified name (e.g. `app.users`). Set `pg_schema` at the config level in `database_config(...)` to set the connection `search_path` for all unqualified references.
+
 ## Step 3: Creating a Manual Migration
 
 Sometimes you need a migration that isn't model-driven: a data backfill, a stored procedure, or a complex SQL operation.
