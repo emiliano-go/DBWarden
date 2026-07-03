@@ -1,5 +1,11 @@
 {% extends "base.html" %}
 
+{% block extrahead %}
+<link rel="icon" type="image/svg+xml" href="{{ base_url }}/assets/images/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="{{ base_url }}/assets/images/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="{{ base_url }}/assets/images/favicon-16x16.png">
+{% endblock %}
+
 {% block site_meta %}
 {% if page.meta and page.meta._seo_head %}
 {{ page.meta._seo_head | safe }}
