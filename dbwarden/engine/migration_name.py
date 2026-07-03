@@ -139,6 +139,11 @@ def _pluralize(operation: str) -> str:
         "alter_column_nullable": "alter_column_nullables",
         "alter_column_default": "alter_column_defaults",
         "recreate_ch_table": "recreate_ch_tables",
+        "create_domain": "create_domains",
+        "drop_domain": "drop_domains",
+        "create_sequence": "create_sequences",
+        "drop_sequence": "drop_sequences",
+        "refresh_matview": "refresh_matviews",
     }
     return singular_to_plural.get(operation, operation + "s")
 
@@ -155,7 +160,8 @@ def _truncate(name: str) -> str:
                 "recreate_ch_table", "recreate_ch_tables",
                 "alter_column_type", "alter_column_types",
                "alter_column_nullable", "alter_column_nullables",
-               "alter_column_default", "alter_column_defaults"}
+               "alter_column_default", "alter_column_defaults",
+               "refresh_matview", "refresh_matviews"}
     
     operation = []
     identifiers = []

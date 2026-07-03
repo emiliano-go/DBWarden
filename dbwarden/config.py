@@ -51,6 +51,8 @@ class DatabaseConfig:
     dev_database_type: DatabaseType | None = None
     overlap_models: bool = False
     pg_extensions: list[str] = field(default_factory=list)
+    pg_domains: list[dict] = field(default_factory=list)
+    pg_sequences: list[dict] = field(default_factory=list)
 
     @property
     def sqlalchemy_url(self) -> str:
@@ -555,6 +557,8 @@ def _finalize_entries(
             dev_database_type=entry.dev_database_type,
             overlap_models=entry.overlap_models,
             pg_extensions=entry.pg_extensions or [],
+            pg_domains=entry.pg_domains or [],
+            pg_sequences=entry.pg_sequences or [],
         )
 
     # model_paths overlap validation

@@ -28,6 +28,7 @@ class PgViewSpec:
     query: str | None = None
     materialized: bool = False
     schema: str | None = None
+    auto_refresh: bool = False
 
 
 __all__ = [

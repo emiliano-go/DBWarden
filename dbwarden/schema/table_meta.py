@@ -33,6 +33,9 @@ class PGTableMeta(TableMeta):
     pg_excludes: list[dict[str, Any]] = []
     pg_indexes: list[Any] = []
     pg_partition: dict[str, Any] | None = None
+    pg_rls: bool = False
+    pg_policies: list[dict[str, Any]] = []
+    pg_grants: list[dict[str, Any]] = []
 
 
 class PGColumnMeta(metaclass=_MetaValidator):
@@ -66,6 +69,7 @@ class PGViewMeta(TableMeta):
     """
     pg_view_query: str | None = None
     pg_view_materialized: bool = False
+    pg_view_auto_refresh: bool = False
     pg_schema: str | None = None
 
 

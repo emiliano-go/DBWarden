@@ -62,6 +62,8 @@ def database_config(
     auto_apply_seeds: bool = False,
     seed_table: str | None = None,
     pg_extensions: list[str] | None = None,
+    pg_domains: list[dict] | None = None,
+    pg_sequences: list[dict] | None = None,
     pg_schema: str | None = None,
 ) -> DatabaseHandle:
     from dbwarden.db_handle import DatabaseHandle as _DH
@@ -84,6 +86,8 @@ def database_config(
             auto_apply_seeds=auto_apply_seeds,
             seed_table=seed_table,
             pg_extensions=pg_extensions or [],
+            pg_domains=pg_domains or [],
+            pg_sequences=pg_sequences or [],
             pg_schema=pg_schema,
         )
     )

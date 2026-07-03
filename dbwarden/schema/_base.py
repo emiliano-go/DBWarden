@@ -85,6 +85,8 @@ def attach_meta(cls, incoming: DBWardenMeta) -> None:
         "pg_checks",
         "pg_uniques",
         "pg_excludes",
+        "pg_policies",
+        "pg_grants",
         "ch_indexes",
         "my_indexes",
         "my_checks",

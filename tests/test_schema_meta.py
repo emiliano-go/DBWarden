@@ -13,6 +13,7 @@ from dbwarden.schema import (
     CheckSpec,
     PGColumnMeta,
     PGTableMeta,
+    PGViewMeta,
     TableMeta,
     UniqueSpec,
     apply_meta,
@@ -781,3 +782,24 @@ class TestChEngineFactories:
         spec = aggregating_merge_tree()
         assert spec.name == "AggregatingMergeTree"
         assert spec.args == ()
+
+
+class TestPGViewMeta:
+    def test_defaults(self):
+        meta = PGViewMeta()
+        assert meta.pg_view_query is None
+        assert meta.pg_view_materialized is False
+        assert meta.pg_view_auto_refresh is False
+        assert meta.pg_schema is None
+
+    def test_custom_values(self):
+        class MyMeta(PGViewMeta):
+            pg_view_query = "SELECT id, name FROM users WHERE active = true"
+            pg_view_materialized = True
+            pg_view_auto_refresh = True
+            pg_schema = "app"
+
+        assert MyMeta.pg_view_query == "SELECT id, name FROM users WHERE active = true"
+        assert MyMeta.pg_view_materialized is True
+        assert MyMeta.pg_view_auto_refresh is True
+        assert MyMeta.pg_schema == "app"

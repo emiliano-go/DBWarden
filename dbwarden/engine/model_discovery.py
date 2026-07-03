@@ -379,6 +379,9 @@ class ModelTable:
         schema: str | None = None,
         pg_view_definition: str | None = None,
         pg_view_materialized: bool = False,
+        pg_view_auto_refresh: bool = False,
+        pg_policies: Optional[list[dict[str, Any]]] = None,
+        pg_grants: Optional[list[dict[str, Any]]] = None,
     ):
         self.name = name
         self.columns = columns
@@ -398,6 +401,9 @@ class ModelTable:
         self.schema = schema
         self.pg_view_definition = pg_view_definition
         self.pg_view_materialized = pg_view_materialized
+        self.pg_view_auto_refresh = pg_view_auto_refresh
+        self.pg_policies = pg_policies or []
+        self.pg_grants = pg_grants or []
 
     def to_dict(self) -> dict:
         return {
@@ -416,6 +422,9 @@ class ModelTable:
             "schema": self.schema,
             "pg_view_definition": self.pg_view_definition,
             "pg_view_materialized": self.pg_view_materialized,
+            "pg_view_auto_refresh": self.pg_view_auto_refresh,
+            "pg_policies": self.pg_policies,
+            "pg_grants": self.pg_grants,
         }
 
 
@@ -1140,6 +1149,9 @@ def extract_table_from_model(
         schema = None
         pg_view_definition = None
         pg_view_materialized = False
+        pg_view_auto_refresh = False
+        pg_policies: list[dict[str, Any]] | None = None
+        pg_grants: list[dict[str, Any]] | None = None
 
         if dw_meta:
             checks = list(getattr(dw_meta, "pg_checks", []) or getattr(dw_meta, "checks", []) or getattr(dw_meta, "my_checks", []))
@@ -1182,15 +1194,18 @@ def extract_table_from_model(
                     )
                     indexes.append(idx_info)
             if isinstance(dw_meta.backend_table, dict):
-                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
+                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques", "pg_policies", "pg_grants"}
                 pg_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("pg_") and k not in excluded_pg_keys}
                 my_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques")}
                 schema = pg_table.pop("pg_schema", None)
+                pg_policies = list(dw_meta.backend_table.get("pg_policies", [])) or None
+                pg_grants = list(dw_meta.backend_table.get("pg_grants", [])) or None
             # If using PgViewSpec, read view definition before pg_table extraction
             if type(dw_meta.backend_table).__name__ == "PgViewSpec":
                 object_type = "materialized_view" if dw_meta.backend_table.materialized else "view"
                 pg_view_definition = dw_meta.backend_table.query
                 pg_view_materialized = dw_meta.backend_table.materialized
+                pg_view_auto_refresh = dw_meta.backend_table.auto_refresh
                 if dw_meta.backend_table.schema:
                     schema = dw_meta.backend_table.schema
                 # Views cannot have indexes, FKs, constraints, or excludes
@@ -1200,7 +1215,7 @@ def extract_table_from_model(
                 checks = []
                 excludes = []
             if not pg_table and any(k.startswith("pg_") for k in getattr(dw_meta, "table_attrs", {})):
-                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques", "pg_view_query", "pg_view_materialized", "pg_schema"}
+                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques", "pg_view_query", "pg_view_materialized", "pg_schema", "pg_policies", "pg_grants"}
                 pg_table = {
                     k: v for k, v in dw_meta.table_attrs.items()
                     if k.startswith("pg_") and k not in excluded_pg_keys and v is not None
@@ -1215,6 +1230,11 @@ def extract_table_from_model(
                     k: v for k, v in dw_meta.table_attrs.items()
                     if k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques") and v is not None
                 }
+
+            if pg_policies is None:
+                pg_policies = list(dw_meta.table_attrs.get("pg_policies", [])) or None
+            if pg_grants is None:
+                pg_grants = list(dw_meta.table_attrs.get("pg_grants", [])) or None
 
         if backend == "clickhouse":
             clickhouse_options = _ch_options_from_meta(model_class)
@@ -1238,6 +1258,9 @@ def extract_table_from_model(
             schema=schema,
             pg_view_definition=pg_view_definition,
             pg_view_materialized=pg_view_materialized,
+            pg_view_auto_refresh=pg_view_auto_refresh,
+            pg_policies=pg_policies,
+            pg_grants=pg_grants,
         )
     except DBWardenConfigError:
         raise
@@ -1589,7 +1612,7 @@ def generate_add_column_sql(
         else False
     )
 
-    nullable_sql = "" if column.nullable or is_serial else "NOT NULL"
+    nullable_sql = "" if column.nullable or is_serial or backend == "clickhouse" else "NOT NULL"
     default_sql = f" DEFAULT {column.default}" if column.default else ""
     fk_sql = ""
     if column.foreign_key and backend != "postgresql":
@@ -1650,7 +1673,7 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             else False
         )
 
-        if not col.nullable and not is_serial:
+        if not col.nullable and not is_serial and backend != "clickhouse":
             col_def += " NOT NULL"
         if backend != "clickhouse" and col.primary_key:
             col_def += " PRIMARY KEY"
@@ -1719,7 +1742,91 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             sql += f"\nPARTITION BY {_quote_pg(strategy)} ({quoted_cols})"
     if backend == "postgresql" and table.comment:
         sql += f";\nCOMMENT ON TABLE {qname} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}';"
+    if backend == "postgresql":
+        pg_rls = table.pg_table.get("pg_rls", False)
+        pg_suffix = ""
+        if pg_rls:
+            pg_suffix += f"\nALTER TABLE {qname} ENABLE ROW LEVEL SECURITY;"
+        for policy in table.pg_policies:
+            pg_suffix += f"\n{_build_create_policy_sql(policy, qname)}"
+        for grant_entry in table.pg_grants:
+            pg_suffix += f"\n{_build_grant_sql(grant_entry, qname)}"
+        if pg_suffix:
+            if not sql.endswith(";"):
+                sql += ";"
+            sql += pg_suffix
+    if not sql.endswith(";"):
+        sql += ";"
     return sql
+
+
+def _build_create_policy_sql(policy: dict, qname: str) -> str:
+    parts = [f"CREATE POLICY {_quote_pg(policy['name'])} ON {qname}"]
+    permissive = policy.get("permissive", "PERMISSIVE")
+    if permissive.upper() == "RESTRICTIVE":
+        parts.append("AS RESTRICTIVE")
+    command = policy.get("command", "ALL")
+    parts.append(f"FOR {command}")
+    role = policy.get("role", "PUBLIC")
+    if isinstance(role, str):
+        role = [role]
+    roles = ", ".join(r if r.upper() == "PUBLIC" else _quote_pg(r) for r in role)
+    parts.append(f"TO {roles}")
+    using = policy.get("using")
+    if using:
+        parts.append(f"USING ({using})")
+    with_check = policy.get("with_check")
+    if with_check:
+        parts.append(f"WITH CHECK ({with_check})")
+    return " ".join(parts) + ";"
+
+
+def _build_alter_policy_sql(policy: dict, qname: str) -> str:
+    parts = [f"ALTER POLICY {_quote_pg(policy['name'])} ON {qname}"]
+    role = policy.get("role", "PUBLIC")
+    if isinstance(role, str):
+        role = [role]
+    roles = ", ".join(r if r.upper() == "PUBLIC" else _quote_pg(r) for r in role)
+    parts.append(f"TO {roles}")
+    using = policy.get("using")
+    if using:
+        parts.append(f"USING ({using})")
+    with_check = policy.get("with_check")
+    if with_check:
+        parts.append(f"WITH CHECK ({with_check})")
+    return " ".join(parts) + ";"
+
+
+def _build_drop_policy_sql(policy_name: str, qname: str) -> str:
+    return f"DROP POLICY IF EXISTS {_quote_pg(policy_name)} ON {qname};"
+
+
+def _build_grant_sql(grant_entry: dict, qname: str) -> str:
+    privileges = grant_entry.get("privileges", "ALL")
+    if isinstance(privileges, list):
+        privileges = ", ".join(privileges)
+    role = grant_entry.get("role", "PUBLIC")
+    if isinstance(role, str):
+        role = [role]
+    roles = ", ".join(r if r.upper() == "PUBLIC" else _quote_pg(r) for r in role)
+    sql = f"GRANT {privileges} ON TABLE {qname} TO {roles}"
+    if grant_entry.get("grantable"):
+        sql += " WITH GRANT OPTION"
+    return sql + ";"
+
+
+def _build_revoke_sql(grant_entry: dict, qname: str) -> str:
+    privileges = grant_entry.get("privileges", "ALL")
+    if isinstance(privileges, list):
+        privileges = ", ".join(privileges)
+    role = grant_entry.get("role", "PUBLIC")
+    if isinstance(role, str):
+        role = [role]
+    roles = ", ".join(r if r.upper() == "PUBLIC" else _quote_pg(r) for r in role)
+    sql = f"REVOKE {privileges} ON TABLE {qname} FROM {roles}"
+    if grant_entry.get("grantable"):
+        sql += " CASCADE"
+    return sql + ";"
 
 
 def _generate_clickhouse_materialized_view_sql(

@@ -2772,3 +2772,573 @@ class TestBugFixRegression:
         assert summary["create_tables"] == 1
         assert summary["drop_tables"] == 0
         assert summary["drop_columns"] == 0
+
+
+class TestPGBugRegression:
+    """Regression tests for PostgreSQL bug fixes A, C, D, and autoincrement normalization."""
+
+    def test_unique_index_backing_constraint_filtered(self):
+        """Bug A: unique index backing a unique constraint is not emitted as drop_index."""
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                        "email": {"type": "varchar(255)", "nullable": True, "primary_key": False},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {
+                "ix_users_email": {
+                    "table": "users",
+                    "columns": ["email"],
+                    "unique": True,
+                    "name": "ix_users_email",
+                },
+            },
+            "constraints": {
+                "ix_users_email": {
+                    "type": "unique",
+                    "table": "users",
+                    "columns": ["email"],
+                    "name": "ix_users_email",
+                },
+            },
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[_mc("id", "INTEGER", pk=True), _mc("email", "VARCHAR(255)")],
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        drop_idx = [op for op in upgrade if op["type"] == "drop_index"]
+        assert len(drop_idx) == 0, f"Expected no drop_index ops, got: {drop_idx}"
+
+    def test_view_ignores_index_diff(self):
+        """Bug C: view models do not produce index diff ops."""
+        snapshot = {
+            "tables": {
+                "active_users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {
+                "ix_active_users_id": {
+                    "table": "active_users",
+                    "columns": ["id"],
+                    "unique": False,
+                    "name": "ix_active_users_id",
+                },
+            },
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="active_users",
+                columns=[_mc("id", "INTEGER", pk=True)],
+                object_type="view",
+                pg_view_definition="SELECT id FROM users WHERE active = true",
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        drop_idx = [op for op in upgrade if op["type"] == "drop_index"]
+        add_idx = [op for op in upgrade if op["type"] == "add_index"]
+        assert len(drop_idx) == 0, f"Expected no drop_index for views, got: {drop_idx}"
+        assert len(add_idx) == 0, f"Expected no add_index for views, got: {add_idx}"
+
+    def test_view_ignores_constraint_diff(self):
+        """Bug C: view models do not produce unique constraint diff ops."""
+        snapshot = {
+            "tables": {
+                "active_users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {
+                "uq_active_users_id": {
+                    "type": "unique",
+                    "table": "active_users",
+                    "columns": ["id"],
+                    "name": "uq_active_users_id",
+                },
+            },
+        }
+        model_tables = [
+            ModelTable(
+                name="active_users",
+                columns=[_mc("id", "INTEGER", pk=True)],
+                object_type="view",
+                pg_view_definition="SELECT id FROM users WHERE active = true",
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        drop_uq = [op for op in upgrade if op["type"] == "drop_unique_constraint"]
+        add_uq = [op for op in upgrade if op["type"] == "add_unique_constraint"]
+        assert len(drop_uq) == 0, f"Expected no drop_unique_constraint for views, got: {drop_uq}"
+        assert len(add_uq) == 0, f"Expected no add_unique_constraint for views, got: {add_uq}"
+
+    def test_autoincrement_default_normalization(self, monkeypatch):
+        """SERIAL column autoincrement: nextval default in snapshot is suppressed when model has autoincrement=True."""
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {
+                            "type": "integer",
+                            "nullable": False,
+                            "primary_key": True,
+                            "default": "nextval('users_id_seq'::regclass)",
+                            "autoincrement": True,
+                        },
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[_mc("id", "INTEGER", pk=True)],
+            )
+        ]
+        model_tables[0].columns[0].autoincrement = True
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot, db_name="primary")
+        alter_default = [op for op in upgrade if op["type"] == "alter_column_default"]
+        assert len(alter_default) == 0, (
+            f"Expected no alter_column_default for autoincrement SERIAL column, got: {alter_default}"
+        )
+
+    def test_matview_auto_refresh_emits_refresh_op(self, monkeypatch):
+        """pg_view_auto_refresh=True on a materialized view emits refresh_matview op."""
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        snapshot = {
+            "tables": {
+                "user_summary": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                        "cnt": {"type": "bigint", "nullable": True, "primary_key": False},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="user_summary",
+                columns=[
+                    _mc("id", "INTEGER", pk=True, nullable=False),
+                    _mc("cnt", "BIGINT"),
+                ],
+                object_type="materialized_view",
+                pg_view_definition="SELECT id, COUNT(*) FROM users GROUP BY id",
+                pg_view_materialized=True,
+                pg_view_auto_refresh=True,
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        refresh_ops = [op for op in upgrade if op["type"] == "refresh_matview"]
+        assert len(refresh_ops) == 1
+        assert refresh_ops[0]["table"] == "user_summary"
+
+    def test_view_auto_refresh_no_op_for_regular_views(self, monkeypatch):
+        """pg_view_auto_refresh=True on a non-materialized view does NOT emit refresh_matview."""
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        snapshot = {
+            "tables": {
+                "active_users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="active_users",
+                columns=[_mc("id", "INTEGER", pk=True, nullable=False)],
+                object_type="view",
+                pg_view_definition="SELECT id FROM users WHERE active = true",
+                pg_view_materialized=False,
+                pg_view_auto_refresh=True,
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        refresh_ops = [op for op in upgrade if op["type"] == "refresh_matview"]
+        assert len(refresh_ops) == 0
+
+    def test_matview_no_auto_refresh_no_op(self, monkeypatch):
+        """Materialized view with pg_view_auto_refresh=False does NOT emit refresh_matview."""
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        snapshot = {
+            "tables": {
+                "user_summary": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                        "cnt": {"type": "bigint", "nullable": True, "primary_key": False},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="user_summary",
+                columns=[
+                    _mc("id", "INTEGER", pk=True, nullable=False),
+                    _mc("cnt", "BIGINT"),
+                ],
+                object_type="materialized_view",
+                pg_view_definition="SELECT id, COUNT(*) FROM users GROUP BY id",
+                pg_view_materialized=True,
+                pg_view_auto_refresh=False,
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        refresh_ops = [op for op in upgrade if op["type"] == "refresh_matview"]
+        assert len(refresh_ops) == 0
+
+
+class TestPGSnapshotDiffToSql:
+    def test_schema_creation_detected(self):
+        """CREATE SCHEMA IF NOT EXISTS is emitted when ops carry a schema key."""
+        ops = [
+            {
+                "type": "alter_view",
+                "table": "active_users",
+                "schema": "app",
+                "pg_view_definition": "SELECT id FROM users",
+                "pg_view_materialized": False,
+                "snap_pg_view_definition": "SELECT id, name FROM users",
+                "snap_pg_view_materialized": False,
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "alter_view",
+                "table": "active_users",
+                "schema": "app",
+                "pg_view_definition": "SELECT id, name FROM users",
+                "pg_view_materialized": False,
+                "snap_pg_view_definition": "SELECT id FROM users",
+                "snap_pg_view_materialized": False,
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert 'CREATE SCHEMA IF NOT EXISTS "app";' in sql
+        assert 'DROP SCHEMA IF EXISTS "app";' in rb_sql
+
+    def test_matview_upgrade_and_rollback_both_materialized(self):
+        """Bug D: matview->matview emits CREATE MATERIALIZED VIEW in both upgrade and rollback."""
+        ops = [
+            {
+                "type": "alter_view",
+                "table": "user_summary",
+                "schema": "public",
+                "pg_view_definition": "SELECT id, COUNT(*) FROM users GROUP BY id",
+                "pg_view_materialized": True,
+                "snap_pg_view_definition": "SELECT id, COUNT(*) FROM old_users GROUP BY id",
+                "snap_pg_view_materialized": True,
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "alter_view",
+                "table": "user_summary",
+                "schema": "public",
+                "pg_view_definition": "SELECT id, COUNT(*) FROM old_users GROUP BY id",
+                "pg_view_materialized": True,
+                "snap_pg_view_definition": "SELECT id, COUNT(*) FROM users GROUP BY id",
+                "snap_pg_view_materialized": True,
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "DROP MATERIALIZED VIEW IF EXISTS" in sql
+        assert "CREATE MATERIALIZED VIEW" in sql
+        assert "DROP MATERIALIZED VIEW IF EXISTS" in rb_sql
+        assert "CREATE MATERIALIZED VIEW" in rb_sql
+
+    def test_matview_to_view_rollback_uses_matview(self):
+        """Bug D: when snapshot had matview but model has view, rollback_sql uses DROP+CREATE MATERIALIZED VIEW."""
+        ops = [
+            {
+                "type": "alter_view",
+                "table": "user_summary",
+                "pg_view_definition": "SELECT id FROM users",
+                "pg_view_materialized": False,
+                "snap_pg_view_definition": "SELECT id, COUNT(*) FROM users GROUP BY id",
+                "snap_pg_view_materialized": True,
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "alter_view",
+                "table": "user_summary",
+                "pg_view_definition": "SELECT id, COUNT(*) FROM users GROUP BY id",
+                "pg_view_materialized": True,
+                "snap_pg_view_definition": "SELECT id FROM users",
+                "snap_pg_view_materialized": False,
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        # upgrade: current=matview, new=view → DROP MATERIALIZED, CREATE VIEW
+        assert "DROP MATERIALIZED VIEW IF EXISTS" in sql
+        assert "CREATE VIEW" in sql
+        # rollback_sql is derived from upgrade op's snap_mat=True → DROP MATERIALIZED + CREATE MATERIALIZED
+        assert "DROP MATERIALIZED VIEW IF EXISTS" in rb_sql
+        assert "CREATE MATERIALIZED VIEW" in rb_sql
+
+    def test_alter_view_ordering_last(self):
+        """ALTER_VIEW ops are emitted at position 99, after all other DDL."""
+        ops = [
+            {"type": "rename_column", "table": "users", "old_name": "name", "new_name": "full_name"},
+            {
+                "type": "alter_view",
+                "table": "active_users",
+                "pg_view_definition": "SELECT id, email FROM users",
+                "pg_view_materialized": False,
+                "snap_pg_view_definition": "SELECT id FROM users",
+                "snap_pg_view_materialized": False,
+            },
+        ]
+        rollback_ops = [
+            {"type": "rename_column", "table": "users", "old_name": "full_name", "new_name": "name"},
+            {
+                "type": "alter_view",
+                "table": "active_users",
+                "pg_view_definition": "SELECT id FROM users",
+                "pg_view_materialized": False,
+                "snap_pg_view_definition": "SELECT id, email FROM users",
+                "snap_pg_view_materialized": False,
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        parts = [p.strip() for p in sql.split("\n\n") if p.strip()]
+        alter_idx = next(i for i, p in enumerate(parts) if "CREATE VIEW" in p or "DROP VIEW" in p)
+        rename_idx = next(i for i, p in enumerate(parts) if "RENAME COLUMN" in p)
+        assert alter_idx > rename_idx, "ALTER_VIEW must be ordered after RENAME COLUMN"
+
+    def test_refresh_matview_emitted_for_auto_refresh_matview(self):
+        """REFRESH MATERIALIZED VIEW is emitted for matviews with pg_view_auto_refresh=True."""
+        ops = [
+            {
+                "type": "refresh_matview",
+                "table": "user_summary",
+                "schema": "public",
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "refresh_matview",
+                "table": "user_summary",
+                "schema": "public",
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "REFRESH MATERIALIZED VIEW" in sql
+        assert "user_summary" in sql
+        assert "REFRESH MATERIALIZED VIEW" in rb_sql
+
+    def test_refresh_matview_schema_qualified(self):
+        """REFRESH MATERIALIZED VIEW uses schema-qualified name when schema is set."""
+        ops = [
+            {
+                "type": "refresh_matview",
+                "table": "user_summary",
+                "schema": "app",
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, [], db_name=None)
+        assert '"app".user_summary' in sql or "app.user_summary" in sql
+
+    def test_refresh_matview_change_operation(self):
+        """refresh_matview produces a Change with operation='refresh_matview'."""
+        ops = [
+            {
+                "type": "refresh_matview",
+                "table": "user_summary",
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, [], db_name=None)
+        assert len(changes) == 1
+        assert changes[0].operation == "refresh_matview"
+        assert changes[0].table == "user_summary"
+
+
+class TestPGDomainSequenceOps:
+    def test_create_domain_op(self):
+        ops = [
+            {
+                "type": "create_domain",
+                "name": "positive_int",
+                "schema": "app",
+                "domain_type": "integer",
+                "not_null": True,
+                "check": "VALUE > 0",
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "drop_domain",
+                "name": "positive_int",
+                "schema": "app",
+                "domain_type": "integer",
+                "not_null": True,
+                "check": "VALUE > 0",
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "CREATE DOMAIN app.positive_int AS integer NOT NULL CHECK (VALUE > 0);" in sql
+        assert "DROP DOMAIN IF EXISTS app.positive_int;" in rb_sql
+        assert any(c.operation == "create_domain" for c in changes)
+
+    def test_drop_domain_op(self):
+        ops = [
+            {
+                "type": "drop_domain",
+                "name": "positive_int",
+                "schema": "app",
+                "domain_type": "integer",
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "create_domain",
+                "name": "positive_int",
+                "schema": "app",
+                "domain_type": "integer",
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "DROP DOMAIN IF EXISTS app.positive_int;" in sql
+        assert "CREATE DOMAIN app.positive_int AS integer;" in rb_sql
+        assert any(c.operation == "drop_domain" for c in changes)
+
+    def test_create_domain_op_with_default(self):
+        ops = [
+            {
+                "type": "create_domain",
+                "name": "my_email",
+                "schema": None,
+                "domain_type": "citext",
+                "default": "'nobody@example.com'",
+                "check": "VALUE ~* '^.+@.+$'",
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "drop_domain",
+                "name": "my_email",
+                "domain_type": "citext",
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "CREATE DOMAIN my_email AS citext DEFAULT 'nobody@example.com'" in sql
+        assert "CHECK (VALUE ~* '^.+@.+$')" in sql
+
+    def test_create_sequence_op(self):
+        ops = [
+            {
+                "type": "create_sequence",
+                "name": "order_number_seq",
+                "schema": "app",
+                "start": 1000,
+                "increment": 1,
+                "minvalue": 1,
+                "maxvalue": 999999,
+                "cycle": True,
+                "owned_by": "app.orders.id",
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "drop_sequence",
+                "name": "order_number_seq",
+                "schema": "app",
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "CREATE SEQUENCE IF NOT EXISTS app.order_number_seq" in sql
+        assert "INCREMENT BY 1" in sql
+        assert "START WITH 1000" in sql
+        assert "MINVALUE 1" in sql
+        assert "MAXVALUE 999999" in sql
+        assert "CYCLE" in sql
+        assert "OWNED BY app.orders.id" in sql
+        assert "DROP SEQUENCE IF EXISTS app.order_number_seq;" in rb_sql
+        assert any(c.operation == "create_sequence" for c in changes)
+
+    def test_drop_sequence_op(self):
+        ops = [
+            {
+                "type": "drop_sequence",
+                "name": "order_number_seq",
+                "schema": None,
+                "start": 1,
+                "increment": 1,
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "create_sequence",
+                "name": "order_number_seq",
+                "start": 1,
+                "increment": 1,
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "DROP SEQUENCE IF EXISTS order_number_seq;" in sql
+        assert "CREATE SEQUENCE IF NOT EXISTS order_number_seq" in rb_sql
+        assert "INCREMENT BY 1" in rb_sql
+        assert any(c.operation == "drop_sequence" for c in changes)
+
+    def test_create_sequence_op_minimal(self):
+        ops = [
+            {
+                "type": "create_sequence",
+                "name": "simple_seq",
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "drop_sequence",
+                "name": "simple_seq",
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "CREATE SEQUENCE IF NOT EXISTS simple_seq" in sql
+        assert "NO CYCLE" in sql
+        assert "DROP SEQUENCE IF EXISTS simple_seq;" in rb_sql

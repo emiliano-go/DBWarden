@@ -38,6 +38,9 @@ class StatementOrder(IntEnum):
     ALTER_TABLE_OPTIONS = 17
     ALTER_TABLE_CONSTRAINT = 18
     ALTER_COLUMN_AUTOINCREMENT = 19
+    ALTER_PG_RLS = 20
+    ALTER_PG_POLICY = 21
+    ALTER_PG_GRANT = 22
     ALTER_VIEW = 99
 
 
@@ -262,6 +265,17 @@ def _build_alter_nullable_sql(
     elif backend == "sqlite":
         upgrade = f"-- SQLite: ALTER TABLE {table} ALTER COLUMN {column} {'DROP' if nullable else 'SET'} NOT NULL (not supported)"
         rollback = f"-- SQLite: ALTER TABLE {table} ALTER COLUMN {column} {'SET' if nullable else 'DROP'} NOT NULL (not supported)"
+    elif backend == "clickhouse":
+        stripped = col_type
+        if col_type and col_type.startswith("Nullable(") and col_type.endswith(")"):
+            stripped = col_type[len("Nullable("):-1]
+        if stripped:
+            mod_type = f"Nullable({stripped})" if nullable else stripped
+            rev_type = stripped if nullable else f"Nullable({stripped})"
+            upgrade = f"ALTER TABLE {table} MODIFY COLUMN {column} {mod_type}"
+            rollback = f"ALTER TABLE {table} MODIFY COLUMN {column} {rev_type}"
+        else:
+            upgrade = rollback = f"-- ClickHouse: cannot alter nullability for {table}.{column} (no type info)"
     else:
         if nullable:
             upgrade = f"ALTER TABLE {table} ALTER COLUMN {column} DROP NOT NULL"
@@ -857,6 +871,52 @@ def extract_full_schema_snapshot(
                                     pg_col["compression"] = r[2]
                                 if pg_col:
                                     columns_dict[cname]["pg_column"] = pg_col
+                except Exception:
+                    pass
+
+                try:
+                    row = _conn.execute(
+                        text("SELECT relrowsecurity FROM pg_class WHERE oid = CAST(:t AS regclass)"),
+                        {"t": _regclass_name},
+                    ).fetchone()
+                    if row and row[0]:
+                        pg_table["pg_rls"] = True
+                except Exception:
+                    pass
+
+                try:
+                    policy_rows = _conn.execute(
+                        text(
+                            "SELECT pol.polname, pol.polpermissive, pol.polcmd, "
+                            "COALESCE(array_remove(array_agg(r.rolname ORDER BY r.rolname), NULL), '{}') AS roles, "
+                            "pg_get_expr(pol.polqual, pol.polrelid) AS using_expr, "
+                            "pg_get_expr(pol.polwithcheck, pol.polrelid) AS with_check_expr "
+                            "FROM pg_policy pol "
+                            "LEFT JOIN pg_roles r ON r.oid = ANY(pol.polroles) "
+                            "WHERE pol.polrelid = CAST(:t AS regclass) "
+                            "GROUP BY pol.polname, pol.polpermissive, pol.polcmd, "
+                            "pg_get_expr(pol.polqual, pol.polrelid), "
+                            "pg_get_expr(pol.polwithcheck, pol.polrelid), "
+                            "pol.polrelid "
+                            "ORDER BY pol.polname"
+                        ),
+                        {"t": _regclass_name},
+                    ).fetchall()
+                    if policy_rows:
+                        _pg_cmd_map = {'r': 'SELECT', 'a': 'INSERT', 'w': 'UPDATE', 'd': 'DELETE', '*': 'ALL'}
+                        policies = []
+                        for r in policy_rows:
+                            roles = list(r[3]) if r[3] else ["PUBLIC"]
+                            policy_entry = {
+                                "name": r[0],
+                                "permissive": "PERMISSIVE" if r[1] else "RESTRICTIVE",
+                                "command": _pg_cmd_map.get(r[2], r[2] or "ALL"),
+                                "role": roles[0] if len(roles) == 1 else roles,
+                                "using": r[4],
+                                "with_check": r[5],
+                            }
+                            policies.append(policy_entry)
+                        pg_table["pg_policies"] = policies
                 except Exception:
                     pass
 
@@ -2325,6 +2385,22 @@ def diff_models_against_snapshot(
                     "snap_pg_view_materialized": table.pg_view_materialized,
                     "schema": table.schema,
                 })
+
+            # --- Matview auto-refresh ---
+            if table.object_type == "materialized_view" and table.pg_view_auto_refresh:
+                upgrade_ops.append({
+                    "type": "refresh_matview",
+                    "table": table.name,
+                    "schema": table.schema,
+                    "pg_view_auto_refresh": table.pg_view_auto_refresh,
+                })
+                rollback_ops.append({
+                    "type": "refresh_matview",
+                    "table": table.name,
+                    "schema": table.schema,
+                    "pg_view_auto_refresh": table.pg_view_auto_refresh,
+                })
+
             continue  # skip column-level ALTER ops for views
 
         dropped_cols = []
@@ -2665,7 +2741,7 @@ def diff_models_against_snapshot(
         # --- Table-level PG metadata diff (pg_table) ---
         snap_pg_table = snapshot_tables[table.name].get("pg_table", {}) or {}
         model_pg_table = table.pg_table or {}
-        scalar_keys = {k for k in set(snap_pg_table.keys()) | set(model_pg_table.keys()) if k != "pg_excludes"}
+        scalar_keys = {k for k in set(snap_pg_table.keys()) | set(model_pg_table.keys()) if k not in ("pg_excludes", "pg_rls", "pg_policies")}
         for key in sorted(scalar_keys):
             if snap_pg_table.get(key) != model_pg_table.get(key):
                 upgrade_ops.append({
@@ -2716,6 +2792,96 @@ def diff_models_against_snapshot(
                     "name": name,
                     "expression": ex.get("expression", ""),
                 })
+
+        # --- RLS diff ---
+        snap_rls = snap_pg_table.get("pg_rls", False)
+        model_rls = model_pg_table.get("pg_rls", False)
+        if snap_rls != model_rls:
+            upgrade_ops.append({
+                "type": "alter_pg_rls",
+                "table": table.name,
+                "enable": model_rls,
+            })
+            rollback_ops.append({
+                "type": "alter_pg_rls",
+                "table": table.name,
+                "enable": snap_rls,
+            })
+
+        # --- Policy diff ---
+        snap_pol_list = snap_pg_table.get("pg_policies", []) or []
+        model_pol_list = table.pg_policies or []
+        snap_policies = {p["name"]: p for p in snap_pol_list}
+        model_policies = {p["name"]: p for p in model_pol_list}
+        all_policy_names = set(snap_policies) | set(model_policies)
+        for name in sorted(all_policy_names):
+            snap_pol = snap_policies.get(name)
+            model_pol = model_policies.get(name)
+            if snap_pol and not model_pol:
+                # Policy removed from model — drop it
+                upgrade_ops.append({
+                    "type": "drop_policy",
+                    "table": table.name,
+                    "name": name,
+                })
+                rollback_ops.append({
+                    "type": "add_policy",
+                    "table": table.name,
+                    **snap_pol,
+                })
+            elif model_pol and not snap_pol:
+                # Policy added to model — create it
+                upgrade_ops.append({
+                    "type": "add_policy",
+                    "table": table.name,
+                    **model_pol,
+                })
+                rollback_ops.append({
+                    "type": "drop_policy",
+                    "table": table.name,
+                    "name": name,
+                })
+            elif model_pol and snap_pol:
+                # Policy exists in both — compare
+                if model_pol != snap_pol:
+                    cmd_changed = model_pol.get("command") != snap_pol.get("command")
+                    permissive_changed = model_pol.get("permissive") != snap_pol.get("permissive")
+                    if cmd_changed or permissive_changed:
+                        # ALTER POLICY cannot change command or permissive — must DROP+CREATE
+                        upgrade_ops.append({
+                            "type": "add_policy",
+                            "table": table.name,
+                            **model_pol,
+                        })
+                        upgrade_ops.append({
+                            "type": "drop_policy",
+                            "table": table.name,
+                            "name": name,
+                        })
+                        rollback_ops.append({
+                            "type": "add_policy",
+                            "table": table.name,
+                            **snap_pol,
+                        })
+                        rollback_ops.append({
+                            "type": "drop_policy",
+                            "table": table.name,
+                            "name": name,
+                        })
+                    else:
+                        # ALTER POLICY can change USING, WITH CHECK, TO role in place
+                        upgrade_ops.append({
+                            "type": "alter_policy",
+                            "table": table.name,
+                            "name": name,
+                            **model_pol,
+                        })
+                        rollback_ops.append({
+                            "type": "alter_policy",
+                            "table": table.name,
+                            "name": name,
+                            **snap_pol,
+                        })
 
     # --- FK diff ---
     def _fk_sig(fk: dict) -> tuple:
@@ -3036,6 +3202,9 @@ def snapshot_diff_to_sql(
         generate_drop_object_sql,
         _format_clickhouse_expression,
         _qualified_name,
+        _quote_pg,
+        _build_create_policy_sql,
+        _build_alter_policy_sql,
     )
     from dbwarden.engine.offline import reconstruct_model_table
 
@@ -3093,6 +3262,100 @@ def snapshot_diff_to_sql(
             )
             statements.append(stmt)
             changes.append(Change(operation="drop_schema", table=s))
+        elif op["type"] == "create_domain":
+            domain_name = op["name"]
+            domain_schema = op.get("schema")
+            qname = _qualified_name(domain_name, domain_schema)
+            domain_type = op.get("domain_type", "text")
+            parts = [f"CREATE DOMAIN {qname} AS {domain_type}"]
+            if op.get("default"):
+                parts.append(f"DEFAULT {op['default']}")
+            if op.get("not_null"):
+                parts.append("NOT NULL")
+            if op.get("check"):
+                parts.append(f"CHECK ({op['check']})")
+            upgrade_sql = " ".join(parts) + ";"
+            rollback_sql = f"DROP DOMAIN IF EXISTS {qname};"
+            stmt = MigrationStatement(
+                order=StatementOrder.CREATE_DOMAIN,
+                upgrade_sql=upgrade_sql,
+                rollback_sql=rollback_sql,
+            )
+            statements.append(stmt)
+            changes.append(Change(operation="create_domain", table=domain_name))
+        elif op["type"] == "drop_domain":
+            domain_name = op["name"]
+            domain_schema = op.get("schema")
+            qname = _qualified_name(domain_name, domain_schema)
+            domain_type = op.get("domain_type", "text")
+            parts = [f"CREATE DOMAIN {qname} AS {domain_type}"]
+            if op.get("default"):
+                parts.append(f"DEFAULT {op['default']}")
+            if op.get("not_null"):
+                parts.append("NOT NULL")
+            if op.get("check"):
+                parts.append(f"CHECK ({op['check']})")
+            stmt = MigrationStatement(
+                order=StatementOrder.CREATE_DOMAIN,
+                upgrade_sql=f"DROP DOMAIN IF EXISTS {qname};",
+                rollback_sql=" ".join(parts) + ";",
+            )
+            statements.append(stmt)
+            changes.append(Change(operation="drop_domain", table=domain_name))
+        elif op["type"] == "create_sequence":
+            seq_name = op["name"]
+            seq_schema = op.get("schema")
+            qname = _qualified_name(seq_name, seq_schema)
+            parts = [f"CREATE SEQUENCE IF NOT EXISTS {qname}"]
+            if op.get("increment") is not None:
+                parts.append(f"INCREMENT BY {op['increment']}")
+            if op.get("minvalue") is not None:
+                parts.append(f"MINVALUE {op['minvalue']}")
+            if op.get("maxvalue") is not None:
+                parts.append(f"MAXVALUE {op['maxvalue']}")
+            if op.get("start") is not None:
+                parts.append(f"START WITH {op['start']}")
+            if op.get("cycle"):
+                parts.append("CYCLE")
+            else:
+                parts.append("NO CYCLE")
+            if op.get("owned_by"):
+                parts.append(f"OWNED BY {op['owned_by']}")
+            upgrade_sql = " ".join(parts) + ";"
+            rollback_sql = f"DROP SEQUENCE IF EXISTS {qname};"
+            stmt = MigrationStatement(
+                order=StatementOrder.CREATE_SEQUENCE,
+                upgrade_sql=upgrade_sql,
+                rollback_sql=rollback_sql,
+            )
+            statements.append(stmt)
+            changes.append(Change(operation="create_sequence", table=seq_name))
+        elif op["type"] == "drop_sequence":
+            seq_name = op["name"]
+            seq_schema = op.get("schema")
+            qname = _qualified_name(seq_name, seq_schema)
+            parts = [f"CREATE SEQUENCE IF NOT EXISTS {qname}"]
+            if op.get("increment") is not None:
+                parts.append(f"INCREMENT BY {op['increment']}")
+            if op.get("minvalue") is not None:
+                parts.append(f"MINVALUE {op['minvalue']}")
+            if op.get("maxvalue") is not None:
+                parts.append(f"MAXVALUE {op['maxvalue']}")
+            if op.get("start") is not None:
+                parts.append(f"START WITH {op['start']}")
+            if op.get("cycle"):
+                parts.append("CYCLE")
+            else:
+                parts.append("NO CYCLE")
+            if op.get("owned_by"):
+                parts.append(f"OWNED BY {op['owned_by']}")
+            stmt = MigrationStatement(
+                order=StatementOrder.CREATE_SEQUENCE,
+                upgrade_sql=f"DROP SEQUENCE IF EXISTS {qname};",
+                rollback_sql=" ".join(parts) + ";",
+            )
+            statements.append(stmt)
+            changes.append(Change(operation="drop_sequence", table=seq_name))
         elif op["type"] == "recreate_ch_table":
             for stmt in _build_clickhouse_recreate_table_sql(op, db_name):
                 statements.append(stmt)
@@ -3146,6 +3409,16 @@ def snapshot_diff_to_sql(
                 rollback_sql=rollback_sql,
             ))
             changes.append(Change(operation="alter_view", table=op["table"]))
+        elif op["type"] == "refresh_matview":
+            qname = _qualified_name(op["table"], op.get("schema"))
+            upgrade_sql = f"REFRESH MATERIALIZED VIEW {qname};"
+            rollback_sql = f"-- REFRESH MATERIALIZED VIEW {qname} (no rollback)"
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_VIEW,
+                upgrade_sql=upgrade_sql,
+                rollback_sql=rollback_sql,
+            ))
+            changes.append(Change(operation="refresh_matview", table=op["table"]))
         elif op["type"] == "rename_column":
             statements.append(MigrationStatement(
                 order=StatementOrder.RENAME_COLUMN,
@@ -3525,6 +3798,47 @@ def snapshot_diff_to_sql(
                         upgrade_sql=up, rollback_sql=rb,
                     ))
             changes.append(Change(operation=f"alter_pg_table_{key}", table=op["table"]))
+        elif op["type"] == "alter_pg_rls":
+            qname = _qualified_name(op["table"], op.get("schema"))
+            if op["enable"]:
+                up = f"ALTER TABLE {qname} ENABLE ROW LEVEL SECURITY;"
+                rb = f"ALTER TABLE {qname} DISABLE ROW LEVEL SECURITY;"
+            else:
+                up = f"ALTER TABLE {qname} DISABLE ROW LEVEL SECURITY;"
+                rb = f"ALTER TABLE {qname} ENABLE ROW LEVEL SECURITY;"
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_OPTIONS,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation="alter_pg_rls", table=op["table"]))
+        elif op["type"] == "add_policy":
+            qname = _qualified_name(op["table"], op.get("schema"))
+            up = _build_create_policy_sql(op, qname)
+            rb = f"DROP POLICY IF EXISTS {_quote_pg(op['name'])} ON {qname};"
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_OPTIONS,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation="add_policy", table=op["table"], target=op["name"]))
+        elif op["type"] == "drop_policy":
+            qname = _qualified_name(op["table"], op.get("schema"))
+            up = f"DROP POLICY IF EXISTS {_quote_pg(op['name'])} ON {qname};"
+            # Rollback requires the full policy definition — stored in snapshot
+            rb = f"-- Cannot auto-restore policy {op['name']}; recreate from snapshot"
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_OPTIONS,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation="drop_policy", table=op["table"], target=op["name"]))
+        elif op["type"] == "alter_policy":
+            qname = _qualified_name(op["table"], op.get("schema"))
+            up = _build_alter_policy_sql(op, qname)
+            rb = f"-- Cannot auto-restore altered policy {op['name']}; recreate from snapshot"
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_TABLE_OPTIONS,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation="alter_policy", table=op["table"], target=op["name"]))
         elif op["type"] == "alter_my_table":
             key = op["key"]
             to_val = op.get("to_value")

@@ -383,3 +383,40 @@ class TestAutogenerateMigrationName:
         ]
         result = autogenerate_migration_name(changes)
         assert result.startswith("alter_")
+
+    def test_domain_pluralization(self):
+        from dbwarden.engine.migration_name import _pluralize
+        assert _pluralize("create_domain") == "create_domains"
+        assert _pluralize("drop_domain") == "drop_domains"
+
+    def test_sequence_pluralization(self):
+        from dbwarden.engine.migration_name import _pluralize
+        assert _pluralize("create_sequence") == "create_sequences"
+        assert _pluralize("drop_sequence") == "drop_sequences"
+
+    def test_domain_migration_name(self):
+        changes = [
+            Change(operation="create_domain", table="positive_int"),
+        ]
+        result = autogenerate_migration_name(changes)
+        assert "create" in result.lower()
+        assert "domain" in result.lower()
+
+    def test_sequence_migration_name(self):
+        changes = [
+            Change(operation="create_sequence", table="order_number_seq"),
+        ]
+        result = autogenerate_migration_name(changes)
+        assert "create" in result.lower()
+        assert "sequence" in result.lower()
+
+    def test_refresh_matview_pluralization(self):
+        assert _pluralize("refresh_matview") == "refresh_matviews"
+
+    def test_refresh_matview_migration_name(self):
+        changes = [
+            Change(operation="refresh_matview", table="user_summary"),
+        ]
+        result = autogenerate_migration_name(changes)
+        assert "refresh" in result.lower()
+        assert "matview" in result.lower()

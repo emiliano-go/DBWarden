@@ -17,6 +17,8 @@ _LIST_FIELDS = {
     "pg_checks",
     "pg_uniques",
     "pg_excludes",
+    "pg_policies",
+    "pg_grants",
     "ch_indexes",
     "my_indexes",
     "my_checks",
@@ -34,6 +36,7 @@ _KNOWN_TABLE_ATTRS = frozenset({
     "comment", "indexes", "checks", "uniques", "partition", "primary_key",
     "pg_tablespace", "pg_fillfactor", "pg_unlogged", "pg_inherits",
     "pg_indexes", "pg_checks", "pg_uniques", "pg_excludes", "pg_partition",
+    "pg_rls", "pg_policies", "pg_grants",
     "pg_view_query", "pg_view_materialized", "pg_schema",
     "ch_engine", "ch_order_by", "ch_primary_key", "ch_partition_by",
     "ch_sample_by", "ch_ttl", "ch_settings", "ch_zookeeper_path",
@@ -227,6 +230,7 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
             query=table_attrs.get("pg_view_query"),
             materialized=table_attrs.get("pg_view_materialized", False),
             schema=table_attrs.get("pg_schema") or None,
+            auto_refresh=table_attrs.get("pg_view_auto_refresh", False),
         )
     elif any(k.startswith("pg_") and k not in ("pg_indexes", "pg_checks", "pg_uniques", "pg_excludes", "pg_partition", "pg_view_query", "pg_view_materialized") for k in table_attrs):
         meta.backend_table = PgTableSpec(

@@ -103,6 +103,8 @@ class DatabaseEntry:
     auto_apply_seeds: bool = False
     seed_table: str | None = field(default=None, validator=_validate_seed_table)
     pg_extensions: list[str] = field(factory=list)
+    pg_domains: list[dict] = field(factory=list)
+    pg_sequences: list[dict] = field(factory=list)
     pg_schema: str | None = None
 
 

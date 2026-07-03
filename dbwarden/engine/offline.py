@@ -216,6 +216,9 @@ def reconstruct_model_table(table_entry: dict[str, Any]) -> ModelTable:
         schema=table_entry.get("schema"),
         pg_view_definition=table_entry.get("pg_view_definition"),
         pg_view_materialized=table_entry.get("pg_view_materialized", False),
+        pg_view_auto_refresh=table_entry.get("pg_view_auto_refresh", False),
+        pg_policies=list(table_entry.get("pg_policies", []) or []),
+        pg_grants=list(table_entry.get("pg_grants", []) or []),
     )
 
 
@@ -270,6 +273,11 @@ def _table_to_state_entry(table: ModelTable) -> dict[str, Any]:
     if table.pg_view_definition is not None:
         entry["pg_view_definition"] = table.pg_view_definition
         entry["pg_view_materialized"] = table.pg_view_materialized
+        entry["pg_view_auto_refresh"] = table.pg_view_auto_refresh
+    if table.pg_policies:
+        entry["pg_policies"] = table.pg_policies
+    if table.pg_grants:
+        entry["pg_grants"] = table.pg_grants
     return entry
 
 

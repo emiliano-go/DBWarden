@@ -411,6 +411,11 @@ def _run_offline_migrations(
         upgrade_ops, rollback_ops, database=database, db_name=db_name,
     )
 
+    # Prepend PostgreSQL preamble (extensions, domains, sequences)
+    upgrade_sql, rollback_sql, changes = _prepend_pg_preamble(
+        upgrade_sql, rollback_sql, changes, database,
+    )
+
     if not upgrade_sql.strip():
         console.print("No offline schema changes detected between model state and current models.", style="cyan")
         return
@@ -1010,6 +1015,124 @@ def _merge_pending_migrations_into_snapshot(
                     }
 
 
+def _build_domain_sql(domain: dict) -> str:
+    schema = domain.get("schema")
+    name = domain["name"]
+    qname = _qualified_name(name, schema)
+    domain_type = domain.get("type", "text")
+    parts = [f"CREATE DOMAIN {qname} AS {domain_type}"]
+    if domain.get("default"):
+        parts.append(f"DEFAULT {domain['default']}")
+    if domain.get("not_null"):
+        parts.append("NOT NULL")
+    if domain.get("check"):
+        parts.append(f"CHECK ({domain['check']})")
+    return " ".join(parts) + ";"
+
+
+def _build_sequence_sql(seq: dict) -> str:
+    schema = seq.get("schema")
+    name = seq["name"]
+    qname = _qualified_name(name, schema)
+    parts = [f"CREATE SEQUENCE IF NOT EXISTS {qname}"]
+    if seq.get("increment") is not None:
+        parts.append(f"INCREMENT BY {seq['increment']}")
+    if seq.get("minvalue") is not None:
+        parts.append(f"MINVALUE {seq['minvalue']}")
+    if seq.get("maxvalue") is not None:
+        parts.append(f"MAXVALUE {seq['maxvalue']}")
+    if seq.get("start") is not None:
+        parts.append(f"START WITH {seq['start']}")
+    if seq.get("cycle"):
+        parts.append("CYCLE")
+    else:
+        parts.append("NO CYCLE")
+    if seq.get("owned_by"):
+        parts.append(f"OWNED BY {seq['owned_by']}")
+    return " ".join(parts) + ";"
+
+
+def _drop_domain_sql(domain: dict) -> str:
+    schema = domain.get("schema")
+    name = domain["name"]
+    qname = _qualified_name(name, schema)
+    return f"DROP DOMAIN IF EXISTS {qname};"
+
+
+def _drop_sequence_sql(seq: dict) -> str:
+    schema = seq.get("schema")
+    name = seq["name"]
+    qname = _qualified_name(name, schema)
+    return f"DROP SEQUENCE IF EXISTS {qname};"
+
+
+def _prepend_pg_preamble(
+    upgrade_sql: str,
+    rollback_sql: str,
+    changes: list[Change],
+    database: str | None,
+) -> tuple[str, str, list[Change]]:
+    """Prepend PostgreSQL preamble SQL (extensions, domains, sequences) to upgrade/rollback SQL."""
+    try:
+        mc = get_multi_db_config()
+        db_name = database or mc.default
+        config = get_database(db_name)
+        if config.database_type != "postgresql":
+            return upgrade_sql, rollback_sql, changes
+
+        if config.pg_sequences:
+            seq_upgrade = "\n".join(_build_sequence_sql(s) for s in config.pg_sequences)
+            seq_rollback = "\n".join(_drop_sequence_sql(s) for s in reversed(config.pg_sequences))
+            if upgrade_sql.strip():
+                upgrade_sql = seq_upgrade + "\n\n" + upgrade_sql
+            else:
+                upgrade_sql = seq_upgrade
+            if rollback_sql.strip():
+                rollback_sql = seq_rollback + "\n\n" + rollback_sql
+            else:
+                rollback_sql = seq_rollback
+            for s in config.pg_sequences:
+                changes.insert(0, Change(operation="create_sequence", table=s["name"]))
+
+        if config.pg_domains:
+            dom_upgrade = "\n".join(_build_domain_sql(d) for d in config.pg_domains)
+            dom_rollback = "\n".join(_drop_domain_sql(d) for d in reversed(config.pg_domains))
+            if upgrade_sql.strip():
+                upgrade_sql = dom_upgrade + "\n\n" + upgrade_sql
+            else:
+                upgrade_sql = dom_upgrade
+            if rollback_sql.strip():
+                rollback_sql = dom_rollback + "\n\n" + rollback_sql
+            else:
+                rollback_sql = dom_rollback
+            for d in config.pg_domains:
+                changes.insert(0, Change(operation="create_domain", table=d["name"]))
+
+        if config.pg_extensions:
+            ext_upgrade = "\n".join(
+                f'CREATE EXTENSION IF NOT EXISTS "{ext}";'
+                for ext in config.pg_extensions
+            )
+            ext_rollback = "\n".join(
+                f'DROP EXTENSION IF EXISTS "{ext}";'
+                for ext in reversed(config.pg_extensions)
+            )
+            if upgrade_sql.strip():
+                upgrade_sql = ext_upgrade + "\n\n" + upgrade_sql
+            else:
+                upgrade_sql = ext_upgrade
+            if rollback_sql.strip():
+                rollback_sql = ext_rollback + "\n\n" + rollback_sql
+            else:
+                rollback_sql = ext_rollback
+            for ext in config.pg_extensions:
+                changes.insert(0, Change(operation="create_extension", table=ext))
+    except Exception:
+        pass
+
+    return upgrade_sql, rollback_sql, changes
+
+
 def generate_migration_sql(
     tables: list,
     migrations_dir: str | None = None,
@@ -1292,30 +1415,10 @@ def generate_migration_sql(
                 upgrade_sql, rollback_sql, changes, existing_statements
             )
 
-    # Prepend PostgreSQL extensions to upgrade SQL
-    try:
-        config = get_database(database or "default")
-        if config.database_type == "postgresql" and config.pg_extensions:
-            ext_upgrade = "\n".join(
-                f'CREATE EXTENSION IF NOT EXISTS "{ext}";'
-                for ext in config.pg_extensions
-            )
-            ext_rollback = "\n".join(
-                f'DROP EXTENSION IF EXISTS "{ext}";'
-                for ext in reversed(config.pg_extensions)
-            )
-            if upgrade_sql.strip():
-                upgrade_sql = ext_upgrade + "\n\n" + upgrade_sql
-            else:
-                upgrade_sql = ext_upgrade
-            if rollback_sql.strip():
-                rollback_sql = ext_rollback + "\n\n" + rollback_sql
-            else:
-                rollback_sql = ext_rollback
-            for ext in config.pg_extensions:
-                changes.insert(0, Change(operation="create_extension", table=ext))
-    except Exception:
-        pass
+    # Prepend PostgreSQL preamble SQL (extensions, domains, sequences).
+    upgrade_sql, rollback_sql, changes = _prepend_pg_preamble(
+        upgrade_sql, rollback_sql, changes, database,
+    )
 
     return upgrade_sql, rollback_sql, changes
 
