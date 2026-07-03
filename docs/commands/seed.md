@@ -1,44 +1,69 @@
 ---
 seo:
   title: seed - DBWarden Documentation
-  description: Manage seed data for a database.
-  canonical: https://dbwarden.emiliano-go.com/commands/seed/
+  canonical: https://dbwarden.emiliano-go.com/commands/seed
   robots: index,follow
   og:
     type: website
     title: seed - DBWarden Documentation
     description: Manage seed data for a database.
-    url: https://dbwarden.emiliano-go.com/commands/seed/
+    url: https://dbwarden.emiliano-go.com/commands/seed
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: seed - DBWarden Documentation
     description: Manage seed data for a database.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Manage seed data for a database.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: seed - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/commands/seed/
+    url: https://dbwarden.emiliano-go.com/commands/seed
     description: Manage seed data for a database.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Commands
-      item: https://emiliano-go.github.io/DBWarden/commands/
+      item: https://dbwarden.emiliano-go.com/commands
     - '@type': ListItem
       position: 2
       name: seed
-      item: https://emiliano-go.github.io/DBWarden/commands/seed/
-    - '@type': ListItem
-      position: 3
-      name: seed
+      item: https://dbwarden.emiliano-go.com/commands/seed
+seo_html: "<title>seed - DBWarden Documentation</title>\n<meta name=\"description\"\
+  \ content=\"Manage seed data for a database.\">\n<link rel=\"canonical\" href=\"\
+  https://dbwarden.emiliano-go.com/commands/seed\">\n<meta name=\"robots\" content=\"\
+  index,follow\">\n<meta property=\"og:type\" content=\"website\">\n<meta property=\"\
+  og:title\" content=\"seed - DBWarden Documentation\">\n<meta property=\"og:description\"\
+  \ content=\"Manage seed data for a database.\">\n<meta property=\"og:url\" content=\"\
+  https://dbwarden.emiliano-go.com/commands/seed\">\n<meta property=\"og:image\" content=\"\
+  https://dbwarden.emiliano-go.com/assets/icon.png\">\n<meta property=\"og:image:width\"\
+  \ content=\"128\">\n<meta property=\"og:image:height\" content=\"128\">\n<meta property=\"\
+  og:site_name\" content=\"DBWarden Documentation\">\n<meta name=\"twitter:card\"\
+  \ content=\"summary_large_image\">\n<meta name=\"twitter:title\" content=\"seed\
+  \ - DBWarden Documentation\">\n<meta name=\"twitter:description\" content=\"Manage\
+  \ seed data for a database.\">\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"seed - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/commands/seed\",\n    \"description\"\
+  : \"Manage seed data for a database.\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Commands\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/commands\"\n      },\n \
+  \     {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"\
+  name\": \"seed\",\n        \"item\": \"https://dbwarden.emiliano-go.com/commands/seed\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # `seed`

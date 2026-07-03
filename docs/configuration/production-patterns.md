@@ -1,44 +1,72 @@
 ---
 seo:
   title: Production Patterns - DBWarden Documentation
-  description: Real-world configuration patterns for production deployments.
-  canonical: https://dbwarden.emiliano-go.com/configuration/production-patterns/
+  canonical: https://dbwarden.emiliano-go.com/configuration/production-patterns
   robots: index,follow
   og:
     type: website
     title: Production Patterns - DBWarden Documentation
     description: Real-world configuration patterns for production deployments.
-    url: https://dbwarden.emiliano-go.com/configuration/production-patterns/
+    url: https://dbwarden.emiliano-go.com/configuration/production-patterns
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Production Patterns - DBWarden Documentation
     description: Real-world configuration patterns for production deployments.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Real-world configuration patterns for production deployments.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Production Patterns - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/configuration/production-patterns/
+    url: https://dbwarden.emiliano-go.com/configuration/production-patterns
     description: Real-world configuration patterns for production deployments.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Configuration
-      item: https://emiliano-go.github.io/DBWarden/configuration/
+      item: https://dbwarden.emiliano-go.com/configuration
     - '@type': ListItem
       position: 2
       name: Production Patterns
-      item: https://emiliano-go.github.io/DBWarden/configuration/production-patterns/
-    - '@type': ListItem
-      position: 3
-      name: Production Patterns
+      item: https://dbwarden.emiliano-go.com/configuration/production-patterns
+seo_html: "<title>Production Patterns - DBWarden Documentation</title>\n<meta name=\"\
+  description\" content=\"Real-world configuration patterns for production deployments.\"\
+  >\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/configuration/production-patterns\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Production Patterns - DBWarden\
+  \ Documentation\">\n<meta property=\"og:description\" content=\"Real-world configuration\
+  \ patterns for production deployments.\">\n<meta property=\"og:url\" content=\"\
+  https://dbwarden.emiliano-go.com/configuration/production-patterns\">\n<meta property=\"\
+  og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n<meta\
+  \ property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Production Patterns - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"Real-world configuration patterns for production deployments.\">\n<meta\
+  \ name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Production Patterns - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/configuration/production-patterns\"\
+  ,\n    \"description\": \"Real-world configuration patterns for production deployments.\"\
+  ,\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\",\n    \"\
+  publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"Emiliano Gandini\
+  \ Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\",\n    \"\
+  @type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n        \"@type\"\
+  : \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Configuration\",\n\
+  \        \"item\": \"https://dbwarden.emiliano-go.com/configuration\"\n      },\n\
+  \      {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"\
+  name\": \"Production Patterns\",\n        \"item\": \"https://dbwarden.emiliano-go.com/configuration/production-patterns\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # Production Patterns

@@ -1,40 +1,62 @@
 ---
 seo:
   title: Codebase Organization - DBWarden Documentation
-  description: Top-Level Layout
-  canonical: https://dbwarden.emiliano-go.com/codebase/
+  canonical: https://dbwarden.emiliano-go.com/codebase
   robots: index,follow
   og:
     type: website
     title: Codebase Organization - DBWarden Documentation
     description: Top-Level Layout
-    url: https://dbwarden.emiliano-go.com/codebase/
+    url: https://dbwarden.emiliano-go.com/codebase
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Codebase Organization - DBWarden Documentation
     description: Top-Level Layout
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Top-Level Layout
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Codebase Organization - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/codebase/
+    url: https://dbwarden.emiliano-go.com/codebase
     description: Top-Level Layout
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Codebase Organization
-      item: https://emiliano-go.github.io/DBWarden/codebase/
-    - '@type': ListItem
-      position: 2
-      name: Codebase Organization
+      item: https://dbwarden.emiliano-go.com/codebase
+seo_html: "<title>Codebase Organization - DBWarden Documentation</title>\n<meta name=\"\
+  description\" content=\"Top-Level Layout\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/codebase\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Codebase Organization - DBWarden\
+  \ Documentation\">\n<meta property=\"og:description\" content=\"Top-Level Layout\"\
+  >\n<meta property=\"og:url\" content=\"https://dbwarden.emiliano-go.com/codebase\"\
+  >\n<meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Codebase Organization - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"Top-Level Layout\">\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Codebase Organization - DBWarden\
+  \ Documentation\",\n    \"url\": \"https://dbwarden.emiliano-go.com/codebase\",\n\
+  \    \"description\": \"Top-Level Layout\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Codebase\
+  \ Organization\",\n        \"item\": \"https://dbwarden.emiliano-go.com/codebase\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # Codebase Organization

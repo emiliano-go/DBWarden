@@ -1,10 +1,7 @@
 ---
 seo:
   title: MySQL & MariaDB - DBWarden Documentation
-  description: 'DBWarden treats MySQL and its fork MariaDB as first-class backends:
-    every natively supported feature is reverse-engineered, diffed, and emitted as
-    correct DDL.'
-  canonical: https://dbwarden.emiliano-go.com/databases/mysql/
+  canonical: https://dbwarden.emiliano-go.com/databases/mysql
   robots: index,follow
   og:
     type: website
@@ -12,8 +9,10 @@ seo:
     description: 'DBWarden treats MySQL and its fork MariaDB as first-class backends:
       every natively supported feature is reverse-engineered, diffed, and emitted
       as correct DDL.'
-    url: https://dbwarden.emiliano-go.com/databases/mysql/
+    url: https://dbwarden.emiliano-go.com/databases/mysql
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -22,11 +21,14 @@ seo:
       every natively supported feature is reverse-engineered, diffed, and emitted
       as correct DDL.'
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: 'DBWarden treats MySQL and its fork MariaDB as first-class backends:
+    every natively supported feature is reverse-engineered, diffed, and emitted as
+    correct DDL.'
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: MySQL & MariaDB - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/databases/mysql/
+    url: https://dbwarden.emiliano-go.com/databases/mysql
     description: 'DBWarden treats MySQL and its fork MariaDB as first-class backends:
       every natively supported feature is reverse-engineered, diffed, and emitted
       as correct DDL.'
@@ -34,19 +36,49 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Databases
-      item: https://emiliano-go.github.io/DBWarden/databases/
+      item: https://dbwarden.emiliano-go.com/databases
     - '@type': ListItem
       position: 2
       name: MySQL & MariaDB
-      item: https://emiliano-go.github.io/DBWarden/databases/mysql/
-    - '@type': ListItem
-      position: 3
-      name: MySQL & MariaDB
+      item: https://dbwarden.emiliano-go.com/databases/mysql
+seo_html: "<title>MySQL &amp; MariaDB - DBWarden Documentation</title>\n<meta name=\"\
+  description\" content=\"DBWarden treats MySQL and its fork MariaDB as first-class\
+  \ backends: every natively supported feature is reverse-engineered, diffed, and\
+  \ emitted as correct DDL.\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/databases/mysql\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"MySQL &amp; MariaDB - DBWarden\
+  \ Documentation\">\n<meta property=\"og:description\" content=\"DBWarden treats\
+  \ MySQL and its fork MariaDB as first-class backends: every natively supported feature\
+  \ is reverse-engineered, diffed, and emitted as correct DDL.\">\n<meta property=\"\
+  og:url\" content=\"https://dbwarden.emiliano-go.com/databases/mysql\">\n<meta property=\"\
+  og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n<meta\
+  \ property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"MySQL &amp; MariaDB - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"DBWarden treats MySQL and its fork MariaDB as first-class backends:\
+  \ every natively supported feature is reverse-engineered, diffed, and emitted as\
+  \ correct DDL.\">\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"MySQL & MariaDB - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/databases/mysql\",\n    \"description\"\
+  : \"DBWarden treats MySQL and its fork MariaDB as first-class backends: every natively\
+  \ supported feature is reverse-engineered, diffed, and emitted as correct DDL.\"\
+  ,\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\",\n    \"\
+  publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"Emiliano Gandini\
+  \ Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\",\n    \"\
+  @type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n        \"@type\"\
+  : \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Databases\",\n  \
+  \      \"item\": \"https://dbwarden.emiliano-go.com/databases\"\n      },\n    \
+  \  {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"name\"\
+  : \"MySQL & MariaDB\",\n        \"item\": \"https://dbwarden.emiliano-go.com/databases/mysql\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # MySQL & MariaDB

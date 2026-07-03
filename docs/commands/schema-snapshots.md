@@ -1,9 +1,7 @@
 ---
 seo:
   title: Schema Snapshots - DBWarden Documentation
-  description: Schema snapshots are JSON files that record the full DDL state of a
-    database at the point a migration was applied. They enable offline migration generation,...
-  canonical: https://dbwarden.emiliano-go.com/commands/schema-snapshots/
+  canonical: https://dbwarden.emiliano-go.com/commands/schema-snapshots
   robots: index,follow
   og:
     type: website
@@ -11,8 +9,10 @@ seo:
     description: Schema snapshots are JSON files that record the full DDL state of
       a database at the point a migration was applied. They enable offline migration
       generation,...
-    url: https://dbwarden.emiliano-go.com/commands/schema-snapshots/
+    url: https://dbwarden.emiliano-go.com/commands/schema-snapshots
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -21,11 +21,13 @@ seo:
       a database at the point a migration was applied. They enable offline migration
       generation,...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Schema snapshots are JSON files that record the full DDL state of a
+    database at the point a migration was applied. They enable offline migration generation,...
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Schema Snapshots - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/commands/schema-snapshots/
+    url: https://dbwarden.emiliano-go.com/commands/schema-snapshots
     description: Schema snapshots are JSON files that record the full DDL state of
       a database at the point a migration was applied. They enable offline migration
       generation,...
@@ -33,19 +35,49 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Commands
-      item: https://emiliano-go.github.io/DBWarden/commands/
+      item: https://dbwarden.emiliano-go.com/commands
     - '@type': ListItem
       position: 2
       name: Schema Snapshots
-      item: https://emiliano-go.github.io/DBWarden/commands/schema-snapshots/
-    - '@type': ListItem
-      position: 3
-      name: Schema Snapshots
+      item: https://dbwarden.emiliano-go.com/commands/schema-snapshots
+seo_html: "<title>Schema Snapshots - DBWarden Documentation</title>\n<meta name=\"\
+  description\" content=\"Schema snapshots are JSON files that record the full DDL\
+  \ state of a database at the point a migration was applied. They enable offline\
+  \ migration generation,...\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/commands/schema-snapshots\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Schema Snapshots - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"Schema snapshots are JSON files that\
+  \ record the full DDL state of a database at the point a migration was applied.\
+  \ They enable offline migration generation,...\">\n<meta property=\"og:url\" content=\"\
+  https://dbwarden.emiliano-go.com/commands/schema-snapshots\">\n<meta property=\"\
+  og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n<meta\
+  \ property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Schema Snapshots - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"Schema snapshots are JSON files that record the full DDL state of a\
+  \ database at the point a migration was applied. They enable offline migration generation,...\"\
+  >\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Schema Snapshots - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/commands/schema-snapshots\",\n\
+  \    \"description\": \"Schema snapshots are JSON files that record the full DDL\
+  \ state of a database at the point a migration was applied. They enable offline\
+  \ migration generation,...\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Commands\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/commands\"\n      },\n \
+  \     {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"\
+  name\": \"Schema Snapshots\",\n        \"item\": \"https://dbwarden.emiliano-go.com/commands/schema-snapshots\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # Schema Snapshots

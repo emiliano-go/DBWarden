@@ -3,9 +3,7 @@ description: Set up DBWarden in your project, install dependencies, initialize t
   project, define your first database, and verify that the configuration loads correctly.
 seo:
   title: Setup - DBWarden Documentation
-  description: Set up DBWarden in your project, install dependencies, initialize the
-    project, define your first database, and verify that the configuration loads correctly.
-  canonical: https://dbwarden.emiliano-go.com/getting-started/setup/
+  canonical: https://dbwarden.emiliano-go.com/getting-started/setup
   robots: index,follow
   og:
     type: website
@@ -13,8 +11,10 @@ seo:
     description: Set up DBWarden in your project, install dependencies, initialize
       the project, define your first database, and verify that the configuration loads
       correctly.
-    url: https://dbwarden.emiliano-go.com/getting-started/setup/
+    url: https://dbwarden.emiliano-go.com/getting-started/setup
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -23,11 +23,13 @@ seo:
       the project, define your first database, and verify that the configuration loads
       correctly.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Set up DBWarden in your project, install dependencies, initialize the
+    project, define your first database, and verify that the configuration loads correctly.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Setup - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/getting-started/setup/
+    url: https://dbwarden.emiliano-go.com/getting-started/setup
     description: Set up DBWarden in your project, install dependencies, initialize
       the project, define your first database, and verify that the configuration loads
       correctly.
@@ -35,19 +37,49 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Get Started
-      item: https://emiliano-go.github.io/DBWarden/getting-started/
+      item: https://dbwarden.emiliano-go.com/getting-started
     - '@type': ListItem
       position: 2
       name: Setup
-      item: https://emiliano-go.github.io/DBWarden/getting-started/setup/
-    - '@type': ListItem
-      position: 3
-      name: Setup
+      item: https://dbwarden.emiliano-go.com/getting-started/setup
+seo_html: "<title>Setup - DBWarden Documentation</title>\n<meta name=\"description\"\
+  \ content=\"Set up DBWarden in your project, install dependencies, initialize the\
+  \ project, define your first database, and verify that the configuration loads correctly.\"\
+  >\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/getting-started/setup\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Setup - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"Set up DBWarden in your project,\
+  \ install dependencies, initialize the project, define your first database, and\
+  \ verify that the configuration loads correctly.\">\n<meta property=\"og:url\" content=\"\
+  https://dbwarden.emiliano-go.com/getting-started/setup\">\n<meta property=\"og:image\"\
+  \ content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n<meta property=\"\
+  og:image:width\" content=\"128\">\n<meta property=\"og:image:height\" content=\"\
+  128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\">\n<meta\
+  \ name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Setup - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"Set up DBWarden in your project, install dependencies, initialize the\
+  \ project, define your first database, and verify that the configuration loads correctly.\"\
+  >\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Setup - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/getting-started/setup\",\n  \
+  \  \"description\": \"Set up DBWarden in your project, install dependencies, initialize\
+  \ the project, define your first database, and verify that the configuration loads\
+  \ correctly.\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Get\
+  \ Started\",\n        \"item\": \"https://dbwarden.emiliano-go.com/getting-started\"\
+  \n      },\n      {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n\
+  \        \"name\": \"Setup\",\n        \"item\": \"https://dbwarden.emiliano-go.com/getting-started/setup\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # Setup

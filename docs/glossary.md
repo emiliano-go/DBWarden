@@ -4,10 +4,7 @@ description: Key terms and concepts used throughout the DBWarden documentation, 
   configuration.
 seo:
   title: Glossary - DBWarden Documentation
-  description: Key terms and concepts used throughout the DBWarden documentation,
-    including migration lifecycle, database backends, safety tooling, FastAPI integration,
-    and configuration.
-  canonical: https://dbwarden.emiliano-go.com/glossary/
+  canonical: https://dbwarden.emiliano-go.com/glossary
   robots: index,follow
   og:
     type: website
@@ -15,8 +12,10 @@ seo:
     description: Key terms and concepts used throughout the DBWarden documentation,
       including migration lifecycle, database backends, safety tooling, FastAPI integration,
       and configuration.
-    url: https://dbwarden.emiliano-go.com/glossary/
+    url: https://dbwarden.emiliano-go.com/glossary
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -25,11 +24,14 @@ seo:
       including migration lifecycle, database backends, safety tooling, FastAPI integration,
       and configuration.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Key terms and concepts used throughout the DBWarden documentation,
+    including migration lifecycle, database backends, safety tooling, FastAPI integration,
+    and configuration.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Glossary - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/glossary/
+    url: https://dbwarden.emiliano-go.com/glossary
     description: Key terms and concepts used throughout the DBWarden documentation,
       including migration lifecycle, database backends, safety tooling, FastAPI integration,
       and configuration.
@@ -37,15 +39,43 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Glossary
-      item: https://emiliano-go.github.io/DBWarden/glossary/
-    - '@type': ListItem
-      position: 2
-      name: Glossary
+      item: https://dbwarden.emiliano-go.com/glossary
+seo_html: "<title>Glossary - DBWarden Documentation</title>\n<meta name=\"description\"\
+  \ content=\"Key terms and concepts used throughout the DBWarden documentation, including\
+  \ migration lifecycle, database backends, safety tooling, FastAPI integration, and\
+  \ configuration.\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/glossary\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Glossary - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"Key terms and concepts used throughout\
+  \ the DBWarden documentation, including migration lifecycle, database backends,\
+  \ safety tooling, FastAPI integration, and configuration.\">\n<meta property=\"\
+  og:url\" content=\"https://dbwarden.emiliano-go.com/glossary\">\n<meta property=\"\
+  og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n<meta\
+  \ property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Glossary - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"Key terms and concepts used throughout the DBWarden documentation, including\
+  \ migration lifecycle, database backends, safety tooling, FastAPI integration, and\
+  \ configuration.\">\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Glossary - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/glossary\",\n    \"description\"\
+  : \"Key terms and concepts used throughout the DBWarden documentation, including\
+  \ migration lifecycle, database backends, safety tooling, FastAPI integration, and\
+  \ configuration.\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Glossary\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/glossary\"\n      }\n  \
+  \  ]\n  }\n]\n</script>\n"
 ---
 
 # Glossary

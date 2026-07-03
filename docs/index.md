@@ -3,32 +3,34 @@ description: DBWarden is a SQL-first database migration system for Python and SQ
   Generate reviewable SQL migrations, validate them before production, and operate
   multiple databases from one config source.
 seo:
-  title: Untitled - DBWarden Documentation
-  description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy.
-    Generate reviewable SQL migrations, validate them before production, and operate
-    multiple databases from one config source.
+  title: DBWarden - DBWarden Documentation
   canonical: https://dbwarden.emiliano-go.com/
   robots: index,follow
   og:
     type: website
-    title: Untitled - DBWarden Documentation
+    title: DBWarden - DBWarden Documentation
     description: DBWarden is a SQL-first database migration system for Python and
       SQLAlchemy. Generate reviewable SQL migrations, validate them before production,
       and operate multiple databases from one config source.
     url: https://dbwarden.emiliano-go.com/
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
-    title: Untitled - DBWarden Documentation
+    title: DBWarden - DBWarden Documentation
     description: DBWarden is a SQL-first database migration system for Python and
       SQLAlchemy. Generate reviewable SQL migrations, validate them before production,
       and operate multiple databases from one config source.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy.
+    Generate reviewable SQL migrations, validate them before production, and operate
+    multiple databases from one config source.
   schema_jsonld:
     '@context': https://schema.org
     '@type': WebPage
-    name: Untitled - DBWarden Documentation
+    name: DBWarden - DBWarden Documentation
     url: https://dbwarden.emiliano-go.com/
     description: DBWarden is a SQL-first database migration system for Python and
       SQLAlchemy. Generate reviewable SQL migrations, validate them before production,
@@ -37,6 +39,32 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
+seo_html: "<title>DBWarden - DBWarden Documentation</title>\n<meta name=\"description\"\
+  \ content=\"DBWarden is a SQL-first database migration system for Python and SQLAlchemy.\
+  \ Generate reviewable SQL migrations, validate them before production, and operate\
+  \ multiple databases from one config source.\">\n<link rel=\"canonical\" href=\"\
+  https://dbwarden.emiliano-go.com/\">\n<meta name=\"robots\" content=\"index,follow\"\
+  >\n<meta property=\"og:type\" content=\"website\">\n<meta property=\"og:title\"\
+  \ content=\"DBWarden - DBWarden Documentation\">\n<meta property=\"og:description\"\
+  \ content=\"DBWarden is a SQL-first database migration system for Python and SQLAlchemy.\
+  \ Generate reviewable SQL migrations, validate them before production, and operate\
+  \ multiple databases from one config source.\">\n<meta property=\"og:url\" content=\"\
+  https://dbwarden.emiliano-go.com/\">\n<meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"DBWarden - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"DBWarden is a SQL-first database migration system for Python and SQLAlchemy.\
+  \ Generate reviewable SQL migrations, validate them before production, and operate\
+  \ multiple databases from one config source.\">\n<meta name=\"twitter:image\" content=\"\
+  https://dbwarden.emiliano-go.com/assets/icon.png\">\n<script type=\"application/ld+json\"\
+  >\n{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"WebPage\",\n  \"name\"\
+  : \"DBWarden - DBWarden Documentation\",\n  \"url\": \"https://dbwarden.emiliano-go.com/\"\
+  ,\n  \"description\": \"DBWarden is a SQL-first database migration system for Python\
+  \ and SQLAlchemy. Generate reviewable SQL migrations, validate them before production,\
+  \ and operate multiple databases from one config source.\",\n  \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n  \"publisher\": {\n    \"@type\": \"Organization\",\n    \"name\": \"Emiliano\
+  \ Gandini Outeda\"\n  }\n}\n</script>\n"
 ---
 
 <p align="center">

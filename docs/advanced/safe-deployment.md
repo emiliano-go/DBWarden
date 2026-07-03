@@ -4,10 +4,7 @@ description: 'Deploy database schema changes safely with DBWarden: pre-flight ch
   integration patterns.'
 seo:
   title: Safe Deployment - DBWarden Documentation
-  description: 'Deploy database schema changes safely with DBWarden: pre-flight checks,
-    impact analysis, sandbox validation, migration locking, rollback planning, and
-    CI/CD integration patterns.'
-  canonical: https://dbwarden.emiliano-go.com/advanced/safe-deployment/
+  canonical: https://dbwarden.emiliano-go.com/advanced/safe-deployment
   robots: index,follow
   og:
     type: website
@@ -15,8 +12,10 @@ seo:
     description: 'Deploy database schema changes safely with DBWarden: pre-flight
       checks, impact analysis, sandbox validation, migration locking, rollback planning,
       and CI/CD integration patterns.'
-    url: https://dbwarden.emiliano-go.com/advanced/safe-deployment/
+    url: https://dbwarden.emiliano-go.com/advanced/safe-deployment
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -25,11 +24,14 @@ seo:
       checks, impact analysis, sandbox validation, migration locking, rollback planning,
       and CI/CD integration patterns.'
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: 'Deploy database schema changes safely with DBWarden: pre-flight checks,
+    impact analysis, sandbox validation, migration locking, rollback planning, and
+    CI/CD integration patterns.'
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Safe Deployment - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/advanced/safe-deployment/
+    url: https://dbwarden.emiliano-go.com/advanced/safe-deployment
     description: 'Deploy database schema changes safely with DBWarden: pre-flight
       checks, impact analysis, sandbox validation, migration locking, rollback planning,
       and CI/CD integration patterns.'
@@ -37,19 +39,49 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Advanced
-      item: https://emiliano-go.github.io/DBWarden/advanced/
+      item: https://dbwarden.emiliano-go.com/advanced
     - '@type': ListItem
       position: 2
       name: Safe Deployment
-      item: https://emiliano-go.github.io/DBWarden/advanced/safe-deployment/
-    - '@type': ListItem
-      position: 3
-      name: Safe Deployment
+      item: https://dbwarden.emiliano-go.com/advanced/safe-deployment
+seo_html: "<title>Safe Deployment - DBWarden Documentation</title>\n<meta name=\"\
+  description\" content=\"Deploy database schema changes safely with DBWarden: pre-flight\
+  \ checks, impact analysis, sandbox validation, migration locking, rollback planning,\
+  \ and CI/CD integration patterns.\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/advanced/safe-deployment\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Safe Deployment - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"Deploy database schema changes safely\
+  \ with DBWarden: pre-flight checks, impact analysis, sandbox validation, migration\
+  \ locking, rollback planning, and CI/CD integration patterns.\">\n<meta property=\"\
+  og:url\" content=\"https://dbwarden.emiliano-go.com/advanced/safe-deployment\">\n\
+  <meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Safe Deployment - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"Deploy database schema changes safely with DBWarden: pre-flight checks,\
+  \ impact analysis, sandbox validation, migration locking, rollback planning, and\
+  \ CI/CD integration patterns.\">\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Safe Deployment - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/advanced/safe-deployment\",\n\
+  \    \"description\": \"Deploy database schema changes safely with DBWarden: pre-flight\
+  \ checks, impact analysis, sandbox validation, migration locking, rollback planning,\
+  \ and CI/CD integration patterns.\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Advanced\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/advanced\"\n      },\n \
+  \     {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"\
+  name\": \"Safe Deployment\",\n        \"item\": \"https://dbwarden.emiliano-go.com/advanced/safe-deployment\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # Safe Deployment

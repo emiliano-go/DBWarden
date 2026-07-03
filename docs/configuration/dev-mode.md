@@ -1,17 +1,17 @@
 ---
 seo:
   title: Dev Mode - DBWarden Documentation
-  description: Use SQLite for local development and PostgreSQL in production with
-    the same codebase.
-  canonical: https://dbwarden.emiliano-go.com/configuration/dev-mode/
+  canonical: https://dbwarden.emiliano-go.com/configuration/dev-mode
   robots: index,follow
   og:
     type: website
     title: Dev Mode - DBWarden Documentation
     description: Use SQLite for local development and PostgreSQL in production with
       the same codebase.
-    url: https://dbwarden.emiliano-go.com/configuration/dev-mode/
+    url: https://dbwarden.emiliano-go.com/configuration/dev-mode
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -19,30 +19,58 @@ seo:
     description: Use SQLite for local development and PostgreSQL in production with
       the same codebase.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Use SQLite for local development and PostgreSQL in production with
+    the same codebase.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Dev Mode - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/configuration/dev-mode/
+    url: https://dbwarden.emiliano-go.com/configuration/dev-mode
     description: Use SQLite for local development and PostgreSQL in production with
       the same codebase.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Configuration
-      item: https://emiliano-go.github.io/DBWarden/configuration/
+      item: https://dbwarden.emiliano-go.com/configuration
     - '@type': ListItem
       position: 2
       name: Dev Mode
-      item: https://emiliano-go.github.io/DBWarden/configuration/dev-mode/
-    - '@type': ListItem
-      position: 3
-      name: Dev Mode
+      item: https://dbwarden.emiliano-go.com/configuration/dev-mode
+seo_html: "<title>Dev Mode - DBWarden Documentation</title>\n<meta name=\"description\"\
+  \ content=\"Use SQLite for local development and PostgreSQL in production with the\
+  \ same codebase.\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/configuration/dev-mode\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Dev Mode - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"Use SQLite for local development\
+  \ and PostgreSQL in production with the same codebase.\">\n<meta property=\"og:url\"\
+  \ content=\"https://dbwarden.emiliano-go.com/configuration/dev-mode\">\n<meta property=\"\
+  og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n<meta\
+  \ property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Dev Mode - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"Use SQLite for local development and PostgreSQL in production with the\
+  \ same codebase.\">\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Dev Mode - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/configuration/dev-mode\",\n \
+  \   \"description\": \"Use SQLite for local development and PostgreSQL in production\
+  \ with the same codebase.\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Configuration\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/configuration\"\n      },\n\
+  \      {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"\
+  name\": \"Dev Mode\",\n        \"item\": \"https://dbwarden.emiliano-go.com/configuration/dev-mode\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # Dev Mode

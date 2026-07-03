@@ -1,17 +1,17 @@
 ---
 seo:
   title: Observability - DBWarden Documentation
-  description: DBWarden provides Prometheus metrics and structured JSON logging for
-    monitoring and debugging.
-  canonical: https://dbwarden.emiliano-go.com/observability/
+  canonical: https://dbwarden.emiliano-go.com/observability
   robots: index,follow
   og:
     type: website
     title: Observability - DBWarden Documentation
     description: DBWarden provides Prometheus metrics and structured JSON logging
       for monitoring and debugging.
-    url: https://dbwarden.emiliano-go.com/observability/
+    url: https://dbwarden.emiliano-go.com/observability
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -19,26 +19,52 @@ seo:
     description: DBWarden provides Prometheus metrics and structured JSON logging
       for monitoring and debugging.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: DBWarden provides Prometheus metrics and structured JSON logging for
+    monitoring and debugging.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Observability - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/observability/
+    url: https://dbwarden.emiliano-go.com/observability
     description: DBWarden provides Prometheus metrics and structured JSON logging
       for monitoring and debugging.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Observability
-      item: https://emiliano-go.github.io/DBWarden/observability/
-    - '@type': ListItem
-      position: 2
-      name: Observability
+      item: https://dbwarden.emiliano-go.com/observability
+seo_html: "<title>Observability - DBWarden Documentation</title>\n<meta name=\"description\"\
+  \ content=\"DBWarden provides Prometheus metrics and structured JSON logging for\
+  \ monitoring and debugging.\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/observability\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Observability - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"DBWarden provides Prometheus metrics\
+  \ and structured JSON logging for monitoring and debugging.\">\n<meta property=\"\
+  og:url\" content=\"https://dbwarden.emiliano-go.com/observability\">\n<meta property=\"\
+  og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n<meta\
+  \ property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Observability - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"DBWarden provides Prometheus metrics and structured JSON logging for\
+  \ monitoring and debugging.\">\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Observability - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/observability\",\n    \"description\"\
+  : \"DBWarden provides Prometheus metrics and structured JSON logging for monitoring\
+  \ and debugging.\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Observability\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/observability\"\n      }\n\
+  \    ]\n  }\n]\n</script>\n"
 ---
 
 # Observability

@@ -1,44 +1,71 @@
 ---
 seo:
   title: CI/CD Patterns - DBWarden Documentation
-  description: Patterns for running DBWarden migrations in automated pipelines.
-  canonical: https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns/
+  canonical: https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns
   robots: index,follow
   og:
     type: website
     title: CI/CD Patterns - DBWarden Documentation
     description: Patterns for running DBWarden migrations in automated pipelines.
-    url: https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns/
+    url: https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: CI/CD Patterns - DBWarden Documentation
     description: Patterns for running DBWarden migrations in automated pipelines.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Patterns for running DBWarden migrations in automated pipelines.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: CI/CD Patterns - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns/
+    url: https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns
     description: Patterns for running DBWarden migrations in automated pipelines.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Advanced
-      item: https://emiliano-go.github.io/DBWarden/advanced/
+      item: https://dbwarden.emiliano-go.com/advanced
     - '@type': ListItem
       position: 2
       name: CI/CD Patterns
-      item: https://emiliano-go.github.io/DBWarden/advanced/ci-cd-patterns/
-    - '@type': ListItem
-      position: 3
-      name: CI/CD Patterns
+      item: https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns
+seo_html: "<title>CI/CD Patterns - DBWarden Documentation</title>\n<meta name=\"description\"\
+  \ content=\"Patterns for running DBWarden migrations in automated pipelines.\">\n\
+  <link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"CI/CD Patterns - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"Patterns for running DBWarden migrations\
+  \ in automated pipelines.\">\n<meta property=\"og:url\" content=\"https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns\"\
+  >\n<meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"CI/CD Patterns - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"Patterns for running DBWarden migrations in automated pipelines.\">\n\
+  <meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"CI/CD Patterns - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns\",\n\
+  \    \"description\": \"Patterns for running DBWarden migrations in automated pipelines.\"\
+  ,\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\",\n    \"\
+  publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"Emiliano Gandini\
+  \ Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\",\n    \"\
+  @type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n        \"@type\"\
+  : \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Advanced\",\n   \
+  \     \"item\": \"https://dbwarden.emiliano-go.com/advanced\"\n      },\n      {\n\
+  \        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"name\": \"\
+  CI/CD Patterns\",\n        \"item\": \"https://dbwarden.emiliano-go.com/advanced/ci-cd-patterns\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # CI/CD Patterns

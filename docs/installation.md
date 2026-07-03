@@ -1,17 +1,17 @@
 ---
 seo:
   title: Installation - DBWarden Documentation
-  description: This guide covers installing DBWarden in your project and verifying
-    it works correctly.
-  canonical: https://dbwarden.emiliano-go.com/installation/
+  canonical: https://dbwarden.emiliano-go.com/installation
   robots: index,follow
   og:
     type: website
     title: Installation - DBWarden Documentation
     description: This guide covers installing DBWarden in your project and verifying
       it works correctly.
-    url: https://dbwarden.emiliano-go.com/installation/
+    url: https://dbwarden.emiliano-go.com/installation
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -19,26 +19,52 @@ seo:
     description: This guide covers installing DBWarden in your project and verifying
       it works correctly.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: This guide covers installing DBWarden in your project and verifying
+    it works correctly.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Installation - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/installation/
+    url: https://dbwarden.emiliano-go.com/installation
     description: This guide covers installing DBWarden in your project and verifying
       it works correctly.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Installation
-      item: https://emiliano-go.github.io/DBWarden/installation/
-    - '@type': ListItem
-      position: 2
-      name: Installation
+      item: https://dbwarden.emiliano-go.com/installation
+seo_html: "<title>Installation - DBWarden Documentation</title>\n<meta name=\"description\"\
+  \ content=\"This guide covers installing DBWarden in your project and verifying\
+  \ it works correctly.\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/installation\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Installation - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"This guide covers installing DBWarden\
+  \ in your project and verifying it works correctly.\">\n<meta property=\"og:url\"\
+  \ content=\"https://dbwarden.emiliano-go.com/installation\">\n<meta property=\"\
+  og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n<meta\
+  \ property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Installation - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"This guide covers installing DBWarden in your project and verifying\
+  \ it works correctly.\">\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Installation - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/installation\",\n    \"description\"\
+  : \"This guide covers installing DBWarden in your project and verifying it works\
+  \ correctly.\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Installation\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/installation\"\n      }\n\
+  \    ]\n  }\n]\n</script>\n"
 ---
 
 # Installation

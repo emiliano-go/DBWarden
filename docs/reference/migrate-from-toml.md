@@ -1,9 +1,7 @@
 ---
 seo:
   title: Migrate from TOML - DBWarden Documentation
-  description: If your project currently uses warden.toml for DBWarden configuration,
-    this guide walks through transitioning to the Python-based databaseconfig... approach.
-  canonical: https://dbwarden.emiliano-go.com/reference/migrate-from-toml/
+  canonical: https://dbwarden.emiliano-go.com/reference/migrate-from-toml
   robots: index,follow
   og:
     type: website
@@ -11,8 +9,10 @@ seo:
     description: If your project currently uses warden.toml for DBWarden configuration,
       this guide walks through transitioning to the Python-based databaseconfig...
       approach.
-    url: https://dbwarden.emiliano-go.com/reference/migrate-from-toml/
+    url: https://dbwarden.emiliano-go.com/reference/migrate-from-toml
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -21,11 +21,13 @@ seo:
       this guide walks through transitioning to the Python-based databaseconfig...
       approach.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: If your project currently uses warden.toml for DBWarden configuration,
+    this guide walks through transitioning to the Python-based databaseconfig... approach.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Migrate from TOML - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/reference/migrate-from-toml/
+    url: https://dbwarden.emiliano-go.com/reference/migrate-from-toml
     description: If your project currently uses warden.toml for DBWarden configuration,
       this guide walks through transitioning to the Python-based databaseconfig...
       approach.
@@ -33,19 +35,48 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Reference
-      item: https://emiliano-go.github.io/DBWarden/reference/
+      item: https://dbwarden.emiliano-go.com/reference
     - '@type': ListItem
       position: 2
       name: Migrate from TOML
-      item: https://emiliano-go.github.io/DBWarden/reference/migrate-from-toml/
-    - '@type': ListItem
-      position: 3
-      name: Migrate from TOML
+      item: https://dbwarden.emiliano-go.com/reference/migrate-from-toml
+seo_html: "<title>Migrate from TOML - DBWarden Documentation</title>\n<meta name=\"\
+  description\" content=\"If your project currently uses warden.toml for DBWarden\
+  \ configuration, this guide walks through transitioning to the Python-based databaseconfig...\
+  \ approach.\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/reference/migrate-from-toml\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Migrate from TOML - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"If your project currently uses warden.toml\
+  \ for DBWarden configuration, this guide walks through transitioning to the Python-based\
+  \ databaseconfig... approach.\">\n<meta property=\"og:url\" content=\"https://dbwarden.emiliano-go.com/reference/migrate-from-toml\"\
+  >\n<meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Migrate from TOML - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"If your project currently uses warden.toml for DBWarden configuration,\
+  \ this guide walks through transitioning to the Python-based databaseconfig... approach.\"\
+  >\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Migrate from TOML - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/reference/migrate-from-toml\"\
+  ,\n    \"description\": \"If your project currently uses warden.toml for DBWarden\
+  \ configuration, this guide walks through transitioning to the Python-based databaseconfig...\
+  \ approach.\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Reference\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/reference\"\n      },\n\
+  \      {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"\
+  name\": \"Migrate from TOML\",\n        \"item\": \"https://dbwarden.emiliano-go.com/reference/migrate-from-toml\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # Migrate from TOML

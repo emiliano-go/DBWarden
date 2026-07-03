@@ -1,10 +1,7 @@
 ---
 seo:
   title: 8. Multi-Database & Configuration - DBWarden Documentation
-  description: DBWarden supports managing multiple databases in a single project;
-    each with its own migration directory, lock, tracking table, and model paths.
-    You can mix...
-  canonical: https://dbwarden.emiliano-go.com/cookbook/08-multi-database/
+  canonical: https://dbwarden.emiliano-go.com/cookbook/08-multi-database
   robots: index,follow
   og:
     type: website
@@ -12,8 +9,10 @@ seo:
     description: DBWarden supports managing multiple databases in a single project;
       each with its own migration directory, lock, tracking table, and model paths.
       You can mix...
-    url: https://dbwarden.emiliano-go.com/cookbook/08-multi-database/
+    url: https://dbwarden.emiliano-go.com/cookbook/08-multi-database
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -22,11 +21,14 @@ seo:
       each with its own migration directory, lock, tracking table, and model paths.
       You can mix...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: DBWarden supports managing multiple databases in a single project;
+    each with its own migration directory, lock, tracking table, and model paths.
+    You can mix...
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: 8. Multi-Database & Configuration - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/cookbook/08-multi-database/
+    url: https://dbwarden.emiliano-go.com/cookbook/08-multi-database
     description: DBWarden supports managing multiple databases in a single project;
       each with its own migration directory, lock, tracking table, and model paths.
       You can mix...
@@ -34,19 +36,50 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Cookbook & Examples
-      item: https://emiliano-go.github.io/DBWarden/cookbook/
+      item: https://dbwarden.emiliano-go.com/cookbook
     - '@type': ListItem
       position: 2
       name: 08 Multi Database
-      item: https://emiliano-go.github.io/DBWarden/cookbook/08-multi-database/
-    - '@type': ListItem
-      position: 3
-      name: 8. Multi-Database & Configuration
+      item: https://dbwarden.emiliano-go.com/cookbook/08-multi-database
+seo_html: "<title>8. Multi-Database &amp; Configuration - DBWarden Documentation</title>\n\
+  <meta name=\"description\" content=\"DBWarden supports managing multiple databases\
+  \ in a single project; each with its own migration directory, lock, tracking table,\
+  \ and model paths. You can mix...\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/cookbook/08-multi-database\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"8. Multi-Database &amp; Configuration\
+  \ - DBWarden Documentation\">\n<meta property=\"og:description\" content=\"DBWarden\
+  \ supports managing multiple databases in a single project; each with its own migration\
+  \ directory, lock, tracking table, and model paths. You can mix...\">\n<meta property=\"\
+  og:url\" content=\"https://dbwarden.emiliano-go.com/cookbook/08-multi-database\"\
+  >\n<meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"8. Multi-Database &amp; Configuration - DBWarden Documentation\">\n\
+  <meta name=\"twitter:description\" content=\"DBWarden supports managing multiple\
+  \ databases in a single project; each with its own migration directory, lock, tracking\
+  \ table, and model paths. You can mix...\">\n<meta name=\"twitter:image\" content=\"\
+  https://dbwarden.emiliano-go.com/assets/icon.png\">\n<script type=\"application/ld+json\"\
+  >\n[\n  {\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\"\
+  ,\n    \"name\": \"8. Multi-Database & Configuration - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/cookbook/08-multi-database\"\
+  ,\n    \"description\": \"DBWarden supports managing multiple databases in a single\
+  \ project; each with its own migration directory, lock, tracking table, and model\
+  \ paths. You can mix...\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Cookbook\
+  \ & Examples\",\n        \"item\": \"https://dbwarden.emiliano-go.com/cookbook\"\
+  \n      },\n      {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n\
+  \        \"name\": \"08 Multi Database\",\n        \"item\": \"https://dbwarden.emiliano-go.com/cookbook/08-multi-database\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # 8. Multi-Database & Configuration

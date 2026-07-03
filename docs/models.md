@@ -1,17 +1,17 @@
 ---
 seo:
   title: SQLAlchemy Models Reference - DBWarden Documentation
-  description: This page is the reference for all supported Meta attributes across
-    every backend. For a step-by-step walkthrough of defining models, see the Modeling...
-  canonical: https://dbwarden.emiliano-go.com/models/
+  canonical: https://dbwarden.emiliano-go.com/models
   robots: index,follow
   og:
     type: website
     title: SQLAlchemy Models Reference - DBWarden Documentation
     description: This page is the reference for all supported Meta attributes across
       every backend. For a step-by-step walkthrough of defining models, see the Modeling...
-    url: https://dbwarden.emiliano-go.com/models/
+    url: https://dbwarden.emiliano-go.com/models
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -19,26 +19,56 @@ seo:
     description: This page is the reference for all supported Meta attributes across
       every backend. For a step-by-step walkthrough of defining models, see the Modeling...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: This page is the reference for all supported Meta attributes across
+    every backend. For a step-by-step walkthrough of defining models, see the Modeling...
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: SQLAlchemy Models Reference - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/models/
+    url: https://dbwarden.emiliano-go.com/models
     description: This page is the reference for all supported Meta attributes across
       every backend. For a step-by-step walkthrough of defining models, see the Modeling...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: SQLAlchemy Models Reference
-      item: https://emiliano-go.github.io/DBWarden/models/
-    - '@type': ListItem
-      position: 2
-      name: SQLAlchemy Models Reference
+      item: https://dbwarden.emiliano-go.com/models
+seo_html: "<title>SQLAlchemy Models Reference - DBWarden Documentation</title>\n<meta\
+  \ name=\"description\" content=\"This page is the reference for all supported Meta\
+  \ attributes across every backend. For a step-by-step walkthrough of defining models,\
+  \ see the Modeling...\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/models\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"SQLAlchemy Models Reference -\
+  \ DBWarden Documentation\">\n<meta property=\"og:description\" content=\"This page\
+  \ is the reference for all supported Meta attributes across every backend. For a\
+  \ step-by-step walkthrough of defining models, see the Modeling...\">\n<meta property=\"\
+  og:url\" content=\"https://dbwarden.emiliano-go.com/models\">\n<meta property=\"\
+  og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n<meta\
+  \ property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"SQLAlchemy Models Reference - DBWarden Documentation\">\n<meta name=\"\
+  twitter:description\" content=\"This page is the reference for all supported Meta\
+  \ attributes across every backend. For a step-by-step walkthrough of defining models,\
+  \ see the Modeling...\">\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"SQLAlchemy Models Reference - DBWarden\
+  \ Documentation\",\n    \"url\": \"https://dbwarden.emiliano-go.com/models\",\n\
+  \    \"description\": \"This page is the reference for all supported Meta attributes\
+  \ across every backend. For a step-by-step walkthrough of defining models, see the\
+  \ Modeling...\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"SQLAlchemy\
+  \ Models Reference\",\n        \"item\": \"https://dbwarden.emiliano-go.com/models\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # SQLAlchemy Models Reference

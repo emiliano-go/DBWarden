@@ -1,37 +1,11 @@
 {% extends "base.html" %}
 
 {% block site_meta %}
+{% if page.meta and page.meta.seo_html %}
+{{ page.meta.seo_html | safe }}
+{% else %}
 {{ super() }}
-{% if page.meta and page.meta.seo %}
-<meta name="description" content="{{ page.meta.seo.description }}">
-<meta name="robots" content="{{ page.meta.seo.robots }}">
-
-<meta property="og:type" content="{{ page.meta.seo.og.type }}">
-<meta property="og:title" content="{{ page.meta.seo.og.title }}">
-<meta property="og:description" content="{{ page.meta.seo.og.description }}">
-<meta property="og:url" content="{{ page.meta.seo.og.url }}">
-<meta property="og:image" content="{{ page.meta.seo.og.image }}">
-<meta property="og:site_name" content="DBWarden Documentation">
-
-<meta name="twitter:card" content="{{ page.meta.seo.twitter.card }}">
-<meta name="twitter:title" content="{{ page.meta.seo.twitter.title }}">
-<meta name="twitter:description" content="{{ page.meta.seo.twitter.description }}">
-<meta name="twitter:image" content="{{ page.meta.seo.twitter.image }}">
-
-{% if page.meta.seo.schema_jsonld %}
-  {% if page.meta.seo.schema_jsonld is mapping %}
-    {% set schemas = [page.meta.seo.schema_jsonld] %}
-  {% else %}
-    {% set schemas = page.meta.seo.schema_jsonld %}
-  {% endif %}
-  {% for schema in schemas %}
-<script type="application/ld+json">
-{{ schema | tojson }}
-</script>
-  {% endfor %}
 {% endif %}
-
 <link rel="alternate" type="text/plain" title="LLMs TXT" href="/llms.txt">
 <link rel="alternate" type="text/plain" title="LLMs Full" href="/llms-full.txt">
-{% endif %}
 {% endblock %}

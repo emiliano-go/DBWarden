@@ -1,44 +1,71 @@
 ---
 seo:
   title: Connection URLs - DBWarden Documentation
-  description: Complete reference for database connection URL formats.
-  canonical: https://dbwarden.emiliano-go.com/configuration/connection-urls/
+  canonical: https://dbwarden.emiliano-go.com/configuration/connection-urls
   robots: index,follow
   og:
     type: website
     title: Connection URLs - DBWarden Documentation
     description: Complete reference for database connection URL formats.
-    url: https://dbwarden.emiliano-go.com/configuration/connection-urls/
+    url: https://dbwarden.emiliano-go.com/configuration/connection-urls
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Connection URLs - DBWarden Documentation
     description: Complete reference for database connection URL formats.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Complete reference for database connection URL formats.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Connection URLs - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/configuration/connection-urls/
+    url: https://dbwarden.emiliano-go.com/configuration/connection-urls
     description: Complete reference for database connection URL formats.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Configuration
-      item: https://emiliano-go.github.io/DBWarden/configuration/
+      item: https://dbwarden.emiliano-go.com/configuration
     - '@type': ListItem
       position: 2
       name: Connection URLs
-      item: https://emiliano-go.github.io/DBWarden/configuration/connection-urls/
-    - '@type': ListItem
-      position: 3
-      name: Connection URLs
+      item: https://dbwarden.emiliano-go.com/configuration/connection-urls
+seo_html: "<title>Connection URLs - DBWarden Documentation</title>\n<meta name=\"\
+  description\" content=\"Complete reference for database connection URL formats.\"\
+  >\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/configuration/connection-urls\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Connection URLs - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"Complete reference for database connection\
+  \ URL formats.\">\n<meta property=\"og:url\" content=\"https://dbwarden.emiliano-go.com/configuration/connection-urls\"\
+  >\n<meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Connection URLs - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"Complete reference for database connection URL formats.\">\n<meta name=\"\
+  twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n\
+  <script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Connection URLs - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/configuration/connection-urls\"\
+  ,\n    \"description\": \"Complete reference for database connection URL formats.\"\
+  ,\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\",\n    \"\
+  publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"Emiliano Gandini\
+  \ Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\",\n    \"\
+  @type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n        \"@type\"\
+  : \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Configuration\",\n\
+  \        \"item\": \"https://dbwarden.emiliano-go.com/configuration\"\n      },\n\
+  \      {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"\
+  name\": \"Connection URLs\",\n        \"item\": \"https://dbwarden.emiliano-go.com/configuration/connection-urls\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # Connection URLs

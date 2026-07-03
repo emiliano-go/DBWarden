@@ -1,10 +1,7 @@
 ---
 seo:
   title: 6. Safety & Impact Analysis - DBWarden Documentation
-  description: Schema changes are the highest-risk operation in most deployments.
-    Dropping a column that application code still references causes runtime errors.
-    Changing a...
-  canonical: https://dbwarden.emiliano-go.com/cookbook/06-safety-impact/
+  canonical: https://dbwarden.emiliano-go.com/cookbook/06-safety-impact
   robots: index,follow
   og:
     type: website
@@ -12,8 +9,10 @@ seo:
     description: Schema changes are the highest-risk operation in most deployments.
       Dropping a column that application code still references causes runtime errors.
       Changing a...
-    url: https://dbwarden.emiliano-go.com/cookbook/06-safety-impact/
+    url: https://dbwarden.emiliano-go.com/cookbook/06-safety-impact
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -22,11 +21,14 @@ seo:
       Dropping a column that application code still references causes runtime errors.
       Changing a...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Schema changes are the highest-risk operation in most deployments.
+    Dropping a column that application code still references causes runtime errors.
+    Changing a...
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: 6. Safety & Impact Analysis - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/cookbook/06-safety-impact/
+    url: https://dbwarden.emiliano-go.com/cookbook/06-safety-impact
     description: Schema changes are the highest-risk operation in most deployments.
       Dropping a column that application code still references causes runtime errors.
       Changing a...
@@ -34,19 +36,49 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Cookbook & Examples
-      item: https://emiliano-go.github.io/DBWarden/cookbook/
+      item: https://dbwarden.emiliano-go.com/cookbook
     - '@type': ListItem
       position: 2
       name: 06 Safety Impact
-      item: https://emiliano-go.github.io/DBWarden/cookbook/06-safety-impact/
-    - '@type': ListItem
-      position: 3
-      name: 6. Safety & Impact Analysis
+      item: https://dbwarden.emiliano-go.com/cookbook/06-safety-impact
+seo_html: "<title>6. Safety &amp; Impact Analysis - DBWarden Documentation</title>\n\
+  <meta name=\"description\" content=\"Schema changes are the highest-risk operation\
+  \ in most deployments. Dropping a column that application code still references\
+  \ causes runtime errors. Changing a...\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/cookbook/06-safety-impact\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"6. Safety &amp; Impact Analysis\
+  \ - DBWarden Documentation\">\n<meta property=\"og:description\" content=\"Schema\
+  \ changes are the highest-risk operation in most deployments. Dropping a column\
+  \ that application code still references causes runtime errors. Changing a...\"\
+  >\n<meta property=\"og:url\" content=\"https://dbwarden.emiliano-go.com/cookbook/06-safety-impact\"\
+  >\n<meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"6. Safety &amp; Impact Analysis - DBWarden Documentation\">\n<meta name=\"\
+  twitter:description\" content=\"Schema changes are the highest-risk operation in\
+  \ most deployments. Dropping a column that application code still references causes\
+  \ runtime errors. Changing a...\">\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"6. Safety & Impact Analysis - DBWarden\
+  \ Documentation\",\n    \"url\": \"https://dbwarden.emiliano-go.com/cookbook/06-safety-impact\"\
+  ,\n    \"description\": \"Schema changes are the highest-risk operation in most\
+  \ deployments. Dropping a column that application code still references causes runtime\
+  \ errors. Changing a...\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Cookbook\
+  \ & Examples\",\n        \"item\": \"https://dbwarden.emiliano-go.com/cookbook\"\
+  \n      },\n      {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n\
+  \        \"name\": \"06 Safety Impact\",\n        \"item\": \"https://dbwarden.emiliano-go.com/cookbook/06-safety-impact\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # 6. Safety & Impact Analysis

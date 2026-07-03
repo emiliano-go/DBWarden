@@ -1,44 +1,71 @@
 ---
 seo:
   title: Troubleshooting - DBWarden Documentation
-  description: Solutions to common configuration issues.
-  canonical: https://dbwarden.emiliano-go.com/configuration/troubleshooting/
+  canonical: https://dbwarden.emiliano-go.com/configuration/troubleshooting
   robots: index,follow
   og:
     type: website
     title: Troubleshooting - DBWarden Documentation
     description: Solutions to common configuration issues.
-    url: https://dbwarden.emiliano-go.com/configuration/troubleshooting/
+    url: https://dbwarden.emiliano-go.com/configuration/troubleshooting
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
     title: Troubleshooting - DBWarden Documentation
     description: Solutions to common configuration issues.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Solutions to common configuration issues.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Troubleshooting - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/configuration/troubleshooting/
+    url: https://dbwarden.emiliano-go.com/configuration/troubleshooting
     description: Solutions to common configuration issues.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Configuration
-      item: https://emiliano-go.github.io/DBWarden/configuration/
+      item: https://dbwarden.emiliano-go.com/configuration
     - '@type': ListItem
       position: 2
       name: Troubleshooting
-      item: https://emiliano-go.github.io/DBWarden/configuration/troubleshooting/
-    - '@type': ListItem
-      position: 3
-      name: Troubleshooting
+      item: https://dbwarden.emiliano-go.com/configuration/troubleshooting
+seo_html: "<title>Troubleshooting - DBWarden Documentation</title>\n<meta name=\"\
+  description\" content=\"Solutions to common configuration issues.\">\n<link rel=\"\
+  canonical\" href=\"https://dbwarden.emiliano-go.com/configuration/troubleshooting\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Troubleshooting - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"Solutions to common configuration\
+  \ issues.\">\n<meta property=\"og:url\" content=\"https://dbwarden.emiliano-go.com/configuration/troubleshooting\"\
+  >\n<meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Troubleshooting - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"Solutions to common configuration issues.\">\n<meta name=\"twitter:image\"\
+  \ content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n<script type=\"\
+  application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\",\n    \"\
+  @type\": \"WebPage\",\n    \"name\": \"Troubleshooting - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/configuration/troubleshooting\"\
+  ,\n    \"description\": \"Solutions to common configuration issues.\",\n    \"image\"\
+  : \"https://dbwarden.emiliano-go.com/assets/icon.png\",\n    \"publisher\": {\n\
+  \      \"@type\": \"Organization\",\n      \"name\": \"Emiliano Gandini Outeda\"\
+  \n    }\n  },\n  {\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"\
+  BreadcrumbList\",\n    \"itemListElement\": [\n      {\n        \"@type\": \"ListItem\"\
+  ,\n        \"position\": 1,\n        \"name\": \"Configuration\",\n        \"item\"\
+  : \"https://dbwarden.emiliano-go.com/configuration\"\n      },\n      {\n      \
+  \  \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"name\": \"Troubleshooting\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/configuration/troubleshooting\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # Troubleshooting

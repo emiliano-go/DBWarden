@@ -4,10 +4,7 @@ description: A round-trip backend is one where DBWarden can both read schema (vi
   MySQL, ClickHouse, SQLite, and MariaDB.
 seo:
   title: Round Trip Support - DBWarden Documentation
-  description: A round-trip backend is one where DBWarden can both read schema (via
-    generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,
-    MySQL, ClickHouse, SQLite, and MariaDB.
-  canonical: https://dbwarden.emiliano-go.com/databases/round-trip/
+  canonical: https://dbwarden.emiliano-go.com/databases/round-trip
   robots: index,follow
   og:
     type: website
@@ -15,8 +12,10 @@ seo:
     description: A round-trip backend is one where DBWarden can both read schema (via
       generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,
       MySQL, ClickHouse, SQLite, and MariaDB.
-    url: https://dbwarden.emiliano-go.com/databases/round-trip/
+    url: https://dbwarden.emiliano-go.com/databases/round-trip
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -25,11 +24,14 @@ seo:
       generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,
       MySQL, ClickHouse, SQLite, and MariaDB.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: A round-trip backend is one where DBWarden can both read schema (via
+    generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,
+    MySQL, ClickHouse, SQLite, and MariaDB.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Round Trip Support - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/databases/round-trip/
+    url: https://dbwarden.emiliano-go.com/databases/round-trip
     description: A round-trip backend is one where DBWarden can both read schema (via
       generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,
       MySQL, ClickHouse, SQLite, and MariaDB.
@@ -37,19 +39,51 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Databases
-      item: https://emiliano-go.github.io/DBWarden/databases/
+      item: https://dbwarden.emiliano-go.com/databases
     - '@type': ListItem
       position: 2
       name: Round Trip Support
-      item: https://emiliano-go.github.io/DBWarden/databases/round-trip/
-    - '@type': ListItem
-      position: 3
-      name: Round Trip Support
+      item: https://dbwarden.emiliano-go.com/databases/round-trip
+seo_html: "<title>Round Trip Support - DBWarden Documentation</title>\n<meta name=\"\
+  description\" content=\"A round-trip backend is one where DBWarden can both read\
+  \ schema (via generate-models) and write schema (via make-migrations/migrate). Covers\
+  \ PostgreSQL, MySQL, ClickHouse, SQLite, and MariaDB.\">\n<link rel=\"canonical\"\
+  \ href=\"https://dbwarden.emiliano-go.com/databases/round-trip\">\n<meta name=\"\
+  robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"website\"\
+  >\n<meta property=\"og:title\" content=\"Round Trip Support - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"A round-trip backend is one where\
+  \ DBWarden can both read schema (via generate-models) and write schema (via make-migrations/migrate).\
+  \ Covers PostgreSQL, MySQL, ClickHouse, SQLite, and MariaDB.\">\n<meta property=\"\
+  og:url\" content=\"https://dbwarden.emiliano-go.com/databases/round-trip\">\n<meta\
+  \ property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Round Trip Support - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"A round-trip backend is one where DBWarden can both read schema (via\
+  \ generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,\
+  \ MySQL, ClickHouse, SQLite, and MariaDB.\">\n<meta name=\"twitter:image\" content=\"\
+  https://dbwarden.emiliano-go.com/assets/icon.png\">\n<script type=\"application/ld+json\"\
+  >\n[\n  {\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\"\
+  ,\n    \"name\": \"Round Trip Support - DBWarden Documentation\",\n    \"url\":\
+  \ \"https://dbwarden.emiliano-go.com/databases/round-trip\",\n    \"description\"\
+  : \"A round-trip backend is one where DBWarden can both read schema (via generate-models)\
+  \ and write schema (via make-migrations/migrate). Covers PostgreSQL, MySQL, ClickHouse,\
+  \ SQLite, and MariaDB.\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n   \
+  \     \"@type\": \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Databases\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/databases\"\n      },\n\
+  \      {\n        \"@type\": \"ListItem\",\n        \"position\": 2,\n        \"\
+  name\": \"Round Trip Support\",\n        \"item\": \"https://dbwarden.emiliano-go.com/databases/round-trip\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # Round Trip Support

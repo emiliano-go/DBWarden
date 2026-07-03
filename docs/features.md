@@ -3,10 +3,7 @@ description: Overview of DBWarden features, with short examples for migrations, 
   checks, multi-database configs, FastAPI integration, seed management, and more.
 seo:
   title: Features - DBWarden Documentation
-  description: Overview of DBWarden features, with short examples for migrations,
-    safety checks, multi-database configs, FastAPI integration, seed management, and
-    more.
-  canonical: https://dbwarden.emiliano-go.com/features/
+  canonical: https://dbwarden.emiliano-go.com/features
   robots: index,follow
   og:
     type: website
@@ -14,8 +11,10 @@ seo:
     description: Overview of DBWarden features, with short examples for migrations,
       safety checks, multi-database configs, FastAPI integration, seed management,
       and more.
-    url: https://dbwarden.emiliano-go.com/features/
+    url: https://dbwarden.emiliano-go.com/features
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -24,11 +23,14 @@ seo:
       safety checks, multi-database configs, FastAPI integration, seed management,
       and more.
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: Overview of DBWarden features, with short examples for migrations,
+    safety checks, multi-database configs, FastAPI integration, seed management, and
+    more.
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Features - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/features/
+    url: https://dbwarden.emiliano-go.com/features
     description: Overview of DBWarden features, with short examples for migrations,
       safety checks, multi-database configs, FastAPI integration, seed management,
       and more.
@@ -36,15 +38,42 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Features
-      item: https://emiliano-go.github.io/DBWarden/features/
-    - '@type': ListItem
-      position: 2
-      name: Features
+      item: https://dbwarden.emiliano-go.com/features
+seo_html: "<title>Features - DBWarden Documentation</title>\n<meta name=\"description\"\
+  \ content=\"Overview of DBWarden features, with short examples for migrations, safety\
+  \ checks, multi-database configs, FastAPI integration, seed management, and more.\"\
+  >\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/features\">\n\
+  <meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Features - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"Overview of DBWarden features, with\
+  \ short examples for migrations, safety checks, multi-database configs, FastAPI\
+  \ integration, seed management, and more.\">\n<meta property=\"og:url\" content=\"\
+  https://dbwarden.emiliano-go.com/features\">\n<meta property=\"og:image\" content=\"\
+  https://dbwarden.emiliano-go.com/assets/icon.png\">\n<meta property=\"og:image:width\"\
+  \ content=\"128\">\n<meta property=\"og:image:height\" content=\"128\">\n<meta property=\"\
+  og:site_name\" content=\"DBWarden Documentation\">\n<meta name=\"twitter:card\"\
+  \ content=\"summary_large_image\">\n<meta name=\"twitter:title\" content=\"Features\
+  \ - DBWarden Documentation\">\n<meta name=\"twitter:description\" content=\"Overview\
+  \ of DBWarden features, with short examples for migrations, safety checks, multi-database\
+  \ configs, FastAPI integration, seed management, and more.\">\n<meta name=\"twitter:image\"\
+  \ content=\"https://dbwarden.emiliano-go.com/assets/icon.png\">\n<script type=\"\
+  application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\",\n    \"\
+  @type\": \"WebPage\",\n    \"name\": \"Features - DBWarden Documentation\",\n  \
+  \  \"url\": \"https://dbwarden.emiliano-go.com/features\",\n    \"description\"\
+  : \"Overview of DBWarden features, with short examples for migrations, safety checks,\
+  \ multi-database configs, FastAPI integration, seed management, and more.\",\n \
+  \   \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\",\n    \"publisher\"\
+  : {\n      \"@type\": \"Organization\",\n      \"name\": \"Emiliano Gandini Outeda\"\
+  \n    }\n  },\n  {\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"\
+  BreadcrumbList\",\n    \"itemListElement\": [\n      {\n        \"@type\": \"ListItem\"\
+  ,\n        \"position\": 1,\n        \"name\": \"Features\",\n        \"item\":\
+  \ \"https://dbwarden.emiliano-go.com/features\"\n      }\n    ]\n  }\n]\n</script>\n"
 ---
 
 # Features

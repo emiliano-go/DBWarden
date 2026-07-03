@@ -1,9 +1,7 @@
 ---
 seo:
   title: Seed Management - DBWarden Documentation
-  description: DBWarden provides built-in seed data management for populating databases
-    with initial or reference data. Seeds complement migrations by handling data that...
-  canonical: https://dbwarden.emiliano-go.com/seeds/
+  canonical: https://dbwarden.emiliano-go.com/seeds
   robots: index,follow
   og:
     type: website
@@ -11,8 +9,10 @@ seo:
     description: DBWarden provides built-in seed data management for populating databases
       with initial or reference data. Seeds complement migrations by handling data
       that...
-    url: https://dbwarden.emiliano-go.com/seeds/
+    url: https://dbwarden.emiliano-go.com/seeds
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+    image:width: 128
+    image:height: 128
     site_name: DBWarden Documentation
   twitter:
     card: summary_large_image
@@ -21,11 +21,13 @@ seo:
       with initial or reference data. Seeds complement migrations by handling data
       that...
     image: https://dbwarden.emiliano-go.com/assets/icon.png
+  description: DBWarden provides built-in seed data management for populating databases
+    with initial or reference data. Seeds complement migrations by handling data that...
   schema_jsonld:
   - '@context': https://schema.org
     '@type': WebPage
     name: Seed Management - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/seeds/
+    url: https://dbwarden.emiliano-go.com/seeds
     description: DBWarden provides built-in seed data management for populating databases
       with initial or reference data. Seeds complement migrations by handling data
       that...
@@ -33,15 +35,42 @@ seo:
     publisher:
       '@type': Organization
       name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
     itemListElement:
     - '@type': ListItem
       position: 1
       name: Seed Management
-      item: https://emiliano-go.github.io/DBWarden/seeds/
-    - '@type': ListItem
-      position: 2
-      name: Seed Management
+      item: https://dbwarden.emiliano-go.com/seeds
+seo_html: "<title>Seed Management - DBWarden Documentation</title>\n<meta name=\"\
+  description\" content=\"DBWarden provides built-in seed data management for populating\
+  \ databases with initial or reference data. Seeds complement migrations by handling\
+  \ data that...\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/seeds\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Seed Management - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"DBWarden provides built-in seed data\
+  \ management for populating databases with initial or reference data. Seeds complement\
+  \ migrations by handling data that...\">\n<meta property=\"og:url\" content=\"https://dbwarden.emiliano-go.com/seeds\"\
+  >\n<meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<meta property=\"og:image:width\" content=\"128\">\n<meta property=\"og:image:height\"\
+  \ content=\"128\">\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\"\
+  >\n<meta name=\"twitter:card\" content=\"summary_large_image\">\n<meta name=\"twitter:title\"\
+  \ content=\"Seed Management - DBWarden Documentation\">\n<meta name=\"twitter:description\"\
+  \ content=\"DBWarden provides built-in seed data management for populating databases\
+  \ with initial or reference data. Seeds complement migrations by handling data that...\"\
+  >\n<meta name=\"twitter:image\" content=\"https://dbwarden.emiliano-go.com/assets/icon.png\"\
+  >\n<script type=\"application/ld+json\">\n[\n  {\n    \"@context\": \"https://schema.org\"\
+  ,\n    \"@type\": \"WebPage\",\n    \"name\": \"Seed Management - DBWarden Documentation\"\
+  ,\n    \"url\": \"https://dbwarden.emiliano-go.com/seeds\",\n    \"description\"\
+  : \"DBWarden provides built-in seed data management for populating databases with\
+  \ initial or reference data. Seeds complement migrations by handling data that...\"\
+  ,\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/icon.png\",\n    \"\
+  publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"Emiliano Gandini\
+  \ Outeda\"\n    }\n  },\n  {\n    \"@context\": \"https://schema.org\",\n    \"\
+  @type\": \"BreadcrumbList\",\n    \"itemListElement\": [\n      {\n        \"@type\"\
+  : \"ListItem\",\n        \"position\": 1,\n        \"name\": \"Seed Management\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/seeds\"\n      }\n    ]\n\
+  \  }\n]\n</script>\n"
 ---
 
 # Seed Management
