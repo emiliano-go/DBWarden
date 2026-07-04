@@ -20,6 +20,9 @@
   <a href="https://deepwiki.com/emiliano-go/DBWarden/">
     <img src="https://img.shields.io/badge/DeepWiki-8A2BE2?logo=readthedocs&logoColor=white&style=for-the-badge" alt="DeepWiki">
   </a>
+  <a href="https://codecov.io/gh/emiliano-go/DBWarden">
+    <img src="https://img.shields.io/codecov/c/github/emiliano-go/DBWarden?logo=codecov&logoColor=white&style=for-the-badge" alt="Codecov">
+  </a>
 </p>
 
 <p align="center">

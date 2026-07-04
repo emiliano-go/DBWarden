@@ -3032,6 +3032,134 @@ class TestPGBugRegression:
         assert len(refresh_ops) == 0
 
 
+class TestPGGrantsDiff:
+    def test_grant_added_emits_add_grant_op(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                        "email": {"type": "varchar(255)", "nullable": True, "primary_key": False},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[_mc("id", "INTEGER", pk=True), _mc("email", "VARCHAR(255)")],
+                pg_grants=[{"role": "app_user", "privileges": "ALL", "grantable": False}],
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        add_grants = [op for op in upgrade if op["type"] == "add_grant"]
+        revoke_grants = [op for op in rollback if op["type"] == "revoke_grant"]
+        assert len(add_grants) == 1
+        assert add_grants[0]["role"] == "app_user"
+        assert add_grants[0]["privileges"] == "ALL"
+        assert len(revoke_grants) == 1
+        assert revoke_grants[0]["role"] == "app_user"
+
+    def test_grant_removed_emits_revoke_grant_op(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                        "email": {"type": "varchar(255)", "nullable": True, "primary_key": False},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                    "pg_grants": [{"role": "old_role", "privileges": ["SELECT"], "grantable": False}],
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[_mc("id", "INTEGER", pk=True), _mc("email", "VARCHAR(255)")],
+                pg_grants=[],
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        revoke_grants = [op for op in upgrade if op["type"] == "revoke_grant"]
+        add_grants = [op for op in rollback if op["type"] == "add_grant"]
+        assert len(revoke_grants) == 1
+        assert revoke_grants[0]["role"] == "old_role"
+        assert len(add_grants) == 1
+        assert add_grants[0]["role"] == "old_role"
+
+    def test_grants_match_no_diff(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                    "pg_grants": [{"role": "reader", "privileges": ["SELECT"], "grantable": False}],
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[_mc("id", "INTEGER", pk=True)],
+                pg_grants=[{"role": "reader", "privileges": ["SELECT"], "grantable": False}],
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        grant_ops = [op for op in upgrade if "grant" in op["type"]]
+        assert len(grant_ops) == 0
+
+    def test_grant_changed_privileges_emits_add_and_revoke(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                    "pg_grants": [{"role": "editor", "privileges": ["SELECT"], "grantable": False}],
+                }
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[_mc("id", "INTEGER", pk=True)],
+                pg_grants=[{"role": "editor", "privileges": ["SELECT", "INSERT"], "grantable": False}],
+            )
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        add_grants = [op for op in upgrade if op["type"] == "add_grant"]
+        revoke_grants = [op for op in upgrade if op["type"] == "revoke_grant"]
+        assert len(add_grants) == 1
+        assert add_grants[0]["role"] == "editor"
+        assert len(revoke_grants) == 1
+        assert revoke_grants[0]["role"] == "editor"
+
+
 class TestPGSnapshotDiffToSql:
     def test_schema_creation_detected(self):
         """CREATE SCHEMA IF NOT EXISTS is emitted when ops carry a schema key."""
@@ -3342,3 +3470,101 @@ class TestPGDomainSequenceOps:
         assert "CREATE SEQUENCE IF NOT EXISTS simple_seq" in sql
         assert "NO CYCLE" in sql
         assert "DROP SEQUENCE IF EXISTS simple_seq;" in rb_sql
+
+
+class TestPGGrantsOps:
+    def test_add_grant_all_to_role(self):
+        ops = [
+            {
+                "type": "add_grant",
+                "table": "users",
+                "role": "app_user",
+                "privileges": "ALL",
+                "grantable": False,
+                "schema": "public",
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "revoke_grant",
+                "table": "users",
+                "role": "app_user",
+                "privileges": "ALL",
+                "grantable": False,
+                "schema": "public",
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "GRANT ALL ON TABLE public.users TO app_user;" in sql
+        assert "REVOKE ALL ON TABLE public.users FROM app_user;" in rb_sql
+        assert any(c.operation == "add_grant" for c in changes)
+
+    def test_add_grant_select_to_public(self):
+        ops = [
+            {
+                "type": "add_grant",
+                "table": "articles",
+                "role": "PUBLIC",
+                "privileges": ["SELECT"],
+                "grantable": False,
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "revoke_grant",
+                "table": "articles",
+                "role": "PUBLIC",
+                "privileges": ["SELECT"],
+                "grantable": False,
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "GRANT SELECT ON TABLE articles TO PUBLIC;" in sql
+        assert "REVOKE SELECT ON TABLE articles FROM PUBLIC;" in rb_sql
+
+    def test_revoke_grant_with_cascade(self):
+        ops = [
+            {
+                "type": "revoke_grant",
+                "table": "accounts",
+                "role": "admin",
+                "privileges": "ALL",
+                "grantable": True,
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "add_grant",
+                "table": "accounts",
+                "role": "admin",
+                "privileges": "ALL",
+                "grantable": True,
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert 'REVOKE ALL ON TABLE accounts FROM "admin" CASCADE;' in sql
+        assert 'GRANT ALL ON TABLE accounts TO "admin" WITH GRANT OPTION;' in rb_sql
+        assert any(c.operation == "revoke_grant" for c in changes)
+
+    def test_add_grant_multiple_privileges(self):
+        ops = [
+            {
+                "type": "add_grant",
+                "table": "tasks",
+                "role": "editor",
+                "privileges": ["SELECT", "INSERT", "UPDATE"],
+                "grantable": False,
+            },
+        ]
+        rollback_ops = [
+            {
+                "type": "revoke_grant",
+                "table": "tasks",
+                "role": "editor",
+                "privileges": ["SELECT", "INSERT", "UPDATE"],
+                "grantable": False,
+            },
+        ]
+        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
+        assert "GRANT SELECT, INSERT, UPDATE ON TABLE tasks TO editor;" in sql
+        assert "REVOKE SELECT, INSERT, UPDATE ON TABLE tasks FROM editor;" in rb_sql

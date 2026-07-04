@@ -920,6 +920,33 @@ def extract_full_schema_snapshot(
                 except Exception:
                     pass
 
+                try:
+                    grant_rows = _conn.execute(
+                        text(
+                            "SELECT COALESCE(r.rolname, 'PUBLIC') AS grantee, "
+                            "array_agg(acl.privilege_type ORDER BY acl.privilege_type) AS privileges, "
+                            "bool_or(acl.is_grantable) AS grantable "
+                            "FROM pg_class c "
+                            "CROSS JOIN LATERAL aclexplode(c.relacl) AS acl "
+                            "LEFT JOIN pg_roles r ON r.oid = acl.grantee "
+                            "WHERE c.oid = CAST(:t AS regclass) "
+                            "AND c.relacl IS NOT NULL "
+                            "GROUP BY COALESCE(r.rolname, 'PUBLIC')"
+                        ),
+                        {"t": _regclass_name},
+                    ).fetchall()
+                    if grant_rows:
+                        grants = []
+                        for r in grant_rows:
+                            grants.append({
+                                "role": r[0],
+                                "privileges": list(r[1]) if r[1] else ["ALL"],
+                                "grantable": bool(r[2]),
+                            })
+                        table_entry["pg_grants"] = grants
+                except Exception:
+                    pass
+
                 if pg_table:
                     table_entry["pg_table"] = pg_table
             except Exception:
@@ -2800,11 +2827,13 @@ def diff_models_against_snapshot(
             upgrade_ops.append({
                 "type": "alter_pg_rls",
                 "table": table.name,
+                "schema": table.schema,
                 "enable": model_rls,
             })
             rollback_ops.append({
                 "type": "alter_pg_rls",
                 "table": table.name,
+                "schema": table.schema,
                 "enable": snap_rls,
             })
 
@@ -2822,11 +2851,13 @@ def diff_models_against_snapshot(
                 upgrade_ops.append({
                     "type": "drop_policy",
                     "table": table.name,
+                    "schema": table.schema,
                     "name": name,
                 })
                 rollback_ops.append({
                     "type": "add_policy",
                     "table": table.name,
+                    "schema": table.schema,
                     **snap_pol,
                 })
             elif model_pol and not snap_pol:
@@ -2834,11 +2865,13 @@ def diff_models_against_snapshot(
                 upgrade_ops.append({
                     "type": "add_policy",
                     "table": table.name,
+                    "schema": table.schema,
                     **model_pol,
                 })
                 rollback_ops.append({
                     "type": "drop_policy",
                     "table": table.name,
+                    "schema": table.schema,
                     "name": name,
                 })
             elif model_pol and snap_pol:
@@ -2851,21 +2884,25 @@ def diff_models_against_snapshot(
                         upgrade_ops.append({
                             "type": "add_policy",
                             "table": table.name,
+                            "schema": table.schema,
                             **model_pol,
                         })
                         upgrade_ops.append({
                             "type": "drop_policy",
                             "table": table.name,
+                            "schema": table.schema,
                             "name": name,
                         })
                         rollback_ops.append({
                             "type": "add_policy",
                             "table": table.name,
+                            "schema": table.schema,
                             **snap_pol,
                         })
                         rollback_ops.append({
                             "type": "drop_policy",
                             "table": table.name,
+                            "schema": table.schema,
                             "name": name,
                         })
                     else:
@@ -2873,15 +2910,58 @@ def diff_models_against_snapshot(
                         upgrade_ops.append({
                             "type": "alter_policy",
                             "table": table.name,
+                            "schema": table.schema,
                             "name": name,
                             **model_pol,
                         })
                         rollback_ops.append({
                             "type": "alter_policy",
                             "table": table.name,
+                            "schema": table.schema,
                             "name": name,
                             **snap_pol,
                         })
+
+        # --- Grants diff ---
+        snap_grants_list = snapshot_tables[table.name].get("pg_grants", []) or []
+        model_grants_list = table.pg_grants or []
+
+        def _grant_key(g: dict) -> tuple:
+            privs = tuple(sorted(g.get("privileges", ["ALL"]))) if isinstance(g.get("privileges"), list) else (g.get("privileges", "ALL"),)
+            return (g.get("role", "PUBLIC"), privs, bool(g.get("grantable", False)))
+
+        snap_grant_keys = {_grant_key(g): g for g in snap_grants_list}
+        model_grant_keys = {_grant_key(g): g for g in model_grants_list}
+
+        for key, grant in model_grant_keys.items():
+            if key not in snap_grant_keys:
+                upgrade_ops.append({
+                    "type": "add_grant",
+                    "table": table.name,
+                    "schema": table.schema,
+                    **grant,
+                })
+                rollback_ops.append({
+                    "type": "revoke_grant",
+                    "table": table.name,
+                    "schema": table.schema,
+                    **grant,
+                })
+
+        for key, grant in snap_grant_keys.items():
+            if key not in model_grant_keys:
+                upgrade_ops.append({
+                    "type": "revoke_grant",
+                    "table": table.name,
+                    "schema": table.schema,
+                    **grant,
+                })
+                rollback_ops.append({
+                    "type": "add_grant",
+                    "table": table.name,
+                    "schema": table.schema,
+                    **grant,
+                })
 
     # --- FK diff ---
     def _fk_sig(fk: dict) -> tuple:
@@ -3205,6 +3285,8 @@ def snapshot_diff_to_sql(
         _quote_pg,
         _build_create_policy_sql,
         _build_alter_policy_sql,
+        _build_grant_sql,
+        _build_revoke_sql,
     )
     from dbwarden.engine.offline import reconstruct_model_table
 
@@ -3839,6 +3921,24 @@ def snapshot_diff_to_sql(
                 upgrade_sql=up, rollback_sql=rb,
             ))
             changes.append(Change(operation="alter_policy", table=op["table"], target=op["name"]))
+        elif op["type"] == "add_grant":
+            qname = _qualified_name(op["table"], op.get("schema"))
+            up = _build_grant_sql(op, qname)
+            rb = _build_revoke_sql(op, qname)
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_PG_GRANT,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation="add_grant", table=op["table"], target=op.get("role")))
+        elif op["type"] == "revoke_grant":
+            qname = _qualified_name(op["table"], op.get("schema"))
+            up = _build_revoke_sql(op, qname)
+            rb = _build_grant_sql(op, qname)
+            statements.append(MigrationStatement(
+                order=StatementOrder.ALTER_PG_GRANT,
+                upgrade_sql=up, rollback_sql=rb,
+            ))
+            changes.append(Change(operation="revoke_grant", table=op["table"], target=op.get("role")))
         elif op["type"] == "alter_my_table":
             key = op["key"]
             to_val = op.get("to_value")
