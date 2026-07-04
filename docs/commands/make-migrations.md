@@ -331,16 +331,6 @@ All `DROP COLUMN` statements are prefixed with a warning comment:
 ALTER TABLE users DROP COLUMN legacy_field
 ```
 
-### DROP COLUMN warning
-
-All `DROP COLUMN` statements are prefixed with a warning comment:
-
-```sql
--- WARNING: DROPPING COLUMN users.legacy_field
-
-ALTER TABLE users DROP COLUMN legacy_field
-```
-
 ## Table Rename Detection
 
 When a table is dropped from the snapshot and a new table with similar columns is added to the model, DBWarden auto-detects it as a potential **table rename** using a column-overlap heuristic.

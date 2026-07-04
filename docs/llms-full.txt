@@ -1986,16 +1986,6 @@ All `DROP COLUMN` statements are prefixed with a warning comment:
 ALTER TABLE users DROP COLUMN legacy_field
 ```
 
-### DROP COLUMN warning
-
-All `DROP COLUMN` statements are prefixed with a warning comment:
-
-```sql
--- WARNING: DROPPING COLUMN users.legacy_field
-
-ALTER TABLE users DROP COLUMN legacy_field
-```
-
 ## Table Rename Detection
 
 When a table is dropped from the snapshot and a new table with similar columns is added to the model, DBWarden auto-detects it as a potential **table rename** using a column-overlap heuristic.
@@ -7347,6 +7337,54 @@ COMMENT ON TABLE orders IS 'Customer orders';
 COMMENT ON COLUMN orders.id IS 'Order ID';
 ```
 
+For PostgreSQL views, use `PGViewMeta` instead of `PGTableMeta`:
+
+```python
+from dbwarden.databases.pgsql import PGViewMeta
+
+class ActiveUser(Base):
+    __tablename__ = "active_users"
+
+    id: Mapped[int] = mapped_column(Integer)
+    email: Mapped[str] = mapped_column(String(255))
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT id, email FROM users WHERE active = true"
+        pg_view_materialized = False
+```
+
+The generated DDL creates a regular view:
+
+```sql
+CREATE OR REPLACE VIEW active_users AS SELECT id, email FROM users WHERE active = true;
+```
+
+For a materialized view with auto-refresh:
+
+```python
+class OrderSummary(Base):
+    __tablename__ = "order_summary"
+
+    user_id: Mapped[int] = mapped_column(Integer)
+    total: Mapped[float] = mapped_column(Integer)
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT user_id, count(*) AS total FROM orders GROUP BY user_id"
+        pg_view_materialized = True
+        pg_view_auto_refresh = True
+```
+
+The first migration generates `CREATE MATERIALIZED VIEW order_summary AS ...`. Subsequent migrations include `REFRESH MATERIALIZED VIEW order_summary;`.
+
+To scope a table or view to a PostgreSQL schema, set `pg_schema`:
+
+```python
+class Meta(PGTableMeta):
+    pg_schema = "app"
+```
+
+The generated DDL uses the fully qualified name (e.g. `app.users`). Set `pg_schema` at the config level in `database_config(...)` to set the connection `search_path` for all unqualified references.
+
 ## Step 3: Creating a Manual Migration
 
 Sometimes you need a migration that isn't model-driven: a data backfill, a stored procedure, or a complex SQL operation.
@@ -10272,8 +10310,10 @@ The following PostgreSQL features are fully supported in this round-trip:
 | Index Options | `USING`, `WHERE`, `INCLUDE`, `WITH`, `TABLESPACE`, `NULLS NOT DISTINCT`, `CONCURRENTLY`, column sorting, operator classes via `postgresql_ops` |
 | Enum Types | `CREATE TYPE ... AS ENUM`, `ALTER TYPE ... ADD VALUE ... AFTER ...` |
 | Comments | Table and column `COMMENT ON` |
+| Schema Support | `pg_schema` scopes tables/views to a PostgreSQL schema; config-level `search_path` on connection |
 | Type Normalization | `SERIAL` → `integer` + autoincrement, `TIMESTAMPTZ`, `NUMERIC(p,s)`, `VARCHAR(n)`, `DOUBLE PRECISION`, `REAL`, `JSONB`, `UUID`, `ARRAY`, `ENUM`, `TSTZRANGE` |
 | Auto-increment Lifecycle | Toggle autoincrement on integer PKs via `autoincrement` field: generates `CREATE SEQUENCE` / `DROP SEQUENCE` + `SET DEFAULT nextval` |
+| Views & Materialized Views | `PGViewMeta` with `pg_view_query`, `pg_view_materialized`, `pg_view_auto_refresh`; `CREATE VIEW` / `CREATE MATERIALIZED VIEW`; `REFRESH MATERIALIZED VIEW` |
 
 ## Declaring Metadata
 
@@ -10475,6 +10515,128 @@ class OrderItem(Base):
 
     order_id: Mapped[int] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE", onupdate="CASCADE", deferrable=True), nullable=False)
 ```
+
+## Schema Support
+
+PostgreSQL organizes tables into schemas (namespaces). DBWarden allows you to scope tables and views to a specific schema at two levels.
+
+### Config-Level Schema
+
+Set `pg_schema` in `database_config(...)` to set the connection's `search_path`:
+
+```python
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://user:pass@localhost:5432/main",
+    pg_schema="app",
+)
+```
+
+All unqualified table references in SQL statements use this schema. The `_dbwarden_seeds` tracking table is created in the schema specified by `search_path`.
+
+### Model-Level Schema
+
+Set `pg_schema` on `PGTableMeta` or `PGViewMeta` to scope a specific model to a schema:
+
+```python
+from dbwarden.databases.pgsql import PGTableMeta
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    class Meta(PGTableMeta):
+        pg_schema = "app"
+```
+
+When a model has `pg_schema` set, all migration DDL (CREATE TABLE, ALTER TABLE, etc.) references the fully qualified name (e.g. `app.users`). This takes precedence over the config-level `search_path`.
+
+### Code Seeds and Schema
+
+Code seeds automatically qualify the table name with the model's `pg_schema`. If `User` has `pg_schema = "app"`, the seed INSERT becomes `INSERT INTO app.users (...) VALUES (...)`. See [Seeds](../seeds.md) for details.
+
+## Views & Materialized Views
+
+PostgreSQL views and materialized views are defined via `PGViewMeta` on the model's `class Meta`. Use a dedicated model per view with `__tablename__` matching the view name.
+
+### Regular Views
+
+Define a regular (non-materialized) view with `pg_view_query`:
+
+```python
+from sqlalchemy import Integer, String, DateTime
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from dbwarden.databases.pgsql import PGViewMeta
+
+class Base(DeclarativeBase):
+    pass
+
+class ActiveUser(Base):
+    __tablename__ = "active_users"
+
+    id: Mapped[int] = mapped_column(Integer)
+    email: Mapped[str] = mapped_column(String(255))
+    name: Mapped[str] = mapped_column(String(255))
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT id, email, name FROM users WHERE active = true"
+        pg_view_materialized = False
+```
+
+`generate-models` reverse-engineers views and emits `PGViewMeta` automatically. `make-migrations` generates `CREATE OR REPLACE VIEW` for regular views.
+
+### Materialized Views
+
+Set `pg_view_materialized = True` for a materialized view:
+
+```python
+class OrderSummary(Base):
+    __tablename__ = "order_summary"
+
+    user_id: Mapped[int] = mapped_column(Integer)
+    total: Mapped[float] = mapped_column(Integer)
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT user_id, count(*) AS total FROM orders GROUP BY user_id"
+        pg_view_materialized = True
+```
+
+`make-migrations` generates `CREATE MATERIALIZED VIEW` on first appearance.
+
+### Auto-Refresh
+
+Set `pg_view_auto_refresh = True` to emit `REFRESH MATERIALIZED VIEW {name}` in subsequent migrations:
+
+```python
+class Meta(PGViewMeta):
+    pg_view_query = "SELECT user_id, count(*) AS total FROM orders GROUP BY user_id"
+    pg_view_materialized = True
+    pg_view_auto_refresh = True
+```
+
+When `auto_refresh` is enabled, every `make-migrations` run after the initial CREATE produces a `refresh_matview` operation. The resulting migration SQL is:
+
+```sql
+REFRESH MATERIALIZED VIEW order_summary;
+```
+
+This is useful for materialized views that should stay current after each schema change. The operation is classified as INFO severity and requires no special flag.
+
+### Schema-Qualified Views
+
+Combine `pg_schema` with `PGViewMeta` to create views in a specific schema:
+
+```python
+class Meta(PGViewMeta):
+    pg_view_query = "SELECT id, email FROM users"
+    pg_view_materialized = False
+    pg_schema = "app"
+```
+
+This generates `CREATE OR REPLACE VIEW app.active_users AS ...`.
 
 ## DDL Behavior
 
@@ -10708,6 +10870,7 @@ assert Safety.CRITICAL == "CRITICAL"
 | Change object type | `WARNING` | `--force` |
 | Add / drop index | `INFO` / `WARNING` | `--force` |
 | Add / drop FK | `INFO` / `WARNING` | `--force` |
+| Refresh materialized view | `INFO` | None |
 
 ========================================================================
 PAGE: https://dbwarden.emiliano-go.com/databases/round-trip/
@@ -11058,7 +11221,19 @@ def get_engine(config):
 
 Connections include retry logic: `get_db_connection()` wraps engine connections with up to 5 attempts and exponential backoff when the database is temporarily unavailable (e.g. during a restart or network hiccup). Engines are cached and reused across calls.
 
-For PostgreSQL schema support, DBWarden sets `search_path` on connection when `postgres_schema` is configured.
+For PostgreSQL schema support, set `pg_schema` in `database_config(...)`. DBWarden sets `search_path` on connection so all unqualified references use that schema:
+
+```python
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://user:pass@localhost:5432/main",
+    pg_schema="app",
+)
+```
+
+At the model level, set `pg_schema` on `PGTableMeta` or `PGViewMeta` to scope a specific table or view to a schema. This takes precedence over the config-level `search_path`. See [PostgreSQL Deep Dive](databases/postgresql.md) for full details.
 
 ## Development Database Strategy
 
@@ -17243,18 +17418,33 @@ Created migration: migrations/primary/primary__0002_add_posts_table.sql
 
 PostgreSQL, MySQL/MariaDB, and ClickHouse support first-class metadata through `class Meta`.
 
-PostgreSQL
+PostgreSQL tables:
 
 ```python
-from dbwarden.databases.pgsql import PGTableMeta, PGColumnMeta
+from dbwarden.databases.pgsql import PGTableMeta, PGColumnMeta, pg
 
 
 class Meta(PGTableMeta):
     pg_fillfactor = 80
+    pg_schema = "app"
 
     class id(PGColumnMeta):
-        pg_identity = "always"
+        pg = pg.field(identity="always")
 ```
+
+PostgreSQL views and materialized views:
+
+```python
+from dbwarden.databases.pgsql import PGViewMeta
+
+
+class Meta(PGViewMeta):
+    pg_view_query = "SELECT id, email FROM users WHERE active = true"
+    pg_view_materialized = False
+    pg_schema = "app"
+```
+
+Set `pg_view_auto_refresh = True` for materialized views that need `REFRESH MATERIALIZED VIEW` on every migration cycle.
 
 MySQL
 
@@ -17964,6 +18154,50 @@ class User(Base):
 ```
 
 See the [reference](../models.md#postgresql-model-metadata) for the full list of `PGTableMeta` and `PGColumnMeta` attributes, or the [PostgreSQL Deep Dive](../databases/postgresql.md) for DDL behavior and snapshot format.
+
+### PostgreSQL Views and Schemas
+
+DBWarden supports PostgreSQL views and materialized views via `PGViewMeta`. Define a view as a model with `__tablename__` matching the view name:
+
+```python
+from dbwarden.databases.pgsql import PGViewMeta
+
+class ActiveUser(Base):
+    __tablename__ = "active_users"
+
+    id: Mapped[int] = mapped_column(Integer)
+    email: Mapped[str] = mapped_column(String(255))
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT id, email FROM users WHERE active = true"
+        pg_view_materialized = False
+```
+
+For materialized views, set `pg_view_materialized = True` and `pg_view_auto_refresh = True` to emit `REFRESH MATERIALIZED VIEW` automatically:
+
+```python
+class OrderSummary(Base):
+    __tablename__ = "order_summary"
+
+    user_id: Mapped[int] = mapped_column(Integer)
+    total: Mapped[float] = mapped_column(Integer)
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT user_id, count(*) AS total FROM orders GROUP BY user_id"
+        pg_view_materialized = True
+        pg_view_auto_refresh = True
+```
+
+Scope tables or views to a PostgreSQL schema with `pg_schema`:
+
+```python
+class Meta(PGTableMeta):
+    pg_schema = "app"
+
+# DDL uses app.users instead of public.users
+```
+
+At the config level, set `pg_schema` in `database_config(...)` to set the connection `search_path`. See [Schema Support](../databases/postgresql.md#schema-support) for details.
 
 
 ## Using `generate-models` as a Starting Point
@@ -19266,7 +19500,7 @@ class User(Base):
         pg_tablespace = "fastspace"
 ```
 
-`PGTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds PostgreSQL-specific ones (`pg_fillfactor`, `pg_tablespace`, `pg_unlogged`, `pg_partition`, `pg_inherits`, `pg_excludes`, `pg_indexes`, `pg_checks`, `pg_uniques`).
+`PGTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds PostgreSQL-specific ones (`pg_schema`, `pg_fillfactor`, `pg_tablespace`, `pg_unlogged`, `pg_partition`, `pg_inherits`, `pg_excludes`, `pg_indexes`, `pg_checks`, `pg_uniques`).
 
 For PostgreSQL-specific indexes, use `PgIndexSpec` in `pg_indexes`:
 
@@ -19321,6 +19555,49 @@ class User(Base):
 `PGColumnMeta` includes the common `comment` and `public` attributes plus a `pg` attribute of type `PgFieldSpec` that bundles all PostgreSQL-specific column options.
 
 For the full list of supported attributes, see [PostgreSQL Deep Dive](databases/postgresql.md).
+
+### PostgreSQL Views
+
+Use `PGViewMeta` for models that represent PostgreSQL views or materialized views. Set `__tablename__` to the view name:
+
+```python
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from dbwarden.databases.pgsql import PGViewMeta
+
+class Base(DeclarativeBase):
+    pass
+
+class ActiveUser(Base):
+    __tablename__ = "active_users"
+
+    id: Mapped[int] = mapped_column(Integer)
+    email: Mapped[str] = mapped_column(String(255))
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT id, email FROM users WHERE active = true"
+        pg_view_materialized = False
+```
+
+`PGViewMeta` attributes:
+
+| Attribute | Type | Default | SQL |
+|-----------|------|---------|-----|
+| `pg_view_query` | `str` | `None` | `AS <query>` in CREATE VIEW |
+| `pg_view_materialized` | `bool` | `False` | `CREATE MATERIALIZED VIEW` instead of `CREATE VIEW` |
+| `pg_view_auto_refresh` | `bool` | `False` | Emits `REFRESH MATERIALIZED VIEW` in subsequent migrations |
+| `pg_schema` | `str \| None` | `None` | Fully qualifies the view as `schema.view_name` |
+
+Set `pg_view_auto_refresh = True` to keep a materialized view current after each schema change:
+
+```python
+class Meta(PGViewMeta):
+    pg_view_query = "SELECT user_id, count(*) AS total FROM orders GROUP BY user_id"
+    pg_view_materialized = True
+    pg_view_auto_refresh = True
+```
+
+Each `make-migrations` run after the initial CREATE produces a `REFRESH MATERIALIZED VIEW` statement.
 
 ## ClickHouse Model Metadata
 
@@ -20639,6 +20916,37 @@ class CountrySeed(Seed):
 | `"ignore"` (default) | Skips existing rows silently |
 | `"update"` | Updates existing rows with new values |
 | `"error"` | Raises an error on conflict |
+
+### PostgreSQL Schema Resolution
+
+When a model uses `pg_schema` in its Meta (via `PGTableMeta` or `PGViewMeta`), code seeds automatically qualify the table name with that schema:
+
+```python
+from dbwarden.databases.pgsql import PGTableMeta
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    class Meta(PGTableMeta):
+        pg_schema = "app"
+
+class UserSeed(Seed):
+    __seed_database__ = "primary"
+    __seed_description__ = "initial users"
+
+    model = User
+    rows = [User(email="alice@example.com", name="Alice")]
+```
+
+The generated INSERT becomes:
+
+```sql
+INSERT INTO app.users (email, name) VALUES ('alice@example.com', 'Alice')
+```
+
+The schema is resolved in this order: `Meta.pg_schema`, then `Meta.backend_table.schema`, then `__table__.schema`. The seed tracking table (default `_dbwarden_seeds`) stays in the schema set by the connection's `search_path` (config-level `pg_schema`).
 
 ### Logic-Based Seeds
 
