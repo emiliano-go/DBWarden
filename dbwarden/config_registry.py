@@ -65,6 +65,7 @@ def database_config(
     pg_domains: list[dict] | None = None,
     pg_sequences: list[dict] | None = None,
     pg_schema: str | None = None,
+    pg_migration_lock_timeout: int | None = None,
 ) -> DatabaseHandle:
     from dbwarden.db_handle import DatabaseHandle as _DH
 
@@ -89,6 +90,7 @@ def database_config(
             pg_domains=pg_domains or [],
             pg_sequences=pg_sequences or [],
             pg_schema=pg_schema,
+            pg_migration_lock_timeout=pg_migration_lock_timeout,
         )
     )
     _REGISTRY.add(entry)

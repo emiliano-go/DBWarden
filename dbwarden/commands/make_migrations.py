@@ -491,6 +491,7 @@ def make_migrations_cmd(
     verbose: bool = False,
     database: str | None = None,
     output_plan: bool = False,
+    output_sql: bool = False,
     rename_flags: list[str] | None = None,
     safe_type_change: bool = False,
     rename_table_flags: list[str] | None = None,
@@ -509,6 +510,7 @@ def make_migrations_cmd(
         verbose: Enable verbose logging.
         database: Target database name.
         output_plan: Print the migration plan JSON without writing files.
+        output_sql: Print the raw migration SQL to stdout without writing files.
         rename_flags: List of user-supplied --rename flag strings.
         safe_type_change: Use multi-step safe type change strategy.
         rename_table_flags: List of user-supplied --rename-table flag strings.
@@ -715,6 +717,10 @@ def make_migrations_cmd(
 
     if output_plan:
         console.print(json.dumps(plan, indent=2), markup=False, highlight=False)
+        return
+
+    if output_sql:
+        console.print(upgrade_sql, markup=False, highlight=False)
         return
 
     if not upgrade_sql.strip():
@@ -1015,6 +1021,9 @@ def _merge_pending_migrations_into_snapshot(
                     }
 
 
+# Kept for backward compatibility — referenced by tests.
+# These helper functions have been replaced by RegistryDriver handlers
+# (DomainHandler, SequenceHandler) in _prepend_pg_preamble.
 def _build_domain_sql(domain: dict) -> str:
     schema = domain.get("schema")
     name = domain["name"]
@@ -1080,33 +1089,32 @@ def _prepend_pg_preamble(
         if config.database_type != "postgresql":
             return upgrade_sql, rollback_sql, changes
 
-        if config.pg_sequences:
-            seq_upgrade = "\n".join(_build_sequence_sql(s) for s in config.pg_sequences)
-            seq_rollback = "\n".join(_drop_sequence_sql(s) for s in reversed(config.pg_sequences))
-            if upgrade_sql.strip():
-                upgrade_sql = seq_upgrade + "\n\n" + upgrade_sql
-            else:
-                upgrade_sql = seq_upgrade
-            if rollback_sql.strip():
-                rollback_sql = seq_rollback + "\n\n" + rollback_sql
-            else:
-                rollback_sql = seq_rollback
-            for s in config.pg_sequences:
-                changes.insert(0, Change(operation="create_sequence", table=s["name"]))
-
-        if config.pg_domains:
-            dom_upgrade = "\n".join(_build_domain_sql(d) for d in config.pg_domains)
-            dom_rollback = "\n".join(_drop_domain_sql(d) for d in reversed(config.pg_domains))
-            if upgrade_sql.strip():
-                upgrade_sql = dom_upgrade + "\n\n" + upgrade_sql
-            else:
-                upgrade_sql = dom_upgrade
-            if rollback_sql.strip():
-                rollback_sql = dom_rollback + "\n\n" + rollback_sql
-            else:
-                rollback_sql = dom_rollback
-            for d in config.pg_domains:
-                changes.insert(0, Change(operation="create_domain", table=d["name"]))
+        if config.pg_sequences or config.pg_domains:
+            from dbwarden.engine.pg_registry import DomainHandler, RegistryDriver, SequenceHandler
+            _reg = RegistryDriver()
+            _reg.register(DomainHandler())
+            _reg.register(SequenceHandler())
+            _up_ops, _rb_ops = _reg.run({"domains": {}, "sequences": {}}, [], config)
+            if _up_ops:
+                _stmts = _reg.emit_all(_up_ops, db_name=db_name)
+                _pg_up = "\n".join(s.upgrade_sql for s in _stmts)
+                _pg_rb = "\n".join(s.rollback_sql for s in reversed(_stmts))
+                if _pg_up.strip():
+                    if upgrade_sql.strip():
+                        upgrade_sql = _pg_up + "\n\n" + upgrade_sql
+                    else:
+                        upgrade_sql = _pg_up
+                if _pg_rb.strip():
+                    if rollback_sql.strip():
+                        rollback_sql = _pg_rb + "\n\n" + rollback_sql
+                    else:
+                        rollback_sql = _pg_rb
+                for op in reversed(_up_ops):
+                    _name = (
+                        op.upgrade_attrs.get("domain_name")
+                        or op.upgrade_attrs.get("seq_name", "")
+                    )
+                    changes.insert(0, Change(operation=op.object_type, table=_name))
 
         if config.pg_extensions:
             ext_upgrade = "\n".join(

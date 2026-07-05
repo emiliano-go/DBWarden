@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -10,9 +11,7 @@ pymysql = pytest.importorskip("pymysql")
 from dbwarden.engine.snapshot import (
     _apply_rename_intents,
     _assemble_migration,
-    _build_fk_name,
     _build_index_name,
-    _build_foreign_key_sql,
     _build_index_sql,
     _normalize_mysql_default,
     _compute_table_overlap,
@@ -33,6 +32,9 @@ from dbwarden.engine.snapshot import (
 )
 from dbwarden.engine.model_discovery import IndexInfo, ModelColumn, ModelTable
 from dbwarden.engine.migration_name import Change
+from dbwarden.engine.offline import diff_model_states, model_state_to_dict
+from dbwarden.engine.pg_registry import ConstraintHandler
+from dbwarden.engine.pg_registry.protocol import Op
 
 
 def _mc(name: str, typ: str, pk: bool = False, nullable: bool = True) -> ModelColumn:
@@ -549,6 +551,281 @@ class TestExtractFullSchemaSnapshot:
         assert snapshot["format_version"] == 1
 
         os.unlink(db_path)
+
+    def test_postgresql_snapshot_skips_inherited_columns(self, monkeypatch):
+        class _Result:
+            def __init__(self, rows=None, scalar_value=None):
+                self._rows = rows or []
+                self._scalar_value = scalar_value
+
+            def fetchall(self):
+                return self._rows
+
+            def fetchone(self):
+                return self._rows[0] if self._rows else None
+
+            def scalar(self):
+                return self._scalar_value
+
+        class _Conn:
+            def __init__(self):
+                self.queries = []
+                self.params = []
+
+            def execute(self, stmt, params=None):
+                sql = str(stmt)
+                self.queries.append(sql)
+                self.params.append(params or {})
+                if "attisdropped" in sql and "attislocal" in sql:
+                    return _Result(rows=[("id",), ("data",)])
+                if "pg_inherits" in sql:
+                    return _Result(rows=[("app", "e2e_parent")])
+                if "pg_constraint" in sql and "contype = 'x'" in sql:
+                    assert (params or {}).get("t") == "app.child"
+                    return _Result(rows=[])
+                return _Result()
+
+            def close(self):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        class _Engine:
+            def __init__(self):
+                self.conn = _Conn()
+
+            def connect(self):
+                return self.conn
+
+            def dispose(self):
+                pass
+
+        class _Inspector:
+            def get_table_names(self, **kwargs):
+                return ["child"]
+
+            def get_columns(self, table_name, **kwargs):
+                return [
+                    {"name": "id", "type": "INTEGER", "nullable": False, "default": None},
+                    {"name": "name", "type": "TEXT", "nullable": True, "default": None},
+                    {"name": "data", "type": "TEXT", "nullable": True, "default": None},
+                ]
+
+            def get_pk_constraint(self, table_name, **kwargs):
+                return {"constrained_columns": ["id"]}
+
+            def get_indexes(self, table_name, **kwargs):
+                return []
+
+            def get_foreign_keys(self, table_name, **kwargs):
+                return []
+
+            def get_unique_constraints(self, table_name, **kwargs):
+                return []
+
+            def get_check_constraints(self, table_name, **kwargs):
+                return []
+
+            def get_table_comment(self, table_name, **kwargs):
+                return {"text": None}
+
+            def get_enums(self):
+                return []
+
+        engine = _Engine()
+        monkeypatch.setattr("sqlalchemy.create_engine", lambda url: engine)
+        monkeypatch.setattr("sqlalchemy.inspect", lambda engine_obj: _Inspector())
+        monkeypatch.setattr("dbwarden.config.get_database", lambda database: type("D", (), {"postgres_schema": "app"})())
+
+        snapshot = extract_full_schema_snapshot(
+            sqlalchemy_url="postgresql://example/db",
+            database_type="postgresql",
+        )
+
+        assert list(snapshot["tables"]["child"]["columns"].keys()) == ["id", "data"]
+        assert snapshot["tables"]["child"]["pg_table"]["backend"] == "postgresql"
+        assert snapshot["tables"]["child"]["pg_table"]["pg_inherits"] == "e2e_parent"
+        assert snapshot["tables"]["child"].get("pg_policies") is None
+        assert any("acl.grantee <> c.relowner" in q for q in engine.conn.queries)
+        assert any(p.get("t") == "app.child" for p in engine.conn.params)
+        assert any("attislocal" in q for q in engine.conn.queries)
+
+    def test_postgresql_snapshot_skips_plain_storage(self, monkeypatch):
+        class _Result:
+            def __init__(self, rows=None):
+                self._rows = rows or []
+
+            def fetchall(self):
+                return self._rows
+
+            def fetchone(self):
+                return self._rows[0] if self._rows else None
+
+        class _Conn:
+            def execute(self, stmt, params=None):
+                sql = str(stmt)
+                if "attisdropped" in sql and "attislocal" in sql:
+                    return _Result(rows=[("id",), ("data",)])
+                if "pg_attribute a" in sql and "attstorage" in sql:
+                    return _Result(rows=[("id", "p", None), ("data", "x", None)])
+                if "pg_inherits" in sql:
+                    return _Result(rows=[])
+                return _Result()
+
+            def close(self):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        class _Engine:
+            def connect(self):
+                return _Conn()
+
+            def dispose(self):
+                pass
+
+        class _Inspector:
+            def get_table_names(self, **kwargs):
+                return ["child"]
+
+            def get_columns(self, table_name, **kwargs):
+                return [
+                    {"name": "id", "type": "INTEGER", "nullable": False, "default": None},
+                    {"name": "data", "type": "TEXT", "nullable": True, "default": None},
+                ]
+
+            def get_pk_constraint(self, table_name, **kwargs):
+                return {"constrained_columns": ["id"]}
+
+            def get_indexes(self, table_name, **kwargs):
+                return []
+
+            def get_foreign_keys(self, table_name, **kwargs):
+                return []
+
+            def get_unique_constraints(self, table_name, **kwargs):
+                return []
+
+            def get_check_constraints(self, table_name, **kwargs):
+                return []
+
+            def get_table_comment(self, table_name, **kwargs):
+                return {"text": None}
+
+            def get_enums(self):
+                return []
+
+        monkeypatch.setattr("sqlalchemy.create_engine", lambda url: _Engine())
+        monkeypatch.setattr("sqlalchemy.inspect", lambda engine_obj: _Inspector())
+        monkeypatch.setattr("dbwarden.config.get_database", lambda database: type("D", (), {"postgres_schema": "app"})())
+
+        snapshot = extract_full_schema_snapshot(
+            sqlalchemy_url="postgresql://example/db",
+            database_type="postgresql",
+        )
+
+        assert "pg_column" not in snapshot["tables"]["child"]["columns"]["id"]
+        assert "pg_column" not in snapshot["tables"]["child"]["columns"]["data"]
+
+    def test_postgresql_snapshot_keeps_only_non_default_opclasses(self, monkeypatch):
+        class _Result:
+            def __init__(self, rows=None, scalar_value=None):
+                self._rows = rows or []
+                self._scalar_value = scalar_value
+
+            def fetchall(self):
+                return self._rows
+
+            def fetchone(self):
+                return self._rows[0] if self._rows else None
+
+            def scalar(self):
+                return self._scalar_value
+
+        class _Conn:
+            def __init__(self):
+                self.queries = []
+
+            def execute(self, stmt, params=None):
+                sql = str(stmt)
+                self.queries.append(sql)
+                if "attisdropped" in sql and "attislocal" in sql:
+                    return _Result(rows=[("id",), ("data",)])
+                if "opcdefault" in sql:
+                    return _Result(rows=[SimpleNamespace(attname="data", opcname="text_pattern_ops")])
+                return _Result()
+
+            def close(self):
+                pass
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        class _Engine:
+            def __init__(self):
+                self.conn = _Conn()
+
+            def connect(self):
+                return self.conn
+
+            def dispose(self):
+                pass
+
+        class _Inspector:
+            def get_table_names(self, **kwargs):
+                return ["child"]
+
+            def get_columns(self, table_name, **kwargs):
+                return [
+                    {"name": "id", "type": "INTEGER", "nullable": False, "default": None},
+                    {"name": "data", "type": "TEXT", "nullable": True, "default": None},
+                ]
+
+            def get_pk_constraint(self, table_name, **kwargs):
+                return {"constrained_columns": ["id"]}
+
+            def get_indexes(self, table_name, **kwargs):
+                return [{"name": "ix_child_data", "column_names": ["data"], "unique": False, "dialect_options": {"postgresql_using": "btree"}}]
+
+            def get_foreign_keys(self, table_name, **kwargs):
+                return []
+
+            def get_unique_constraints(self, table_name, **kwargs):
+                return []
+
+            def get_check_constraints(self, table_name, **kwargs):
+                return []
+
+            def get_table_comment(self, table_name, **kwargs):
+                return {"text": None}
+
+            def get_enums(self):
+                return []
+
+        engine = _Engine()
+        monkeypatch.setattr("sqlalchemy.create_engine", lambda url: engine)
+        monkeypatch.setattr("sqlalchemy.inspect", lambda engine_obj: _Inspector())
+        monkeypatch.setattr("dbwarden.config.get_database", lambda database: type("D", (), {"postgres_schema": "app"})())
+
+        snapshot = extract_full_schema_snapshot(
+            sqlalchemy_url="postgresql://example/db",
+            database_type="postgresql",
+        )
+
+        idx = snapshot["indexes"]["child.ix_child_data"]
+        assert idx["postgresql_ops"] == {"data": "text_pattern_ops"}
+        assert any("opcdefault" in q for q in engine.conn.queries)
 
     def test_includes_indexes(self):
         import sqlite3
@@ -1378,7 +1655,300 @@ class TestSnapshotDiffToSqlEdgeCases:
         assert "ADD COLUMN" in sql or "ALTER TABLE" in sql
 
 
-class TestTableRenameDetection:
+class TestHandlerConvergence:
+
+    def test_all_op_types_emit(self, monkeypatch):
+        """Convergence test: every handler-registered op type emits SQL without error."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            monkeypatch.chdir(tmpdir)
+            Path("dbwarden/schemas").mkdir(parents=True)
+            Path("dbwarden.py").write_text(
+                "from dbwarden import database_config\n"
+                "database_config(database_name='test', default=True, database_type='postgresql', "
+                "database_url_sync='postgresql:///test', model_paths=['models'])\n"
+            )
+            monkeypatch.setattr(
+                "dbwarden.engine.snapshot._get_backend",
+                lambda db_name=None: "postgresql",
+            )
+            ops = [
+                {"type": "rename_table", "old_table": "users", "new_table": "accounts"},
+                {"type": "rename_column", "table": "accounts", "old_name": "name", "new_name": "full_name"},
+                {"type": "alter_column_type", "table": "accounts", "column": "bio", "model_type": "TEXT"},
+                {"type": "alter_column_nullable", "table": "accounts", "column": "email", "nullable": False, "col_type": "VARCHAR"},
+                {"type": "alter_column_default", "table": "accounts", "column": "role", "default": "'admin'"},
+                {"type": "alter_column_autoincrement", "table": "accounts", "column": "id", "autoincrement": False, "col_type": "INTEGER", "nullable": False},
+                {"type": "alter_column_comment", "table": "accounts", "column": "email", "comment": "user email", "col_type": "VARCHAR", "nullable": True, "autoincrement": False, "my_meta": {}},
+                {"type": "add_column", "table": "accounts", "column": "phone", "model_column": ModelColumn("phone", "VARCHAR", True, False, False, None, None)},
+                {"type": "drop_column", "table": "accounts", "column": "legacy", "definition": {"type": "varchar"}},
+                {"type": "alter_pg_column_meta", "table": "accounts", "column": "id", "col_type": "INTEGER", "snap_type": "integer", "from_pg_column": {}, "to_pg_column": {"default": "1"}},
+                {"type": "alter_my_column_meta", "table": "accounts", "column": "id", "col_type": "INTEGER", "snap_type": "integer", "from_my_column": {}, "to_my_column": {"my_col": "val"}, "nullable": True, "default": None, "comment": None, "autoincrement": False, "snap_nullable": True, "snap_default": None, "snap_comment": None},
+                {"type": "alter_ch_column", "table": "accounts", "column": "ts", "col_type": "DateTime", "snap_type": "DateTime", "from_ch_column": {}, "to_ch_column": {"codec": "LZ4"}},
+                {"type": "add_unique_constraint", "table": "accounts", "columns": ["email"], "name": "uq_accounts_email"},
+                {"type": "drop_unique_constraint", "table": "accounts", "columns": ["email"], "name": "uq_accounts_email"},
+                {"type": "rename_unique_constraint", "table": "accounts", "old_name": "uq_old", "new_name": "uq_new"},
+                {"type": "add_check_constraint", "table": "accounts", "name": "ck_age", "expression": "age > 0"},
+                {"type": "drop_check_constraint", "table": "accounts", "name": "ck_age"},
+                {"type": "add_foreign_key", "table": "accounts", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]},
+                {"type": "drop_foreign_key", "table": "accounts", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"], "name": "fk_accounts_group"},
+                {"type": "add_index", "table": "accounts", "columns": ["email"], "unique": True},
+                {"type": "drop_index", "table": "accounts", "columns": ["email"], "unique": True, "index_name": "ix_accounts_email"},
+                {"type": "alter_table_comment", "table": "accounts", "comment": "user accounts table"},
+                {"type": "drop_table", "table": "old_thing"},
+                {"type": "alter_pg_table", "table": "accounts", "key": "fillfactor", "from_value": None, "to_value": "70"},
+                {"type": "alter_ch_options", "table": "events", "ch_engine": "MergeTree()", "ch_order_by": "(id)", "ch_partition_by": "()"},
+                {"type": "alter_my_table", "table": "accounts", "key": "my_engine", "from_value": None, "to_value": "InnoDB"},
+                {"type": "create_schema", "schema": "app"},
+                {"type": "drop_schema", "schema": "old_schema"},
+                {"type": "create_domain", "name": "positive_int", "domain_type": "integer"},
+                {"type": "drop_domain", "name": "positive_int"},
+                {"type": "create_sequence", "name": "user_seq"},
+                {"type": "drop_sequence", "name": "user_seq"},
+                {"type": "alter_pg_storage_param", "table": "accounts", "param": "fillfactor", "from_value": None, "to_value": "80"},
+                {"type": "alter_pg_rls", "table": "accounts", "enabled": True},
+                {"type": "add_policy", "table": "accounts", "name": "policy_self", "using": "user_id = current_user"},
+                {"type": "drop_policy", "table": "accounts", "name": "policy_self"},
+                {"type": "alter_policy", "table": "accounts", "name": "policy_self", "using": "user_id = current_user"},
+                {"type": "add_grant", "table": "accounts", "role": "app_user", "privileges": ["SELECT", "INSERT"]},
+                {"type": "revoke_grant", "table": "accounts", "role": "app_user", "privileges": ["SELECT"]},
+                {"type": "alter_enum_add_value", "enum_name": "mood", "value": "ok", "after": "happy"},
+                {"type": "create_type", "enum_name": "mood", "values": ["happy", "sad"]},
+                {"type": "drop_type", "enum_name": "mood"},
+                {"type": "alter_view", "table": "active_users", "definition": "SELECT * FROM users WHERE active"},
+                {"type": "refresh_matview", "table": "user_stats"},
+            ]
+            rollback_ops = [dict(op) for op in ops]
+            sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="test")
+            assert sql
+            assert rb_sql
+            assert len(changes) >= len(ops)
+
+    def test_handler_diff_to_sql_pipeline(self, monkeypatch):
+        """End-to-end: diff_models_against_snapshot -> snapshot_diff_to_sql with handler ops."""
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "postgresql")
+
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                        "name": {"type": "varchar", "nullable": True},
+                        "group_id": {"type": "integer", "nullable": True},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                },
+                "groups": {
+                    "columns": {
+                        "id": {"type": "integer", "nullable": False, "primary_key": True},
+                    },
+                    "primary_key": ["id"],
+                    "comment": None,
+                },
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("full_name", "VARCHAR(255)", True, False, False, None, None),
+                    ModelColumn("group_id", "INTEGER", True, False, False, None, None),
+                ],
+                foreign_keys=[{"columns": ["group_id"], "referred_table": "groups", "referred_columns": ["id"]}],
+                comment="User accounts",
+            ),
+            ModelTable(
+                name="groups",
+                columns=[ModelColumn("id", "INTEGER", False, True, False, None, None)],
+            ),
+        ]
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        assert any(op["type"] == "rename_column" for op in upgrade)
+        assert any(op["type"] == "add_foreign_key" for op in upgrade)
+        assert any(op["type"] == "alter_table_comment" for op in upgrade)
+
+        sql, rb_sql, changes = snapshot_diff_to_sql(upgrade, rollback, db_name=None)
+        assert "RENAME COLUMN" in sql
+        assert "ADD CONSTRAINT" in sql
+        assert "COMMENT ON TABLE" in sql
+        assert len(changes) == len(upgrade)
+
+    def test_online_offline_pipeline_equivalence(self, monkeypatch):
+        """Online and offline diff paths must render identical SQL per backend."""
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: db_name or "postgresql")
+        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: db_name or "postgresql")
+
+        prev_tables = [
+            ModelTable(
+                name="accounts",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None, autoincrement=False),
+                    ModelColumn("email", "VARCHAR(255)", True, False, False, None, None),
+                    ModelColumn("role", "VARCHAR(50)", True, False, False, None, None),
+                    ModelColumn("status", "INTEGER", True, False, False, None, None),
+                    ModelColumn("bio", "VARCHAR", True, False, False, None, None),
+                    ModelColumn("age", "INTEGER", True, False, False, None, None),
+                    ModelColumn("group_id", "INTEGER", True, False, False, None, None),
+                    ModelColumn("handle", "VARCHAR(50)", True, False, False, None, None),
+                ],
+                pg_table={"pg_fillfactor": 70},
+            ),
+            ModelTable(
+                name="groups",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                ],
+            ),
+            ModelTable(
+                name="inventory",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("sku", "VARCHAR(64)", False, False, False, None, None),
+                    ModelColumn("qty", "INTEGER", False, False, False, None, None),
+                ],
+                my_table={
+                    "my_engine": "innodb",
+                    "my_charset": "utf8mb4",
+                    "my_collate": "utf8mb4_general_ci",
+                    "my_row_format": "dynamic",
+                },
+            ),
+            ModelTable(
+                name="events",
+                columns=[
+                    ModelColumn("id", "UInt64", False, True, False, None, None),
+                    ModelColumn("ts", "DateTime", False, False, False, None, None),
+                    ModelColumn("payload", "String", True, False, False, None, None),
+                ],
+                clickhouse_options={
+                    "ch_engine": "MergeTree",
+                    "ch_order_by": ["id"],
+                    "ch_partition_by": "toYYYYMM(ts)",
+                },
+            ),
+            ModelTable(
+                name="event_logs",
+                columns=[
+                    ModelColumn("id", "UInt64", False, True, False, None, None),
+                    ModelColumn("ts", "DateTime", False, False, False, None, None),
+                ],
+                clickhouse_options={
+                    "ch_engine": "MergeTree",
+                    "ch_order_by": ["ts"],
+                },
+            ),
+        ]
+
+        curr_tables = [
+            ModelTable(
+                name="accounts",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None, autoincrement=True),
+                    ModelColumn("email", "VARCHAR(255)", False, False, False, None, None, comment="contact email"),
+                    ModelColumn("role", "VARCHAR(50)", True, False, False, None, None),
+                    ModelColumn("status", "INTEGER", True, False, False, 1, None),
+                    ModelColumn("bio", "TEXT", True, False, False, None, None),
+                    ModelColumn("age", "INTEGER", True, False, False, None, None),
+                    ModelColumn("group_id", "INTEGER", True, False, False, None, None),
+                    ModelColumn("handle", "VARCHAR(50)", True, False, False, None, None),
+                ],
+                indexes=[IndexInfo(name="ix_accounts_email", columns=["email"], unique=False)],
+                uniques=[{"name": "uq_accounts_handle", "columns": ["handle"]}],
+                comment="User accounts",
+                pg_table={"pg_fillfactor": 80},
+            ),
+            ModelTable(
+                name="groups",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                ],
+            ),
+            ModelTable(
+                name="inventory",
+                columns=[
+                    ModelColumn("id", "INTEGER", False, True, False, None, None),
+                    ModelColumn("sku", "VARCHAR(64)", False, False, False, None, None),
+                    ModelColumn("qty", "INTEGER", False, False, False, None, None),
+                ],
+                my_table={
+                    "my_engine": "myisam",
+                    "my_charset": "latin1",
+                    "my_collate": "latin1_swedish_ci",
+                    "my_row_format": "compact",
+                    "my_auto_increment": 42,
+                },
+            ),
+            ModelTable(
+                name="events",
+                columns=[
+                    ModelColumn("id", "UInt64", False, True, False, None, None),
+                    ModelColumn("ts", "DateTime", False, False, False, None, None),
+                    ModelColumn("payload", "String", True, False, False, None, None),
+                ],
+                clickhouse_options={
+                    "ch_engine": "ReplacingMergeTree",
+                    "ch_order_by": ["ts", "id"],
+                    "ch_partition_by": "toYYYYMM(ts)",
+                },
+            ),
+            ModelTable(
+                name="event_logs",
+                columns=[
+                    ModelColumn("id", "UInt64", False, True, False, None, None),
+                    ModelColumn("ts", "DateTime", False, False, False, None, None),
+                ],
+                clickhouse_options={
+                    "ch_engine": "MergeTree",
+                    "ch_order_by": ["ts", "id"],
+                    "ch_ttl": ["ts + INTERVAL 1 DAY"],
+                },
+            ),
+        ]
+
+        prev_state = model_state_to_dict(prev_tables)
+        curr_state = model_state_to_dict(curr_tables)
+        snapshot = model_state_to_dict(prev_tables)
+        for table in prev_tables:
+            snapshot["tables"][table.name]["clickhouse_options"] = dict(table.clickhouse_options)
+            snapshot["tables"][table.name]["pg_table"] = dict(table.pg_table)
+            snapshot["tables"][table.name]["my_table"] = dict(table.my_table)
+
+        def _backend_for_table(state: dict, table_name: str) -> str | None:
+            table = state.get("tables", {}).get(table_name, {})
+            return (table.get("backend_table_spec") or {}).get("backend")
+
+        def _sorted_ops(ops: list[dict], state: dict, backend: str) -> list[dict]:
+            relevant = [
+                op for op in ops
+                if _backend_for_table(state, op.get("table", "")) == backend
+            ]
+            return sorted(relevant, key=lambda op: json.dumps(op, sort_keys=True, default=str))
+
+        def _render(ops: list[dict], rollback_ops: list[dict], state: dict, backend: str) -> tuple[str, str]:
+            return snapshot_diff_to_sql(
+                _sorted_ops(ops, state, backend),
+                _sorted_ops(rollback_ops, state, backend),
+                db_name=backend,
+            )[:2]
+
+        online_upgrade, online_rollback = diff_models_against_snapshot(
+            curr_tables,
+            snapshot,
+            db_name="postgresql",
+            clickhouse_engine_recreate=True,
+        )
+        offline_upgrade, offline_rollback = diff_model_states(prev_state, curr_state)
+
+        for backend in ("postgresql", "mysql", "clickhouse"):
+            online_sql, online_rb_sql = _render(online_upgrade, online_rollback, prev_state, backend)
+            offline_sql, offline_rb_sql = _render(offline_upgrade, offline_rollback, prev_state, backend)
+            assert online_sql == offline_sql
+            assert online_rb_sql == offline_rb_sql
     def test_compute_overlap_high(self):
         snapshot = {
             "tables": {
@@ -1488,8 +2058,9 @@ class TestTableRenameDetection:
 
 class TestForeignKeyDiff:
     def test_fk_name_generation(self):
-        name = _build_fk_name("users", ["group_id"])
-        assert name == "users_group_id_fkey"
+        handler = ConstraintHandler()
+        name = handler._build_fk_name("users", ["group_id"])
+        assert name == "fk_users_group_id"
 
     def test_fk_diff_add(self):
         snapshot = {
@@ -1589,26 +2160,30 @@ class TestForeignKeyDiff:
         fk_ops = [op for op in upgrade if "foreign_key" in op["type"]]
         assert len(fk_ops) == 0
 
-    def test_fk_add_sql_postgresql(self):
-        op = {"type": "add_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]}
-        stmts = _build_foreign_key_sql(op, "postgresql")
+    def test_fk_add_sql_postgresql(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        op = Op(object_type="add_foreign_key", upgrade_attrs={"table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]})
+        stmts = ConstraintHandler().emit(op, db_name="primary")
         assert len(stmts) == 1
         assert "ADD CONSTRAINT" in stmts[0].upgrade_sql
-        assert "users_group_id_fkey" in stmts[0].upgrade_sql
+        assert "fk_users_group_id" in stmts[0].upgrade_sql
 
-    def test_fk_drop_sql_mysql(self):
-        op = {"type": "drop_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]}
-        stmts = _build_foreign_key_sql(op, "mysql")
+    def test_fk_drop_sql_mysql(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "mysql")
+        op = Op(object_type="drop_foreign_key", upgrade_attrs={"table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]})
+        stmts = ConstraintHandler().emit(op, db_name="primary")
         assert "DROP FOREIGN KEY" in stmts[0].upgrade_sql
 
-    def test_fk_sql_sqlite_not_supported(self):
-        op = {"type": "add_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]}
-        stmts = _build_foreign_key_sql(op, "sqlite")
+    def test_fk_sql_sqlite_not_supported(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "sqlite")
+        op = Op(object_type="add_foreign_key", upgrade_attrs={"table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]})
+        stmts = ConstraintHandler().emit(op, db_name="primary")
         assert "not supported" in stmts[0].upgrade_sql
 
-    def test_fk_sql_with_deferrable(self):
-        op = {"type": "add_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"], "deferrable": True}
-        stmts = _build_foreign_key_sql(op, "postgresql")
+    def test_fk_sql_with_deferrable(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        op = Op(object_type="add_foreign_key", upgrade_attrs={"table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"], "deferrable": True})
+        stmts = ConstraintHandler().emit(op, db_name="primary")
         assert "DEFERRABLE INITIALLY DEFERRED" in stmts[0].upgrade_sql
 
     def test_fk_validation_skips_missing_ref_table(self):
@@ -1721,6 +2296,11 @@ class TestIndexDiff:
         assert "CREATE UNIQUE INDEX" in stmts[0].upgrade_sql
         assert "CONCURRENTLY" in stmts[0].upgrade_sql
 
+    def test_index_add_sql_postgresql_concurrent_is_autocommit_marked(self):
+        op = {"type": "add_index", "table": "users", "columns": ["email"], "unique": False}
+        stmts = _build_index_sql(op, "postgresql")
+        assert stmts[0].upgrade_sql.startswith("-- @dbwarden:autocommit\n")
+
     def test_index_add_sql_sqlite(self):
         op = {"type": "add_index", "table": "users", "columns": ["email"], "unique": False}
         stmts = _build_index_sql(op, "sqlite")
@@ -1774,15 +2354,17 @@ class TestIndexDiff:
         assert any(c.operation == "add_foreign_key" for c in changes)
         assert any(c.operation == "add_index" for c in changes)
 
-    def test_fk_rollback_sql_correctness(self):
-        op = {"type": "add_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]}
-        stmt = _build_foreign_key_sql(op, "postgresql")[0]
+    def test_fk_rollback_sql_correctness(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        op = Op(object_type="add_foreign_key", upgrade_attrs={"table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]})
+        stmt = ConstraintHandler().emit(op, db_name="primary")[0]
         assert "DROP CONSTRAINT" in stmt.rollback_sql
-        assert "users_group_id_fkey" in stmt.rollback_sql
+        assert "fk_users_group_id" in stmt.rollback_sql
 
-    def test_fk_mariadb_uses_drop_foreign_key(self):
-        op = {"type": "drop_foreign_key", "table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]}
-        stmt = _build_foreign_key_sql(op, "mariadb")
+    def test_fk_mariadb_uses_drop_foreign_key(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "mariadb")
+        op = Op(object_type="drop_foreign_key", upgrade_attrs={"table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"]})
+        stmt = ConstraintHandler().emit(op, db_name="primary")
         assert "DROP FOREIGN KEY" in stmt[0].upgrade_sql
 
     def test_index_mysql_syntax(self):
@@ -2042,31 +2624,20 @@ class TestIndexDiff:
         assert "CREATE UNIQUE INDEX" in stmt[0].rollback_sql
 
     def test_composite_fk_name_generation(self):
-        name = _build_fk_name("orders", ["user_id", "product_id"])
-        assert name == "orders_user_id_product_id_fkey"
+        handler = ConstraintHandler()
+        name = handler._build_fk_name("orders", ["user_id", "product_id"])
+        assert name == "fk_orders_user_id_product_id"
 
-    def test_fk_add_sql_does_not_include_on_delete(self):
-        op = {
-            "type": "add_foreign_key",
-            "table": "users",
-            "columns": ["group_id"],
-            "referenced_table": "groups",
-            "referenced_columns": ["id"],
-            "on_delete": "CASCADE",
-        }
-        stmts = _build_foreign_key_sql(op, "postgresql")
+    def test_fk_add_sql_does_not_include_on_delete(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        op = Op(object_type="add_foreign_key", upgrade_attrs={"table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"], "on_delete": "CASCADE"})
+        stmts = ConstraintHandler().emit(op, db_name="primary")
         assert "ON DELETE CASCADE" in stmts[0].upgrade_sql
 
-    def test_fk_add_sql_does_not_include_on_update(self):
-        op = {
-            "type": "add_foreign_key",
-            "table": "users",
-            "columns": ["group_id"],
-            "referenced_table": "groups",
-            "referenced_columns": ["id"],
-            "on_update": "SET NULL",
-        }
-        stmts = _build_foreign_key_sql(op, "postgresql")
+    def test_fk_add_sql_does_not_include_on_update(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        op = Op(object_type="add_foreign_key", upgrade_attrs={"table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"], "on_update": "SET NULL"})
+        stmts = ConstraintHandler().emit(op, db_name="primary")
         assert "ON UPDATE SET NULL" in stmts[0].upgrade_sql
 
     def test_fk_diff_detects_on_delete_change(self):

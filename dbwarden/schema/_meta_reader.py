@@ -233,11 +233,14 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
             auto_refresh=table_attrs.get("pg_view_auto_refresh", False),
         )
     elif any(k.startswith("pg_") and k not in ("pg_indexes", "pg_checks", "pg_uniques", "pg_excludes", "pg_partition", "pg_view_query", "pg_view_materialized") for k in table_attrs):
+        pg_inherits = table_attrs.get("pg_inherits")
+        if isinstance(pg_inherits, str):
+            pg_inherits = [pg_inherits]
         meta.backend_table = PgTableSpec(
             tablespace=table_attrs.get("pg_tablespace"),
             fillfactor=table_attrs.get("pg_fillfactor"),
             unlogged=table_attrs.get("pg_unlogged", False),
-            inherits=list(table_attrs.get("pg_inherits", [])) if table_attrs.get("pg_inherits") else None,
+            inherits=list(pg_inherits) if pg_inherits else None,
             schema=table_attrs.get("pg_schema") or None,
         )
     elif any(k.startswith("ch_") and k not in ("ch_indexes", "ch_projections", "ch_settings", "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key") for k in table_attrs):

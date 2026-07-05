@@ -106,6 +106,7 @@ class DatabaseEntry:
     pg_domains: list[dict] = field(factory=list)
     pg_sequences: list[dict] = field(factory=list)
     pg_schema: str | None = None
+    pg_migration_lock_timeout: int | None = None
 
 
 @define(slots=False)

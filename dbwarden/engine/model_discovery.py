@@ -126,6 +126,21 @@ def _quote_pg(name: str) -> str:
     return name
 
 
+def _is_expression(s: str) -> bool:
+    """Return True if *s* looks like a PostgreSQL expression (not a simple column name).
+
+    Expressions contain parentheses, type casts (::), operators or function calls.
+    """
+    if not s:
+        return False
+    if s.startswith('"') and s.endswith('"'):
+        return False
+    for ch in s:
+        if ch in ("(", ")", ":", ",", "+", "-", "*", "/", "%", "=", "<", ">", "!", "|", "&", "#", "~"):
+            return True
+    return False
+
+
 def _render_mysql_column_type(type_str: str, meta: dict[str, Any]) -> str:
     rendered = type_str
     if meta.get("my_unsigned") and "UNSIGNED" not in rendered.upper():
@@ -303,10 +318,12 @@ class IndexInfo:
     tablespace: str | None = None
     nulls_not_distinct: bool = False
     column_sorting: dict[str, str] | None = None
+    postgresql_ops: dict[str, str] | None = None
     comment: str | None = None
     concurrently: bool = True
     clickhouse_type: str | None = None
     clickhouse_granularity: int | None = None
+    expression: str | None = None
 
     def to_dict(self) -> dict:
         d: dict[str, Any] = {
@@ -329,6 +346,8 @@ class IndexInfo:
             d["nulls_not_distinct"] = True
         if self.column_sorting is not None:
             d["column_sorting"] = self.column_sorting
+        if self.postgresql_ops is not None:
+            d["postgresql_ops"] = self.postgresql_ops
         if self.comment is not None:
             d["comment"] = self.comment
         if not self.concurrently:
@@ -337,6 +356,8 @@ class IndexInfo:
             d["clickhouse_type"] = self.clickhouse_type
         if self.clickhouse_granularity is not None:
             d["clickhouse_granularity"] = self.clickhouse_granularity
+        if self.expression is not None:
+            d["expression"] = self.expression
         return d
 
     @staticmethod
@@ -352,10 +373,12 @@ class IndexInfo:
             tablespace=d.get("tablespace"),
             nulls_not_distinct=bool(d.get("nulls_not_distinct", False)),
             column_sorting=dict(d.get("column_sorting", {})) if d.get("column_sorting") else None,
+            postgresql_ops=dict(d.get("postgresql_ops", {})) if d.get("postgresql_ops") else None,
             comment=d.get("comment"),
             concurrently=bool(d.get("concurrently", True)),
             clickhouse_type=d.get("clickhouse_type"),
             clickhouse_granularity=d.get("clickhouse_granularity"),
+            expression=d.get("expression"),
         )
 
 
@@ -1180,26 +1203,44 @@ def extract_table_from_model(
                             f"Index entries must be dicts or typed spec objects, "
                             f"got {type(idx_entry).__name__}"
                         )
+                    raw_cols = list(idx_entry.get("columns", []))
+                    spec_expr = idx_entry.get("expression")
+                    if spec_expr:
+                        clean_cols = [c for c in raw_cols if c != spec_expr]
+                        expr_val = spec_expr
+                    else:
+                        expr_val = None
+                        clean_cols = raw_cols
                     idx_info = IndexInfo(
                         name=idx_entry.get("name"),
-                        columns=list(idx_entry.get("columns", [])),
+                        columns=clean_cols or raw_cols,
                         unique=bool(idx_entry.get("unique", False)),
                         using=idx_entry.get("using"),
                         where=idx_entry.get("where"),
                         include=idx_entry.get("include"),
                         nulls_not_distinct=bool(idx_entry.get("nulls_not_distinct", False)),
                         column_sorting=dict(idx_entry.get("column_sorting", {})) if idx_entry.get("column_sorting") else None,
+                        postgresql_ops=dict(idx_entry.get("postgresql_ops", {})) if idx_entry.get("postgresql_ops") else None,
                         clickhouse_type=idx_entry.get("clickhouse_type"),
                         clickhouse_granularity=idx_entry.get("clickhouse_granularity"),
+                        expression=expr_val,
                     )
                     indexes.append(idx_info)
             if isinstance(dw_meta.backend_table, dict):
-                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques", "pg_policies", "pg_grants"}
+                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques", "pg_policies", "pg_grants", "pg_storage_params"}
                 pg_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("pg_") and k not in excluded_pg_keys}
                 my_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques")}
                 schema = pg_table.pop("pg_schema", None)
                 pg_policies = list(dw_meta.backend_table.get("pg_policies", [])) or None
                 pg_grants = list(dw_meta.backend_table.get("pg_grants", [])) or None
+                # Phase 1c: populate pg_storage_params from pg_fillfactor (deprecated alias)
+                storage_params: dict[str, Any] = {}
+                model_storage = dw_meta.backend_table.get("pg_storage_params") or {}
+                if isinstance(model_storage, dict):
+                    storage_params.update(model_storage)
+                if "pg_fillfactor" in pg_table and "fillfactor" not in storage_params:
+                    storage_params["fillfactor"] = pg_table["pg_fillfactor"]
+                pg_table["pg_storage_params"] = storage_params or None
             # If using PgViewSpec, read view definition before pg_table extraction
             if type(dw_meta.backend_table).__name__ == "PgViewSpec":
                 object_type = "materialized_view" if dw_meta.backend_table.materialized else "view"
@@ -1215,13 +1256,21 @@ def extract_table_from_model(
                 checks = []
                 excludes = []
             if not pg_table and any(k.startswith("pg_") for k in getattr(dw_meta, "table_attrs", {})):
-                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques", "pg_view_query", "pg_view_materialized", "pg_schema", "pg_policies", "pg_grants"}
+                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques", "pg_view_query", "pg_view_materialized", "pg_schema", "pg_policies", "pg_grants", "pg_storage_params"}
                 pg_table = {
                     k: v for k, v in dw_meta.table_attrs.items()
                     if k.startswith("pg_") and k not in excluded_pg_keys and v is not None
                 }
                 if schema is None:
                     schema = pg_table.pop("pg_schema", None)
+                # Phase 1c: populate pg_storage_params from pg_fillfactor (deprecated alias)
+                storage_params: dict[str, Any] = {}
+                attrs_storage = dw_meta.table_attrs.get("pg_storage_params") or {}
+                if isinstance(attrs_storage, dict):
+                    storage_params.update(attrs_storage)
+                if "pg_fillfactor" in pg_table and "fillfactor" not in storage_params:
+                    storage_params["fillfactor"] = pg_table["pg_fillfactor"]
+                pg_table["pg_storage_params"] = storage_params or None
             # If using PgTableSpec, read schema from the typed object
             if schema is None and type(dw_meta.backend_table).__name__ == "PgTableSpec":
                 schema = dw_meta.backend_table.schema
@@ -1230,6 +1279,13 @@ def extract_table_from_model(
                     k: v for k, v in dw_meta.table_attrs.items()
                     if k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques") and v is not None
                 }
+
+            # Normalize partition strategy to uppercase so that
+            # "range" matches the snapshot's "RANGE" during diff.
+            if "pg_partition" in pg_table:
+                part = pg_table["pg_partition"]
+                if isinstance(part, dict) and "strategy" in part:
+                    part["strategy"] = part["strategy"].upper()
 
             if pg_policies is None:
                 pg_policies = list(dw_meta.table_attrs.get("pg_policies", [])) or None
@@ -1486,7 +1542,10 @@ def extract_column_info(
             "pg_identity_max",
         ):
             if key in column.info:
-                pg_meta[key] = column.info[key]
+                val = column.info[key]
+                if key == "pg_storage" and val in ("PLAIN", "EXTENDED"):
+                    continue
+                pg_meta[key] = val
         if backend == "postgresql":
             if item_type is not None:
                 pg_meta["pg_type"] = {
@@ -1713,7 +1772,8 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
     elif backend == "postgresql" and table.object_type in ("view", "materialized_view"):
         return generate_create_view_sql(table)
     else:
-        sql = f"CREATE TABLE IF NOT EXISTS {qname} (\n{columns_sql}\n)"
+        unlogged = "UNLOGGED " if table.pg_table and table.pg_table.get("pg_unlogged") else ""
+        sql = f"CREATE {unlogged}TABLE IF NOT EXISTS {qname} (\n{columns_sql}\n)"
     if backend == "clickhouse":
         if table.object_type == "table":
             sql += _render_clickhouse_table_suffix(table)
@@ -1739,7 +1799,14 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             strategy = pg_partition.get("strategy", "RANGE")
             columns = pg_partition.get("columns", [])
             quoted_cols = ", ".join(_quote_pg(c) for c in columns)
-            sql += f"\nPARTITION BY {_quote_pg(strategy)} ({quoted_cols})"
+            sql += f"\nPARTITION BY {strategy} ({quoted_cols})"
+        pg_inherits = table.pg_table.get("pg_inherits")
+        if pg_inherits:
+            parent = _quote_pg(pg_inherits) if isinstance(pg_inherits, str) else ", ".join(_quote_pg(p) for p in pg_inherits)
+            sql += f"\nINHERITS ({parent})"
+        pg_tablespace = table.pg_table.get("pg_tablespace")
+        if pg_tablespace:
+            sql += f"\nTABLESPACE {pg_tablespace}"
     if backend == "postgresql" and table.comment:
         sql += f";\nCOMMENT ON TABLE {qname} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}';"
     if backend == "postgresql":

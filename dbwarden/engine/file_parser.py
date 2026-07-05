@@ -128,9 +128,16 @@ def parse_rollback_statements(file_path: str) -> list[str]:
     return _extract_section_statements(content, "-- rollback")
 
 
+DBWARDEN_AUTOCOMMIT_MARKER = "-- @dbwarden:autocommit"
+
+
 def _extract_section_statements(content: str, section_marker: str) -> list[str]:
     """
     Extract SQL statements from a section of a migration file.
+
+    Supports ``-- @dbwarden:autocommit`` comment markers. When present,
+    the marker is prepended to the following SQL statement so the
+    migration runner can detect and execute it outside the transaction.
 
     Args:
         content: Full content of the migration file.
@@ -143,6 +150,7 @@ def _extract_section_statements(content: str, section_marker: str) -> list[str]:
     raw_statements: list[str] = []
     current_statement: list[str] = []
     in_section = False
+    pending_marker: str | None = None
 
     for line in lines:
         stripped = line.strip()
@@ -155,24 +163,34 @@ def _extract_section_statements(content: str, section_marker: str) -> list[str]:
             if current_statement:
                 statement = "\n".join(current_statement).strip()
                 if statement:
-                    raw_statements.append(statement)
+                    raw_statements.append(pending_marker + "\n" + statement if pending_marker else statement)
                 current_statement = []
+                pending_marker = None
             in_section = False
             continue
 
         if in_section:
-            if stripped and not stripped.startswith("--"):
+            if stripped == DBWARDEN_AUTOCOMMIT_MARKER:
+                if current_statement:
+                    statement = "\n".join(current_statement).strip()
+                    if statement:
+                        raw_statements.append(pending_marker + "\n" + statement if pending_marker else statement)
+                    current_statement = []
+                    pending_marker = None
+                pending_marker = DBWARDEN_AUTOCOMMIT_MARKER
+            elif stripped and not stripped.startswith("--"):
                 current_statement.append(line)
             elif current_statement and not stripped:
                 statement = "\n".join(current_statement).strip()
                 if statement:
-                    raw_statements.append(statement)
+                    raw_statements.append(pending_marker + "\n" + statement if pending_marker else statement)
                 current_statement = []
+                pending_marker = None
 
     if current_statement:
         statement = "\n".join(current_statement).strip()
         if statement:
-            raw_statements.append(statement)
+            raw_statements.append(pending_marker + "\n" + statement if pending_marker else statement)
 
     statements: list[str] = []
     for raw in raw_statements:

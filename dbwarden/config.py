@@ -53,6 +53,7 @@ class DatabaseConfig:
     pg_extensions: list[str] = field(default_factory=list)
     pg_domains: list[dict] = field(default_factory=list)
     pg_sequences: list[dict] = field(default_factory=list)
+    pg_migration_lock_timeout: int | None = None
 
     @property
     def sqlalchemy_url(self) -> str:
@@ -559,6 +560,7 @@ def _finalize_entries(
             pg_extensions=entry.pg_extensions or [],
             pg_domains=entry.pg_domains or [],
             pg_sequences=entry.pg_sequences or [],
+            pg_migration_lock_timeout=entry.pg_migration_lock_timeout,
         )
 
     # model_paths overlap validation

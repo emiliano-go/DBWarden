@@ -36,6 +36,7 @@ class PGTableMeta(TableMeta):
     pg_rls: bool = False
     pg_policies: list[dict[str, Any]] = []
     pg_grants: list[dict[str, Any]] = []
+    pg_storage_params: dict[str, Any] | None = None
 
 
 class PGColumnMeta(metaclass=_MetaValidator):

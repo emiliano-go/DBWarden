@@ -144,6 +144,19 @@ def _pluralize(operation: str) -> str:
         "create_sequence": "create_sequences",
         "drop_sequence": "drop_sequences",
         "refresh_matview": "refresh_matviews",
+        "alter_pg_rls": "alter_pg_rls",
+        "add_policy": "add_policies",
+        "drop_policy": "drop_policies",
+        "alter_policy": "alter_policies",
+        "add_grant": "add_grants",
+        "revoke_grant": "revoke_grants",
+        "alter_pg_storage_param": "alter_pg_storage_params",
+        "validate_constraint": "validate_constraints",
+        "alter_pg_column_meta": "alter_pg_column_metas",
+        "alter_pg_table": "alter_pg_tables",
+        "create_type": "create_types",
+        "drop_type": "drop_types",
+        "alter_enum_add_value": "alter_enum_add_values",
     }
     return singular_to_plural.get(operation, operation + "s")
 
@@ -161,7 +174,16 @@ def _truncate(name: str) -> str:
                 "alter_column_type", "alter_column_types",
                "alter_column_nullable", "alter_column_nullables",
                "alter_column_default", "alter_column_defaults",
-               "refresh_matview", "refresh_matviews"}
+               "refresh_matview", "refresh_matviews",
+               "alter_pg_rls", "add_policy", "drop_policy", "alter_policy",
+               "add_policies", "drop_policies", "alter_policies",
+               "add_grant", "revoke_grant", "add_grants", "revoke_grants",
+               "alter_pg_storage_param", "alter_pg_storage_params",
+               "validate_constraint", "validate_constraints",
+               "alter_pg_column_meta", "alter_pg_column_metas",
+               "alter_pg_table", "alter_pg_tables",
+               "create_type", "drop_type", "create_types", "drop_types",
+               "alter_enum_add_value", "alter_enum_add_values"}
     
     operation = []
     identifiers = []

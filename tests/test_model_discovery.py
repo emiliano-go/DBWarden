@@ -123,6 +123,31 @@ class User(Base):
         assert table.pg_table["pg_fillfactor"] == 80
         assert table.columns[1].pg_meta["pg_storage"] == "extended"
 
+    def test_extract_table_from_model_skips_plain_storage(self, monkeypatch):
+        from sqlalchemy import Integer, String
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+        from dbwarden.databases.pgsql import PGColumnMeta
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        class Base(DeclarativeBase):
+            pass
+
+        class User(Base):
+            __tablename__ = "users"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            email: Mapped[str] = mapped_column(String(255), nullable=False)
+
+            class Meta:
+                class email(PGColumnMeta):
+                    pg = pg.field(storage="PLAIN")
+
+        table = extract_table_from_model(User, db_name="primary")
+
+        assert table is not None
+        assert "pg_storage" not in table.columns[1].pg_meta
+
 
 class TestModelColumn:
     """Tests for ModelColumn class."""

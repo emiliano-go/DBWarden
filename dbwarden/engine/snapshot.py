@@ -11,10 +11,12 @@ from datetime import datetime, timezone
 from enum import IntEnum
 from typing import Any
 
-from dbwarden.engine.model_discovery import IndexInfo, ModelColumn, ModelTable
+from dbwarden.engine.model_discovery import IndexInfo, ModelColumn, ModelTable, _is_expression
 
 
 class StatementOrder(IntEnum):
+    ROLE_MGMT = -5
+    ALTER_DEFAULT_PRIVILEGES = -4
     CREATE_EXTENSION = -3
     CREATE_SCHEMA = -2
     CREATE_DOMAIN = -1
@@ -25,6 +27,7 @@ class StatementOrder(IntEnum):
     ALTER_COLUMN_NULLABLE = 4
     ALTER_COLUMN_DEFAULT = 5
     CREATE_TYPE = 6
+    CREATE_FUNCTION = 6
     CREATE_TABLE = 7
     CREATE_VIEW = 8
     ADD_COLUMN = 9
@@ -37,10 +40,14 @@ class StatementOrder(IntEnum):
     ALTER_COLUMN_COMMENT = 16
     ALTER_TABLE_OPTIONS = 17
     ALTER_TABLE_CONSTRAINT = 18
-    ALTER_COLUMN_AUTOINCREMENT = 19
-    ALTER_PG_RLS = 20
-    ALTER_PG_POLICY = 21
-    ALTER_PG_GRANT = 22
+    ALTER_CONSTRAINT = 19
+    VALIDATE_CONSTRAINT = 19
+    ALTER_COLUMN_AUTOINCREMENT = 20
+    ALTER_PG_RLS = 21
+    ALTER_PG_POLICY = 22
+    ALTER_PG_GRANT = 23
+    CREATE_STATISTICS = 24
+    CREATE_TRIGGER = 24
     ALTER_VIEW = 99
 
 
@@ -67,6 +74,49 @@ def _assemble_migration(
         rollback_parts.append(stmt.rollback_sql)
     rollback_parts.reverse()
     return "\n\n".join(upgrade_parts), "\n\n".join(rollback_parts)
+
+
+def _strip_pg_expr_parens(expr: str | None) -> str | None:
+    """Remove one layer of outer parentheses added by pg_get_expr().
+
+    pg_get_expr wraps boolean expressions in extra parens, e.g.
+    ``(owner_id = current_user_id())``.  Strip them so the expression
+    matches the user-provided form stored in the model.
+    """
+    if not expr:
+        return expr
+    if expr.startswith('(') and expr.endswith(')'):
+        depth = 0
+        for i, ch in enumerate(expr):
+            if ch == '(':
+                depth += 1
+            elif ch == ')':
+                depth -= 1
+            if depth == 0 and i < len(expr) - 1:
+                # Unbalanced — the parens do not wrap the whole expression
+                return expr
+        return expr[1:-1]
+    return expr
+
+
+def _normalize_view_def(sql: str | None) -> str | None:
+    """Normalize a SQL view definition for stable comparison.
+
+    PostgreSQL reformats view definitions through ``pg_get_viewdef``,
+    producing different whitespace, keyword casing, trailing
+    semicolons, auto-added AS aliases for computed columns, and
+    schema qualification differences.  This function collapses
+    whitespace, strips trailing semicolons, strips PG-injected
+    AS aliases, removes schema qualifiers, and lowercases so that
+    semantically identical definitions compare equal.
+    """
+    if not sql:
+        return sql
+    sql = re.sub(r'\s+', ' ', sql).strip()
+    sql = sql.rstrip(';').strip()
+    sql = re.sub(r'(\w+\([^)]*\))\s+AS\s+\w+', r'\1', sql, flags=re.IGNORECASE)
+    sql = re.sub(r'(?<=\s)(\w+)\.(\w+)', r'\2', sql)
+    return sql.lower()
 
 
 def _get_backend(db_name: str | None = None) -> str:
@@ -574,6 +624,7 @@ def extract_full_schema_snapshot(
 
     tables: dict[str, Any] = {}
     enums: dict[str, Any] = {}
+    domains: dict[str, Any] = {}
     indexes: dict[str, Any] = {}
     constraints: dict[str, Any] = {}
 
@@ -588,8 +639,28 @@ def extract_full_schema_snapshot(
     inspect_kw = {"schema": pg_schema} if pg_schema else {}
     table_names = inspector.get_table_names(**inspect_kw)
     for table_name in table_names:
+        _regclass_name = f"{pg_schema}.{table_name}" if pg_schema else table_name
         columns_info = inspector.get_columns(table_name, **inspect_kw)
         pk_info = inspector.get_pk_constraint(table_name, **inspect_kw)
+
+        if database_type == "postgresql":
+            try:
+                _pg_conn = engine.connect() if own_engine and engine is not None else connection
+                local_rows = _pg_conn.execute(
+                    text(
+                        "SELECT attname FROM pg_attribute "
+                        "WHERE attrelid = CAST(:t AS regclass) "
+                        "AND attnum > 0 AND NOT attisdropped AND attislocal"
+                    ),
+                    {"t": _regclass_name},
+                ).fetchall()
+                local_columns = {r[0] for r in local_rows}
+                if local_columns:
+                    columns_info = [col for col in columns_info if col.get("name") in local_columns]
+                if own_engine:
+                    _pg_conn.close()
+            except Exception:
+                pass
 
         pk_columns = set(pk_info.get("constrained_columns", []) or [])
 
@@ -748,7 +819,7 @@ def extract_full_schema_snapshot(
 
             _conn = engine.connect() if own_engine and engine is not None else connection
             try:
-                pg_table: dict[str, Any] = {}
+                pg_table: dict[str, Any] = {"backend": "postgresql"}
 
                 try:
                     rows = _conn.execute(
@@ -756,6 +827,7 @@ def extract_full_schema_snapshot(
                         {"t": _regclass_name},
                     ).fetchall()
                     params: dict[str, Any] = {}
+                    storage_params: dict[str, Any] = {}
                     for row in rows:
                         kv = row[0].split("=", 1)
                         if len(kv) == 2:
@@ -764,8 +836,38 @@ def extract_full_schema_snapshot(
                             if val.isdigit():
                                 val = int(val)
                             params[key] = val
+                            storage_params[kv[0]] = val
                     if params:
                         pg_table.update(params)
+                    if storage_params:
+                        pg_table["pg_storage_params"] = storage_params
+                except Exception:
+                    pass
+
+                try:
+                    # Toast reloptions
+                    toast_sql = (
+                        "SELECT unnest(COALESCE("
+                        "(SELECT reloptions FROM pg_class WHERE oid = c.reltoastrelid), '{}'"
+                        ")) FROM pg_class c WHERE c.oid = CAST(:t AS regclass)"
+                    )
+                    toast_rows = _conn.execute(
+                        text(toast_sql),
+                        {"t": _regclass_name},
+                    ).fetchall()
+                    toast_params: dict[str, Any] = {}
+                    for row in toast_rows:
+                        kv = row[0].split("=", 1)
+                        if len(kv) == 2:
+                            key = f"toast.{kv[0]}"
+                            val: Any = kv[1]
+                            if val.isdigit():
+                                val = int(val)
+                            toast_params[key] = val
+                    if toast_params:
+                        existing = pg_table.get("pg_storage_params", {})
+                        existing.update(toast_params)
+                        pg_table["pg_storage_params"] = existing
                 except Exception:
                     pass
 
@@ -795,10 +897,18 @@ def extract_full_schema_snapshot(
 
                 try:
                     rows = _conn.execute(
-                        text("SELECT inhparent::regclass::text FROM pg_inherits WHERE inhrelid = CAST(:t AS regclass)"),
-                        {"t": table_name},
+                        text("""
+                            SELECT p_ns.nspname AS parent_schema, p.relname AS parent_name
+                            FROM pg_inherits i
+                            JOIN pg_class c ON c.oid = i.inhrelid
+                            JOIN pg_namespace c_ns ON c_ns.oid = c.relnamespace
+                            JOIN pg_class p ON p.oid = i.inhparent
+                            JOIN pg_namespace p_ns ON p_ns.oid = p.relnamespace
+                            WHERE c.oid = CAST(:t AS regclass)
+                        """),
+                        {"t": _regclass_name},
                     ).fetchall()
-                    parents = [r[0] for r in rows]
+                    parents = [r[1] for r in rows]
                     if len(parents) == 1:
                         pg_table["pg_inherits"] = parents[0]
                     elif parents:
@@ -841,7 +951,7 @@ def extract_full_schema_snapshot(
                             "FROM pg_constraint "
                             "WHERE conrelid = CAST(:t AS regclass) AND contype = 'x'"
                         ),
-                        {"t": table_name},
+                        {"t": _regclass_name},
                     ).fetchall()
                     excludes = [{"name": r[0], "expression": r[1]} for r in rows]
                     if excludes:
@@ -865,8 +975,9 @@ def extract_full_schema_snapshot(
                         if cname in columns_dict:
                             pg_col = columns_dict[cname].get("pg_column", {})
                             if isinstance(pg_col, dict):
-                                if r[1]:
-                                    pg_col["storage"] = storage_map.get(r[1], r[1])
+                                storage = storage_map.get(r[1], r[1]) if r[1] else None
+                                if storage and storage not in ("PLAIN", "EXTENDED"):
+                                    pg_col["storage"] = storage
                                 if r[2]:
                                     pg_col["compression"] = r[2]
                                 if pg_col:
@@ -887,36 +998,28 @@ def extract_full_schema_snapshot(
                 try:
                     policy_rows = _conn.execute(
                         text(
-                            "SELECT pol.polname, pol.polpermissive, pol.polcmd, "
-                            "COALESCE(array_remove(array_agg(r.rolname ORDER BY r.rolname), NULL), '{}') AS roles, "
-                            "pg_get_expr(pol.polqual, pol.polrelid) AS using_expr, "
-                            "pg_get_expr(pol.polwithcheck, pol.polrelid) AS with_check_expr "
-                            "FROM pg_policy pol "
-                            "LEFT JOIN pg_roles r ON r.oid = ANY(pol.polroles) "
-                            "WHERE pol.polrelid = CAST(:t AS regclass) "
-                            "GROUP BY pol.polname, pol.polpermissive, pol.polcmd, "
-                            "pg_get_expr(pol.polqual, pol.polrelid), "
-                            "pg_get_expr(pol.polwithcheck, pol.polrelid), "
-                            "pol.polrelid "
-                            "ORDER BY pol.polname"
+                            "SELECT policyname, permissive, cmd, roles, qual, with_check "
+                            "FROM pg_policies "
+                            "WHERE schemaname = :schema AND tablename = :table "
+                            "ORDER BY policyname"
                         ),
-                        {"t": _regclass_name},
+                        {"schema": pg_schema or "public", "table": table_name},
                     ).fetchall()
                     if policy_rows:
-                        _pg_cmd_map = {'r': 'SELECT', 'a': 'INSERT', 'w': 'UPDATE', 'd': 'DELETE', '*': 'ALL'}
                         policies = []
                         for r in policy_rows:
                             roles = list(r[3]) if r[3] else ["PUBLIC"]
                             policy_entry = {
                                 "name": r[0],
                                 "permissive": "PERMISSIVE" if r[1] else "RESTRICTIVE",
-                                "command": _pg_cmd_map.get(r[2], r[2] or "ALL"),
+                                "command": r[2] or "ALL",
                                 "role": roles[0] if len(roles) == 1 else roles,
-                                "using": r[4],
-                                "with_check": r[5],
+                                "using": _strip_pg_expr_parens(r[4]),
                             }
+                            if r[5]:
+                                policy_entry["with_check"] = _strip_pg_expr_parens(r[5])
                             policies.append(policy_entry)
-                        pg_table["pg_policies"] = policies
+                        table_entry["pg_policies"] = policies
                 except Exception:
                     pass
 
@@ -931,6 +1034,7 @@ def extract_full_schema_snapshot(
                             "LEFT JOIN pg_roles r ON r.oid = acl.grantee "
                             "WHERE c.oid = CAST(:t AS regclass) "
                             "AND c.relacl IS NOT NULL "
+                            "AND acl.grantee <> c.relowner "
                             "GROUP BY COALESCE(r.rolname, 'PUBLIC')"
                         ),
                         {"t": _regclass_name},
@@ -1042,12 +1146,22 @@ def extract_full_schema_snapshot(
                 continue
             if idx.get("unique") and set(idx.get("column_names", [])) == pk_columns:
                 continue
+            raw_cols = list(idx.get("column_names", []))
+            expr = None
+            clean_cols: list[str] = []
+            for c in raw_cols:
+                if _is_expression(c):
+                    expr = c
+                else:
+                    clean_cols.append(c)
             idx_entry: dict[str, Any] = {
                 "table": table_name,
                 "name": idx_name,
-                "columns": list(idx.get("column_names", [])),
+                "columns": clean_cols or raw_cols,
                 "unique": bool(idx.get("unique", False)),
             }
+            if expr:
+                idx_entry["expression"] = expr
             idx_dialect = idx.get("dialect_options", {})
             for k in ("postgresql_using", "mysql_using", "mariadb_using", "sqlite_using"):
                 val = idx_dialect.get(k)
@@ -1080,38 +1194,79 @@ def extract_full_schema_snapshot(
                     idx_entry["nulls_not_distinct"] = True
                     break
 
-            if database_type == "postgresql" and idx_name and engine is not None:
+            if database_type == "postgresql" and idx_name:
                 try:
-                    with engine.connect() as _c:
-                        sort_rows = _c.execute(
-                            text("""
-                                SELECT a.attname,
-                                       pg_index_column_has_property(i.indexrelid, k, 'asc') AS is_asc,
-                                       pg_index_column_has_property(i.indexrelid, k, 'nulls_first') AS nf
-                                FROM pg_index i
-                                CROSS JOIN LATERAL generate_series(1, array_length(i.indkey, 1)) AS k
-                                JOIN pg_class ci ON ci.oid = i.indexrelid
-                                JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[k]
-                                WHERE ci.relname = :idxname AND i.indkey[k] <> 0
-                                ORDER BY k
-                            """),
-                            {"idxname": idx_name},
-                        ).fetchall()
-                        sorting: dict[str, str] = {}
-                        for r in sort_rows:
-                            parts: list[str] = []
-                            if r.is_asc is False:
-                                parts.append("DESC")
-                            if r.nf is False:
-                                parts.append("NULLS LAST")
-                            elif r.nf is True:
-                                parts.append("NULLS FIRST")
-                            if parts:
-                                sorting[r.attname] = " ".join(parts)
-                        if sorting:
-                            idx_entry["column_sorting"] = sorting
+                    _pg_c = engine.connect() if own_engine and engine is not None else connection
+                    sort_rows = _pg_c.execute(
+                        text("""
+                            SELECT a.attname,
+                                   pg_index_column_has_property(i.indexrelid, k, 'asc') AS is_asc,
+                                   pg_index_column_has_property(i.indexrelid, k, 'nulls_first') AS nf
+                            FROM pg_index i
+                            CROSS JOIN LATERAL generate_series(0, i.indnkeyatts - 1) AS k
+                            JOIN pg_class ci ON ci.oid = i.indexrelid
+                            JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[k]
+                            WHERE ci.relname = :idxname AND i.indkey[k] <> 0
+                            ORDER BY k
+                        """),
+                        {"idxname": idx_name},
+                    ).fetchall()
+                    sorting: dict[str, str] = {}
+                    for r in sort_rows:
+                        parts: list[str] = []
+                        if r.is_asc is False:
+                            parts.append("DESC")
+                        if r.nf is False:
+                            parts.append("NULLS LAST")
+                        elif r.nf is True:
+                            parts.append("NULLS FIRST")
+                        if parts:
+                            sorting[r.attname] = " ".join(parts)
+                    if sorting:
+                        idx_entry["column_sorting"] = sorting
                 except Exception:
                     pass
+
+            if database_type == "postgresql" and idx_name:
+                try:
+                    _pg_c = engine.connect() if own_engine and engine is not None else connection
+                    opclass_rows = _pg_c.execute(
+                        text("""
+                            SELECT a.attname, o.opcname
+                            FROM pg_index i
+                            CROSS JOIN LATERAL generate_series(0, i.indnkeyatts - 1) AS k
+                            JOIN pg_class ci ON ci.oid = i.indexrelid
+                            JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[k]
+                            JOIN pg_opclass o ON o.oid = i.indclass[k]
+                            WHERE ci.relname = :idxname AND i.indkey[k] <> 0
+                              AND COALESCE(o.opcdefault, false) = false
+                            ORDER BY k
+                        """),
+                        {"idxname": idx_name},
+                    ).fetchall()
+                    if opclass_rows:
+                        idx_entry["postgresql_ops"] = {r.attname: r.opcname for r in opclass_rows}
+                except Exception:
+                    pass
+
+            if database_type == "postgresql" and idx_name:
+                try:
+                    _pg_c = engine.connect() if own_engine and engine is not None else connection
+                    row = _pg_c.execute(
+                        text("""
+                            SELECT d.description
+                            FROM pg_index i
+                            JOIN pg_class ci ON ci.oid = i.indexrelid
+                            LEFT JOIN pg_description d ON d.objoid = ci.oid AND d.objsubid = 0
+                                WHERE ci.relname = :idxname
+                        """),
+                        {"idxname": idx_name},
+                    ).scalar()
+                    if row:
+                        idx_entry["comment"] = row
+                except Exception:
+                    pass
+
             indexes[f"{table_name}.{idx_name}"] = idx_entry
 
         for fk in inspector.get_foreign_keys(table_name, **inspect_kw):
@@ -1181,6 +1336,17 @@ def extract_full_schema_snapshot(
                         constraints[cname]["initially_deferred"] = bool(r[2])
             except Exception:
                 pass
+            try:
+                validated_rows = _pg_conn.execute(
+                    text("SELECT conname, contype, convalidated FROM pg_constraint WHERE conrelid = CAST(:t AS regclass) AND contype IN ('f', 'c')"),
+                    {"t": _regclass_name},
+                ).fetchall()
+                for r in validated_rows:
+                    cname = f"{table_name}.{r[0]}"
+                    if cname in constraints:
+                        constraints[cname]["validated"] = bool(r[2])
+            except Exception:
+                pass
             if own_engine:
                 _pg_conn.close()
 
@@ -1188,6 +1354,52 @@ def extract_full_schema_snapshot(
         try:
             for enum_info in inspector.get_enums():
                 enums[enum_info["name"]] = list(enum_info.get("labels", []))
+        except Exception:
+            pass
+
+        try:
+            _pg_conn = engine.connect() if own_engine else connection
+            domain_rows = _pg_conn.execute(
+                text("""
+                    SELECT t.typname AS domain_name,
+                           pg_catalog.format_type(t.typbasetype, t.typtypmod) AS domain_type,
+                           t.typnotnull AS not_null,
+                           pg_catalog.pg_get_expr(t.typdefaultbin, 'pg_catalog.pg_class'::regclass) AS default,
+                           n.nspname AS schema
+                    FROM pg_catalog.pg_type t
+                    JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+                    WHERE t.typtype = 'd'
+                      AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                    ORDER BY t.typname
+                """),
+            ).fetchall()
+            for r in domain_rows:
+                domain_info = {
+                    "domain_type": r.domain_type,
+                    "not_null": bool(r.not_null),
+                }
+                if r.default:
+                    domain_info["default"] = r.default
+                domains[r.domain_name] = domain_info
+                if r.schema and r.schema != "public":
+                    domains[r.domain_name]["schema"] = r.schema
+            # Also extract domain check constraints
+            check_rows = _pg_conn.execute(
+                text("""
+                    SELECT t.typname AS domain_name,
+                           pg_catalog.pg_get_constraintdef(c.oid) AS check_def
+                    FROM pg_catalog.pg_type t
+                    JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+                    JOIN pg_catalog.pg_constraint c ON c.contypid = t.oid AND c.contype = 'c'
+                    WHERE t.typtype = 'd'
+                      AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                """),
+            ).fetchall()
+            for r in check_rows:
+                if r.domain_name in domains:
+                    domains[r.domain_name]["check"] = r.check_def
+            if own_engine:
+                _pg_conn.close()
         except Exception:
             pass
 
@@ -1229,7 +1441,7 @@ def extract_full_schema_snapshot(
                 view_materialized = False
                 try:
                     vrow = _pg_conn.execute(
-                        text("SELECT pg_get_viewdef(:t) AS vdef, relkind FROM pg_class WHERE oid = CAST(:t2 AS regclass)"),
+                        text("SELECT pg_get_viewdef(:t, false) AS vdef, relkind FROM pg_class WHERE oid = CAST(:t2 AS regclass)"),
                         {"t": view_name, "t2": view_name},
                     ).fetchone()
                     if vrow:
@@ -1271,7 +1483,7 @@ def extract_full_schema_snapshot(
                         mv_entry = tables[mv_name]
                         try:
                             vdef_row = _pg_conn.execute(
-                                text("SELECT pg_get_viewdef(:t)"),
+                                text("SELECT pg_get_viewdef(:t, false)"),
                                 {"t": mv_name},
                             ).fetchone()
                             mv_entry["pg_view_definition"] = vdef_row[0] if vdef_row else None
@@ -1301,7 +1513,7 @@ def extract_full_schema_snapshot(
                                     "autoincrement": _is_autoincrement(col),
                                 }
                             vdef_row = _pg_conn.execute(
-                                text("SELECT pg_get_viewdef(:t)"),
+                                text("SELECT pg_get_viewdef(:t, false)"),
                                 {"t": mv_name},
                             ).fetchone()
                             vdef = vdef_row[0] if vdef_row else None
@@ -1340,6 +1552,7 @@ def extract_full_schema_snapshot(
         "applied_at": "",
         "tables": tables,
         "enums": enums,
+        "domains": domains,
         "indexes": indexes,
         "constraints": constraints,
     }
@@ -1768,7 +1981,7 @@ def find_latest_snapshot(database: str | None = None) -> dict[str, Any] | None:
         db_name = database
 
     prefix = f"{db_name}__"
-    candidates: list[tuple[str, str]] = []
+    candidates: list[tuple[str, float, str]] = []
 
     for fname in os.listdir(schemas_dir):
         if not fname.endswith(".schema.json"):
@@ -1780,13 +1993,18 @@ def find_latest_snapshot(database: str | None = None) -> dict[str, Any] | None:
         version_match = re.search(r"__(\d{4})_", migration_id)
         if version_match:
             version = version_match.group(1)
-            candidates.append((version, os.path.join(schemas_dir, fname)))
+            path = os.path.join(schemas_dir, fname)
+            try:
+                mtime = os.path.getmtime(path)
+            except OSError:
+                mtime = 0.0
+            candidates.append((version, mtime, path))
 
     if not candidates:
         return None
 
-    candidates.sort(key=lambda x: x[0])
-    latest_path = candidates[-1][1]
+    candidates.sort(key=lambda x: (x[0], x[1]))
+    latest_path = candidates[-1][2]
     return read_snapshot(latest_path)
 
 
@@ -1934,10 +2152,23 @@ def _rename_table_sql(intent: TableRenameIntent, backend: str) -> MigrationState
     )
 
 
+def _normalize_index_col(col: str) -> str:
+    """Normalize an index column/expression for stable comparison.
+
+    Strips PostgreSQL type casts (::typename) that the canonical form
+    returned by ``pg_get_indexdef`` may add (e.g. ``lower(email::text)``
+    versus the user-written ``lower(email)``).
+    """
+    import re
+    col = re.sub(r'::\w+(\.\w+)*(\[\])?', '', col)
+    col = ' '.join(col.split())
+    return col
+
+
 def _index_sig(idx_or_info: dict | IndexInfo) -> tuple:
     if isinstance(idx_or_info, IndexInfo):
         return (
-            tuple(idx_or_info.columns),
+            tuple(_normalize_index_col(c) for c in idx_or_info.columns),
             idx_or_info.unique,
             idx_or_info.using or "btree",
             idx_or_info.where,
@@ -1948,9 +2179,12 @@ def _index_sig(idx_or_info: dict | IndexInfo) -> tuple:
             tuple((idx_or_info.column_sorting or {}).items()),
             idx_or_info.clickhouse_type,
             idx_or_info.clickhouse_granularity,
+            tuple(sorted((idx_or_info.postgresql_ops or {}).items())),
+            idx_or_info.comment,
+            _normalize_index_col(idx_or_info.expression) if idx_or_info.expression else None,
         )
     return (
-        tuple(idx_or_info.get("columns", [])),
+        tuple(_normalize_index_col(c) for c in idx_or_info.get("columns", [])),
         bool(idx_or_info.get("unique", False)),
         idx_or_info.get("using") or "btree",
         idx_or_info.get("where"),
@@ -1961,6 +2195,9 @@ def _index_sig(idx_or_info: dict | IndexInfo) -> tuple:
         tuple(sorted((idx_or_info.get("column_sorting") or {}).items())),
         idx_or_info.get("clickhouse_type"),
         idx_or_info.get("clickhouse_granularity"),
+        tuple(sorted((idx_or_info.get("postgresql_ops") or {}).items())),
+        idx_or_info.get("comment"),
+        _normalize_index_col(idx_or_info.get("expression")) if idx_or_info.get("expression") else None,
     )
 
 
@@ -1987,12 +2224,18 @@ def _index_op_from_info(info: IndexInfo, table: str) -> dict[str, Any]:
         op["nulls_not_distinct"] = True
     if info.column_sorting is not None:
         op["column_sorting"] = info.column_sorting
+    if info.postgresql_ops is not None:
+        op["postgresql_ops"] = info.postgresql_ops
+    if info.comment is not None:
+        op["comment"] = info.comment
     if not info.concurrently:
         op["concurrently"] = False
     if info.clickhouse_type is not None:
         op["clickhouse_type"] = info.clickhouse_type
     if info.clickhouse_granularity is not None:
         op["clickhouse_granularity"] = info.clickhouse_granularity
+    if info.expression is not None:
+        op["expression"] = info.expression
     return op
 
 
@@ -2019,27 +2262,6 @@ def _join_creation_sql(table: ModelTable, db_name: str | None) -> str:
     return "\n\n".join(stmt.upgrade_sql for stmt in _build_create_table_sequence(table, db_name))
 
 
-_CH_OPTION_KEYS: frozenset[str] = frozenset({
-    "ch_engine",
-    "ch_order_by",
-    "ch_primary_key",
-    "ch_partition_by",
-    "ch_sample_by",
-    "ch_ttl",
-    "ch_settings",
-    "ch_object_type",
-    "ch_select_statement",
-    "ch_to_table",
-    "ch_dictionary",
-    "ch_dict_layout",
-    "ch_dict_source",
-    "ch_dict_lifetime",
-    "ch_dict_primary_key",
-    "ch_zookeeper_path",
-    "ch_replica_name",
-    "ch_projections",
-})
-
 
 def _check_ch_engine_recreate_allowed(snap_spec: dict, model_spec: dict, table_name: str) -> None:
     reasons: list[str] = []
@@ -2054,121 +2276,6 @@ def _check_ch_engine_recreate_allowed(snap_spec: dict, model_spec: dict, table_n
             f"{'; '.join(reasons)}. "
             "Handle manually or use --force to skip this check."
         )
-
-
-_RECREATE_REQUIRED_CH_KEYS: frozenset[str] = frozenset({
-    "ch_select_statement",
-    "ch_to_table",
-    "ch_dictionary",
-    "ch_dict_layout",
-    "ch_dict_source",
-    "ch_dict_lifetime",
-    "ch_dict_primary_key",
-    "ch_zookeeper_path",
-    "ch_replica_name",
-    "ch_object_type",
-})
-
-
-def _diff_ch_options(
-    snap_opts: dict,
-    model_opts: dict,
-    table_name: str,
-    upgrade_ops: list[dict],
-    rollback_ops: list[dict],
-    snapshot_table: dict[str, Any] | None = None,
-    model_table: ModelTable | None = None,
-    clickhouse_engine_recreate: bool = False,
-) -> None:
-    if snap_opts.get("ch_engine") != model_opts.get("ch_engine") and snap_opts.get("ch_engine") is not None and model_opts.get("ch_engine") is not None and snapshot_table is not None and model_table is not None:
-        _check_ch_engine_recreate_allowed(snap_opts, model_opts, table_name)
-        from dbwarden.engine.offline import _table_to_state_entry
-
-        upgrade_ops.append({
-            "type": "recreate_ch_table",
-            "table": table_name,
-            "reason": "ch_engine",
-            "from_table": {
-                "name": table_name,
-                **snapshot_table,
-                "backend_table_spec": {"backend": "clickhouse", **snap_opts},
-            },
-            "to_table": _table_to_state_entry(model_table),
-            "drop_old_after_swap": False,
-            "preserve_old_suffix": "__dbw_old",
-            "failed_suffix": "__dbw_failed",
-        })
-        rollback_ops.append({
-            "type": "recreate_ch_table",
-            "table": table_name,
-            "reason": "ch_engine",
-            "from_table": _table_to_state_entry(model_table),
-            "to_table": {
-                "name": table_name,
-                **snapshot_table,
-                "backend_table_spec": {"backend": "clickhouse", **snap_opts},
-            },
-            "drop_old_after_swap": False,
-            "preserve_old_suffix": "__dbw_failed",
-            "failed_suffix": "__dbw_old",
-        })
-        return
-
-    ch_changes: dict[str, dict[str, Any]] = {}
-    for key in _CH_OPTION_KEYS:
-        snap_val = snap_opts.get(key)
-        model_val = model_opts.get(key)
-        if json.dumps(snap_val, sort_keys=True, default=str) != json.dumps(model_val, sort_keys=True, default=str):
-            if snap_val is None and model_val is None:
-                continue
-            ch_changes[key] = {"from": snap_val, "to": model_val}
-
-    has_recreate_keys = any(k in _RECREATE_REQUIRED_CH_KEYS for k in ch_changes)
-    if has_recreate_keys and clickhouse_engine_recreate and snapshot_table is not None and model_table is not None:
-        from dbwarden.engine.offline import _table_to_state_entry
-
-        reason = ",".join(k for k in ch_changes if k in _RECREATE_REQUIRED_CH_KEYS)
-        upgrade_ops.append({
-            "type": "recreate_ch_table",
-            "table": table_name,
-            "reason": reason,
-            "from_table": {
-                "name": table_name,
-                **snapshot_table,
-                "backend_table_spec": {"backend": "clickhouse", **snap_opts},
-            },
-            "to_table": _table_to_state_entry(model_table),
-            "drop_old_after_swap": False,
-            "preserve_old_suffix": "__dbw_old",
-            "failed_suffix": "__dbw_failed",
-        })
-        rollback_ops.append({
-            "type": "recreate_ch_table",
-            "table": table_name,
-            "reason": reason,
-            "from_table": _table_to_state_entry(model_table),
-            "to_table": {
-                "name": table_name,
-                **snapshot_table,
-                "backend_table_spec": {"backend": "clickhouse", **snap_opts},
-            },
-            "drop_old_after_swap": False,
-            "preserve_old_suffix": "__dbw_failed",
-            "failed_suffix": "__dbw_old",
-        })
-        return
-
-    if ch_changes:
-        upgrade_ops.append({
-            "type": "alter_ch_options",
-            "table": table_name,
-            "changes": ch_changes,
-        })
-        rollback_ops.append({
-            "type": "alter_ch_options",
-            "table": table_name,
-            "changes": {k: {"from": v["to"], "to": v["from"]} for k, v in ch_changes.items()},
-        })
 
 
 _CH_COLUMN_KEYS: frozenset[str] = frozenset({
@@ -2304,855 +2411,131 @@ def diff_models_against_snapshot(
         if table.name.startswith(_SYSTEM_TABLE_PREFIXES):
             continue
         if table.name not in snapshot_tables:
-            upgrade_ops.append({
-                "type": "create_table",
-                "table": table.name,
-                "object_type": table.object_type,
-                "schema": table.schema,
-                "sql": None,
-            })
-            rollback_ops.append({
-                "type": "drop_table",
-                "table": table.name,
-                "object_type": table.object_type,
-                "schema": table.schema,
-            })
-
-    for snap_table_name in list(snapshot_tables.keys()):
-        if snap_table_name.startswith(_SYSTEM_TABLE_PREFIXES):
             continue
-        if snap_table_name not in model_by_name:
-            snap_object_type = snapshot_tables[snap_table_name].get("object_type", "table")
-            snap_schema = snapshot_tables[snap_table_name].get("schema")
-            upgrade_ops.append({
-                "type": "drop_table",
-                "table": snap_table_name,
-                "object_type": snap_object_type,
-                "schema": snap_schema,
-            })
-            rollback_ops.append({
-                "type": "create_table",
-                "table": snap_table_name,
-                "object_type": snap_object_type,
-                "schema": snap_schema,
-                "sql": None,
-            })
-
-    for table in model_tables:
-        if table.name.startswith(_SYSTEM_TABLE_PREFIXES):
-            continue
-        if table.name not in snapshot_tables:
+        if table.object_type == "view":
             continue
 
         snap_table = snapshot_tables[table.name]
         snap_columns = snap_table.get("columns", {})
         model_columns = {c.name: c for c in table.columns}
 
-        snap_comment = snap_table.get("comment")
-        if snap_comment != table.comment:
-            upgrade_ops.append({
-                "type": "alter_table_comment",
-                "table": table.name,
-                "comment": table.comment,
-                "previous_comment": snap_comment,
-            })
-            rollback_ops.append({
-                "type": "alter_table_comment",
-                "table": table.name,
-                "comment": snap_comment,
-            })
+        # --- PG table metadata & exclude constraints via RegistryDriver ---
 
-        snap_ch_options = snap_table.get("ch_options") or snap_table.get("clickhouse_options") or {}
-        model_ch_options = table.clickhouse_options or {}
-        _diff_ch_options(snap_ch_options, model_ch_options, table.name, upgrade_ops, rollback_ops, snapshot_table=snap_table, model_table=table, clickhouse_engine_recreate=clickhouse_engine_recreate)
+        # --- Phase 5: PG sub-object diff via RegistryDriver ---
+        # Replaced inline storage_params, RLS, policies, grants.
 
-        snap_my_table = snap_table.get("my_table") or {}
-        model_my_table = table.my_table or {}
-        for key in sorted(set(snap_my_table.keys()) | set(model_my_table.keys())):
-            snap_val = _normalize_mysql_table_value(key, snap_my_table.get(key))
-            model_val = _normalize_mysql_table_value(key, model_my_table.get(key))
-            if key == "my_auto_increment" and model_val is None:
-                continue
-            if snap_val != model_val:
-                upgrade_ops.append({
-                    "type": "alter_my_table",
-                    "table": table.name,
-                    "key": key,
-                    "from_value": snap_my_table.get(key),
-                    "to_value": model_my_table.get(key),
-                })
-                rollback_ops.append({
-                    "type": "alter_my_table",
-                    "table": table.name,
-                    "key": key,
-                    "from_value": model_my_table.get(key),
-                    "to_value": snap_my_table.get(key),
-                })
+    # --- Constraint diff via RegistryDriver ---
+    from dbwarden.engine.pg_registry import ConstraintHandler, Op, RegistryDriver
+    _con_handler = ConstraintHandler()
+    _con_handler._snapshot = snapshot
+    _con_handler._view_tables = {t.name for t in model_tables if getattr(t, 'object_type', None) == 'view'}
+    _con_driver = RegistryDriver()
+    _con_driver.register(_con_handler)
+    _con_up, _con_rb = _con_driver.run(snapshot, model_tables, None)
+    for op in _con_up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _con_rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
-        # --- View definition diff (run before continue) ---
-        if table.object_type in ("view", "materialized_view"):
-            snap_view_def = snapshot_tables[table.name].get("pg_view_definition")
-            snap_view_mat = snapshot_tables[table.name].get("pg_view_materialized", False)
-            if snap_view_def != table.pg_view_definition or snap_view_mat != table.pg_view_materialized:
-                upgrade_ops.append({
-                    "type": "alter_view",
-                    "table": table.name,
-                    "pg_view_definition": table.pg_view_definition,
-                    "pg_view_materialized": table.pg_view_materialized,
-                    "snap_pg_view_definition": snap_view_def,
-                    "snap_pg_view_materialized": snap_view_mat,
-                    "schema": table.schema,
-                })
-                rollback_ops.append({
-                    "type": "alter_view",
-                    "table": table.name,
-                    "pg_view_definition": snap_view_def,
-                    "pg_view_materialized": snap_view_mat,
-                    "snap_pg_view_definition": table.pg_view_definition,
-                    "snap_pg_view_materialized": table.pg_view_materialized,
-                    "schema": table.schema,
-                })
+    # --- Column diff via RegistryDriver ---
+    from dbwarden.engine.pg_registry import ColumnHandler, Op, RegistryDriver
+    _col_handler = ColumnHandler()
+    _col_handler._db_name = db_name
+    _col_driver = RegistryDriver()
+    _col_driver.register(_col_handler)
+    _col_up, _col_rb = _col_driver.run(snapshot, model_tables, None)
+    for op in _col_up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _col_rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
-            # --- Matview auto-refresh ---
-            if table.object_type == "materialized_view" and table.pg_view_auto_refresh:
-                upgrade_ops.append({
-                    "type": "refresh_matview",
-                    "table": table.name,
-                    "schema": table.schema,
-                    "pg_view_auto_refresh": table.pg_view_auto_refresh,
-                })
-                rollback_ops.append({
-                    "type": "refresh_matview",
-                    "table": table.name,
-                    "schema": table.schema,
-                    "pg_view_auto_refresh": table.pg_view_auto_refresh,
-                })
+    # --- CH table metadata & recreate via RegistryDriver ---
+    from dbwarden.engine.pg_registry import ChTableHandler, Op, RegistryDriver
+    _ch_handler = ChTableHandler()
+    _ch_handler.clickhouse_engine_recreate = clickhouse_engine_recreate
+    _ch_driver = RegistryDriver()
+    _ch_driver.register(_ch_handler)
+    _ch_up, _ch_rb = _ch_driver.run(snapshot, model_tables, None)
+    for op in _ch_up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _ch_rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
-            continue  # skip column-level ALTER ops for views
+    # --- PG table metadata & exclude constraints via RegistryDriver ---
+    from dbwarden.engine.pg_registry import PgTableHandler, Op, RegistryDriver
+    _pgt_driver = RegistryDriver()
+    _pgt_driver.register(PgTableHandler())
+    _pgt_up, _pgt_rb = _pgt_driver.run(snapshot, model_tables, None)
+    for op in _pgt_up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _pgt_rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
-        dropped_cols = []
-        for col_name in snap_columns:
-            if col_name not in model_columns:
-                dropped_cols.append((col_name, snap_columns[col_name]))
+    # --- Index diff via RegistryDriver ---
+    from dbwarden.engine.pg_registry import IndexHandler, Op, RegistryDriver
+    _idx_driver = RegistryDriver()
+    _idx_driver.register(IndexHandler())
+    _idx_up, _idx_rb = _idx_driver.run(snapshot, model_tables, None)
+    for op in _idx_up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _idx_rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
-        added_cols = []
-        for col_name, model_col in model_columns.items():
-            if col_name not in snap_columns:
-                added_cols.append((col_name, model_col))
+    # --- Enum diff via RegistryDriver ---
+    from dbwarden.engine.pg_registry import EnumHandler, Op, RegistryDriver
+    _enum_driver = RegistryDriver()
+    _enum_driver.register(EnumHandler())
+    _enum_up_ops, _enum_rb_ops = _enum_driver.run(snapshot, model_tables, None)
+    for op in _enum_up_ops:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _enum_rb_ops:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
-        renames = detect_renames(table.name, dropped_cols, added_cols)
+    # --- Phase 5: PG sub-objects (storage params, RLS, policies, grants) ---
+    from dbwarden.engine.pg_registry import (
+        GrantsHandler,
+        PoliciesHandler,
+        StorageParamsHandler,
+    )
+    _pg5_driver = RegistryDriver()
+    _pg5_driver.register(StorageParamsHandler())
+    _pg5_driver.register(PoliciesHandler())
+    _pg5_driver.register(GrantsHandler())
+    _pg5_up, _pg5_rb = _pg5_driver.run(snapshot, model_tables, None)
+    for op in _pg5_up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _pg5_rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
-        renamed_old = {old for old, _ in renames}
-        renamed_new = {new for _, new in renames}
+    # --- View diff via RegistryDriver ---
+    from dbwarden.engine.pg_registry import ViewHandler
+    _view_driver = RegistryDriver()
+    _view_driver.register(ViewHandler())
+    _view_up, _view_rb = _view_driver.run(snapshot, model_tables, None)
+    for op in _view_up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _view_rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
-        for old_name, new_name in renames:
-            upgrade_ops.append({
-                "type": "rename_column",
-                "table": table.name,
-                "old_name": old_name,
-                "new_name": new_name,
-            })
-            rollback_ops.append({
-                "type": "rename_column",
-                "table": table.name,
-                "old_name": new_name,
-                "new_name": old_name,
-            })
+    # --- Table create/drop/comment via RegistryDriver ---
+    from dbwarden.engine.pg_registry import TableHandler
+    _table_driver = RegistryDriver()
+    _table_driver.register(TableHandler())
+    _table_up, _table_rb = _table_driver.run(snapshot, model_tables, None)
+    for op in _table_up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _table_rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
-        snap_pk_count_table = sum(
-            1 for ec in snap_table.get("columns", {}).values()
-            if ec.get("primary_key")
-        )
-        model_pk_count_table = sum(1 for c in table.columns if c.primary_key)
-
-        for col_name in snap_columns:
-            if col_name not in model_columns:
-                continue
-            if col_name in renamed_old or col_name in renamed_new:
-                continue
-            snap_col = snap_columns[col_name]
-            model_col = model_columns[col_name]
-            snap_raw = snap_col.get("type", "")
-            if _get_backend(db_name) == "clickhouse":
-                snap_raw = _strip_ch_type_wrappers(snap_raw)
-                model_raw = model_col.ch_meta.get("ch_type", str(model_col.type))
-                model_raw = _strip_ch_type_wrappers(model_raw)
-            else:
-                model_raw = _model_type_str(model_col.type)
-            snap_type = normalize_type(snap_raw)["type"]
-            model_type = normalize_type(model_raw)["type"]
-            if snap_type != model_type:
-                op_model_type = model_col.ch_meta.get("ch_type", model_col.type) if _get_backend(db_name) == "clickhouse" else model_col.type
-                upgrade_ops.append({
-                    "type": "alter_column_type",
-                    "table": table.name,
-                    "column": col_name,
-                    "snap_type": snap_col.get("type", ""),
-                    "model_type": op_model_type,
-                })
-                rollback_ops.append({
-                    "type": "alter_column_type",
-                    "table": table.name,
-                    "column": col_name,
-                    "snap_type": snap_col.get("type", ""),
-                    "model_type": op_model_type,
-                })
-            snap_nullable = snap_col.get("nullable", True)
-            if snap_nullable != model_col.nullable:
-                upgrade_ops.append({
-                    "type": "alter_column_nullable",
-                    "table": table.name,
-                    "column": col_name,
-                    "nullable": model_col.nullable,
-                    "col_type": model_col.type,
-                })
-                rollback_ops.append({
-                    "type": "alter_column_nullable",
-                    "table": table.name,
-                    "column": col_name,
-                    "nullable": snap_nullable,
-                    "col_type": snap_col.get("type", ""),
-                })
-            snap_autoinc = snap_col.get("autoincrement", False)
-            model_autoinc = model_col.autoincrement
-            # Suppress autoincrement diffs for composite PK columns (likely join tables)
-            # where autoincrement does not apply and emitting ALTERs is dangerous.
-            pk_count = max(snap_pk_count_table, model_pk_count_table)
-            # Normalize "auto" to actual boolean: True only for single-column Integer PK
-            if model_autoinc == "auto":
-                model_autoinc = (
-                    model_col.primary_key
-                    and pk_count <= 1
-                    and "int" in str(model_col.type).lower()
-                )
-            if model_autoinc is not None and bool(snap_autoinc) != bool(model_autoinc):
-                if pk_count > 1 and _get_backend(db_name) in ("mysql", "mariadb"):
-                    pass  # skip - composite PK columns should not get autoincrement ALTERs
-                else:
-                    upgrade_ops.append({
-                        "type": "alter_column_autoincrement",
-                        "table": table.name,
-                        "column": col_name,
-                        "autoincrement": model_autoinc,
-                        "col_type": model_col.type,
-                        "nullable": model_col.nullable,
-                    })
-                    rollback_ops.append({
-                        "type": "alter_column_autoincrement",
-                        "table": table.name,
-                        "column": col_name,
-                        "autoincrement": bool(snap_autoinc),
-                        "col_type": snap_col.get("type", ""),
-                        "nullable": snap_nullable,
-                    })
-            snap_default = _normalize_default(snap_col.get("default"))
-            model_default = _normalize_default(model_col.default)
-            if _get_backend(db_name) in ("mysql", "mariadb"):
-                snap_default = _normalize_mysql_default(snap_col.get("default"))
-                model_default = _normalize_mysql_default(model_col.default)
-                snap_my_col = snap_col.get("my_column") or {}
-                model_my_col = model_col.my_meta or {}
-                if snap_my_col.get("my_on_update") and model_my_col.get("my_on_update") and model_default is None and snap_default == "CURRENT_TIMESTAMP":
-                    snap_default = None
-            if _get_backend(db_name) == "postgresql":
-                if model_autoinc and snap_default is not None and snap_default.lower().startswith("nextval("):
-                    snap_default = None
-            if snap_default != model_default:
-                upgrade_ops.append({
-                    "type": "alter_column_default",
-                    "table": table.name,
-                    "column": col_name,
-                    "default": model_default,
-                    "col_type": model_col.type,
-                    "nullable": model_col.nullable,
-                    "my_meta": model_col.my_meta or {},
-                })
-                rollback_ops.append({
-                    "type": "alter_column_default",
-                    "table": table.name,
-                    "column": col_name,
-                    "default": snap_default,
-                    "col_type": snap_col.get("type", ""),
-                    "nullable": snap_nullable,
-                    "my_meta": snap_col.get("my_column", {}),
-                })
-            snap_col_comment = snap_col.get("comment")
-            if snap_col_comment != model_col.comment:
-                snap_my_col = snap_col.get("my_column") or {}
-                model_my_col = model_col.my_meta or {}
-                upgrade_ops.append({
-                    "type": "alter_column_comment",
-                    "table": table.name,
-                    "column": col_name,
-                    "comment": model_col.comment,
-                    "previous_comment": snap_col_comment,
-                    "col_type": model_col.type,
-                    "nullable": model_col.nullable,
-                    "autoincrement": model_col.autoincrement,
-                    "my_meta": model_my_col,
-                })
-                rollback_ops.append({
-                    "type": "alter_column_comment",
-                    "table": table.name,
-                    "column": col_name,
-                    "comment": snap_col_comment,
-                    "col_type": snap_col.get("type", ""),
-                    "nullable": snap_nullable,
-                    "autoincrement": snap_col.get("autoincrement", False),
-                    "my_meta": snap_my_col,
-                })
-            snap_pg_col = snap_col.get("pg_column") or {}
-            model_pg_meta = model_col.pg_meta or {}
-            norm_snap_pg_col = {
-                snap_to_model_key(k): v for k, v in snap_pg_col.items()
-                if snap_to_model_key(k) not in ("pg_type",)
-            }
-            model_pg_meta_filtered = {
-                k: v for k, v in model_pg_meta.items()
-                if k not in ("pg_type", "pg_enum_name", "pg_enum_values")
-            }
-            if norm_snap_pg_col != model_pg_meta_filtered:
-                upgrade_ops.append({
-                    "type": "alter_pg_column_meta",
-                    "table": table.name,
-                    "column": col_name,
-                    "col_type": model_col.type,
-                    "snap_type": snap_col.get("type", ""),
-                    "from_pg_column": snap_pg_col,
-                    "to_pg_column": model_pg_meta,
-                })
-                rollback_ops.append({
-                    "type": "alter_pg_column_meta",
-                    "table": table.name,
-                    "column": col_name,
-                    "col_type": snap_col.get("type", ""),
-                    "snap_type": model_col.type,
-                    "from_pg_column": model_pg_meta,
-                    "to_pg_column": snap_pg_col,
-                })
-
-            snap_ch_col = snap_col.get("ch_column") or {}
-            model_ch_col = model_col.ch_meta or {}
-            _diff_ch_column_extras(snap_ch_col, model_ch_col, table.name, col_name, upgrade_ops, rollback_ops)
-
-            snap_my_col = snap_col.get("my_column") or {}
-            model_my_col = model_col.my_meta or {}
-            if snap_my_col != model_my_col:
-                upgrade_ops.append({
-                    "type": "alter_my_column_meta",
-                    "table": table.name,
-                    "column": col_name,
-                    "col_type": model_col.type,
-                    "snap_type": snap_col.get("type", ""),
-                    "from_my_column": snap_my_col,
-                    "to_my_column": model_my_col,
-                    "nullable": model_col.nullable,
-                    "default": model_col.default,
-                    "comment": model_col.comment,
-                    "autoincrement": model_col.autoincrement,
-                    "snap_nullable": snap_col.get("nullable", True),
-                    "snap_default": snap_col.get("default"),
-                    "snap_comment": snap_col.get("comment"),
-                })
-                rollback_ops.append({
-                    "type": "alter_my_column_meta",
-                    "table": table.name,
-                    "column": col_name,
-                    "col_type": snap_col.get("type", ""),
-                    "snap_type": model_col.type,
-                    "from_my_column": model_my_col,
-                    "to_my_column": snap_my_col,
-                    "nullable": snap_col.get("nullable", True),
-                    "default": snap_col.get("default"),
-                    "comment": snap_col.get("comment"),
-                    "autoincrement": snap_col.get("autoincrement", False),
-                    "snap_nullable": model_col.nullable,
-                    "snap_default": model_col.default,
-                    "snap_comment": model_col.comment,
-                })
-
-        for col_name, col_def in dropped_cols:
-            if col_name in renamed_old:
-                continue
-            upgrade_ops.append({
-                "type": "drop_column",
-                "table": table.name,
-                "column": col_name,
-            })
-            rollback_ops.append({
-                "type": "add_column",
-                "table": table.name,
-                "column": col_name,
-                "definition": col_def,
-            })
-
-        for col_name, model_col in added_cols:
-            if col_name in renamed_new:
-                continue
-            upgrade_ops.append({
-                "type": "add_column",
-                "table": table.name,
-                "column": col_name,
-                "model_column": model_col,
-            })
-            rollback_ops.append({
-                "type": "drop_column",
-                "table": table.name,
-                "column": col_name,
-            })
-
-        # --- Constraint diff (unique, check, exclude) ---
-        table_constraints = snapshot.get("constraints", {})
-        snap_uniques = {
-            c.get("name", name): c for name, c in table_constraints.items()
-            if c.get("type") == "unique" and c.get("table") == table.name
-        }
-        model_uniques = {u.get("name") or f"uq_{table.name}_{'_'.join(u.get('columns', []))}": u for u in (table.uniques or [])}
-
-        # RENAME CONSTRAINT optimization: same columns, different name
-        snap_by_cols: dict[frozenset, tuple[str, dict]] = {}
-        model_by_cols: dict[frozenset, tuple[str, dict]] = {}
-        for n, u in snap_uniques.items():
-            snap_by_cols[frozenset(u.get("columns", []))] = (n, u)
-        for n, u in model_uniques.items():
-            model_by_cols[frozenset(u.get("columns", []))] = (n, u)
-        handled_snap: set[str] = set()
-        handled_model: set[str] = set()
-        for cols_sig, (snap_name, snap_entry) in snap_by_cols.items():
-            model_match = model_by_cols.get(cols_sig)
-            if model_match is None:
-                continue
-            model_name, model_entry = model_match
-            if snap_name == model_name:
-                handled_snap.add(snap_name)
-                handled_model.add(model_name)
-            elif snap_entry.get("columns") == model_entry.get("columns"):
-                # Same columns, different name: emit RENAME CONSTRAINT
-                rename_payload = {"old_name": snap_name, "new_name": model_name, "columns": list(cols_sig)}
-                upgrade_ops.append({"type": "rename_unique_constraint", "table": table.name, **rename_payload})
-                rollback_ops.append({"type": "rename_unique_constraint", "table": table.name, "old_name": model_name, "new_name": snap_name, "columns": list(cols_sig)})
-                handled_snap.add(snap_name)
-                handled_model.add(model_name)
-        for name, uq in snap_uniques.items():
-            if name in handled_snap:
-                continue
-            if name not in model_uniques or snap_uniques[name] != model_uniques[name]:
-                payload = {k: v for k, v in uq.items() if k not in {"type", "table"}}
-                upgrade_ops.append({"type": "drop_unique_constraint", "table": table.name, "name": name, **payload})
-                rollback_ops.append({"type": "add_unique_constraint", "table": table.name, "name": name, **payload})
-        for name, uq in model_uniques.items():
-            if name in handled_model:
-                continue
-            if name not in snap_uniques:
-                payload = {k: v for k, v in uq.items() if k not in {"type", "table"}}
-                upgrade_ops.append({"type": "add_unique_constraint", "table": table.name, "name": name, **payload})
-                rollback_ops.append({"type": "drop_unique_constraint", "table": table.name, "name": name, **payload})
-
-        snap_checks = {
-            c.get("name", name): c for name, c in table_constraints.items()
-            if c.get("type") == "check" and c.get("table") == table.name
-        }
-        model_checks = {c.get("name") or f"ck_{table.name}_{i}": c for i, c in enumerate(table.checks or [])}
-        for name, ck in snap_checks.items():
-            snap_sig = {k: v for k, v in ck.items() if k not in {"type", "table", "columns"}}
-            model_sig = model_checks.get(name, {})
-            if name not in model_checks or snap_sig != model_sig:
-                payload = {k: v for k, v in ck.items() if k not in {"type", "table"}}
-                upgrade_ops.append({"type": "drop_check_constraint", "table": table.name, "name": name, **payload})
-                rollback_ops.append({"type": "add_check_constraint", "table": table.name, "name": name, **payload})
-        for name, ck in model_checks.items():
-            if name not in snap_checks:
-                upgrade_ops.append({"type": "add_check_constraint", "table": table.name, "name": name, **ck})
-                rollback_ops.append({"type": "drop_check_constraint", "table": table.name, "name": name, **ck})
-
-        # --- Table-level PG metadata diff (pg_table) ---
-        snap_pg_table = snapshot_tables[table.name].get("pg_table", {}) or {}
-        model_pg_table = table.pg_table or {}
-        scalar_keys = {k for k in set(snap_pg_table.keys()) | set(model_pg_table.keys()) if k not in ("pg_excludes", "pg_rls", "pg_policies")}
-        for key in sorted(scalar_keys):
-            if snap_pg_table.get(key) != model_pg_table.get(key):
-                upgrade_ops.append({
-                    "type": "alter_pg_table",
-                    "table": table.name,
-                    "key": key,
-                    "from_value": snap_pg_table.get(key),
-                    "to_value": model_pg_table.get(key),
-                })
-                rollback_ops.append({
-                    "type": "alter_pg_table",
-                    "table": table.name,
-                    "key": key,
-                    "from_value": model_pg_table.get(key),
-                    "to_value": snap_pg_table.get(key),
-                })
-
-        snap_excl_list = snap_pg_table.get("pg_excludes", []) or []
-        model_excl_list = model_pg_table.get("pg_excludes", []) or []
-        snap_excludes = {e["name"]: e for e in snap_excl_list}
-        model_excludes = {e["name"]: e for e in model_excl_list}
-
-        for name, ex in snap_excludes.items():
-            if name not in model_excludes or snap_excludes[name] != model_excludes.get(name):
-                upgrade_ops.append({
-                    "type": "drop_exclude_constraint",
-                    "table": table.name,
-                    "name": name,
-                    "expression": ex.get("expression", ""),
-                })
-                rollback_ops.append({
-                    "type": "add_exclude_constraint",
-                    "table": table.name,
-                    "name": name,
-                    "expression": ex.get("expression", ""),
-                })
-        for name, ex in model_excludes.items():
-            if name not in snap_excludes:
-                upgrade_ops.append({
-                    "type": "add_exclude_constraint",
-                    "table": table.name,
-                    "name": name,
-                    "expression": ex.get("expression", ""),
-                })
-                rollback_ops.append({
-                    "type": "drop_exclude_constraint",
-                    "table": table.name,
-                    "name": name,
-                    "expression": ex.get("expression", ""),
-                })
-
-        # --- RLS diff ---
-        snap_rls = snap_pg_table.get("pg_rls", False)
-        model_rls = model_pg_table.get("pg_rls", False)
-        if snap_rls != model_rls:
-            upgrade_ops.append({
-                "type": "alter_pg_rls",
-                "table": table.name,
-                "schema": table.schema,
-                "enable": model_rls,
-            })
-            rollback_ops.append({
-                "type": "alter_pg_rls",
-                "table": table.name,
-                "schema": table.schema,
-                "enable": snap_rls,
-            })
-
-        # --- Policy diff ---
-        snap_pol_list = snap_pg_table.get("pg_policies", []) or []
-        model_pol_list = table.pg_policies or []
-        snap_policies = {p["name"]: p for p in snap_pol_list}
-        model_policies = {p["name"]: p for p in model_pol_list}
-        all_policy_names = set(snap_policies) | set(model_policies)
-        for name in sorted(all_policy_names):
-            snap_pol = snap_policies.get(name)
-            model_pol = model_policies.get(name)
-            if snap_pol and not model_pol:
-                # Policy removed from model — drop it
-                upgrade_ops.append({
-                    "type": "drop_policy",
-                    "table": table.name,
-                    "schema": table.schema,
-                    "name": name,
-                })
-                rollback_ops.append({
-                    "type": "add_policy",
-                    "table": table.name,
-                    "schema": table.schema,
-                    **snap_pol,
-                })
-            elif model_pol and not snap_pol:
-                # Policy added to model — create it
-                upgrade_ops.append({
-                    "type": "add_policy",
-                    "table": table.name,
-                    "schema": table.schema,
-                    **model_pol,
-                })
-                rollback_ops.append({
-                    "type": "drop_policy",
-                    "table": table.name,
-                    "schema": table.schema,
-                    "name": name,
-                })
-            elif model_pol and snap_pol:
-                # Policy exists in both — compare
-                if model_pol != snap_pol:
-                    cmd_changed = model_pol.get("command") != snap_pol.get("command")
-                    permissive_changed = model_pol.get("permissive") != snap_pol.get("permissive")
-                    if cmd_changed or permissive_changed:
-                        # ALTER POLICY cannot change command or permissive — must DROP+CREATE
-                        upgrade_ops.append({
-                            "type": "add_policy",
-                            "table": table.name,
-                            "schema": table.schema,
-                            **model_pol,
-                        })
-                        upgrade_ops.append({
-                            "type": "drop_policy",
-                            "table": table.name,
-                            "schema": table.schema,
-                            "name": name,
-                        })
-                        rollback_ops.append({
-                            "type": "add_policy",
-                            "table": table.name,
-                            "schema": table.schema,
-                            **snap_pol,
-                        })
-                        rollback_ops.append({
-                            "type": "drop_policy",
-                            "table": table.name,
-                            "schema": table.schema,
-                            "name": name,
-                        })
-                    else:
-                        # ALTER POLICY can change USING, WITH CHECK, TO role in place
-                        upgrade_ops.append({
-                            "type": "alter_policy",
-                            "table": table.name,
-                            "schema": table.schema,
-                            "name": name,
-                            **model_pol,
-                        })
-                        rollback_ops.append({
-                            "type": "alter_policy",
-                            "table": table.name,
-                            "schema": table.schema,
-                            "name": name,
-                            **snap_pol,
-                        })
-
-        # --- Grants diff ---
-        snap_grants_list = snapshot_tables[table.name].get("pg_grants", []) or []
-        model_grants_list = table.pg_grants or []
-
-        def _grant_key(g: dict) -> tuple:
-            privs = tuple(sorted(g.get("privileges", ["ALL"]))) if isinstance(g.get("privileges"), list) else (g.get("privileges", "ALL"),)
-            return (g.get("role", "PUBLIC"), privs, bool(g.get("grantable", False)))
-
-        snap_grant_keys = {_grant_key(g): g for g in snap_grants_list}
-        model_grant_keys = {_grant_key(g): g for g in model_grants_list}
-
-        for key, grant in model_grant_keys.items():
-            if key not in snap_grant_keys:
-                upgrade_ops.append({
-                    "type": "add_grant",
-                    "table": table.name,
-                    "schema": table.schema,
-                    **grant,
-                })
-                rollback_ops.append({
-                    "type": "revoke_grant",
-                    "table": table.name,
-                    "schema": table.schema,
-                    **grant,
-                })
-
-        for key, grant in snap_grant_keys.items():
-            if key not in model_grant_keys:
-                upgrade_ops.append({
-                    "type": "revoke_grant",
-                    "table": table.name,
-                    "schema": table.schema,
-                    **grant,
-                })
-                rollback_ops.append({
-                    "type": "add_grant",
-                    "table": table.name,
-                    "schema": table.schema,
-                    **grant,
-                })
-
-    # --- FK diff ---
-    def _fk_sig(fk: dict) -> tuple:
-        return (
-            frozenset(fk.get("columns", [])),
-            fk.get("referenced_table") or fk.get("referred_table", ""),
-            frozenset(fk.get("referenced_columns", fk.get("referred_columns", []))),
-            fk.get("on_delete", "NO ACTION"),
-            fk.get("on_update", "NO ACTION"),
-            bool(fk.get("deferrable", False)),
-        )
-
-    snapshot_constraints = snapshot.get("constraints", {})
-    for table in model_tables:
-        model_fks = table.foreign_keys or []
-        model_fk_sigs = {_fk_sig(fk) for fk in model_fks}
-
-        snap_fks = [
-            c for c in snapshot_constraints.values()
-            if c.get("type") == "foreign_key" and c.get("table") == table.name
-        ]
-        snap_fk_sigs = {_fk_sig(fk) for fk in snap_fks}
-
-        for fk in snap_fks:
-            if _fk_sig(fk) not in model_fk_sigs:
-                upgrade_ops.append({
-                    "type": "drop_foreign_key",
-                    "table": table.name,
-                    "columns": fk["columns"],
-                    "referenced_table": fk["referenced_table"],
-                    "referenced_columns": fk["referenced_columns"],
-                })
-                rollback_ops.append({
-                    "type": "add_foreign_key",
-                    "table": table.name,
-                    "columns": fk["columns"],
-                    "referenced_table": fk["referenced_table"],
-                    "referenced_columns": fk["referenced_columns"],
-                    "on_delete": fk.get("on_delete", "NO ACTION"),
-                    "on_update": fk.get("on_update", "NO ACTION"),
-                    "deferrable": bool(fk.get("deferrable", False)),
-                })
-
-        for fk in model_fks:
-            if _fk_sig(fk) not in snap_fk_sigs:
-                ref_table = fk.get("referred_table") or fk.get("referenced_table", "")
-                snap_tbl = snapshot.get("tables", {}).get(ref_table)
-                if snap_tbl is None:
-                    continue
-                snap_ref_cols = snap_tbl.get("columns", {})
-                ref_cols = fk["referred_columns"]
-                if not all(c in snap_ref_cols for c in ref_cols):
-                    continue
-                upgrade_ops.append({
-                    "type": "add_foreign_key",
-                    "table": table.name,
-                    "columns": fk["columns"],
-                    "referenced_table": fk["referred_table"],
-                    "referenced_columns": fk["referred_columns"],
-                    "on_delete": fk.get("on_delete", "NO ACTION"),
-                    "on_update": fk.get("on_update", "NO ACTION"),
-                    "deferrable": fk.get("deferrable", False),
-                })
-                rollback_ops.append({
-                    "type": "drop_foreign_key",
-                    "table": table.name,
-                    "columns": fk["columns"],
-                    "referenced_table": fk["referred_table"],
-                    "referenced_columns": fk["referred_columns"],
-                })
-
-    # --- Index diff ---
-    snapshot_indexes = snapshot.get("indexes", {})
-    snapshot_constraints_all = snapshot.get("constraints", {})
-    # Build name -> entry map for constraints (keys are "table.name", use inner "name" field)
-    _con_by_name: dict[str, dict] = {}
-    for _key, _c in snapshot_constraints_all.items():
-        _cname = _c.get("name") or _key.split(".", 1)[-1]
-        _con_by_name[_cname] = _c
-    for table in model_tables:
-        if table.object_type in ("view", "materialized_view"):
-            continue  # views cannot have indexes
-
-        model_idxs = table.indexes or []
-        model_idx_sigs = {_index_sig(idx) for idx in model_idxs}
-
-        # Snapshot indexes for this table
-        snap_idxs = [
-            (idx.get("name", ""), idx) for _, idx in snapshot_indexes.items()
-            if idx.get("table") == table.name
-        ]
-        snap_idx_sigs = {_index_sig(idx) for _, idx in snap_idxs}
-
-        # Indexes to drop (in snapshot but not in model)
-        for name, idx in snap_idxs:
-            sig = _index_sig(idx)
-            if sig not in model_idx_sigs:
-                # Skip unique indexes that back a unique constraint with the same name.
-                # PostgreSQL creates an index to implement every unique constraint.
-                # Dropping the constraint cascades to the index automatically.
-                if idx.get("unique", False) and name:
-                    c = _con_by_name.get(name)
-                    if c and c.get("type") == "unique" and c.get("table") == table.name:
-                        continue
-                upgrade_ops.append({
-                    "type": "drop_index",
-                    "table": table.name,
-                    "index_name": name,
-                    "columns": idx["columns"],
-                    "unique": idx.get("unique", False),
-                    "using": idx.get("using"),
-                    "where": idx.get("where"),
-                    "include": idx.get("include"),
-                    "with_params": idx.get("with_params"),
-                    "tablespace": idx.get("tablespace"),
-                    "nulls_not_distinct": idx.get("nulls_not_distinct", False),
-                    "column_sorting": idx.get("column_sorting"),
-                    "concurrently": idx.get("concurrently", True),
-                    "clickhouse_type": idx.get("clickhouse_type"),
-                    "clickhouse_granularity": idx.get("clickhouse_granularity"),
-                })
-                rollback_ops.append({
-                    "type": "add_index",
-                    "table": table.name,
-                    "columns": idx["columns"],
-                    "unique": idx.get("unique", False),
-                    "using": idx.get("using"),
-                    "where": idx.get("where"),
-                    "include": idx.get("include"),
-                    "with_params": idx.get("with_params"),
-                    "tablespace": idx.get("tablespace"),
-                    "nulls_not_distinct": idx.get("nulls_not_distinct", False),
-                    "column_sorting": idx.get("column_sorting"),
-                    "concurrently": idx.get("concurrently", True),
-                    "clickhouse_type": idx.get("clickhouse_type"),
-                    "clickhouse_granularity": idx.get("clickhouse_granularity"),
-                })
-
-        # Indexes to add (in model but not in snapshot)
-        for idx in model_idxs:
-            sig = _index_sig(idx)
-            if sig not in snap_idx_sigs:
-                upgrade_ops.append(_index_op_from_info(idx, table.name))
-                rollback_ops.append({
-                    "type": "drop_index",
-                    "table": table.name,
-                    "index_name": None,
-                    "columns": idx.columns,
-                    "unique": idx.unique,
-                })
-
-    # --- Enum ADD VALUE diff ---
-    snap_enums = snapshot.get("enums", {})
-    model_enum_values: dict[str, list[str]] = {}
-    for table in model_tables:
-        for col in table.columns:
-            pg_type = col.pg_meta.get("pg_type", {})
-            if pg_type.get("kind") == "enum":
-                type_name = pg_type.get("type_name", "")
-                if type_name:
-                    model_enum_values[type_name] = pg_type.get("values", [])
-    for enum_name, snap_values in snap_enums.items():
-        to_values = model_enum_values.get(enum_name)
-        if to_values is None:
-            continue
-        snap_set = set(snap_values)
-        new_values = [v for v in to_values if v not in snap_set]
-        if new_values:
-            pos_map = {v: i for i, v in enumerate(to_values)}
-            for v in new_values:
-                idx = pos_map[v]
-                after = to_values[idx - 1] if idx > 0 else None
-                upgrade_ops.append({
-                    "type": "alter_enum_add_value",
-                    "enum_name": enum_name,
-                    "value": v,
-                    "after": after,
-                })
-                rollback_ops.append({
-                    "type": "alter_enum_add_value",
-                    "enum_name": enum_name,
-                    "value": v,
-                    "revert": True,
-                    "after": after,
-                })
-
-    # --- Create TYPE for enums not in snapshot ---
-    for enum_name, curr_values in model_enum_values.items():
-        if enum_name not in snap_enums:
-            upgrade_ops.append({"type": "create_type", "enum_name": enum_name, "values": curr_values})
-            rollback_ops.insert(0, {"type": "drop_type", "enum_name": enum_name})
+    # --- MySQL table-level ops ---
+    from dbwarden.engine.pg_registry import MyTableHandler
+    _my_driver = RegistryDriver()
+    _my_driver.register(MyTableHandler())
+    _my_up, _my_rb = _my_driver.run(snapshot, model_tables, None)
+    for op in _my_up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _my_rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
     # --- Annotate recreate_ch_table ops with dependent MVs ---
     for op in upgrade_ops + rollback_ops:
@@ -3282,11 +2665,6 @@ def snapshot_diff_to_sql(
         generate_drop_object_sql,
         _format_clickhouse_expression,
         _qualified_name,
-        _quote_pg,
-        _build_create_policy_sql,
-        _build_alter_policy_sql,
-        _build_grant_sql,
-        _build_revoke_sql,
     )
     from dbwarden.engine.offline import reconstruct_model_table
 
@@ -3303,10 +2681,116 @@ def snapshot_diff_to_sql(
         upgrade_ops = [{"type": "create_schema", "schema": s, "sql": None} for s in sorted(schemas)] + upgrade_ops
         rollback_ops = rollback_ops + [{"type": "drop_schema", "schema": s, "sql": None} for s in reversed(sorted(schemas))]
     from dbwarden.engine.migration_name import Change
+    from dbwarden.engine.pg_registry import (
+        ChTableHandler,
+        ColumnHandler,
+        ConstraintHandler,
+        DomainHandler,
+        EnumHandler,
+        GrantsHandler,
+        IndexHandler,
+        MyTableHandler,
+        Op,
+        PgTableHandler,
+        PoliciesHandler,
+        RenameTableHandler,
+        SchemaHandler,
+        SequenceHandler,
+        StorageParamsHandler,
+        TableHandler,
+        ViewHandler,
+    )
+
+    # Build emit dispatch: op_type -> handler instance
+    _emit_dispatch: dict[str, Any] = {}
+    for _h in (
+        ChTableHandler(),
+        ColumnHandler(),
+        ConstraintHandler(),
+        DomainHandler(),
+        EnumHandler(),
+        GrantsHandler(),
+        IndexHandler(),
+        MyTableHandler(),
+        PgTableHandler(),
+        PoliciesHandler(),
+        RenameTableHandler(),
+        SchemaHandler(),
+        SequenceHandler(),
+        StorageParamsHandler(),
+        TableHandler(),
+        ViewHandler(),
+    ):
+        for _ot in getattr(_h, "op_types", (_h.object_type,)):
+            _emit_dispatch[_ot] = _h
+
+    # Mapping from op_type to the dict key to use as Change.table
+    _CHANGE_TABLE_KEY: dict[str, str] = {
+        "rename_table": "old_table",
+        "create_schema": "schema", "drop_schema": "schema",
+        "create_domain": "name", "drop_domain": "name",
+        "create_sequence": "name", "drop_sequence": "name",
+        "alter_pg_storage_param": "table",
+        "alter_pg_rls": "table",
+        "add_policy": "table", "drop_policy": "table", "alter_policy": "table",
+        "add_grant": "table", "revoke_grant": "table",
+        "alter_enum_add_value": "enum_name", "create_type": "enum_name", "drop_type": "enum_name",
+        "alter_my_table": "table",
+        "alter_view": "table",
+        "refresh_matview": "table",
+        "create_table": "table",
+        "drop_table": "table",
+        "alter_table_comment": "table",
+        "add_index": "table",
+        "drop_index": "table",
+        "alter_pg_table": "table",
+        "add_exclude_constraint": "table",
+        "drop_exclude_constraint": "table",
+        "add_unique_constraint": "table",
+        "drop_unique_constraint": "table",
+        "rename_unique_constraint": "table",
+        "add_check_constraint": "table",
+        "drop_check_constraint": "table",
+        "add_foreign_key": "table",
+        "drop_foreign_key": "table",
+        "alter_ch_options": "table",
+        "recreate_ch_table": "table",
+        "add_column": "table",
+        "drop_column": "table",
+        "rename_column": "table",
+        "alter_column_type": "table",
+        "alter_column_nullable": "table",
+        "alter_column_autoincrement": "table",
+        "alter_column_default": "table",
+        "alter_column_comment": "table",
+        "alter_ch_column": "table",
+        "alter_pg_column_meta": "table",
+        "alter_my_column_meta": "table",
+    }
+    # Optional second key for Change.target (only when present in the op dict)
+    _CHANGE_TARGET_KEY: dict[str, str] = {
+        "rename_table": "new_table",
+        "alter_pg_storage_param": "param",
+        "add_policy": "name", "drop_policy": "name", "alter_policy": "name",
+        "add_grant": "role", "revoke_grant": "role",
+        "alter_enum_add_value": "value",
+        "alter_my_table": "key",
+        "alter_pg_table": "key",
+        "add_index": "columns",
+        "add_column": "column",
+        "drop_column": "column",
+        "alter_column_type": "column",
+        "alter_column_nullable": "column",
+        "alter_column_autoincrement": "column",
+        "alter_column_default": "column",
+        "alter_column_comment": "column",
+        "alter_ch_column": "column",
+        "alter_pg_column_meta": "column",
+        "alter_my_column_meta": "column",
+    }
 
     statements: list[MigrationStatement] = []
     changes: list[Change] = []
-    backend = _get_backend(db_name)
 
     # Apply global concurrent flag to all index ops
     if not concurrent:
@@ -3318,817 +2802,70 @@ def snapshot_diff_to_sql(
                 op["concurrently"] = False
 
     for op in upgrade_ops:
-        if op["type"] == "rename_table":
-            intent = TableRenameIntent(old_table=op["old_table"], new_table=op["new_table"])
-            stmt = _rename_table_sql(intent, backend)
-            statements.append(stmt)
-            changes.append(Change(
-                operation="rename_table", table=op["old_table"], target=op["new_table"],
-                resolved_from=op.get("resolved_from"),
-            ))
-        elif op["type"] == "create_schema":
-            s = op["schema"]
-            stmt = MigrationStatement(
-                order=StatementOrder.CREATE_SCHEMA,
-                upgrade_sql=f'CREATE SCHEMA IF NOT EXISTS "{s}";',
-                rollback_sql=f'DROP SCHEMA IF EXISTS "{s}";',
-            )
-            statements.append(stmt)
-            changes.append(Change(operation="create_schema", table=s))
-        elif op["type"] == "drop_schema":
-            s = op["schema"]
-            stmt = MigrationStatement(
-                order=StatementOrder.CREATE_SCHEMA,
-                upgrade_sql=f'DROP SCHEMA IF EXISTS "{s}";',
-                rollback_sql=f'CREATE SCHEMA IF NOT EXISTS "{s}";',
-            )
-            statements.append(stmt)
-            changes.append(Change(operation="drop_schema", table=s))
-        elif op["type"] == "create_domain":
-            domain_name = op["name"]
-            domain_schema = op.get("schema")
-            qname = _qualified_name(domain_name, domain_schema)
-            domain_type = op.get("domain_type", "text")
-            parts = [f"CREATE DOMAIN {qname} AS {domain_type}"]
-            if op.get("default"):
-                parts.append(f"DEFAULT {op['default']}")
-            if op.get("not_null"):
-                parts.append("NOT NULL")
-            if op.get("check"):
-                parts.append(f"CHECK ({op['check']})")
-            upgrade_sql = " ".join(parts) + ";"
-            rollback_sql = f"DROP DOMAIN IF EXISTS {qname};"
-            stmt = MigrationStatement(
-                order=StatementOrder.CREATE_DOMAIN,
-                upgrade_sql=upgrade_sql,
-                rollback_sql=rollback_sql,
-            )
-            statements.append(stmt)
-            changes.append(Change(operation="create_domain", table=domain_name))
-        elif op["type"] == "drop_domain":
-            domain_name = op["name"]
-            domain_schema = op.get("schema")
-            qname = _qualified_name(domain_name, domain_schema)
-            domain_type = op.get("domain_type", "text")
-            parts = [f"CREATE DOMAIN {qname} AS {domain_type}"]
-            if op.get("default"):
-                parts.append(f"DEFAULT {op['default']}")
-            if op.get("not_null"):
-                parts.append("NOT NULL")
-            if op.get("check"):
-                parts.append(f"CHECK ({op['check']})")
-            stmt = MigrationStatement(
-                order=StatementOrder.CREATE_DOMAIN,
-                upgrade_sql=f"DROP DOMAIN IF EXISTS {qname};",
-                rollback_sql=" ".join(parts) + ";",
-            )
-            statements.append(stmt)
-            changes.append(Change(operation="drop_domain", table=domain_name))
-        elif op["type"] == "create_sequence":
-            seq_name = op["name"]
-            seq_schema = op.get("schema")
-            qname = _qualified_name(seq_name, seq_schema)
-            parts = [f"CREATE SEQUENCE IF NOT EXISTS {qname}"]
-            if op.get("increment") is not None:
-                parts.append(f"INCREMENT BY {op['increment']}")
-            if op.get("minvalue") is not None:
-                parts.append(f"MINVALUE {op['minvalue']}")
-            if op.get("maxvalue") is not None:
-                parts.append(f"MAXVALUE {op['maxvalue']}")
-            if op.get("start") is not None:
-                parts.append(f"START WITH {op['start']}")
-            if op.get("cycle"):
-                parts.append("CYCLE")
-            else:
-                parts.append("NO CYCLE")
-            if op.get("owned_by"):
-                parts.append(f"OWNED BY {op['owned_by']}")
-            upgrade_sql = " ".join(parts) + ";"
-            rollback_sql = f"DROP SEQUENCE IF EXISTS {qname};"
-            stmt = MigrationStatement(
-                order=StatementOrder.CREATE_SEQUENCE,
-                upgrade_sql=upgrade_sql,
-                rollback_sql=rollback_sql,
-            )
-            statements.append(stmt)
-            changes.append(Change(operation="create_sequence", table=seq_name))
-        elif op["type"] == "drop_sequence":
-            seq_name = op["name"]
-            seq_schema = op.get("schema")
-            qname = _qualified_name(seq_name, seq_schema)
-            parts = [f"CREATE SEQUENCE IF NOT EXISTS {qname}"]
-            if op.get("increment") is not None:
-                parts.append(f"INCREMENT BY {op['increment']}")
-            if op.get("minvalue") is not None:
-                parts.append(f"MINVALUE {op['minvalue']}")
-            if op.get("maxvalue") is not None:
-                parts.append(f"MAXVALUE {op['maxvalue']}")
-            if op.get("start") is not None:
-                parts.append(f"START WITH {op['start']}")
-            if op.get("cycle"):
-                parts.append("CYCLE")
-            else:
-                parts.append("NO CYCLE")
-            if op.get("owned_by"):
-                parts.append(f"OWNED BY {op['owned_by']}")
-            stmt = MigrationStatement(
-                order=StatementOrder.CREATE_SEQUENCE,
-                upgrade_sql=f"DROP SEQUENCE IF EXISTS {qname};",
-                rollback_sql=" ".join(parts) + ";",
-            )
-            statements.append(stmt)
-            changes.append(Change(operation="drop_sequence", table=seq_name))
-        elif op["type"] == "recreate_ch_table":
-            for stmt in _build_clickhouse_recreate_table_sql(op, db_name):
-                statements.append(stmt)
-            changes.append(Change(operation="recreate_ch_table", table=op["table"]))
-        elif op["type"] == "create_table":
-            table = reconstruct_model_table(op["state_table"]) if op.get("state_table") else _find_model_table(op["table"], db_name=db_name)
-            if table:
-                table_statements = _build_create_table_sequence(table, db_name)
-                statements.extend(table_statements)
-                changes.append(Change(operation="create_table", table=op["table"]))
-                changes.extend(
-                    Change(operation="add_index", table=op["table"], target=",".join(idx.columns), index_type=idx.using)
-                    for idx in table.indexes
+        # --- Dispatch to handler emit if a handler claims this op type ---
+        _handler = _emit_dispatch.get(op["type"])
+        if _handler is not None:
+            _ot = op["type"]
+            _attrs: dict[str, Any] = {k: v for k, v in op.items() if k != "type"}
+            if _ot in ("create_domain", "drop_domain"):
+                _info: dict[str, Any] = {"type": op.get("domain_type", "text")}
+                for _k in ("schema", "default", "not_null", "check"):
+                    if op.get(_k) is not None:
+                        _info[_k] = op[_k]
+                _attrs = {"domain_name": op.get("name") or op.get("domain_name", ""), "domain_info": _info}
+            elif _ot in ("create_sequence", "drop_sequence"):
+                _info = {}
+                for _k in ("increment", "minvalue", "maxvalue", "start", "cycle", "owned_by", "schema"):
+                    if op.get(_k) is not None:
+                        _info[_k] = op[_k]
+                _attrs = {"seq_name": op.get("name") or op.get("seq_name", ""), "seq_info": _info}
+            _op_obj = Op(object_type=_ot, upgrade_attrs=_attrs)
+            statements.extend(_handler.emit(_op_obj, db_name=db_name))
+            _table_key = _CHANGE_TABLE_KEY.get(_ot, "table")
+            _table = op.get(_table_key) or op.get("name") or op.get("table", "")
+            _change: dict[str, Any] = {"operation": _ot, "table": _table}
+            _target_key = _CHANGE_TARGET_KEY.get(_ot)
+            if _target_key and op.get(_target_key) is not None:
+                _change["target"] = op[_target_key]
+            changes.append(Change(**_change))
+            # Special handling for add_index: columns is a list, needs join + index_type
+            if _ot == "add_index":
+                changes[-1] = Change(
+                    operation="add_index", table=_table,
+                    target=",".join(op.get("columns", [])),
+                    index_type=op.get("using"),
                 )
-        elif op["type"] == "drop_table":
-            drop_table = reconstruct_model_table(op["state_table"]) if op.get("state_table") else ModelTable(name=op["table"], columns=[], object_type=op.get("object_type", "table"))
-            rollback_sql = (
-                "\n\n".join(stmt.upgrade_sql for stmt in _build_create_table_sequence(drop_table, db_name))
-                if op.get("state_table")
-                else f"CREATE TABLE {op['table']} (/* see .dbwarden/schemas/ for DDL */)"
-            )
-            statements.append(MigrationStatement(
-                order=StatementOrder.DROP_TABLE,
-                upgrade_sql=generate_drop_object_sql(drop_table),
-                rollback_sql=rollback_sql,
-            ))
-            changes.append(Change(operation="drop_table", table=op["table"]))
-        elif op["type"] == "alter_view":
-            qname = _qualified_name(op["table"], op.get("schema"))
-            view_def = op.get("pg_view_definition") or ""
-            mat = op.get("pg_view_materialized", False)
-            snap_mat = op.get("snap_pg_view_materialized", False)
-            rollback_def = op.get("snap_pg_view_definition") or ""
-            # Upgrade: emit correct DROP type based on what exists + what we're creating
-            if mat and snap_mat:
-                upgrade_sql = f"DROP MATERIALIZED VIEW IF EXISTS {qname};\nCREATE MATERIALIZED VIEW {qname} AS {view_def}"
-            elif mat and not snap_mat:
-                upgrade_sql = f"DROP VIEW IF EXISTS {qname};\nCREATE MATERIALIZED VIEW {qname} AS {view_def}"
-            elif not mat and snap_mat:
-                upgrade_sql = f"DROP MATERIALIZED VIEW IF EXISTS {qname};\nCREATE VIEW {qname} AS {view_def}"
-            else:
-                upgrade_sql = f"DROP VIEW IF EXISTS {qname};\nCREATE VIEW {qname} AS {view_def}"
-            # Rollback: restore the snapshot's view type
-            if snap_mat:
-                rollback_sql = f"DROP MATERIALIZED VIEW IF EXISTS {qname};\nCREATE MATERIALIZED VIEW {qname} AS {rollback_def}"
-            else:
-                rollback_sql = f"DROP VIEW IF EXISTS {qname};\nCREATE VIEW {qname} AS {rollback_def}"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_VIEW,
-                upgrade_sql=upgrade_sql,
-                rollback_sql=rollback_sql,
-            ))
-            changes.append(Change(operation="alter_view", table=op["table"]))
-        elif op["type"] == "refresh_matview":
-            qname = _qualified_name(op["table"], op.get("schema"))
-            upgrade_sql = f"REFRESH MATERIALIZED VIEW {qname};"
-            rollback_sql = f"-- REFRESH MATERIALIZED VIEW {qname} (no rollback)"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_VIEW,
-                upgrade_sql=upgrade_sql,
-                rollback_sql=rollback_sql,
-            ))
-            changes.append(Change(operation="refresh_matview", table=op["table"]))
-        elif op["type"] == "rename_column":
-            statements.append(MigrationStatement(
-                order=StatementOrder.RENAME_COLUMN,
-                upgrade_sql=f"ALTER TABLE {op['table']} RENAME COLUMN {op['old_name']} TO {op['new_name']}",
-                rollback_sql=f"ALTER TABLE {op['table']} RENAME COLUMN {op['new_name']} TO {op['old_name']}",
-            ))
-            changes.append(Change(
-                operation="rename_column", table=op["table"], target=op["new_name"],
-                resolved_from=op.get("resolved_from"),
-            ))
-        elif op["type"] == "add_column":
-            model_col = op.get("model_column")
-            if model_col:
-                sql = generate_add_column_sql(op["table"], model_col, db_name)
-                statements.append(MigrationStatement(
-                    order=StatementOrder.ADD_COLUMN,
-                    upgrade_sql=sql,
-                    rollback_sql=f"ALTER TABLE {op['table']} DROP COLUMN {op['column']}",
-                ))
-            else:
-                col_def = op.get("definition", {})
-                col_type = col_def.get("type")
-                if not col_type:
-                    col_type = _missing_def_placeholder(backend)
-                statements.append(MigrationStatement(
-                    order=StatementOrder.ADD_COLUMN,
-                    upgrade_sql=f"ALTER TABLE {op['table']} ADD COLUMN {op['column']} {col_type}",
-                    rollback_sql=f"ALTER TABLE {op['table']} DROP COLUMN {op['column']}",
-                ))
-            changes.append(Change(operation="add_column", table=op["table"], target=op["column"]))
-        elif op["type"] == "drop_column":
-            warning = f"-- WARNING: DROPPING COLUMN {op['table']}.{op['column']}\n"
-            col_type = op.get("definition", {}).get("type", "")
-            if not col_type:
-                col_type = _missing_def_placeholder(backend)
-            statements.append(MigrationStatement(
-                order=StatementOrder.DROP_COLUMN,
-                upgrade_sql=f"{warning}ALTER TABLE {op['table']} DROP COLUMN {op['column']}",
-                rollback_sql=f"ALTER TABLE {op['table']} ADD COLUMN {op['column']} {col_type}",
-            ))
-            changes.append(Change(operation="drop_column", table=op["table"], target=op["column"]))
-        elif op["type"] == "alter_column_type":
-            model_type = op.get("model_type", "")
-            if not isinstance(model_type, str):
-                model_type = _model_type_str(model_type)
-            if safe_type_change:
-                temp_col = f"{op['column']}_new"
-                stmts = _build_safe_type_change_sql(op["table"], op["column"], model_type, backend)
-                for s in stmts:
-                    statements.append(s)
-                changes.append(Change(operation="alter_column_type", table=op["table"], target=op["column"]))
-            else:
-                alter_up, alter_rb = _build_alter_type_sql(op["table"], op["column"], model_type, backend, old_type=op.get("snap_type", ""), postgres_auto_using=postgres_auto_using)
-                statements.append(MigrationStatement(
-                    order=StatementOrder.ALTER_COLUMN_TYPE,
-                    upgrade_sql=alter_up,
-                    rollback_sql=alter_rb,
-                ))
-                changes.append(Change(operation="alter_column_type", table=op["table"], target=op["column"]))
-        elif op["type"] == "alter_column_nullable":
-            nullable = op.get("nullable", True)
-            col_type = op.get("col_type", "")
-            null_up, null_rb = _build_alter_nullable_sql(op["table"], op["column"], nullable, col_type, backend)
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_COLUMN_NULLABLE,
-                upgrade_sql=null_up,
-                rollback_sql=null_rb,
-            ))
-            changes.append(Change(operation="alter_column_nullable", table=op["table"], target=op["column"]))
-        elif op["type"] == "alter_column_default":
-            default = op.get("default")
-            col_type = op.get("col_type")
-            nullable = op.get("nullable")
-            my_meta = op.get("my_meta", {})
-            def_up, def_rb = _build_alter_default_sql(
-                op["table"], op["column"], default, backend,
-                col_type=col_type, nullable=nullable, my_meta=my_meta,
-            )
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_COLUMN_DEFAULT,
-                upgrade_sql=def_up,
-                rollback_sql=def_rb,
-            ))
-            changes.append(Change(operation="alter_column_default", table=op["table"], target=op["column"]))
-        elif op["type"] == "alter_column_autoincrement":
-            table = op["table"]
-            column = op["column"]
-            autoinc = op.get("autoincrement", False)
-            col_type = op.get("col_type", "integer")
-            seq_name = f"{table}_{column}_seq"
-            if backend == "postgresql":
-                if autoinc:
-                    upgrade_sql = (
-                        f"CREATE SEQUENCE IF NOT EXISTS {seq_name};\n"
-                        f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT nextval('{seq_name}');\n"
-                        f"ALTER SEQUENCE {seq_name} OWNED BY {table}.{column};"
-                    )
-                    rollback_sql = (
-                        f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT;\n"
-                        f"DROP SEQUENCE IF EXISTS {seq_name};"
-                    )
-                else:
-                    upgrade_sql = (
-                        f"ALTER TABLE {table} ALTER COLUMN {column} DROP DEFAULT;\n"
-                        f"DROP SEQUENCE IF EXISTS {seq_name};"
-                    )
-                    rollback_sql = (
-                        f"CREATE SEQUENCE IF NOT EXISTS {seq_name};\n"
-                        f"ALTER TABLE {table} ALTER COLUMN {column} SET DEFAULT nextval('{seq_name}');\n"
-                        f"ALTER SEQUENCE {seq_name} OWNED BY {table}.{column};"
-                    )
-            elif backend in ("mysql", "mariadb"):
-                nullable = op.get("nullable")
-                null_clause = ""
-                if nullable is not None:
-                    null_clause = " NOT NULL" if not nullable else " NULL"
-                if autoinc:
-                    upgrade_sql = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type}{null_clause} AUTO_INCREMENT;"
-                    rollback_sql = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type}{null_clause};"
-                else:
-                    upgrade_sql = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type}{null_clause};"
-                    rollback_sql = f"ALTER TABLE {table} MODIFY COLUMN {column} {col_type}{null_clause} AUTO_INCREMENT;"
-            else:
-                upgrade_sql = f"-- Autoincrement toggle for {table}.{column} only supported on PostgreSQL"
-                rollback_sql = f"-- Autoincrement toggle for {table}.{column} only supported on PostgreSQL"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_COLUMN_AUTOINCREMENT,
-                upgrade_sql=upgrade_sql,
-                rollback_sql=rollback_sql,
-            ))
-            changes.append(Change(operation="alter_column_autoincrement", table=table, target=column))
-        elif op["type"] == "alter_table_comment":
-            comment = op.get("comment") or ""
-            prev = op.get("previous_comment") or ""
-            raw_comment = op.get("comment")
-            raw_prev = op.get("previous_comment")
-            if backend == "sqlite":
-                c = comment.replace(chr(39), chr(39)+chr(39))
-                up = f"-- COMMENT ON TABLE {op['table']} IS '{c}';" if comment else f"-- COMMENT ON TABLE {op['table']} IS NULL;"
-                rb = f"-- COMMENT ON TABLE {op['table']} IS '{prev}';" if prev else f"-- COMMENT ON TABLE {op['table']} IS NULL;"
-            elif backend in ("mysql", "mariadb"):
-                c = (raw_comment or "").replace(chr(39), chr(39)+chr(39))
-                p = (raw_prev or "").replace(chr(39), chr(39)+chr(39))
-                up = f"ALTER TABLE {op['table']} COMMENT = '{c}';"
-                rb = f"ALTER TABLE {op['table']} COMMENT = '{p}';"
-            else:
-                up = f"COMMENT ON TABLE {op['table']} IS '{comment.replace(chr(39), chr(39)+chr(39))}';" if comment else f"COMMENT ON TABLE {op['table']} IS NULL;"
-                rb = f"COMMENT ON TABLE {op['table']} IS '{prev.replace(chr(39), chr(39)+chr(39))}';" if prev else f"COMMENT ON TABLE {op['table']} IS NULL;"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_TABLE_COMMENT,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation="alter_table_comment", table=op["table"]))
-        elif op["type"] == "alter_column_comment":
-            comment = op.get("comment") or ""
-            prev = op.get("previous_comment") or ""
-            raw_comment = op.get("comment")
-            raw_prev = op.get("previous_comment")
-            col_type = op.get("col_type", "")
-            nullable = op.get("nullable")
-            if backend == "sqlite":
-                c = comment.replace(chr(39), chr(39)+chr(39))
-                col = f"{op['table']}.{op['column']}"
-                up = f"-- COMMENT ON COLUMN {col} IS '{c}';" if comment else f"-- COMMENT ON COLUMN {col} IS NULL;"
-                rb = f"-- COMMENT ON COLUMN {col} IS '{prev}';" if prev else f"-- COMMENT ON COLUMN {col} IS NULL;"
-            elif backend in ("mysql", "mariadb"):
-                my_meta = op.get("my_meta", {}) or {}
-                autoinc = op.get("autoincrement")
-                up = (
-                    f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} "
-                    f"{_mysql_column_definition_for_meta(col_type, my_meta, nullable=nullable, comment=raw_comment, autoincrement=autoinc)};"
+            # Special handling for rename_column: target is new_name, not column
+            if _ot == "rename_column":
+                changes[-1] = Change(
+                    operation="rename_column", table=_table,
+                    target=op.get("new_name", ""),
+                    resolved_from=op.get("resolved_from"),
                 )
-                rb = (
-                    f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} "
-                    f"{_mysql_column_definition_for_meta(col_type, my_meta, nullable=nullable, comment=raw_prev, autoincrement=autoinc)};"
+            # Special handling for add_foreign_key: composite target
+            if _ot == "add_foreign_key":
+                changes[-1] = Change(
+                    operation="add_foreign_key", table=_table,
+                    target=f"{op.get('referenced_table', '')}({','.join(op.get('referenced_columns', []))})",
                 )
-            else:
-                up = f"COMMENT ON COLUMN {op['table']}.{op['column']} IS '{comment.replace(chr(39), chr(39)+chr(39))}';" if comment else f"COMMENT ON COLUMN {op['table']}.{op['column']} IS NULL;"
-                rb = f"COMMENT ON COLUMN {op['table']}.{op['column']} IS '{prev.replace(chr(39), chr(39)+chr(39))}';" if prev else f"COMMENT ON COLUMN {op['table']}.{op['column']} IS NULL;"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_COLUMN_COMMENT,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation="alter_column_comment", table=op["table"], target=op["column"]))
-        elif op["type"] == "alter_ch_options":
-            changes_map = op.get("changes", {})
-            up_stmts: list[str] = []
-            rb_stmts: list[str] = []
-            for key, change in changes_map.items():
-                to_val = change.get("to")
-                from_val = change.get("from")
-                if key == "ch_settings" and isinstance(to_val, dict):
-                    for setting_key, setting_value in to_val.items():
-                        up_stmts.append(f"ALTER TABLE {op['table']} MODIFY SETTING {setting_key} = {setting_value}")
-                    if isinstance(from_val, dict):
-                        for setting_key, setting_value in from_val.items():
-                            rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY SETTING {setting_key} = {setting_value}")
-                elif key == "ch_ttl" and to_val:
-                    ttl_sql = ", ".join(to_val) if isinstance(to_val, list) else str(to_val)
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY TTL {ttl_sql}")
-                    if from_val:
-                        prev_ttl = ", ".join(from_val) if isinstance(from_val, list) else str(from_val)
-                        rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY TTL {prev_ttl}")
-                elif key == "ch_order_by" and to_val:
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY ORDER BY {_format_clickhouse_expression(to_val)}")
-                    if from_val:
-                        rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY ORDER BY {_format_clickhouse_expression(from_val)}")
-                elif key == "ch_primary_key" and to_val:
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY PRIMARY KEY {_format_clickhouse_expression(to_val)}")
-                    if from_val:
-                        rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY PRIMARY KEY {_format_clickhouse_expression(from_val)}")
-                elif key == "ch_partition_by" and to_val:
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY PARTITION BY {to_val}")
-                    if from_val:
-                        rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY PARTITION BY {from_val}")
-                elif key == "ch_sample_by" and to_val:
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY SAMPLE BY {to_val}")
-                    if from_val:
-                        rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY SAMPLE BY {from_val}")
-                elif key == "ch_engine":
-                    up_stmts.append(f"-- ENGINE change for {op['table']} requires table recreation")
-                    rb_stmts.append(f"-- ENGINE change for {op['table']} requires table recreation")
-                elif key == "ch_projections":
-                    _build_ch_projection_sql(op['table'], to_val, from_val, up_stmts, rb_stmts)
-                elif key in {"ch_select_statement", "ch_to_table", "ch_dictionary", "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key", "ch_zookeeper_path", "ch_replica_name", "ch_object_type"}:
-                    up_stmts.append(f"-- {key} changed for {op['table']}. Re-run with --clickhouse-engine-recreate to auto-generate recreation SQL.")
-                    rb_stmts.append(f"-- {key} changed for {op['table']}. Re-run with --clickhouse-engine-recreate to auto-generate recreation SQL.")
+            # Extra per-index changes for create_table
+            if _ot == "create_table":
+                _ct_table = _find_model_table(_table, db_name=db_name)
+                if _ct_table and hasattr(_ct_table, 'indexes') and _ct_table.indexes:
+                    for _idx in _ct_table.indexes:
+                        changes.append(Change(
+                            operation="add_index", table=_table,
+                            target=",".join(_idx.columns), index_type=_idx.using,
+                        ))
+            # Special handling for rename_table: resolved_from
+            if _ot == "rename_table":
+                changes[-1] = Change(
+                    operation="rename_table", table=_table,
+                    target=op.get("new_table", ""),
+                    resolved_from=op.get("resolved_from"),
+                )
+            continue
 
-            if up_stmts or rb_stmts:
-                statements.append(MigrationStatement(
-                    order=StatementOrder.ALTER_TABLE_OPTIONS,
-                    upgrade_sql="\n".join(up_stmts) if up_stmts else "-- no-op",
-                    rollback_sql="\n".join(rb_stmts) if rb_stmts else "-- no-op",
-                ))
-                changes.append(Change(operation="alter_ch_options", table=op["table"]))
-        elif op["type"] == "alter_ch_column":
-            from_ch = op.get("from_ch_column", {}) or {}
-            to_ch = op.get("to_ch_column", {}) or {}
-            base_type = to_ch.get("ch_type") or from_ch.get("ch_type") or ""
-            up_stmts: list[str] = []
-            rb_stmts: list[str] = []
-            if to_ch.get("ch_type") and to_ch.get("ch_type") != from_ch.get("ch_type"):
-                up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {to_ch['ch_type']}")
-                if from_ch.get("ch_type"):
-                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {from_ch['ch_type']}")
-            if to_ch.get("ch_codec") and to_ch.get("ch_codec") != from_ch.get("ch_codec"):
-                up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {base_type} CODEC({to_ch['ch_codec']})")
-                if from_ch.get("ch_codec"):
-                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {base_type} CODEC({from_ch['ch_codec']})")
-            if to_ch.get("ch_default_expression") != from_ch.get("ch_default_expression"):
-                if to_ch.get("ch_default_expression"):
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} DEFAULT {to_ch['ch_default_expression']}")
-                else:
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} REMOVE DEFAULT")
-                if from_ch.get("ch_default_expression"):
-                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} DEFAULT {from_ch['ch_default_expression']}")
-                else:
-                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} REMOVE DEFAULT")
-            if to_ch.get("ch_materialized") != from_ch.get("ch_materialized"):
-                if to_ch.get("ch_materialized"):
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} MATERIALIZED {to_ch['ch_materialized']}")
-                if from_ch.get("ch_materialized"):
-                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} MATERIALIZED {from_ch['ch_materialized']}")
-            if to_ch.get("ch_alias") != from_ch.get("ch_alias"):
-                if to_ch.get("ch_alias"):
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} ALIAS {to_ch['ch_alias']}")
-                if from_ch.get("ch_alias"):
-                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} ALIAS {from_ch['ch_alias']}")
-            if to_ch.get("ch_ttl") != from_ch.get("ch_ttl"):
-                if to_ch.get("ch_ttl"):
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} TTL {to_ch['ch_ttl']}")
-                else:
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} REMOVE TTL")
-                if from_ch.get("ch_ttl"):
-                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} TTL {from_ch['ch_ttl']}")
-                else:
-                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} REMOVE TTL")
-            _ch_type_changed = to_ch.get("ch_type") and to_ch.get("ch_type") != from_ch.get("ch_type")
-            if not _ch_type_changed:
-                ch_lc_diff = to_ch.get("ch_low_cardinality") != from_ch.get("ch_low_cardinality")
-                ch_null_diff = to_ch.get("ch_nullable") != from_ch.get("ch_nullable")
-                if ch_lc_diff or ch_null_diff:
-                    base = _strip_ch_type_wrappers(to_ch.get("ch_type") or from_ch.get("ch_type") or "")
-                    target = base
-                    if to_ch.get("ch_low_cardinality"):
-                        target = f"LowCardinality({target})"
-                    if to_ch.get("ch_nullable"):
-                        target = f"Nullable({target})"
-                    up_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {target}")
-                    base_rb = _strip_ch_type_wrappers(from_ch.get("ch_type") or to_ch.get("ch_type") or "")
-                    rb_target = base_rb
-                    if from_ch.get("ch_low_cardinality"):
-                        rb_target = f"LowCardinality({rb_target})"
-                    if from_ch.get("ch_nullable"):
-                        rb_target = f"Nullable({rb_target})"
-                    rb_stmts.append(f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} {rb_target}")
-
-            if up_stmts or rb_stmts:
-                statements.append(MigrationStatement(
-                    order=StatementOrder.ALTER_COLUMN_TYPE,
-                    upgrade_sql="\n".join(up_stmts) if up_stmts else "-- no-op",
-                    rollback_sql="\n".join(rb_stmts) if rb_stmts else "-- no-op",
-                ))
-                changes.append(Change(operation="alter_ch_column", table=op["table"], target=op["column"]))
-        elif op["type"] == "alter_pg_column_meta":
-            stmts = _build_pg_meta_sql(
-                op["table"], op["column"], op["col_type"], op["snap_type"],
-                op["to_pg_column"], op["from_pg_column"], backend,
-            )
-            for s in stmts:
-                statements.append(s)
-            changes.append(Change(operation="alter_pg_column_meta", table=op["table"], target=op["column"]))
-        elif op["type"] == "alter_pg_table":
-            key = op["key"]
-            to_val = op.get("to_value")
-            from_val = op.get("from_value")
-            if backend == "postgresql":
-                if key == "pg_fillfactor":
-                    if to_val is not None:
-                        up = f"ALTER TABLE {op['table']} SET (fillfactor = {to_val});"
-                    else:
-                        up = f"ALTER TABLE {op['table']} RESET (fillfactor);"
-                    if from_val is not None:
-                        rb = f"ALTER TABLE {op['table']} SET (fillfactor = {from_val});"
-                    else:
-                        rb = f"ALTER TABLE {op['table']} RESET (fillfactor);"
-                    statements.append(MigrationStatement(
-                        order=StatementOrder.ALTER_TABLE_OPTIONS,
-                        upgrade_sql=up, rollback_sql=rb,
-                    ))
-                elif key == "pg_tablespace":
-                    if to_val:
-                        up = f"ALTER TABLE {op['table']} SET TABLESPACE {to_val};"
-                    else:
-                        up = f"-- Cannot unset tablespace for {op['table']}; move to default manually"
-                    if from_val:
-                        rb = f"ALTER TABLE {op['table']} SET TABLESPACE {from_val};"
-                    else:
-                        rb = f"-- Cannot restore tablespace for {op['table']}; move to default manually"
-                    statements.append(MigrationStatement(
-                        order=StatementOrder.ALTER_TABLE_OPTIONS,
-                        upgrade_sql=up, rollback_sql=rb,
-                    ))
-                elif key == "pg_inherits":
-                    if to_val:
-                        parents = ", ".join(to_val)
-                        up = f"ALTER TABLE {op['table']} INHERIT {parents};"
-                    else:
-                        up = f"-- Cannot remove all inheritance for {op['table']} via ALTER"
-                    if from_val:
-                        parents = ", ".join(from_val)
-                        rb = f"ALTER TABLE {op['table']} INHERIT {parents};"
-                    else:
-                        rb = f"-- Cannot restore inheritance for {op['table']} via ALTER"
-                    statements.append(MigrationStatement(
-                        order=StatementOrder.ALTER_TABLE_OPTIONS,
-                        upgrade_sql=up, rollback_sql=rb,
-                    ))
-                elif key == "pg_unlogged":
-                    if to_val:
-                        up = f"ALTER TABLE {op['table']} SET UNLOGGED;"
-                    else:
-                        up = f"ALTER TABLE {op['table']} SET LOGGED;"
-                    if from_val:
-                        rb = f"ALTER TABLE {op['table']} SET UNLOGGED;"
-                    else:
-                        rb = f"ALTER TABLE {op['table']} SET LOGGED;"
-                    statements.append(MigrationStatement(
-                        order=StatementOrder.ALTER_TABLE_OPTIONS,
-                        upgrade_sql=up, rollback_sql=rb,
-                    ))
-                elif key == "pg_partition":
-                    up = f"-- Partition strategy changed for {op['table']}; requires table rebuild"
-                    rb = f"-- Cannot revert partition change for {op['table']}; requires table rebuild"
-                    statements.append(MigrationStatement(
-                        order=StatementOrder.ALTER_TABLE_OPTIONS,
-                        upgrade_sql=up, rollback_sql=rb,
-                    ))
-            changes.append(Change(operation=f"alter_pg_table_{key}", table=op["table"]))
-        elif op["type"] == "alter_pg_rls":
-            qname = _qualified_name(op["table"], op.get("schema"))
-            if op["enable"]:
-                up = f"ALTER TABLE {qname} ENABLE ROW LEVEL SECURITY;"
-                rb = f"ALTER TABLE {qname} DISABLE ROW LEVEL SECURITY;"
-            else:
-                up = f"ALTER TABLE {qname} DISABLE ROW LEVEL SECURITY;"
-                rb = f"ALTER TABLE {qname} ENABLE ROW LEVEL SECURITY;"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_TABLE_OPTIONS,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation="alter_pg_rls", table=op["table"]))
-        elif op["type"] == "add_policy":
-            qname = _qualified_name(op["table"], op.get("schema"))
-            up = _build_create_policy_sql(op, qname)
-            rb = f"DROP POLICY IF EXISTS {_quote_pg(op['name'])} ON {qname};"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_TABLE_OPTIONS,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation="add_policy", table=op["table"], target=op["name"]))
-        elif op["type"] == "drop_policy":
-            qname = _qualified_name(op["table"], op.get("schema"))
-            up = f"DROP POLICY IF EXISTS {_quote_pg(op['name'])} ON {qname};"
-            # Rollback requires the full policy definition — stored in snapshot
-            rb = f"-- Cannot auto-restore policy {op['name']}; recreate from snapshot"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_TABLE_OPTIONS,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation="drop_policy", table=op["table"], target=op["name"]))
-        elif op["type"] == "alter_policy":
-            qname = _qualified_name(op["table"], op.get("schema"))
-            up = _build_alter_policy_sql(op, qname)
-            rb = f"-- Cannot auto-restore altered policy {op['name']}; recreate from snapshot"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_TABLE_OPTIONS,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation="alter_policy", table=op["table"], target=op["name"]))
-        elif op["type"] == "add_grant":
-            qname = _qualified_name(op["table"], op.get("schema"))
-            up = _build_grant_sql(op, qname)
-            rb = _build_revoke_sql(op, qname)
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_PG_GRANT,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation="add_grant", table=op["table"], target=op.get("role")))
-        elif op["type"] == "revoke_grant":
-            qname = _qualified_name(op["table"], op.get("schema"))
-            up = _build_revoke_sql(op, qname)
-            rb = _build_grant_sql(op, qname)
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_PG_GRANT,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation="revoke_grant", table=op["table"], target=op.get("role")))
-        elif op["type"] == "alter_my_table":
-            key = op["key"]
-            to_val = op.get("to_value")
-            from_val = op.get("from_value")
-            if backend in ("mysql", "mariadb"):
-                if key == "my_engine":
-                    up = f"ALTER TABLE {op['table']} ENGINE={to_val};" if to_val else f"-- Cannot unset engine for {op['table']}"
-                    rb = f"ALTER TABLE {op['table']} ENGINE={from_val};" if from_val else f"-- Cannot restore unset engine for {op['table']}"
-                elif key == "my_charset":
-                    up = f"ALTER TABLE {op['table']} DEFAULT CHARACTER SET {to_val};" if to_val else f"-- Cannot unset character set for {op['table']}"
-                    rb = f"ALTER TABLE {op['table']} DEFAULT CHARACTER SET {from_val};" if from_val else f"-- Cannot restore unset character set for {op['table']}"
-                elif key == "my_collate":
-                    up = f"ALTER TABLE {op['table']} COLLATE={to_val};" if to_val else f"-- Cannot unset collation for {op['table']}"
-                    rb = f"ALTER TABLE {op['table']} COLLATE={from_val};" if from_val else f"-- Cannot restore unset collation for {op['table']}"
-                elif key == "my_row_format":
-                    up = f"ALTER TABLE {op['table']} ROW_FORMAT={to_val};" if to_val else f"-- Cannot unset row format for {op['table']}"
-                    rb = f"ALTER TABLE {op['table']} ROW_FORMAT={from_val};" if from_val else f"-- Cannot restore unset row format for {op['table']}"
-                elif key == "my_auto_increment":
-                    up = f"ALTER TABLE {op['table']} AUTO_INCREMENT={to_val};" if to_val is not None else f"-- Cannot unset auto_increment for {op['table']}"
-                    rb = f"ALTER TABLE {op['table']} AUTO_INCREMENT={from_val};" if from_val is not None else f"-- Cannot restore unset auto_increment for {op['table']}"
-                else:
-                    up = f"-- Unsupported MySQL table option change {key} on {op['table']}"
-                    rb = up
-                statements.append(MigrationStatement(
-                    order=StatementOrder.ALTER_TABLE_OPTIONS,
-                    upgrade_sql=up,
-                    rollback_sql=rb,
-                ))
-            changes.append(Change(operation=f"alter_my_table_{key}", table=op["table"]))
-        elif op["type"] == "alter_my_column_meta":
-            from_my = op.get("from_my_column", {}) or {}
-            to_my = op.get("to_my_column", {}) or {}
-            if backend in ("mysql", "mariadb"):
-                up = (
-                    f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} "
-                    f"{_mysql_column_definition_for_meta(op['col_type'], to_my,
-                        nullable=op.get('nullable'),
-                        default=op.get('default'),
-                        comment=op.get('comment'),
-                        autoincrement=op.get('autoincrement'))};"
-                )
-                rb = (
-                    f"ALTER TABLE {op['table']} MODIFY COLUMN {op['column']} "
-                    f"{_mysql_column_definition_for_meta(op['snap_type'], from_my,
-                        nullable=op.get('snap_nullable'),
-                        default=op.get('snap_default'),
-                        comment=op.get('snap_comment'),
-                        autoincrement=op.get('autoincrement'))};"
-                )
-                statements.append(MigrationStatement(
-                    order=StatementOrder.ALTER_COLUMN_TYPE,
-                    upgrade_sql=up,
-                    rollback_sql=rb,
-                ))
-            changes.append(Change(operation="alter_my_column_meta", table=op["table"], target=op["column"]))
-        elif op["type"] in ("add_unique_constraint", "drop_unique_constraint"):
-            name = op["name"]
-            using = op.get("using")
-            using_clause = f" USING INDEX {using}" if using else ""
-            if op["type"] == "add_unique_constraint":
-                cols = ", ".join(op.get("columns", []))
-                defer_clause = ""
-                if backend == "postgresql" and op.get("deferrable"):
-                    if op.get("initially_deferred"):
-                        defer_clause = " DEFERRABLE INITIALLY DEFERRED"
-                    else:
-                        defer_clause = " DEFERRABLE INITIALLY IMMEDIATE"
-                up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} UNIQUE ({cols}){using_clause}{defer_clause};"
-                rb = f"ALTER TABLE {op['table']} DROP CONSTRAINT {name};"
-            else:
-                up = f"ALTER TABLE {op['table']} DROP CONSTRAINT {name};"
-                cols = ", ".join(op.get("columns", []))
-                defer_clause = ""
-                if backend == "postgresql" and op.get("deferrable"):
-                    if op.get("initially_deferred"):
-                        defer_clause = " DEFERRABLE INITIALLY DEFERRED"
-                    else:
-                        defer_clause = " DEFERRABLE INITIALLY IMMEDIATE"
-                rb = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} UNIQUE ({cols}){using_clause}{defer_clause};"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_TABLE_CONSTRAINT,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation=op["type"], table=op["table"]))
-        elif op["type"] == "rename_unique_constraint":
-            up = f"ALTER TABLE {op['table']} RENAME CONSTRAINT {op['old_name']} TO {op['new_name']};"
-            rb = f"ALTER TABLE {op['table']} RENAME CONSTRAINT {op['new_name']} TO {op['old_name']};"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_TABLE_CONSTRAINT,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation=op["type"], table=op["table"]))
-        elif op["type"] in ("add_check_constraint", "drop_check_constraint"):
-            name = op["name"]
-            no_inherit = " NO INHERIT" if (op.get("no_inherit") and backend == "postgresql") else ""
-            if op["type"] == "add_check_constraint":
-                expr = op.get("expression", "")
-                up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} CHECK ({expr}){no_inherit};"
-                rb = f"ALTER TABLE {op['table']} DROP CONSTRAINT IF EXISTS {name};"
-            else:
-                up = f"ALTER TABLE {op['table']} DROP CONSTRAINT IF EXISTS {name};"
-                expr = op.get("expression", "")
-                rb = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} CHECK ({expr}){no_inherit};"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_TABLE_CONSTRAINT,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation=op["type"], table=op["table"]))
-        elif op["type"] in ("add_exclude_constraint", "drop_exclude_constraint"):
-            name = op["name"]
-            if op["type"] == "add_exclude_constraint":
-                expr = op.get("expression", "")
-                up = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} EXCLUDE {expr};"
-                rb = f"ALTER TABLE {op['table']} DROP CONSTRAINT {name};"
-            else:
-                up = f"ALTER TABLE {op['table']} DROP CONSTRAINT {name};"
-                expr = op.get("expression", "")
-                rb = f"ALTER TABLE {op['table']} ADD CONSTRAINT {name} EXCLUDE {expr};"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_TABLE_CONSTRAINT,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation=op["type"], table=op["table"]))
-        elif op["type"] in ("add_foreign_key", "drop_foreign_key"):
-            stmts = _build_foreign_key_sql(op, backend)
-            for s in stmts:
-                statements.append(s)
-            if op["type"] == "add_foreign_key":
-                changes.append(Change(
-                    operation="add_foreign_key", table=op["table"],
-                    target=f"{op['referenced_table']}({','.join(op['referenced_columns'])})",
-                ))
-            else:
-                changes.append(Change(
-                    operation="drop_foreign_key", table=op["table"],
-                ))
-        elif op["type"] in ("add_index", "drop_index"):
-            stmts = _build_index_sql(op, backend)
-            for s in stmts:
-                statements.append(s)
-            if op["type"] == "add_index":
-                target = ",".join(op["columns"])
-                idx_type = op.get("using")
-                changes.append(Change(
-                    operation="add_index", table=op["table"], target=target,
-                    index_type=idx_type,
-                ))
-            else:
-                changes.append(Change(
-                    operation="drop_index", table=op["table"],
-                ))
-        elif op["type"] == "alter_enum_add_value":
-            enum_name = op["enum_name"]
-            value = op["value"]
-            after = op.get("after")
-            after_clause = f" AFTER {after!r}" if after else ""
-            if backend == "sqlite":
-                up = f"-- ALTER TYPE {enum_name} ADD VALUE IF NOT EXISTS {value!r}{after_clause};"
-                rb = f"-- Revert: {value} was added to enum {enum_name}"
-            elif op.get("revert"):
-                up = f"-- Revert: {value} was added to enum {enum_name}"
-                rb = f"ALTER TYPE {enum_name} ADD VALUE IF NOT EXISTS {value!r}{after_clause};"
-            else:
-                up = f"ALTER TYPE {enum_name} ADD VALUE IF NOT EXISTS {value!r}{after_clause};"
-                rb = f"-- Revert: {value} was added to enum {enum_name}"
-            statements.append(MigrationStatement(
-                order=StatementOrder.ALTER_TABLE_OPTIONS,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation="alter_enum_add_value", table=enum_name, target=value))
-        elif op["type"] == "create_type":
-            enum_name = op["enum_name"]
-            values_sql = ", ".join(repr(v) for v in op.get("values", []))
-            up = f"CREATE TYPE {enum_name} AS ENUM ({values_sql});"
-            rb = f"DROP TYPE IF EXISTS {enum_name};"
-            statements.append(MigrationStatement(
-                order=StatementOrder.CREATE_TYPE,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation="create_type", table=enum_name))
-        elif op["type"] == "drop_type":
-            enum_name = op["enum_name"]
-            up = f"DROP TYPE IF EXISTS {enum_name};"
-            values_sql = ", ".join(repr(v) for v in op.get("values", []))
-            rb = f"CREATE TYPE {enum_name} AS ENUM ({values_sql});"
-            statements.append(MigrationStatement(
-                order=StatementOrder.CREATE_TYPE,
-                upgrade_sql=up, rollback_sql=rb,
-            ))
-            changes.append(Change(operation="drop_type", table=enum_name))
 
     upgrade_sql, rollback_sql = _assemble_migration(statements)
     return upgrade_sql, rollback_sql, changes
@@ -4248,94 +2985,13 @@ def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None
     ]
 
 
-def _build_fk_name(table: str, columns: list[str]) -> str:
-    return f"{table}_{'_'.join(columns)}_fkey"
 
-
-def _build_foreign_key_sql(op: dict[str, Any], backend: str) -> list[MigrationStatement]:
-    table = op["table"]
-    columns = op.get("columns", [])
-    ref_table = op.get("referenced_table", "")
-    ref_columns = op.get("referenced_columns", [])
-    fk_name = _build_fk_name(table, columns)
-
-    if op["type"] == "add_foreign_key":
-        cols = ", ".join(columns)
-        ref_cols = ", ".join(ref_columns)
-        if backend == "sqlite":
-            return [
-                MigrationStatement(
-                    order=StatementOrder.ALTER_FOREIGN_KEY,
-                    upgrade_sql=(
-                        f"-- SQLite: ADD CONSTRAINT {fk_name} FOREIGN KEY ({cols}) "
-                        f"REFERENCES {ref_table}({ref_cols}) (not supported)\n"
-                        f"-- Recreate the table with the constraint included."
-                    ),
-                    rollback_sql=f"-- (inverse requires manual migration)",
-                ),
-            ]
-        upgrade = (
-            f"ALTER TABLE {table} ADD CONSTRAINT {fk_name} "
-            f"FOREIGN KEY ({cols}) REFERENCES {ref_table}({ref_cols})"
-        )
-        on_delete = op.get("on_delete")
-        on_update = op.get("on_update")
-        if on_delete and on_delete != "NO ACTION":
-            upgrade += f" ON DELETE {on_delete}"
-        if on_update and on_update != "NO ACTION":
-            upgrade += f" ON UPDATE {on_update}"
-        if backend == "postgresql" and op.get("deferrable"):
-            upgrade += " DEFERRABLE INITIALLY DEFERRED"
-        upgrade += ";"
-        rollback = f"ALTER TABLE {table} DROP CONSTRAINT {fk_name};"
-        return [
-            MigrationStatement(
-                order=StatementOrder.ALTER_FOREIGN_KEY,
-                upgrade_sql=upgrade,
-                rollback_sql=rollback,
-            ),
-        ]
-    else:  # drop_foreign_key
-        cols = ", ".join(columns)
-        ref_cols = ", ".join(ref_columns)
-        fk_sql = f"ALTER TABLE {table} ADD CONSTRAINT {fk_name} FOREIGN KEY ({cols}) REFERENCES {ref_table}({ref_cols})"
-        on_delete = op.get("on_delete")
-        on_update = op.get("on_update")
-        if on_delete and on_delete != "NO ACTION":
-            fk_sql += f" ON DELETE {on_delete}"
-        if on_update and on_update != "NO ACTION":
-            fk_sql += f" ON UPDATE {on_update}"
-        if backend == "postgresql" and op.get("deferrable"):
-            fk_sql += " DEFERRABLE INITIALLY DEFERRED"
-        fk_sql += ";"
-
-        if backend in ("mysql", "mariadb"):
-            upgrade = f"ALTER TABLE {table} DROP FOREIGN KEY {fk_name};"
-        elif backend == "sqlite":
-            return [
-                MigrationStatement(
-                    order=StatementOrder.ALTER_FOREIGN_KEY,
-                    upgrade_sql=(
-                        f"-- SQLite: DROP CONSTRAINT {fk_name} (not supported)\n"
-                        f"-- Recreate the table without the constraint."
-                    ),
-                    rollback_sql="-- (inverse requires manual migration)",
-                ),
-            ]
-        else:
-            upgrade = f"ALTER TABLE {table} DROP CONSTRAINT {fk_name};"
-        return [
-            MigrationStatement(
-                order=StatementOrder.ALTER_FOREIGN_KEY,
-                upgrade_sql=upgrade,
-                rollback_sql=fk_sql,
-            ),
-        ]
-
-
-def _build_index_name(table: str, columns: list[str], unique: bool, using: str | None = None) -> str:
+def _build_index_name(table: str, columns: list[str], unique: bool, using: str | None = None, expression: str | None = None) -> str:
     prefix = "uq" if unique else "idx"
-    cols = "_".join(columns)
+    if expression:
+        cols = "expr"
+    else:
+        cols = "_".join(columns)
     name = f"{prefix}_{table}_{cols}"
     if using and using != "btree":
         name += f"_{using}"
@@ -4357,7 +3013,8 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
     concurrently = op.get("concurrently", True)
     clickhouse_type = op.get("clickhouse_type")
     clickhouse_granularity = op.get("clickhouse_granularity")
-    idx_name = op.get("index_name") or _build_index_name(table, columns, unique, using)
+    expression = op.get("expression")
+    idx_name = op.get("index_name") or _build_index_name(table, columns, unique, using, expression)
 
     if op["type"] == "add_index":
         if backend == "clickhouse" and clickhouse_type:
@@ -4399,6 +3056,8 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
             if sorting:
                 col_sql += f" {sorting}"
             col_parts.append(col_sql)
+        if expression:
+            col_parts.append(expression)
         parts.append(f"({', '.join(col_parts)})")
 
         if include and backend == "postgresql":
@@ -4418,6 +3077,10 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
             parts.append("NULLS NOT DISTINCT")
 
         upgrade = " ".join(parts) + ";"
+        if backend == "postgresql" and concurrently:
+            from dbwarden.engine.file_parser import DBWARDEN_AUTOCOMMIT_MARKER
+
+            upgrade = f"{DBWARDEN_AUTOCOMMIT_MARKER}\n{upgrade}"
         rollback = f"DROP INDEX {idx_name};"
         return [
             MigrationStatement(

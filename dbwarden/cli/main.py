@@ -162,6 +162,11 @@ def make_migrations(
         "--plan",
         help="Output migration plan JSON without writing files",
     ),
+    sql_output: bool = typer.Option(
+        False,
+        "--sql",
+        help="Output raw migration SQL to stdout without writing files",
+    ),
     database: str | None = typer.Option(
         None, "--database", "-d", help="Target database name"
     ),
@@ -217,6 +222,7 @@ def make_migrations(
         verbose=verbose,
         database=database,
         output_plan=plan,
+        output_sql=sql_output,
         rename_flags=rename,
         safe_type_change=safe_type_change,
         rename_table_flags=rename_table,
