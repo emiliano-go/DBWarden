@@ -588,6 +588,9 @@ class TestExtractFullSchemaSnapshot:
             def close(self):
                 pass
 
+            def execution_options(self, **kw):
+                return self
+
             def __enter__(self):
                 return self
 
@@ -682,6 +685,9 @@ class TestExtractFullSchemaSnapshot:
             def close(self):
                 pass
 
+            def execution_options(self, **kw):
+                return self
+
             def __enter__(self):
                 return self
 
@@ -768,6 +774,9 @@ class TestExtractFullSchemaSnapshot:
 
             def close(self):
                 pass
+
+            def execution_options(self, **kw):
+                return self
 
             def __enter__(self):
                 return self

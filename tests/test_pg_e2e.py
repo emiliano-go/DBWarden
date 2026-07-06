@@ -112,10 +112,10 @@ def test_trigger_extraction(engine, snap):
 # ---------------------------------------------------------------------------
 
 def test_role_extraction(engine, snap):
-    # pg_roles is already extracted in the baseline snapshot; just validate it
     from dbwarden.engine.pg_registry import RoleHandler
     spec = RoleHandler().extract(snap)
-    assert "postgres" not in spec  # filtered by default
+    assert "postgres" in spec  # superuser role is visible
+    assert "pg_execute_server_programs" not in spec  # starts with pg_ is excluded
     assert isinstance(spec, dict)
 
 
@@ -203,16 +203,16 @@ def test_extended_statistics_extraction(engine, snap):
     fresh = _refresh()
     from dbwarden.engine.pg_registry.extended_statistics_handler import ExtendedStatisticsHandler
     spec = ExtendedStatisticsHandler().extract(fresh)
-    assert "public.e2e_s1" in spec, f"e2e_s1 not found in {list(spec.keys())}"
-    assert "public.e2e_s2" in spec, f"e2e_s2 not found in {list(spec.keys())}"
-    assert "public.e2e_s3" in spec, f"e2e_s3 not found in {list(spec.keys())}"
+    assert "e2e_s1" in spec, f"e2e_s1 not found in {list(spec.keys())}"
+    assert "e2e_s2" in spec, f"e2e_s2 not found in {list(spec.keys())}"
+    assert "e2e_s3" in spec, f"e2e_s3 not found in {list(spec.keys())}"
 
-    s1 = spec["public.e2e_s1"]
+    s1 = spec["e2e_s1"]
     assert s1["table"] == "e2e_stats"
     assert "f" in s1["kinds"]
     assert s1["columns"] is not None
 
-    s3 = spec["public.e2e_s3"]
+    s3 = spec["e2e_s3"]
     assert set(s3["kinds"]) == {"d", "f", "m"}
 
     _drop("e2e_stats")
@@ -276,20 +276,16 @@ def _drop(*names):
     e = sa.create_engine(PG_URL)
     with e.begin() as conn:
         for n in names:
-            try:
-                conn.execute(sa.text(f"DROP TABLE IF EXISTS {n} CASCADE"))
-            except Exception:
-                pass
-            try:
-                conn.execute(sa.text(f"DROP FUNCTION IF EXISTS {n} CASCADE"))
-            except Exception:
-                pass
-            try:
-                conn.execute(sa.text(f"DROP TYPE IF EXISTS {n} CASCADE"))
-            except Exception:
-                pass
-            try:
-                conn.execute(sa.text(f"DROP STATISTICS IF EXISTS {n} CASCADE"))
-            except Exception:
-                pass
+            for tmpl in (
+                "DROP TABLE IF EXISTS {n} CASCADE",
+                "DROP FUNCTION IF EXISTS {n} CASCADE",
+                "DROP TYPE IF EXISTS {n} CASCADE",
+                "DROP STATISTICS IF EXISTS {n} CASCADE",
+                "DROP EVENT TRIGGER IF EXISTS {n} CASCADE",
+                "DROP SCHEMA IF EXISTS {n} CASCADE",
+            ):
+                try:
+                    conn.execute(sa.text(tmpl.format(n=n)))
+                except Exception:
+                    pass
     e.dispose()

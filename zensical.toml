@@ -114,7 +114,7 @@ Databases = [
   {Overview = "databases.md"},
   {"Round Trip Support" = "databases/round-trip.md"},
   {"Common SQL Databases" = "databases/sql-databases.md"},
-  {PostgreSQL = "databases/postgresql.md"},
+  {PostgreSQL = "databases/postgresql/index.md"},
   {MySQL = "databases/mysql.md"},
   {ClickHouse = "databases/clickhouse.md"}
 ]

@@ -837,7 +837,7 @@ def extract_full_schema_snapshot(
             except Exception:
                 pass
 
-            _conn = engine.connect() if own_engine and engine is not None else connection
+            _conn = engine.connect().execution_options(isolation_level="AUTOCOMMIT") if own_engine and engine is not None else connection
             try:
                 pg_table: dict[str, Any] = {"backend": "postgresql"}
 
@@ -980,9 +980,32 @@ def extract_full_schema_snapshot(
                     pass
 
                 try:
+                    child_rows = _conn.execute(
+                        text("SELECT c.relname, pg_get_expr(c.relpartbound, c.oid) AS bound "
+                             "FROM pg_class c JOIN pg_inherits i ON i.inhrelid = c.oid "
+                             "WHERE i.inhparent = CAST(:t AS regclass) AND c.relispartition = true "
+                             "ORDER BY c.relname"),
+                        {"t": _regclass_name},
+                    ).fetchall()
+                    if child_rows:
+                        children = [{"name": r[0], "bound": r[1]} for r in child_rows]
+                        pg_table["pg_partitions"] = children
+                except Exception as e:
+                    import logging
+                    logging.getLogger('dbwarden.snapshot').warning('child partitions extraction failed for %s: %s', _regclass_name, e)
+                    try:
+                        _conn.rollback()
+                    except Exception:
+                        pass
+
+                try:
+                    if pg_version and pg_version >= (14, 0):
+                        attr_cols = "a.attname, a.attstorage, a.attcompression, a.attstattarget"
+                    else:
+                        attr_cols = "a.attname, a.attstorage, NULL::text AS attcompression, a.attstattarget"
                     rows = _conn.execute(
                         text(
-                            "SELECT a.attname, a.attstorage, a.attcompression, a.attstattarget "
+                            f"SELECT {attr_cols} "
                             "FROM pg_attribute a "
                             "WHERE a.attrelid = CAST(:t AS regclass) AND a.attnum > 0 AND NOT a.attisdropped "
                             "ORDER BY a.attnum"
@@ -1004,8 +1027,13 @@ def extract_full_schema_snapshot(
                                     pg_col["statistics"] = r[3]
                                 if pg_col:
                                     columns_dict[cname]["pg_column"] = pg_col
-                except Exception:
-                    pass
+                except Exception as e:
+                    import logging
+                    logging.getLogger('dbwarden.snapshot').warning('attstats extraction failed for %s: %s', _regclass_name, e)
+                    try:
+                        _conn.rollback()
+                    except Exception:
+                        pass
 
                 try:
                     row = _conn.execute(
@@ -1024,8 +1052,13 @@ def extract_full_schema_snapshot(
                     ).fetchone()
                     if row and row[0]:
                         pg_table["pg_rls_force"] = True
-                except Exception:
-                    pass
+                except Exception as e:
+                    import logging
+                    logging.getLogger('dbwarden.snapshot').warning('rls_force extraction failed for %s: %s', _regclass_name, e)
+                    try:
+                        _conn.rollback()
+                    except Exception:
+                        pass
 
                 try:
                     policy_rows = _conn.execute(
@@ -1101,15 +1134,29 @@ def extract_full_schema_snapshot(
                                 "definition": r[1],
                             })
                         table_entry["pg_triggers"] = triggers
-                except Exception:
-                    pass
+                except Exception as e:
+                    import logging
+                    logging.getLogger('dbwarden.snapshot').warning('trigger extraction failed for %s: %s', _regclass_name, e)
+                    try:
+                        _conn.rollback()
+                    except Exception:
+                        pass
 
                 if pg_table:
                     table_entry["pg_table"] = pg_table
             except Exception:
-                pass
+                import logging
+                logging.getLogger('dbwarden.snapshot').warning('PG table extraction failed for %s', _regclass_name)
+                try:
+                    _conn.rollback()
+                except Exception:
+                    pass
             finally:
                 if own_engine and _conn is not None:
+                    try:
+                        _conn.rollback()
+                    except Exception:
+                        pass
                     try:
                         _conn.close()
                     except Exception:
@@ -1604,28 +1651,29 @@ def extract_full_schema_snapshot(
 
             try:
                 seq_rows = _pg_conn.execute(
-                    text("""SELECT seqrelid::regclass::text AS seq_name,
-                                   s.increment_by, s.min_value, s.max_value, s.start_value,
-                                   s.is_cycled, s.seqowner::regrole::text AS owned_by
+                    text("""SELECT seq.relname AS seq_name,
+                                   s.seqincrement, s.seqmin, s.seqmax, s.seqstart,
+                                   s.seqcycle, pg_get_userbyid(seq.relowner) AS owned_by
                             FROM pg_sequence s
                             JOIN pg_class seq ON seq.oid = s.seqrelid
                             WHERE seq.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = current_schema())"""),
                 ).fetchall()
                 for r in seq_rows:
-                    seq_info: dict[str, Any] = {"increment": r.increment_by}
-                    if r.min_value is not None:
-                        seq_info["minvalue"] = r.min_value
-                    if r.max_value is not None:
-                        seq_info["maxvalue"] = r.max_value
-                    if r.start_value is not None:
-                        seq_info["start"] = r.start_value
-                    if r.is_cycled:
+                    seq_info: dict[str, Any] = {"increment": r.seqincrement}
+                    if r.seqmin is not None:
+                        seq_info["minvalue"] = r.seqmin
+                    if r.seqmax is not None:
+                        seq_info["maxvalue"] = r.seqmax
+                    if r.seqstart is not None:
+                        seq_info["start"] = r.seqstart
+                    if r.seqcycle:
                         seq_info["cycle"] = True
                     if r.owned_by:
                         seq_info["owned_by"] = r.owned_by
                     sequences[r.seq_name] = seq_info
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger('dbwarden.snapshot').warning('sequences extraction failed: %s', e)
 
             try:
                 comp_rows = _pg_conn.execute(
@@ -1636,7 +1684,12 @@ def extract_full_schema_snapshot(
                             JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
                             JOIN pg_catalog.pg_attribute a ON a.attrelid = t.typrelid
                             WHERE t.typtype = 'c'
-                              AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                              AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+                              AND NOT EXISTS (
+                                  SELECT 1 FROM pg_class c
+                                  WHERE c.relname = t.typname
+                                    AND c.relnamespace = t.typnamespace
+                                    AND c.relkind IN ('r', 'v', 'm', 'S', 't', 'p'))
                               AND a.attnum > 0 AND NOT a.attisdropped
                             ORDER BY t.typname, a.attnum"""),
                 ).fetchall()
@@ -1649,8 +1702,13 @@ def extract_full_schema_snapshot(
                             comp_type_map[tname]["schema"] = r.schema
                     comp_type_map[tname]["columns"].append({"name": r.col_name, "type": r.col_type})
                 composite_types.update(comp_type_map)
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger('dbwarden.snapshot').warning('composite_types extraction failed: %s', e)
+                try:
+                    _pg_conn.rollback()
+                except Exception:
+                    pass
 
             try:
                 func_rows = _pg_conn.execute(
@@ -1667,8 +1725,13 @@ def extract_full_schema_snapshot(
                     if r.schema and r.schema != "public":
                         func_entry["schema"] = r.schema
                     functions[r.func_name] = func_entry
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger('dbwarden.snapshot').warning('functions extraction failed: %s', e)
+                try:
+                    _pg_conn.rollback()
+                except Exception:
+                    pass
 
             try:
                 role_rows = _pg_conn.execute(
@@ -1693,8 +1756,13 @@ def extract_full_schema_snapshot(
                     if r.rolvaliduntil:
                         role_info["valid_until"] = str(r.rolvaliduntil)
                     roles[r.rolname] = role_info
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger('dbwarden.snapshot').warning('roles extraction failed: %s', e)
+                try:
+                    _pg_conn.rollback()
+                except Exception:
+                    pass
 
             try:
                 dp_rows = _pg_conn.execute(
@@ -1716,8 +1784,13 @@ def extract_full_schema_snapshot(
                 for val in dp_map.values():
                     val["privileges"] = list(sorted(set(val["privileges"])))
                 default_privileges.update(dp_map)
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger('dbwarden.snapshot').warning('default_privileges extraction failed: %s', e)
+                try:
+                    _pg_conn.rollback()
+                except Exception:
+                    pass
 
             try:
                 sg_rows = _pg_conn.execute(
@@ -1742,32 +1815,39 @@ def extract_full_schema_snapshot(
                         "grantable": bool(r.grantable),
                     })
                 schema_grants.update(sg_map)
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger('dbwarden.snapshot').warning('schema_grants extraction failed: %s', e)
+                try:
+                    _pg_conn.rollback()
+                except Exception:
+                    pass
 
             try:
                 et_rows = _pg_conn.execute(
                     text("""SELECT evtname, evtevent, proname AS func_name,
-                                   n.nspname AS func_schema, evtenabled,
-                                   array_agg(evttag ORDER BY evttag) FILTER (WHERE evttag IS NOT NULL) AS tags
+                                   n.nspname AS func_schema, evtenabled, evttags
                             FROM pg_event_trigger et
                             LEFT JOIN pg_proc p ON p.oid = et.evtfoid
-                            LEFT JOIN pg_namespace n ON n.oid = p.pronamespace
-                            LEFT JOIN pg_event_trigger_tags ett ON ett.evtname = et.evtname
-                            GROUP BY evtname, evtevent, evtfoid, proname, n.nspname, evtenabled"""),
+                            LEFT JOIN pg_namespace n ON n.oid = p.pronamespace"""),
                 ).fetchall()
                 for r in et_rows:
                     et_entry: dict[str, Any] = {
                         "event": r.evtevent,
                         "function": {"name": r.func_name, "schema": r.func_schema},
                     }
-                    if r.tags:
-                        et_entry["tags"] = list(r.tags)
+                    if r.evttags:
+                        et_entry["tags"] = list(r.evttags)
                     if r.evtenabled and r.evtenabled != 'O':
                         et_entry["enabled"] = r.evtenabled
                     event_triggers[r.evtname] = et_entry
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger('dbwarden.snapshot').warning('event_triggers extraction failed: %s', e)
+                try:
+                    _pg_conn.rollback()
+                except Exception:
+                    pass
 
             try:
                 if pg_version and pg_version >= (14, 0):
@@ -1801,9 +1881,15 @@ def extract_full_schema_snapshot(
                     if r.expressions:
                         exprs = [e.strip() for e in str(r.expressions).split(",") if e.strip()]
                         stat_entry["expressions"] = exprs
-                    extended_stats[r.stxname] = stat_entry
-            except Exception:
-                pass
+                    stat_key = f"{r.schema}.{r.stxname}" if r.schema and r.schema != "public" else r.stxname
+                    extended_stats[stat_key] = stat_entry
+            except Exception as e:
+                import logging
+                logging.getLogger('dbwarden.snapshot').warning('extended_stats extraction failed: %s', e)
+                try:
+                    _pg_conn.rollback()
+                except Exception:
+                    pass
 
             if own_engine:
                 _pg_conn.close()
