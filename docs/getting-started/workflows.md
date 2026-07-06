@@ -1,50 +1,6 @@
 ---
 description: Organize larger DBWarden workflows, including multi-database projects,
   CI patterns, sandbox validation, and command conventions across environments.
-seo:
-  title: Workflows - DBWarden Documentation
-  description: Organize larger DBWarden workflows, including multi-database projects,
-    CI patterns, sandbox validation, and command conventions across environments.
-  canonical: https://dbwarden.emiliano-go.com/getting-started/workflows/
-  robots: index,follow
-  og:
-    type: website
-    title: Workflows - DBWarden Documentation
-    description: Organize larger DBWarden workflows, including multi-database projects,
-      CI patterns, sandbox validation, and command conventions across environments.
-    url: https://dbwarden.emiliano-go.com/getting-started/workflows/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Workflows - DBWarden Documentation
-    description: Organize larger DBWarden workflows, including multi-database projects,
-      CI patterns, sandbox validation, and command conventions across environments.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-  - '@context': https://schema.org
-    '@type': WebPage
-    name: Workflows - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/getting-started/workflows/
-    description: Organize larger DBWarden workflows, including multi-database projects,
-      CI patterns, sandbox validation, and command conventions across environments.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
-    itemListElement:
-    - '@type': ListItem
-      position: 1
-      name: Get Started
-      item: https://emiliano-go.github.io/DBWarden/getting-started/
-    - '@type': ListItem
-      position: 2
-      name: Workflows
-      item: https://emiliano-go.github.io/DBWarden/getting-started/workflows/
-    - '@type': ListItem
-      position: 3
-      name: Workflows
 ---
 
 # Workflows
@@ -168,5 +124,3 @@ This verifies both directions of the migration before a release depends on them.
 - Use [Cookbook Overview](../cookbook/index.md) for full working flows
 - Use [Configuration](../configuration/index.md) for deeper config behavior
 - Use [CLI Reference](../cli-reference.md) for command details
-
-

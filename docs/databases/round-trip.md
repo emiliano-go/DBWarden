@@ -2,54 +2,6 @@
 description: A round-trip backend is one where DBWarden can both read schema (via
   generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,
   MySQL, ClickHouse, SQLite, and MariaDB.
-seo:
-  title: Round Trip Support - DBWarden Documentation
-  description: A round-trip backend is one where DBWarden can both read schema (via
-    generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,
-    MySQL, ClickHouse, SQLite, and MariaDB.
-  canonical: https://dbwarden.emiliano-go.com/databases/round-trip/
-  robots: index,follow
-  og:
-    type: website
-    title: Round Trip Support - DBWarden Documentation
-    description: A round-trip backend is one where DBWarden can both read schema (via
-      generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,
-      MySQL, ClickHouse, SQLite, and MariaDB.
-    url: https://dbwarden.emiliano-go.com/databases/round-trip/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Round Trip Support - DBWarden Documentation
-    description: A round-trip backend is one where DBWarden can both read schema (via
-      generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,
-      MySQL, ClickHouse, SQLite, and MariaDB.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-  - '@context': https://schema.org
-    '@type': WebPage
-    name: Round Trip Support - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/databases/round-trip/
-    description: A round-trip backend is one where DBWarden can both read schema (via
-      generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,
-      MySQL, ClickHouse, SQLite, and MariaDB.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
-    itemListElement:
-    - '@type': ListItem
-      position: 1
-      name: Databases
-      item: https://emiliano-go.github.io/DBWarden/databases/
-    - '@type': ListItem
-      position: 2
-      name: Round Trip Support
-      item: https://emiliano-go.github.io/DBWarden/databases/round-trip/
-    - '@type': ListItem
-      position: 3
-      name: Round Trip Support
 ---
 
 # Round Trip Support

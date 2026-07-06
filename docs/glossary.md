@@ -2,50 +2,6 @@
 description: Key terms and concepts used throughout the DBWarden documentation, including
   migration lifecycle, database backends, safety tooling, FastAPI integration, and
   configuration.
-seo:
-  title: Glossary - DBWarden Documentation
-  description: Key terms and concepts used throughout the DBWarden documentation,
-    including migration lifecycle, database backends, safety tooling, FastAPI integration,
-    and configuration.
-  canonical: https://dbwarden.emiliano-go.com/glossary/
-  robots: index,follow
-  og:
-    type: website
-    title: Glossary - DBWarden Documentation
-    description: Key terms and concepts used throughout the DBWarden documentation,
-      including migration lifecycle, database backends, safety tooling, FastAPI integration,
-      and configuration.
-    url: https://dbwarden.emiliano-go.com/glossary/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Glossary - DBWarden Documentation
-    description: Key terms and concepts used throughout the DBWarden documentation,
-      including migration lifecycle, database backends, safety tooling, FastAPI integration,
-      and configuration.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-  - '@context': https://schema.org
-    '@type': WebPage
-    name: Glossary - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/glossary/
-    description: Key terms and concepts used throughout the DBWarden documentation,
-      including migration lifecycle, database backends, safety tooling, FastAPI integration,
-      and configuration.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
-    itemListElement:
-    - '@type': ListItem
-      position: 1
-      name: Glossary
-      item: https://emiliano-go.github.io/DBWarden/glossary/
-    - '@type': ListItem
-      position: 2
-      name: Glossary
 ---
 
 # Glossary

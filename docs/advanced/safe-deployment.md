@@ -2,54 +2,6 @@
 description: 'Deploy database schema changes safely with DBWarden: pre-flight checks,
   impact analysis, sandbox validation, migration locking, rollback planning, and CI/CD
   integration patterns.'
-seo:
-  title: Safe Deployment - DBWarden Documentation
-  description: 'Deploy database schema changes safely with DBWarden: pre-flight checks,
-    impact analysis, sandbox validation, migration locking, rollback planning, and
-    CI/CD integration patterns.'
-  canonical: https://dbwarden.emiliano-go.com/advanced/safe-deployment/
-  robots: index,follow
-  og:
-    type: website
-    title: Safe Deployment - DBWarden Documentation
-    description: 'Deploy database schema changes safely with DBWarden: pre-flight
-      checks, impact analysis, sandbox validation, migration locking, rollback planning,
-      and CI/CD integration patterns.'
-    url: https://dbwarden.emiliano-go.com/advanced/safe-deployment/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Safe Deployment - DBWarden Documentation
-    description: 'Deploy database schema changes safely with DBWarden: pre-flight
-      checks, impact analysis, sandbox validation, migration locking, rollback planning,
-      and CI/CD integration patterns.'
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-  - '@context': https://schema.org
-    '@type': WebPage
-    name: Safe Deployment - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/advanced/safe-deployment/
-    description: 'Deploy database schema changes safely with DBWarden: pre-flight
-      checks, impact analysis, sandbox validation, migration locking, rollback planning,
-      and CI/CD integration patterns.'
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
-    itemListElement:
-    - '@type': ListItem
-      position: 1
-      name: Advanced
-      item: https://emiliano-go.github.io/DBWarden/advanced/
-    - '@type': ListItem
-      position: 2
-      name: Safe Deployment
-      item: https://emiliano-go.github.io/DBWarden/advanced/safe-deployment/
-    - '@type': ListItem
-      position: 3
-      name: Safe Deployment
 ---
 
 # Safe Deployment

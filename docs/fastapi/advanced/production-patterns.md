@@ -1,35 +1,5 @@
 ---
-seo:
-  title: Production Patterns - DBWarden Documentation
-  description: Best practices for deploying FastAPI applications with DBWarden in
-    production.
-  canonical: https://dbwarden.emiliano-go.com/fastapi/advanced/production-patterns/
-  robots: index,follow
-  og:
-    type: website
-    title: Production Patterns - DBWarden Documentation
-    description: Best practices for deploying FastAPI applications with DBWarden in
-      production.
-    url: https://dbwarden.emiliano-go.com/fastapi/advanced/production-patterns/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Production Patterns - DBWarden Documentation
-    description: Best practices for deploying FastAPI applications with DBWarden in
-      production.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Production Patterns - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/fastapi/advanced/production-patterns/
-    description: Best practices for deploying FastAPI applications with DBWarden in
-      production.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # Production Patterns

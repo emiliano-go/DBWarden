@@ -1,35 +1,5 @@
 ---
-seo:
-  title: Complete Application - DBWarden Documentation
-  description: A full, production-ready FastAPI application using all of DBWarden's
-    features.
-  canonical: https://dbwarden.emiliano-go.com/fastapi/tutorial/complete-application/
-  robots: index,follow
-  og:
-    type: website
-    title: Complete Application - DBWarden Documentation
-    description: A full, production-ready FastAPI application using all of DBWarden's
-      features.
-    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/complete-application/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Complete Application - DBWarden Documentation
-    description: A full, production-ready FastAPI application using all of DBWarden's
-      features.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Complete Application - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/complete-application/
-    description: A full, production-ready FastAPI application using all of DBWarden's
-      features.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # Complete Application

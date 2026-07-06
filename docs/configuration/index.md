@@ -2,50 +2,6 @@
 description: 'Learn how to configure DBWarden for single and multi-database setups:
   connection URLs, model discovery, dev mode with SQLite translation, credential management,
   and production patterns.'
-seo:
-  title: Configuration - DBWarden Documentation
-  description: 'Learn how to configure DBWarden for single and multi-database setups:
-    connection URLs, model discovery, dev mode with SQLite translation, credential
-    management, and production patterns.'
-  canonical: https://dbwarden.emiliano-go.com/configuration/
-  robots: index,follow
-  og:
-    type: website
-    title: Configuration - DBWarden Documentation
-    description: 'Learn how to configure DBWarden for single and multi-database setups:
-      connection URLs, model discovery, dev mode with SQLite translation, credential
-      management, and production patterns.'
-    url: https://dbwarden.emiliano-go.com/configuration/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Configuration - DBWarden Documentation
-    description: 'Learn how to configure DBWarden for single and multi-database setups:
-      connection URLs, model discovery, dev mode with SQLite translation, credential
-      management, and production patterns.'
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-  - '@context': https://schema.org
-    '@type': WebPage
-    name: Configuration - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/configuration/
-    description: 'Learn how to configure DBWarden for single and multi-database setups:
-      connection URLs, model discovery, dev mode with SQLite translation, credential
-      management, and production patterns.'
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
-  - '@type': BreadcrumbList
-    itemListElement:
-    - '@type': ListItem
-      position: 1
-      name: Configuration
-      item: https://emiliano-go.github.io/DBWarden/configuration/
-    - '@type': ListItem
-      position: 2
-      name: Configuration
 ---
 
 # Configuration

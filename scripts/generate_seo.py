@@ -12,21 +12,22 @@ import os
 import re
 import sys
 from pathlib import Path
-from urllib.parse import urlparse
 
 import yaml
-from seoslug import SEOConfig, URLPolicy, SEOEntity, build_seo_payload
+from seoslug import (
+    SEOConfig,
+    URLPolicy,
+    SEOEntity,
+    Breadcrumb,
+    OGImage,
+    Robots,
+    build_seo_payload,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DOCS_DIR = PROJECT_ROOT / "docs"
 SITE_URL = "https://dbwarden.emiliano-go.com"
 SITE_NAME = "DBWarden Documentation"
-
-# Extract base path from SITE_URL (e.g. "/DBWarden") for canonical URL construction.
-# seoslug's normalize_public_url uses canonical_host (host-only), so it misses
-# the base path. We fix canonical URLs post-generation.
-_SITE_PARSE = urlparse(SITE_URL)
-SITE_BASE_PATH = _SITE_PARSE.path.rstrip("/")
 
 SEO_CONFIG = SEOConfig(
     canonical_host="dbwarden.emiliano-go.com",
@@ -37,9 +38,19 @@ SEO_CONFIG = SEOConfig(
         trailing_slash="never",
     ),
     site_name=SITE_NAME,
-    default_og_image=f"{SITE_URL}/assets/icon.png",
+    default_og_image=OGImage(
+        url=f"{SITE_URL}/assets/images/og-image.png",
+        width=1376,
+        height=768,
+        alt="DBWarden documentation",
+    ),
     publisher_name="Emiliano Gandini Outeda",
+    publisher_logo=f"{SITE_URL}/assets/images/og-image.png",
+    locale="en_US",
+    twitter_site="@emiliano_go_",
     title_template="{title} - DBWarden Documentation",
+    default_robots=Robots(index=True, follow=True),
+    emit_warnings=True,
 )
 
 FM_RE = re.compile(
@@ -69,20 +80,9 @@ def first_heading(text: str) -> str | None:
     return title
 
 
-def strip_frontmatter(text: str) -> str:
-    if text.startswith("---"):
-        parts = text.split("---", 2)
-        if len(parts) >= 3:
-            return parts[2].lstrip("\n")
-    return text
-
-
 def extract_excerpt(body: str, max_chars: int = 160) -> str:
-    # Strip the first heading (page title) since it's redundant in descriptions
     body = re.sub(r"^#\s+.*\n?", "", body, count=1).strip()
-    # Take the first paragraph
     para = re.split(r"\n\s*\n", body, maxsplit=1)[0].strip()
-    # Clean markdown syntax
     clean = re.sub(r"[`*_\[\]()>|#{}]", "", para)
     clean = re.sub(r"\s+", " ", clean).strip()
     if not clean:
@@ -106,69 +106,19 @@ def read_meta_and_body(filepath: Path) -> tuple[dict, str]:
                     meta = parsed
             except Exception:
                 pass
-            body = text[match.end() :].lstrip("\n")
+            body = text[match.end():].lstrip("\n")
     return meta, body
 
 
-def build_seo_frontmatter(
-    meta: dict, body: str, route_path: str
-) -> dict | None:
-    title = meta.get("title") or first_heading(body) or "Untitled"
-    description = meta.get("description") or extract_excerpt(body)
-    entity_type = "home" if route_path == "/" else "page"
-
-    entity = SEOEntity(
-        entity_type=entity_type,
-        title=title,
-        excerpt=description or None,
-        status="published",
-    )
-    payload = build_seo_payload(entity, route_path, SEO_CONFIG)
-    if not isinstance(payload, dict):
-        return None
-
-    # Fix canonical URL: seoslug's normalize_public_url only uses the host
-    # from canonical_host, ignoring any base path in public_base_url.
-    # The correct canonical needs the /DBWarden base path prepended.
-    correct_canonical = f"https://{SEO_CONFIG.canonical_host}{SITE_BASE_PATH}{route_path}"
-    if route_path == "/":
-        correct_canonical = correct_canonical.rstrip("/") + "/"
-
-    payload["canonical"] = correct_canonical
-    if isinstance(payload.get("og"), dict):
-        payload["og"]["url"] = correct_canonical
-    if isinstance(payload.get("schema_jsonld"), dict):
-        payload["schema_jsonld"]["url"] = correct_canonical
-    elif isinstance(payload.get("schema_jsonld"), list):
-        for item in payload["schema_jsonld"]:
-            if isinstance(item, dict):
-                item["url"] = correct_canonical
-
-    # Add BreadcrumbList structured data
-    crumbs = build_breadcrumbs(route_path, title)
-    if crumbs:
-        existing = payload.get("schema_jsonld", [])
-        if isinstance(existing, dict):
-            existing = [existing]
-        if isinstance(existing, list):
-            payload["schema_jsonld"] = existing + crumbs
-        else:
-            payload["schema_jsonld"] = crumbs
-
-    return payload
-
-
-def build_breadcrumbs(route_path: str, page_title: str) -> list[dict]:
+def build_breadcrumbs(route_path: str) -> list[Breadcrumb] | None:
     parts = [p for p in route_path.strip("/").split("/") if p]
     if not parts:
-        return []
+        return None
 
     crumbs = []
-    base = "https://emiliano-go.github.io/DBWarden"
     acc = ""
 
     label_map = {
-        "": "Home",
         "getting-started": "Get Started",
         "first-migration": "Your First Migration",
         "first-steps": "First Steps",
@@ -244,26 +194,39 @@ def build_breadcrumbs(route_path: str, page_title: str) -> list[dict]:
         "glossary": "Glossary",
     }
 
-    for i, part in enumerate(parts):
+    for part in parts:
         acc += "/" + part
         label = label_map.get(part, part.replace("-", " ").title())
-        crumb = {
-            "@type": "ListItem",
-            "position": i + 1,
-            "name": label,
-            "item": f"{base}{acc}/",
-        }
-        crumbs.append(crumb)
+        crumbs.append(Breadcrumb(name=label, url=acc))
 
-    # Append the page itself as the final breadcrumb
-    crumb = {
-        "@type": "ListItem",
-        "position": len(parts) + 1,
-        "name": page_title,
+    return crumbs
+
+
+def build_seo_frontmatter(
+    meta: dict, body: str, route_path: str
+) -> dict | None:
+    title = meta.get("title") or first_heading(body) or SITE_NAME.replace(" Documentation", "")
+    description = meta.get("description") or extract_excerpt(body)
+    entity_type = "home" if route_path == "/" else "page"
+
+    breadcrumbs = build_breadcrumbs(route_path)
+
+    entity = SEOEntity(
+        entity_type=entity_type,
+        title=title,
+        excerpt=description or None,
+        status="published",
+        breadcrumbs=breadcrumbs,
+    )
+    payload = build_seo_payload(entity, route_path, SEO_CONFIG)
+
+    if payload is None:
+        return None
+
+    return {
+        "seo_html": payload.render_html(),
+        "seo": payload.to_dict(),
     }
-    crumbs.append(crumb)
-
-    return [{"@type": "BreadcrumbList", "itemListElement": crumbs}]
 
 
 def main() -> int:
@@ -275,22 +238,28 @@ def main() -> int:
         rel_path = md_file.relative_to(PROJECT_ROOT)
         meta, body = read_meta_and_body(md_file)
         route = route_path_from_file(md_file)
-        new_seo = build_seo_frontmatter(meta, body, route)
+        result = build_seo_frontmatter(meta, body, route)
 
-        if new_seo is None:
+        if result is None:
             print(f"  SKIP  {rel_path}  (no payload generated)")
             skipped += 1
             continue
 
+        new_seo = result["seo"]
+        new_seo_html = result["seo_html"]
+
         existing_seo = meta.get("seo", {})
+        existing_seo_html = meta.get("seo_html")
+
         new_dumped = yaml.dump(new_seo, sort_keys=True)
         existing_dumped = yaml.dump(existing_seo, sort_keys=True)
 
-        if new_dumped == existing_dumped:
+        if new_dumped == existing_dumped and new_seo_html == existing_seo_html:
             skipped += 1
             continue
 
         meta["seo"] = new_seo
+        meta["seo_html"] = new_seo_html
         fm_dump = yaml.dump(
             meta,
             default_flow_style=False,
