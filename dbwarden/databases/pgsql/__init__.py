@@ -21,6 +21,7 @@ class PgTableSpec:
     unlogged: bool = False
     inherits: list[str] | None = None
     schema: str | None = None
+    partition: dict | None = None
 
 
 @dataclass

@@ -53,6 +53,13 @@ class DatabaseConfig:
     pg_extensions: list[str] = field(default_factory=list)
     pg_domains: list[dict] = field(default_factory=list)
     pg_sequences: list[dict] = field(default_factory=list)
+    pg_functions: list[dict] = field(default_factory=list)
+    pg_triggers: list[dict] = field(default_factory=list)
+    pg_roles: list[dict] = field(default_factory=list)
+    pg_default_privileges: list[dict] = field(default_factory=list)
+    pg_composite_types: list[dict] = field(default_factory=list)
+    pg_extended_statistics: list[dict] = field(default_factory=list)
+    pg_event_triggers: list[dict] = field(default_factory=list)
     pg_migration_lock_timeout: int | None = None
 
     @property
@@ -560,6 +567,13 @@ def _finalize_entries(
             pg_extensions=entry.pg_extensions or [],
             pg_domains=entry.pg_domains or [],
             pg_sequences=entry.pg_sequences or [],
+            pg_functions=entry.pg_functions or [],
+            pg_triggers=entry.pg_triggers or [],
+            pg_roles=entry.pg_roles or [],
+            pg_default_privileges=entry.pg_default_privileges or [],
+            pg_composite_types=entry.pg_composite_types or [],
+            pg_extended_statistics=entry.pg_extended_statistics or [],
+            pg_event_triggers=entry.pg_event_triggers or [],
             pg_migration_lock_timeout=entry.pg_migration_lock_timeout,
         )
 

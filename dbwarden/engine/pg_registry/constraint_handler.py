@@ -74,6 +74,13 @@ class ConstraintHandler(ObjectHandler):
         return {}
 
     def canonicalize(self, spec: dict[str, Any]) -> dict[str, Any]:
+        if not spec:
+            return {}
+        for entry in spec.values():
+            for fk in entry.get("fks", []):
+                m = fk.get("match")
+                if m is None or m == "SIMPLE":
+                    fk.pop("match", None)
         return spec
 
     _snapshot: dict[str, Any] | None = None
@@ -211,6 +218,7 @@ class ConstraintHandler(ObjectHandler):
                     fk.get("on_delete", "NO ACTION"),
                     fk.get("on_update", "NO ACTION"),
                     bool(fk.get("deferrable", False)),
+                    fk.get("match"),
                 )
 
             snap_fk_sigs = {_fk_sig(fk) for fk in snap_fks}
@@ -233,6 +241,7 @@ class ConstraintHandler(ObjectHandler):
                             "on_delete": fk.get("on_delete", "NO ACTION"),
                             "on_update": fk.get("on_update", "NO ACTION"),
                             "deferrable": bool(fk.get("deferrable", False)),
+                            "match": fk.get("match"),
                         },
                     ))
                     rollback_ops.append(Op(
@@ -245,6 +254,7 @@ class ConstraintHandler(ObjectHandler):
                             "on_delete": fk.get("on_delete", "NO ACTION"),
                             "on_update": fk.get("on_update", "NO ACTION"),
                             "deferrable": bool(fk.get("deferrable", False)),
+                            "match": fk.get("match"),
                         },
                         rollback_attrs={
                             "table": tname,
@@ -275,6 +285,7 @@ class ConstraintHandler(ObjectHandler):
                             "on_delete": fk.get("on_delete", "NO ACTION"),
                             "on_update": fk.get("on_update", "NO ACTION"),
                             "deferrable": fk.get("deferrable", False),
+                            "match": fk.get("match"),
                         },
                         rollback_attrs={
                             "table": tname,
@@ -299,6 +310,7 @@ class ConstraintHandler(ObjectHandler):
                             "on_delete": fk.get("on_delete", "NO ACTION"),
                             "on_update": fk.get("on_update", "NO ACTION"),
                             "deferrable": fk.get("deferrable", False),
+                            "match": fk.get("match"),
                         },
                     ))
 
@@ -415,6 +427,9 @@ class ConstraintHandler(ObjectHandler):
                         upgrade += f" ON DELETE {on_delete}"
                     if on_update and on_update != "NO ACTION":
                         upgrade += f" ON UPDATE {on_update}"
+                    match = attrs.get("match")
+                    if backend == "postgresql" and match and match != "SIMPLE":
+                        upgrade += f" MATCH {match}"
                     if backend == "postgresql" and attrs.get("deferrable"):
                         upgrade += " DEFERRABLE INITIALLY DEFERRED"
                     if not_valid:
@@ -443,6 +458,9 @@ class ConstraintHandler(ObjectHandler):
                     fk_sql += f" ON DELETE {on_delete}"
                 if on_update and on_update != "NO ACTION":
                     fk_sql += f" ON UPDATE {on_update}"
+                match = attrs.get("match")
+                if backend == "postgresql" and match and match != "SIMPLE":
+                    fk_sql += f" MATCH {match}"
                 if backend == "postgresql" and attrs.get("deferrable"):
                     fk_sql += " DEFERRABLE INITIALLY DEFERRED"
                 if not_valid:

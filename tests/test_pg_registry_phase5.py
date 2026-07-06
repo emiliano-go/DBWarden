@@ -888,3 +888,56 @@ class TestGrantsHandlerContract:
         assert len(revoke_ops) == 2
         revoked_roles = {op.upgrade_attrs.get("role") for op in revoke_ops}
         assert "PUBLIC" in revoked_roles  # orders had PUBLIC, model doesn't
+
+
+# ===================================================================
+# Churn tests: RLS-FORCE convergence
+# ===================================================================
+
+
+class TestRlsForceChurn:
+
+    def test_rls_no_force_does_not_emit_no_force(self):
+        """When RLS is enabled but FORCE was never set, no NO FORCE should be emitted."""
+        snap_spec = {"users": {"rls": True}}
+        model_spec = {"users": {"rls": True}}
+        handler = PoliciesHandler()
+        c_snap = handler.canonicalize(snap_spec)
+        c_model = handler.canonicalize(model_spec)
+        up, rb = handler.diff(c_snap, c_model)
+        assert up == [], f"Expected 0 ops when force is absent on both sides, got {len(up)}"
+
+    def test_rls_force_add_emits_force(self):
+        """Adding RLS-FORCE to an existing table with RLS enabled emits FORCE."""
+        snap_spec = {"users": {"rls": True}}
+        model_spec = {"users": {"rls": True, "force": True}}
+        handler = PoliciesHandler()
+        c_snap = handler.canonicalize(snap_spec)
+        c_model = handler.canonicalize(model_spec)
+        up, rb = handler.diff(c_snap, c_model)
+        force_ops = [op for op in up if op.object_type == "alter_pg_rls"]
+        assert len(force_ops) == 1
+        assert force_ops[0].upgrade_attrs.get("force") is True
+
+    def test_rls_force_remove_emits_no_force(self):
+        """Removing RLS-FORCE emits NO FORCE."""
+        snap_spec = {"users": {"rls": True, "force": True}}
+        model_spec = {"users": {"rls": True}}
+        handler = PoliciesHandler()
+        c_snap = handler.canonicalize(snap_spec)
+        c_model = handler.canonicalize(model_spec)
+        up, rb = handler.diff(c_snap, c_model)
+        force_ops = [op for op in up if op.object_type == "alter_pg_rls"]
+        assert len(force_ops) == 1
+        up_force = force_ops[0].upgrade_attrs.get("force")
+        assert up_force is None or up_force is False
+
+    def test_rls_force_two_cycle_convergence(self):
+        """Two-cycle convergence: canonicalize is idempotent for FORCE."""
+        spec = {"users": {"rls": True, "force": True}}
+        handler = PoliciesHandler()
+        c1 = handler.canonicalize(spec)
+        c2 = handler.canonicalize(c1)
+        assert c1 == c2
+        up, rb = handler.diff(c1, c2)
+        assert up == []

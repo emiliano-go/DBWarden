@@ -637,9 +637,12 @@ class TestExtractFullSchemaSnapshot:
                 return []
 
         engine = _Engine()
-        monkeypatch.setattr("sqlalchemy.create_engine", lambda url: engine)
+        monkeypatch.setattr("sqlalchemy.create_engine", lambda url, **kw: engine)
         monkeypatch.setattr("sqlalchemy.inspect", lambda engine_obj: _Inspector())
-        monkeypatch.setattr("dbwarden.config.get_database", lambda database: type("D", (), {"postgres_schema": "app"})())
+        monkeypatch.setattr(
+            "dbwarden.config.get_database",
+            lambda database: type("D", (), {"postgres_schema": "app"})(),
+        )
 
         snapshot = extract_full_schema_snapshot(
             sqlalchemy_url="postgresql://example/db",
@@ -723,7 +726,7 @@ class TestExtractFullSchemaSnapshot:
             def get_enums(self):
                 return []
 
-        monkeypatch.setattr("sqlalchemy.create_engine", lambda url: _Engine())
+        monkeypatch.setattr("sqlalchemy.create_engine", lambda url, **kw: _Engine())
         monkeypatch.setattr("sqlalchemy.inspect", lambda engine_obj: _Inspector())
         monkeypatch.setattr("dbwarden.config.get_database", lambda database: type("D", (), {"postgres_schema": "app"})())
 
@@ -760,7 +763,7 @@ class TestExtractFullSchemaSnapshot:
                 if "attisdropped" in sql and "attislocal" in sql:
                     return _Result(rows=[("id",), ("data",)])
                 if "opcdefault" in sql:
-                    return _Result(rows=[SimpleNamespace(attname="data", opcname="text_pattern_ops")])
+                    return _Result(rows=[SimpleNamespace(col_def="data", opcname="text_pattern_ops")])
                 return _Result()
 
             def close(self):
@@ -814,7 +817,7 @@ class TestExtractFullSchemaSnapshot:
                 return []
 
         engine = _Engine()
-        monkeypatch.setattr("sqlalchemy.create_engine", lambda url: engine)
+        monkeypatch.setattr("sqlalchemy.create_engine", lambda url, **kw: engine)
         monkeypatch.setattr("sqlalchemy.inspect", lambda engine_obj: _Inspector())
         monkeypatch.setattr("dbwarden.config.get_database", lambda database: type("D", (), {"postgres_schema": "app"})())
 
@@ -2185,6 +2188,52 @@ class TestForeignKeyDiff:
         op = Op(object_type="add_foreign_key", upgrade_attrs={"table": "users", "columns": ["group_id"], "referenced_table": "groups", "referenced_columns": ["id"], "deferrable": True})
         stmts = ConstraintHandler().emit(op, db_name="primary")
         assert "DEFERRABLE INITIALLY DEFERRED" in stmts[0].upgrade_sql
+
+    def test_fk_match_full_emits_match_clause(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        op = Op(object_type="add_foreign_key", upgrade_attrs={
+            "table": "users", "columns": ["group_id"],
+            "referenced_table": "groups", "referenced_columns": ["id"],
+            "match": "FULL",
+        })
+        stmts = ConstraintHandler().emit(op, db_name="primary")
+        assert "MATCH FULL" in stmts[0].upgrade_sql
+
+    def test_fk_match_simple_not_emitted(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        op = Op(object_type="add_foreign_key", upgrade_attrs={
+            "table": "users", "columns": ["group_id"],
+            "referenced_table": "groups", "referenced_columns": ["id"],
+            "match": "SIMPLE",
+        })
+        stmts = ConstraintHandler().emit(op, db_name="primary")
+        assert "MATCH" not in stmts[0].upgrade_sql
+
+    def test_fk_match_none_not_emitted(self, monkeypatch):
+        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
+        op = Op(object_type="add_foreign_key", upgrade_attrs={
+            "table": "users", "columns": ["group_id"],
+            "referenced_table": "groups", "referenced_columns": ["id"],
+        })
+        stmts = ConstraintHandler().emit(op, db_name="primary")
+        assert "MATCH" not in stmts[0].upgrade_sql
+
+    def test_fk_match_simple_canonicalized_to_absence(self):
+        """Canonicalize SIMPLE to absence so snap and model compare equal."""
+        handler = ConstraintHandler()
+        snap_spec = {"users": {"uniques": {}, "checks": {}, "fks": [
+            {"columns": ["a"], "referenced_table": "b", "referenced_columns": ["id"],
+             "match": "SIMPLE", "on_delete": "NO ACTION", "on_update": "NO ACTION"},
+        ]}}
+        model_spec = {"users": {"uniques": {}, "checks": {}, "fks": [
+            {"columns": ["a"], "referenced_table": "b", "referenced_columns": ["id"],
+             "on_delete": "NO ACTION", "on_update": "NO ACTION"},
+        ]}}
+        c_snap = handler.canonicalize(snap_spec)
+        c_model = handler.canonicalize(model_spec)
+        assert c_snap == c_model
+        up, rb = handler.diff(c_snap, c_model)
+        assert up == []
 
     def test_fk_validation_skips_missing_ref_table(self):
         snapshot = {

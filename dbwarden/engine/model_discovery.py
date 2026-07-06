@@ -1154,6 +1154,7 @@ def extract_table_from_model(
                     "referred_columns": [ref_col],
                     "on_delete": fk.ondelete or "NO ACTION",
                     "on_update": fk.onupdate or "NO ACTION",
+                    "match": fk.match,
                 })
         if debug_timing:
             print(f"TIMING {model_class.__name__} columns {len(columns)} {time.time() - start:.3f}s", flush=True)
@@ -1811,9 +1812,12 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
         sql += f";\nCOMMENT ON TABLE {qname} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}';"
     if backend == "postgresql":
         pg_rls = table.pg_table.get("pg_rls", False)
+        pg_rls_force = table.pg_table.get("pg_rls_force", False)
         pg_suffix = ""
         if pg_rls:
             pg_suffix += f"\nALTER TABLE {qname} ENABLE ROW LEVEL SECURITY;"
+        if pg_rls_force:
+            pg_suffix += f"\nALTER TABLE {qname} FORCE ROW LEVEL SECURITY;"
         for policy in table.pg_policies:
             pg_suffix += f"\n{_build_create_policy_sql(policy, qname)}"
         for grant_entry in table.pg_grants:
@@ -1868,7 +1872,7 @@ def _build_drop_policy_sql(policy_name: str, qname: str) -> str:
     return f"DROP POLICY IF EXISTS {_quote_pg(policy_name)} ON {qname};"
 
 
-def _build_grant_sql(grant_entry: dict, qname: str) -> str:
+def _build_grant_sql(grant_entry: dict, qname: str, object_type: str = "TABLE") -> str:
     privileges = grant_entry.get("privileges", "ALL")
     if isinstance(privileges, list):
         privileges = ", ".join(privileges)
@@ -1876,13 +1880,13 @@ def _build_grant_sql(grant_entry: dict, qname: str) -> str:
     if isinstance(role, str):
         role = [role]
     roles = ", ".join(r if r.upper() == "PUBLIC" else _quote_pg(r) for r in role)
-    sql = f"GRANT {privileges} ON TABLE {qname} TO {roles}"
+    sql = f"GRANT {privileges} ON {object_type} {qname} TO {roles}"
     if grant_entry.get("grantable"):
         sql += " WITH GRANT OPTION"
     return sql + ";"
 
 
-def _build_revoke_sql(grant_entry: dict, qname: str) -> str:
+def _build_revoke_sql(grant_entry: dict, qname: str, object_type: str = "TABLE") -> str:
     privileges = grant_entry.get("privileges", "ALL")
     if isinstance(privileges, list):
         privileges = ", ".join(privileges)
@@ -1890,7 +1894,7 @@ def _build_revoke_sql(grant_entry: dict, qname: str) -> str:
     if isinstance(role, str):
         role = [role]
     roles = ", ".join(r if r.upper() == "PUBLIC" else _quote_pg(r) for r in role)
-    sql = f"REVOKE {privileges} ON TABLE {qname} FROM {roles}"
+    sql = f"REVOKE {privileges} ON {object_type} {qname} FROM {roles}"
     if grant_entry.get("grantable"):
         sql += " CASCADE"
     return sql + ";"

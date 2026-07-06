@@ -34,6 +34,7 @@ class PGTableMeta(TableMeta):
     pg_indexes: list[Any] = []
     pg_partition: dict[str, Any] | None = None
     pg_rls: bool = False
+    pg_rls_force: bool = False
     pg_policies: list[dict[str, Any]] = []
     pg_grants: list[dict[str, Any]] = []
     pg_storage_params: dict[str, Any] | None = None

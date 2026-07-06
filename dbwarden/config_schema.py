@@ -105,6 +105,13 @@ class DatabaseEntry:
     pg_extensions: list[str] = field(factory=list)
     pg_domains: list[dict] = field(factory=list)
     pg_sequences: list[dict] = field(factory=list)
+    pg_functions: list[dict] = field(factory=list)
+    pg_triggers: list[dict] = field(factory=list)
+    pg_roles: list[dict] = field(factory=list)
+    pg_default_privileges: list[dict] = field(factory=list)
+    pg_composite_types: list[dict] = field(factory=list)
+    pg_extended_statistics: list[dict] = field(factory=list)
+    pg_event_triggers: list[dict] = field(factory=list)
     pg_schema: str | None = None
     pg_migration_lock_timeout: int | None = None
 
