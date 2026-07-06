@@ -605,7 +605,8 @@ def extract_full_schema_snapshot(
 
     if sqlalchemy_url is not None and database_type is not None:
         from sqlalchemy import create_engine
-        engine = create_engine(sqlalchemy_url)
+        from sqlalchemy.pool import NullPool
+        engine = create_engine(sqlalchemy_url, poolclass=NullPool)
         inspector = inspect(engine)
         own_engine = True
     else:
@@ -627,12 +628,31 @@ def extract_full_schema_snapshot(
     domains: dict[str, Any] = {}
     indexes: dict[str, Any] = {}
     constraints: dict[str, Any] = {}
+    sequences: dict[str, Any] = {}
+    composite_types: dict[str, Any] = {}
+    functions: dict[str, Any] = {}
+    roles: dict[str, Any] = {}
+    default_privileges: dict[str, Any] = {}
+    schema_grants: dict[str, Any] = {}
+    event_triggers: dict[str, Any] = {}
+    extended_stats: dict[str, Any] = {}
 
     pg_schema = None
+    pg_version: tuple[int, int] | None = None
     if database_type == "postgresql":
         try:
             from dbwarden.config import get_database
             pg_schema = get_database(database).postgres_schema
+        except Exception:
+            pass
+        try:
+            _vc = engine.connect() if own_engine and engine is not None else connection
+            ver_row = _vc.execute(text("SELECT current_setting('server_version_num')")).scalar()
+            if ver_row:
+                ver_int = int(ver_row)
+                pg_version = (ver_int // 10000, (ver_int // 100) % 100)
+            if own_engine and engine is not None:
+                _vc.close()
         except Exception:
             pass
 
@@ -962,7 +982,7 @@ def extract_full_schema_snapshot(
                 try:
                     rows = _conn.execute(
                         text(
-                            "SELECT a.attname, a.attstorage, a.attcompression "
+                            "SELECT a.attname, a.attstorage, a.attcompression, a.attstattarget "
                             "FROM pg_attribute a "
                             "WHERE a.attrelid = CAST(:t AS regclass) AND a.attnum > 0 AND NOT a.attisdropped "
                             "ORDER BY a.attnum"
@@ -980,6 +1000,8 @@ def extract_full_schema_snapshot(
                                     pg_col["storage"] = storage
                                 if r[2]:
                                     pg_col["compression"] = r[2]
+                                if r[3] is not None and r[3] != -1:
+                                    pg_col["statistics"] = r[3]
                                 if pg_col:
                                     columns_dict[cname]["pg_column"] = pg_col
                 except Exception:
@@ -992,6 +1014,16 @@ def extract_full_schema_snapshot(
                     ).fetchone()
                     if row and row[0]:
                         pg_table["pg_rls"] = True
+                except Exception:
+                    pass
+
+                try:
+                    row = _conn.execute(
+                        text("SELECT relforcerowsecurity FROM pg_class WHERE oid = CAST(:t AS regclass)"),
+                        {"t": _regclass_name},
+                    ).fetchone()
+                    if row and row[0]:
+                        pg_table["pg_rls_force"] = True
                 except Exception:
                     pass
 
@@ -1048,6 +1080,27 @@ def extract_full_schema_snapshot(
                                 "grantable": bool(r[2]),
                             })
                         table_entry["pg_grants"] = grants
+                except Exception:
+                    pass
+
+                try:
+                    trigger_rows = _conn.execute(
+                        text("""
+                            SELECT tgname, pg_get_triggerdef(t.oid) AS definition
+                            FROM pg_trigger t
+                            WHERE t.tgrelid = CAST(:t AS regclass) AND NOT t.tgisinternal
+                            ORDER BY tgname
+                        """),
+                        {"t": _regclass_name},
+                    ).fetchall()
+                    if trigger_rows:
+                        triggers = []
+                        for r in trigger_rows:
+                            triggers.append({
+                                "name": r[0],
+                                "definition": r[1],
+                            })
+                        table_entry["pg_triggers"] = triggers
                 except Exception:
                     pass
 
@@ -1147,17 +1200,28 @@ def extract_full_schema_snapshot(
             if idx.get("unique") and set(idx.get("column_names", [])) == pk_columns:
                 continue
             raw_cols = list(idx.get("column_names", []))
+            raw_exprs = list(idx.get("expressions", []))
             expr = None
             clean_cols: list[str] = []
-            for c in raw_cols:
-                if _is_expression(c):
-                    expr = c
+            if raw_exprs:
+                for c in raw_cols:
+                    if c is not None:
+                        clean_cols.append(c)
+                exprs = [e for e in raw_exprs if e is not None]
+                if len(exprs) == 1 and not clean_cols:
+                    expr = exprs[0]
                 else:
-                    clean_cols.append(c)
+                    clean_cols.extend(exprs)
+            else:
+                for c in raw_cols:
+                    if _is_expression(c):
+                        expr = c
+                    else:
+                        clean_cols.append(c)
             idx_entry: dict[str, Any] = {
                 "table": table_name,
                 "name": idx_name,
-                "columns": clean_cols or raw_cols,
+                "columns": clean_cols,
                 "unique": bool(idx.get("unique", False)),
             }
             if expr:
@@ -1274,6 +1338,11 @@ def extract_full_schema_snapshot(
             if not fk_name:
                 fk_name = f"fk_{table_name}_{'_'.join(fk.get('constrained_columns', []))}"
             fk_options = fk.get("options", {})
+            fk_match = fk_options.get("match")
+            if fk_match and fk_match.upper() != "SIMPLE":
+                fk_match = fk_match.upper()
+            else:
+                fk_match = None
             constraints[f"{table_name}.{fk_name}"] = {
                 "type": "foreign_key",
                 "name": fk_name,
@@ -1285,6 +1354,8 @@ def extract_full_schema_snapshot(
                 "on_update": fk_options.get("onupdate", "NO ACTION"),
                 "deferrable": bool(fk_options.get("deferrable", False)),
             }
+            if fk_match:
+                constraints[f"{table_name}.{fk_name}"]["match"] = fk_match
 
         for uq in inspector.get_unique_constraints(table_name, **inspect_kw):
             uq_name = uq.get("name", "")
@@ -1531,6 +1602,209 @@ def extract_full_schema_snapshot(
             except Exception:
                 pass
 
+            try:
+                seq_rows = _pg_conn.execute(
+                    text("""SELECT seqrelid::regclass::text AS seq_name,
+                                   s.increment_by, s.min_value, s.max_value, s.start_value,
+                                   s.is_cycled, s.seqowner::regrole::text AS owned_by
+                            FROM pg_sequence s
+                            JOIN pg_class seq ON seq.oid = s.seqrelid
+                            WHERE seq.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = current_schema())"""),
+                ).fetchall()
+                for r in seq_rows:
+                    seq_info: dict[str, Any] = {"increment": r.increment_by}
+                    if r.min_value is not None:
+                        seq_info["minvalue"] = r.min_value
+                    if r.max_value is not None:
+                        seq_info["maxvalue"] = r.max_value
+                    if r.start_value is not None:
+                        seq_info["start"] = r.start_value
+                    if r.is_cycled:
+                        seq_info["cycle"] = True
+                    if r.owned_by:
+                        seq_info["owned_by"] = r.owned_by
+                    sequences[r.seq_name] = seq_info
+            except Exception:
+                pass
+
+            try:
+                comp_rows = _pg_conn.execute(
+                    text("""SELECT t.typname AS type_name, n.nspname AS schema,
+                                   a.attname AS col_name,
+                                   pg_catalog.format_type(a.atttypid, a.atttypmod) AS col_type
+                            FROM pg_catalog.pg_type t
+                            JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+                            JOIN pg_catalog.pg_attribute a ON a.attrelid = t.typrelid
+                            WHERE t.typtype = 'c'
+                              AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                              AND a.attnum > 0 AND NOT a.attisdropped
+                            ORDER BY t.typname, a.attnum"""),
+                ).fetchall()
+                comp_type_map: dict[str, dict[str, Any]] = {}
+                for r in comp_rows:
+                    tname = r.type_name
+                    if tname not in comp_type_map:
+                        comp_type_map[tname] = {"columns": []}
+                        if r.schema and r.schema != "public":
+                            comp_type_map[tname]["schema"] = r.schema
+                    comp_type_map[tname]["columns"].append({"name": r.col_name, "type": r.col_type})
+                composite_types.update(comp_type_map)
+            except Exception:
+                pass
+
+            try:
+                func_rows = _pg_conn.execute(
+                    text("""SELECT n.nspname AS schema, p.proname AS func_name,
+                                   pg_catalog.pg_get_functiondef(p.oid) AS definition
+                            FROM pg_catalog.pg_proc p
+                            JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+                            WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+                              AND p.prokind IN ('f', 'p', 'w')
+                            ORDER BY p.proname"""),
+                ).fetchall()
+                for r in func_rows:
+                    func_entry: dict[str, Any] = {"definition": r.definition}
+                    if r.schema and r.schema != "public":
+                        func_entry["schema"] = r.schema
+                    functions[r.func_name] = func_entry
+            except Exception:
+                pass
+
+            try:
+                role_rows = _pg_conn.execute(
+                    text("""SELECT rolname, rolsuper, rolinherit, rolcreaterole, rolcreatedb,
+                                   rolcanlogin, rolconnlimit, rolvaliduntil
+                            FROM pg_roles WHERE rolname NOT LIKE 'pg_%'"""),
+                ).fetchall()
+                for r in role_rows:
+                    role_info: dict[str, Any] = {}
+                    if r.rolsuper:
+                        role_info["superuser"] = True
+                    if not r.rolinherit:
+                        role_info["inherit"] = False
+                    if r.rolcreaterole:
+                        role_info["createrole"] = True
+                    if r.rolcreatedb:
+                        role_info["createdb"] = True
+                    if r.rolcanlogin:
+                        role_info["login"] = True
+                    if r.rolconnlimit is not None and r.rolconnlimit != -1:
+                        role_info["connlimit"] = r.rolconnlimit
+                    if r.rolvaliduntil:
+                        role_info["valid_until"] = str(r.rolvaliduntil)
+                    roles[r.rolname] = role_info
+            except Exception:
+                pass
+
+            try:
+                dp_rows = _pg_conn.execute(
+                    text("""SELECT n.nspname, COALESCE(r.rolname, 'PUBLIC') AS grantee,
+                                   da.defaclobjtype, acl.privilege_type
+                            FROM pg_default_acl da
+                            JOIN pg_namespace n ON n.oid = da.defaclnamespace
+                            CROSS JOIN LATERAL aclexplode(da.defaclacl) AS acl
+                            LEFT JOIN pg_roles r ON r.oid = acl.grantee"""),
+                ).fetchall()
+                dp_map: dict[str, dict[str, Any]] = {}
+                for r in dp_rows:
+                    obj_type_map = {'r': 'tables', 'S': 'sequences', 'f': 'functions', 'T': 'types', 'n': 'schemas'}
+                    obj_type = obj_type_map.get(r.defaclobjtype, r.defaclobjtype)
+                    key = f"{r.nspname}.{r.grantee}.{obj_type}"
+                    if key not in dp_map:
+                        dp_map[key] = {"schema": r.nspname, "role": r.grantee, "object_type": obj_type, "privileges": []}
+                    dp_map[key]["privileges"].append(r.privilege_type)
+                for val in dp_map.values():
+                    val["privileges"] = list(sorted(set(val["privileges"])))
+                default_privileges.update(dp_map)
+            except Exception:
+                pass
+
+            try:
+                sg_rows = _pg_conn.execute(
+                    text("""SELECT n.nspname AS schema, COALESCE(r.rolname, 'PUBLIC') AS grantee,
+                                   array_agg(acl.privilege_type ORDER BY acl.privilege_type) AS privileges,
+                                   bool_or(acl.is_grantable) AS grantable
+                            FROM pg_namespace n
+                            CROSS JOIN LATERAL aclexplode(n.nspacl) AS acl
+                            LEFT JOIN pg_roles r ON r.oid = acl.grantee
+                            WHERE n.nspacl IS NOT NULL
+                              AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+                            GROUP BY n.nspname, COALESCE(r.rolname, 'PUBLIC')"""),
+                ).fetchall()
+                sg_map: dict[str, list[dict[str, Any]]] = {}
+                for r in sg_rows:
+                    schema_name = r.schema
+                    if schema_name not in sg_map:
+                        sg_map[schema_name] = []
+                    sg_map[schema_name].append({
+                        "role": r.grantee,
+                        "privileges": list(r.privileges) if r.privileges else ["ALL"],
+                        "grantable": bool(r.grantable),
+                    })
+                schema_grants.update(sg_map)
+            except Exception:
+                pass
+
+            try:
+                et_rows = _pg_conn.execute(
+                    text("""SELECT evtname, evtevent, proname AS func_name,
+                                   n.nspname AS func_schema, evtenabled,
+                                   array_agg(evttag ORDER BY evttag) FILTER (WHERE evttag IS NOT NULL) AS tags
+                            FROM pg_event_trigger et
+                            LEFT JOIN pg_proc p ON p.oid = et.evtfoid
+                            LEFT JOIN pg_namespace n ON n.oid = p.pronamespace
+                            LEFT JOIN pg_event_trigger_tags ett ON ett.evtname = et.evtname
+                            GROUP BY evtname, evtevent, evtfoid, proname, n.nspname, evtenabled"""),
+                ).fetchall()
+                for r in et_rows:
+                    et_entry: dict[str, Any] = {
+                        "event": r.evtevent,
+                        "function": {"name": r.func_name, "schema": r.func_schema},
+                    }
+                    if r.tags:
+                        et_entry["tags"] = list(r.tags)
+                    if r.evtenabled and r.evtenabled != 'O':
+                        et_entry["enabled"] = r.evtenabled
+                    event_triggers[r.evtname] = et_entry
+            except Exception:
+                pass
+
+            try:
+                if pg_version and pg_version >= (14, 0):
+                    stats_rows = _pg_conn.execute(
+                        text("""SELECT s.stxname,
+                                       s.stxnamespace::regnamespace::text AS schema,
+                                       c.relname AS table_name,
+                                       s.stxkind AS kinds, s.stxkeys AS columns,
+                                       pg_get_statisticsobjdef_expressions(s.oid) AS expressions
+                                FROM pg_statistic_ext s
+                                JOIN pg_class c ON c.oid = s.stxrelid
+                                WHERE s.stxrelid > 0"""),
+                    ).fetchall()
+                else:
+                    stats_rows = _pg_conn.execute(
+                        text("""SELECT s.stxname,
+                                       s.stxnamespace::regnamespace::text AS schema,
+                                       c.relname AS table_name,
+                                       s.stxkind AS kinds, s.stxkeys AS columns,
+                                       NULL AS expressions
+                                FROM pg_statistic_ext s
+                                JOIN pg_class c ON c.oid = s.stxrelid
+                                WHERE s.stxrelid > 0"""),
+                    ).fetchall()
+                for r in stats_rows:
+                    stat_entry: dict[str, Any] = {"table": r.table_name, "kinds": list(r.kinds) if r.kinds else []}
+                    if r.schema and r.schema != "public":
+                        stat_entry["schema"] = r.schema
+                    if r.columns:
+                        stat_entry["columns"] = r.columns
+                    if r.expressions:
+                        exprs = [e.strip() for e in str(r.expressions).split(",") if e.strip()]
+                        stat_entry["expressions"] = exprs
+                    extended_stats[r.stxname] = stat_entry
+            except Exception:
+                pass
+
             if own_engine:
                 _pg_conn.close()
         except Exception:
@@ -1555,6 +1829,14 @@ def extract_full_schema_snapshot(
         "domains": domains,
         "indexes": indexes,
         "constraints": constraints,
+        "sequences": sequences,
+        "composite_types": composite_types,
+        "functions": functions,
+        "roles": roles,
+        "default_privileges": default_privileges,
+        "schema_grants": schema_grants,
+        "event_triggers": event_triggers,
+        "extended_stats": extended_stats,
     }
 
 
@@ -2491,6 +2773,36 @@ def diff_models_against_snapshot(
     for op in _enum_rb_ops:
         rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
+    # --- PG preamble handlers (roles, sequences, composite types, etc.) ---
+    from dbwarden.engine.pg_registry import (
+        CompositeTypeHandler,
+        DefaultPrivilegesHandler,
+        EventTriggerHandler,
+        ExtendedStatisticsHandler,
+        FunctionHandler,
+        PartitionHandler,
+        RoleHandler,
+        SequenceHandler,
+        StatisticsHandler,
+        TriggerHandler,
+    )
+    _pg_pre_driver = RegistryDriver()
+    _pg_pre_driver.register(CompositeTypeHandler())
+    _pg_pre_driver.register(DefaultPrivilegesHandler())
+    _pg_pre_driver.register(EventTriggerHandler())
+    _pg_pre_driver.register(ExtendedStatisticsHandler())
+    _pg_pre_driver.register(FunctionHandler())
+    _pg_pre_driver.register(PartitionHandler())
+    _pg_pre_driver.register(RoleHandler())
+    _pg_pre_driver.register(SequenceHandler())
+    _pg_pre_driver.register(StatisticsHandler())
+    _pg_pre_driver.register(TriggerHandler())
+    _pg_pre_up, _pg_pre_rb = _pg_pre_driver.run(snapshot, model_tables, None)
+    for op in _pg_pre_up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _pg_pre_rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+
     # --- Phase 5: PG sub-objects (storage params, RLS, policies, grants) ---
     from dbwarden.engine.pg_registry import (
         GrantsHandler,
@@ -3132,6 +3444,8 @@ def _build_index_sql(op: dict[str, Any], backend: str) -> list[MigrationStatemen
             if sorting:
                 col_sql += f" {sorting}"
             col_parts_rb.append(col_sql)
+        if expression:
+            col_parts_rb.append(expression)
         rollback_parts.append(f"({', '.join(col_parts_rb)})")
 
         if include and backend == "postgresql":
