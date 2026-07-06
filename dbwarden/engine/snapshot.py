@@ -3082,20 +3082,29 @@ def snapshot_diff_to_sql(
     from dbwarden.engine.pg_registry import (
         ChTableHandler,
         ColumnHandler,
+        CompositeTypeHandler,
         ConstraintHandler,
+        DefaultPrivilegesHandler,
         DomainHandler,
         EnumHandler,
+        EventTriggerHandler,
+        ExtendedStatisticsHandler,
+        FunctionHandler,
         GrantsHandler,
         IndexHandler,
         MyTableHandler,
         Op,
+        PartitionHandler,
         PgTableHandler,
         PoliciesHandler,
         RenameTableHandler,
+        RoleHandler,
         SchemaHandler,
         SequenceHandler,
+        StatisticsHandler,
         StorageParamsHandler,
         TableHandler,
+        TriggerHandler,
         ViewHandler,
     )
 
@@ -3104,19 +3113,28 @@ def snapshot_diff_to_sql(
     for _h in (
         ChTableHandler(),
         ColumnHandler(),
+        CompositeTypeHandler(),
         ConstraintHandler(),
+        DefaultPrivilegesHandler(),
         DomainHandler(),
         EnumHandler(),
+        EventTriggerHandler(),
+        ExtendedStatisticsHandler(),
+        FunctionHandler(),
         GrantsHandler(),
         IndexHandler(),
         MyTableHandler(),
+        PartitionHandler(),
         PgTableHandler(),
         PoliciesHandler(),
         RenameTableHandler(),
+        RoleHandler(),
         SchemaHandler(),
         SequenceHandler(),
+        StatisticsHandler(),
         StorageParamsHandler(),
         TableHandler(),
+        TriggerHandler(),
         ViewHandler(),
     ):
         for _ot in getattr(_h, "op_types", (_h.object_type,)):
@@ -3164,6 +3182,12 @@ def snapshot_diff_to_sql(
         "alter_ch_column": "table",
         "alter_pg_column_meta": "table",
         "alter_my_column_meta": "table",
+        "create_composite_type": "type_name", "drop_composite_type": "type_name",
+        "create_event_trigger": "trigger_name", "drop_event_trigger": "trigger_name",
+        "create_extended_statistics": "stat_name", "drop_extended_statistics": "stat_name",
+        "create_function": "function_name", "drop_function": "function_name",
+        "create_role": "role_name", "drop_role": "role_name", "alter_role": "role_name",
+        "alter_default_privileges": "schema",
     }
     # Optional second key for Change.target (only when present in the op dict)
     _CHANGE_TARGET_KEY: dict[str, str] = {
@@ -3185,6 +3209,9 @@ def snapshot_diff_to_sql(
         "alter_ch_column": "column",
         "alter_pg_column_meta": "column",
         "alter_my_column_meta": "column",
+        "attach_partition": "partition_name", "detach_partition": "partition_name",
+        "alter_trigger": "name",
+        "alter_column_statistics": "column",
     }
 
     statements: list[MigrationStatement] = []
