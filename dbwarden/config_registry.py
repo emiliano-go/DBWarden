@@ -61,6 +61,18 @@ def database_config(
     overlap_models: bool = False,
     auto_apply_seeds: bool = False,
     seed_table: str | None = None,
+    pg_extensions: list[str] | None = None,
+    pg_domains: list[dict] | None = None,
+    pg_sequences: list[dict] | None = None,
+    pg_functions: list[dict] | None = None,
+    pg_triggers: list[dict] | None = None,
+    pg_roles: list[dict] | None = None,
+    pg_default_privileges: list[dict] | None = None,
+    pg_composite_types: list[dict] | None = None,
+    pg_extended_statistics: list[dict] | None = None,
+    pg_event_triggers: list[dict] | None = None,
+    pg_schema: str | None = None,
+    pg_migration_lock_timeout: int | None = None,
 ) -> DatabaseHandle:
     from dbwarden.db_handle import DatabaseHandle as _DH
 
@@ -81,6 +93,18 @@ def database_config(
             overlap_models=overlap_models,
             auto_apply_seeds=auto_apply_seeds,
             seed_table=seed_table,
+            pg_extensions=pg_extensions or [],
+            pg_domains=pg_domains or [],
+            pg_sequences=pg_sequences or [],
+            pg_functions=pg_functions or [],
+            pg_triggers=pg_triggers or [],
+            pg_roles=pg_roles or [],
+            pg_default_privileges=pg_default_privileges or [],
+            pg_composite_types=pg_composite_types or [],
+            pg_extended_statistics=pg_extended_statistics or [],
+            pg_event_triggers=pg_event_triggers or [],
+            pg_schema=pg_schema,
+            pg_migration_lock_timeout=pg_migration_lock_timeout,
         )
     )
     _REGISTRY.add(entry)

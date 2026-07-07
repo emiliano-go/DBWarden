@@ -383,3 +383,83 @@ class TestAutogenerateMigrationName:
         ]
         result = autogenerate_migration_name(changes)
         assert result.startswith("alter_")
+
+    def test_domain_pluralization(self):
+        from dbwarden.engine.migration_name import _pluralize
+        assert _pluralize("create_domain") == "create_domains"
+        assert _pluralize("drop_domain") == "drop_domains"
+
+    def test_sequence_pluralization(self):
+        from dbwarden.engine.migration_name import _pluralize
+        assert _pluralize("create_sequence") == "create_sequences"
+        assert _pluralize("drop_sequence") == "drop_sequences"
+
+    def test_domain_migration_name(self):
+        changes = [
+            Change(operation="create_domain", table="positive_int"),
+        ]
+        result = autogenerate_migration_name(changes)
+        assert "create" in result.lower()
+        assert "domain" in result.lower()
+
+    def test_sequence_migration_name(self):
+        changes = [
+            Change(operation="create_sequence", table="order_number_seq"),
+        ]
+        result = autogenerate_migration_name(changes)
+        assert "create" in result.lower()
+        assert "sequence" in result.lower()
+
+    def test_refresh_matview_pluralization(self):
+        assert _pluralize("refresh_matview") == "refresh_matviews"
+
+    def test_refresh_matview_migration_name(self):
+        changes = [
+            Change(operation="refresh_matview", table="user_summary"),
+        ]
+        result = autogenerate_migration_name(changes)
+        assert "refresh" in result.lower()
+        assert "matview" in result.lower()
+
+    def test_validate_constraint_pluralization(self):
+        from dbwarden.engine.migration_name import _pluralize
+        assert _pluralize("validate_constraint") == "validate_constraints"
+
+    def test_alter_pg_storage_param_pluralization(self):
+        from dbwarden.engine.migration_name import _pluralize
+        assert _pluralize("alter_pg_storage_param") == "alter_pg_storage_params"
+
+    def test_alter_pg_rls_no_pluralize(self):
+        from dbwarden.engine.migration_name import _pluralize
+        assert _pluralize("alter_pg_rls") == "alter_pg_rls"
+
+    def test_add_grant_pluralization(self):
+        from dbwarden.engine.migration_name import _pluralize
+        assert _pluralize("add_grant") == "add_grants"
+
+    def test_add_policy_pluralization(self):
+        from dbwarden.engine.migration_name import _pluralize
+        assert _pluralize("add_policy") == "add_policies"
+
+    def test_alter_enum_add_value_pluralization(self):
+        from dbwarden.engine.migration_name import _pluralize
+        assert _pluralize("alter_enum_add_value") == "alter_enum_add_values"
+
+    def test_policy_migration_name(self):
+        from dbwarden.engine.migration_name import autogenerate_migration_name, Change
+        changes = [
+            Change(operation="add_policy", table="users", target="user_select_policy"),
+        ]
+        result = autogenerate_migration_name(changes)
+        assert "add_policy" in result.lower()
+        assert "users" in result.lower()
+
+    def test_storage_param_migration_name(self):
+        from dbwarden.engine.migration_name import autogenerate_migration_name, Change
+        changes = [
+            Change(operation="alter_pg_storage_param", table="users", target="fillfactor"),
+        ]
+        result = autogenerate_migration_name(changes)
+        assert "alter_pg_storage_param" in result.lower()
+        assert "users" in result.lower()
+        assert "fillfactor" in result.lower()

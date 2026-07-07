@@ -99,7 +99,7 @@ def index(
 ) -> dict[str, Any]:
     """Build an index dict for ``class Meta``.
 
-    Returns a plain dict; no import needed beyond ``from dbwarden.schema import index``.
+    Returns a plain dict; import it from ``dbwarden.schema.index``.
     All fields are optional except *name* and *columns*.
     """
     d: dict[str, Any] = {

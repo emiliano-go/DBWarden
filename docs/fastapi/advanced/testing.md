@@ -1,31 +1,5 @@
 ---
-seo:
-  title: Testing - DBWarden Documentation
-  description: Learn how to test FastAPI applications that use DBWarden.
-  canonical: https://dbwarden.emiliano-go.com/fastapi/advanced/testing/
-  robots: index,follow
-  og:
-    type: website
-    title: Testing - DBWarden Documentation
-    description: Learn how to test FastAPI applications that use DBWarden.
-    url: https://dbwarden.emiliano-go.com/fastapi/advanced/testing/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Testing - DBWarden Documentation
-    description: Learn how to test FastAPI applications that use DBWarden.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Testing - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/fastapi/advanced/testing/
-    description: Learn how to test FastAPI applications that use DBWarden.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # Testing

@@ -432,3 +432,65 @@ def test_generate_migration_sql_with_table_rename():
             c.operation == "rename_table" and c.target == "accounts"
             for c in changes
         )
+
+
+class TestPGDomainSequenceSQL:
+    def test_build_domain_sql_basic(self):
+        from dbwarden.commands.make_migrations import _build_domain_sql
+        domain = {"name": "positive_int", "type": "integer", "not_null": True, "check": "VALUE > 0"}
+        sql = _build_domain_sql(domain)
+        assert sql == "CREATE DOMAIN positive_int AS integer NOT NULL CHECK (VALUE > 0);"
+
+    def test_build_domain_sql_with_default_and_schema(self):
+        from dbwarden.commands.make_migrations import _build_domain_sql
+        domain = {
+            "name": "my_email", "type": "citext", "schema": "app",
+            "default": "'nobody@example.com'", "not_null": False, "check": "VALUE ~* '^.+@.+$'",
+        }
+        sql = _build_domain_sql(domain)
+        assert sql == "CREATE DOMAIN app.my_email AS citext DEFAULT 'nobody@example.com' CHECK (VALUE ~* '^.+@.+$');"
+
+    def test_build_domain_sql_no_options(self):
+        from dbwarden.commands.make_migrations import _build_domain_sql
+        domain = {"name": "simple_type", "type": "text"}
+        sql = _build_domain_sql(domain)
+        assert sql == "CREATE DOMAIN simple_type AS text;"
+
+    def test_build_sequence_sql_basic(self):
+        from dbwarden.commands.make_migrations import _build_sequence_sql
+        seq = {"name": "order_number_seq", "start": 1000, "increment": 1}
+        sql = _build_sequence_sql(seq)
+        assert "CREATE SEQUENCE IF NOT EXISTS order_number_seq" in sql
+        assert "INCREMENT BY 1" in sql
+        assert "START WITH 1000" in sql
+        assert "NO CYCLE" in sql
+
+    def test_build_sequence_sql_with_schema_and_cycle(self):
+        from dbwarden.commands.make_migrations import _build_sequence_sql
+        seq = {
+            "name": "global_id_seq", "schema": "app",
+            "start": 1, "increment": 1, "minvalue": 1, "maxvalue": 999999,
+            "cycle": True, "owned_by": "app.users.id",
+        }
+        sql = _build_sequence_sql(seq)
+        assert "CREATE SEQUENCE IF NOT EXISTS app.global_id_seq" in sql
+        assert "MINVALUE 1" in sql
+        assert "MAXVALUE 999999" in sql
+        assert "CYCLE" in sql
+        assert "OWNED BY app.users.id" in sql
+
+    def test_build_sequence_sql_minimal(self):
+        from dbwarden.commands.make_migrations import _build_sequence_sql
+        seq = {"name": "simple_seq"}
+        sql = _build_sequence_sql(seq)
+        assert sql == "CREATE SEQUENCE IF NOT EXISTS simple_seq NO CYCLE;"
+
+    def test_drop_domain_sql(self):
+        from dbwarden.commands.make_migrations import _drop_domain_sql
+        assert _drop_domain_sql({"name": "positive_int"}) == "DROP DOMAIN IF EXISTS positive_int;"
+        assert _drop_domain_sql({"name": "my_email", "schema": "app"}) == "DROP DOMAIN IF EXISTS app.my_email;"
+
+    def test_drop_sequence_sql(self):
+        from dbwarden.commands.make_migrations import _drop_sequence_sql
+        assert _drop_sequence_sql({"name": "seq"}) == "DROP SEQUENCE IF EXISTS seq;"
+        assert _drop_sequence_sql({"name": "seq", "schema": "app"}) == "DROP SEQUENCE IF EXISTS app.seq;"

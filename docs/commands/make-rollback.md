@@ -1,31 +1,5 @@
 ---
-seo:
-  title: make-rollback - DBWarden Documentation
-  description: Generate a rollback SQL file for a given migration file.
-  canonical: https://dbwarden.emiliano-go.com/commands/make-rollback/
-  robots: index,follow
-  og:
-    type: website
-    title: make-rollback - DBWarden Documentation
-    description: Generate a rollback SQL file for a given migration file.
-    url: https://dbwarden.emiliano-go.com/commands/make-rollback/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: make-rollback - DBWarden Documentation
-    description: Generate a rollback SQL file for a given migration file.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: make-rollback - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/commands/make-rollback/
-    description: Generate a rollback SQL file for a given migration file.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # `make-rollback`

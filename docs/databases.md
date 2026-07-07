@@ -1,31 +1,5 @@
 ---
-seo:
-  title: Supported Databases - DBWarden Documentation
-  description: DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
-  canonical: https://dbwarden.emiliano-go.com/databases/
-  robots: index,follow
-  og:
-    type: website
-    title: Supported Databases - DBWarden Documentation
-    description: DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
-    url: https://dbwarden.emiliano-go.com/databases/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Supported Databases - DBWarden Documentation
-    description: DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Supported Databases - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/databases/
-    description: DBWarden supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # Supported Databases
@@ -116,7 +90,19 @@ def get_engine(config):
 
 Connections include retry logic: `get_db_connection()` wraps engine connections with up to 5 attempts and exponential backoff when the database is temporarily unavailable (e.g. during a restart or network hiccup). Engines are cached and reused across calls.
 
-For PostgreSQL schema support, DBWarden sets `search_path` on connection when `postgres_schema` is configured.
+For PostgreSQL schema support, set `pg_schema` in `database_config(...)`. DBWarden sets `search_path` on connection so all unqualified references use that schema:
+
+```python
+primary = database_config(
+    database_name="primary",
+    default=True,
+    database_type="postgresql",
+    database_url_sync="postgresql://user:pass@localhost:5432/main",
+    pg_schema="app",
+)
+```
+
+At the model level, set `pg_schema` on `PGTableMeta` or `PGViewMeta` to scope a specific table or view to a schema. This takes precedence over the config-level `search_path`. See [PostgreSQL Deep Dive](databases/postgresql.md) for full details.
 
 ## Development Database Strategy
 

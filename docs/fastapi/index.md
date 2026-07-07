@@ -2,41 +2,6 @@
 description: Integrate DBWarden with FastAPI for automatic schema migration on startup,
   async database sessions, health endpoints, readiness gates, Prometheus metrics,
   and distributed locking.
-seo:
-  title: FastAPI Integration - DBWarden Documentation
-  description: Integrate DBWarden with FastAPI for automatic schema migration on startup,
-    async database sessions, health endpoints, readiness gates, Prometheus metrics,
-    and distributed locking.
-  canonical: https://dbwarden.emiliano-go.com/fastapi/
-  robots: index,follow
-  og:
-    type: website
-    title: FastAPI Integration - DBWarden Documentation
-    description: Integrate DBWarden with FastAPI for automatic schema migration on
-      startup, async database sessions, health endpoints, readiness gates, Prometheus
-      metrics, and distributed locking.
-    url: https://dbwarden.emiliano-go.com/fastapi/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: FastAPI Integration - DBWarden Documentation
-    description: Integrate DBWarden with FastAPI for automatic schema migration on
-      startup, async database sessions, health endpoints, readiness gates, Prometheus
-      metrics, and distributed locking.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: FastAPI Integration - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/fastapi/
-    description: Integrate DBWarden with FastAPI for automatic schema migration on
-      startup, async database sessions, health endpoints, readiness gates, Prometheus
-      metrics, and distributed locking.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
 ---
 
 # FastAPI Integration
@@ -232,4 +197,3 @@ app = FastAPI(lifespan=lifespan)
 **Result:** Less boilerplate, fewer bugs, easier maintenance.
 
 See also: [Cookbook: FastAPI Integration](../cookbook/09-fastapi-integration.md)
-

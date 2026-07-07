@@ -1,38 +1,5 @@
 ---
-seo:
-  title: Seed Management - DBWarden Documentation
-  description: DBWarden provides built-in seed data management for populating databases
-    with initial or reference data. Seeds complement migrations by handling data that...
-  canonical: https://dbwarden.emiliano-go.com/seeds/
-  robots: index,follow
-  og:
-    type: website
-    title: Seed Management - DBWarden Documentation
-    description: DBWarden provides built-in seed data management for populating databases
-      with initial or reference data. Seeds complement migrations by handling data
-      that...
-    url: https://dbwarden.emiliano-go.com/seeds/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Seed Management - DBWarden Documentation
-    description: DBWarden provides built-in seed data management for populating databases
-      with initial or reference data. Seeds complement migrations by handling data
-      that...
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Seed Management - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/seeds/
-    description: DBWarden provides built-in seed data management for populating databases
-      with initial or reference data. Seeds complement migrations by handling data
-      that...
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # Seed Management
@@ -138,6 +105,37 @@ class CountrySeed(Seed):
 | `"ignore"` (default) | Skips existing rows silently |
 | `"update"` | Updates existing rows with new values |
 | `"error"` | Raises an error on conflict |
+
+### PostgreSQL Schema Resolution
+
+When a model uses `pg_schema` in its Meta (via `PGTableMeta` or `PGViewMeta`), code seeds automatically qualify the table name with that schema:
+
+```python
+from dbwarden.databases.pgsql import PGTableMeta
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+    class Meta(PGTableMeta):
+        pg_schema = "app"
+
+class UserSeed(Seed):
+    __seed_database__ = "primary"
+    __seed_description__ = "initial users"
+
+    model = User
+    rows = [User(email="alice@example.com", name="Alice")]
+```
+
+The generated INSERT becomes:
+
+```sql
+INSERT INTO app.users (email, name) VALUES ('alice@example.com', 'Alice')
+```
+
+The schema is resolved in this order: `Meta.pg_schema`, then `Meta.backend_table.schema`, then `__table__.schema`. The seed tracking table (default `_dbwarden_seeds`) stays in the schema set by the connection's `search_path` (config-level `pg_schema`).
 
 ### Logic-Based Seeds
 

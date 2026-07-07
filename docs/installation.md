@@ -1,35 +1,5 @@
 ---
-seo:
-  title: Installation - DBWarden Documentation
-  description: This guide covers installing DBWarden in your project and verifying
-    it works correctly.
-  canonical: https://dbwarden.emiliano-go.com/installation/
-  robots: index,follow
-  og:
-    type: website
-    title: Installation - DBWarden Documentation
-    description: This guide covers installing DBWarden in your project and verifying
-      it works correctly.
-    url: https://dbwarden.emiliano-go.com/installation/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Installation - DBWarden Documentation
-    description: This guide covers installing DBWarden in your project and verifying
-      it works correctly.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Installation - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/installation/
-    description: This guide covers installing DBWarden in your project and verifying
-      it works correctly.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # Installation
@@ -195,4 +165,3 @@ poetry update dbwarden
 ```
 
 Check the release notes when upgrading major versions - there may be configuration or workflow changes.
-

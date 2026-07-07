@@ -1,3 +1,9 @@
+---
+description: A round-trip backend is one where DBWarden can both read schema (via
+  generate-models) and write schema (via make-migrations/migrate). Covers PostgreSQL,
+  MySQL, ClickHouse, SQLite, and MariaDB.
+---
+
 # Round Trip Support
 
 A **round-trip** backend is one where DBWarden can both read schema (via `generate-models`) and write schema (via `make-migrations` / `migrate`).

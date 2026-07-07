@@ -415,6 +415,20 @@ def _analyze_table(table_snapshot: dict[str, Any], model_table: ModelTable) -> l
                 )
             )
 
+    # Phase 1: storage params — diff key-by-key from pg_storage_params
+    snap_storage = snap_pg_table.get("pg_storage_params") or {}
+    model_storage = model_pg_table.get("pg_storage_params") or {}
+    for key in sorted(set(snap_storage.keys()) | set(model_storage.keys())):
+        if snap_storage.get(key) != model_storage.get(key):
+            issues.append(
+                SafetyIssue(
+                    severity="INFO",
+                    change_type="change_pg_storage_params",
+                    table_name=model_table.name,
+                    message=f"Change storage parameter '{key}' for '{model_table.name}'",
+                )
+            )
+
     issues.extend(_analyze_clickhouse_options(table_snapshot, model_table))
     return issues
 

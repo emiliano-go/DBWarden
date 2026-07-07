@@ -1,32 +1,7 @@
 ---
-description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-seo:
-  title: DBWarden - DBWarden Documentation
-  description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-  canonical: https://dbwarden.emiliano-go.com/
-  robots: index,follow
-  og:
-    type: website
-    title: DBWarden - DBWarden Documentation
-    description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-    url: https://dbwarden.emiliano-go.com/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: DBWarden - DBWarden Documentation
-    description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: DBWarden - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/
-    description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy. Generate reviewable SQL migrations, validate them before production, and operate multiple databases from one config source.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+description: DBWarden is a SQL-first database migration system for Python and SQLAlchemy.
+  Generate reviewable SQL migrations, validate them before production, and operate
+  multiple databases from one config source.
 ---
 
 <p align="center">

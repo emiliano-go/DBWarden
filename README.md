@@ -9,16 +9,19 @@
 </p>
 <p align="center">
   <a href="https://www.python.org/downloads/">
-    <img src="https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white&style=for-the-badge" alt="Python">
+    <img src="https://img.shields.io/badge/Python-3.12.7%2B-3776AB?logo=python&logoColor=white&style=for-the-badge" alt="Python">
   </a>
-  <a href="https://pypi.org/project/dbwarden">
-    <img src="https://img.shields.io/badge/PyPI-0.12.4-34D058?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
+  <a href="https://pypi.org/project/dbwarden/">
+    <img src="https://img.shields.io/pypi/v/dbwarden?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
   </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
   </a>
   <a href="https://deepwiki.com/emiliano-go/DBWarden/">
     <img src="https://img.shields.io/badge/DeepWiki-8A2BE2?logo=readthedocs&logoColor=white&style=for-the-badge" alt="DeepWiki">
+  </a>
+  <a href="https://codecov.io/gh/emiliano-go/DBWarden">
+    <img src="https://img.shields.io/codecov/c/github/emiliano-go/DBWarden?logo=codecov&logoColor=white&style=for-the-badge" alt="Codecov">
   </a>
 </p>
 

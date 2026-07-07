@@ -21,7 +21,10 @@ from dbwarden.engine.model_discovery import (
     extract_tables_from_migrations,
     extract_tables_from_database,
     _extract_create_table_columns,
+    _qualified_name,
+    _quote_pg,
 )
+from dbwarden.engine.model_discovery import _get_backend_name as _get_backend_name_md
 from dbwarden.engine.migration_name import Change, autogenerate_migration_name
 from dbwarden.engine.version import (
     get_migrations_directory,
@@ -408,6 +411,11 @@ def _run_offline_migrations(
         upgrade_ops, rollback_ops, database=database, db_name=db_name,
     )
 
+    # Prepend PostgreSQL preamble (extensions, domains, sequences)
+    upgrade_sql, rollback_sql, changes = _prepend_pg_preamble(
+        upgrade_sql, rollback_sql, changes, database,
+    )
+
     if not upgrade_sql.strip():
         console.print("No offline schema changes detected between model state and current models.", style="cyan")
         return
@@ -483,6 +491,7 @@ def make_migrations_cmd(
     verbose: bool = False,
     database: str | None = None,
     output_plan: bool = False,
+    output_sql: bool = False,
     rename_flags: list[str] | None = None,
     safe_type_change: bool = False,
     rename_table_flags: list[str] | None = None,
@@ -501,6 +510,7 @@ def make_migrations_cmd(
         verbose: Enable verbose logging.
         database: Target database name.
         output_plan: Print the migration plan JSON without writing files.
+        output_sql: Print the raw migration SQL to stdout without writing files.
         rename_flags: List of user-supplied --rename flag strings.
         safe_type_change: Use multi-step safe type change strategy.
         rename_table_flags: List of user-supplied --rename-table flag strings.
@@ -707,6 +717,10 @@ def make_migrations_cmd(
 
     if output_plan:
         console.print(json.dumps(plan, indent=2), markup=False, highlight=False)
+        return
+
+    if output_sql:
+        console.print(upgrade_sql, markup=False, highlight=False)
         return
 
     if not upgrade_sql.strip():
@@ -1007,6 +1021,148 @@ def _merge_pending_migrations_into_snapshot(
                     }
 
 
+# Kept for backward compatibility — referenced by tests.
+# These helper functions have been replaced by RegistryDriver handlers
+# (DomainHandler, SequenceHandler) in _prepend_pg_preamble.
+def _build_domain_sql(domain: dict) -> str:
+    schema = domain.get("schema")
+    name = domain["name"]
+    qname = _qualified_name(name, schema)
+    domain_type = domain.get("type", "text")
+    parts = [f"CREATE DOMAIN {qname} AS {domain_type}"]
+    if domain.get("default"):
+        parts.append(f"DEFAULT {domain['default']}")
+    if domain.get("not_null"):
+        parts.append("NOT NULL")
+    if domain.get("check"):
+        parts.append(f"CHECK ({domain['check']})")
+    return " ".join(parts) + ";"
+
+
+def _build_sequence_sql(seq: dict) -> str:
+    schema = seq.get("schema")
+    name = seq["name"]
+    qname = _qualified_name(name, schema)
+    parts = [f"CREATE SEQUENCE IF NOT EXISTS {qname}"]
+    if seq.get("increment") is not None:
+        parts.append(f"INCREMENT BY {seq['increment']}")
+    if seq.get("minvalue") is not None:
+        parts.append(f"MINVALUE {seq['minvalue']}")
+    if seq.get("maxvalue") is not None:
+        parts.append(f"MAXVALUE {seq['maxvalue']}")
+    if seq.get("start") is not None:
+        parts.append(f"START WITH {seq['start']}")
+    if seq.get("cycle"):
+        parts.append("CYCLE")
+    else:
+        parts.append("NO CYCLE")
+    if seq.get("owned_by"):
+        parts.append(f"OWNED BY {seq['owned_by']}")
+    return " ".join(parts) + ";"
+
+
+def _drop_domain_sql(domain: dict) -> str:
+    schema = domain.get("schema")
+    name = domain["name"]
+    qname = _qualified_name(name, schema)
+    return f"DROP DOMAIN IF EXISTS {qname};"
+
+
+def _drop_sequence_sql(seq: dict) -> str:
+    schema = seq.get("schema")
+    name = seq["name"]
+    qname = _qualified_name(name, schema)
+    return f"DROP SEQUENCE IF EXISTS {qname};"
+
+
+def _prepend_pg_preamble(
+    upgrade_sql: str,
+    rollback_sql: str,
+    changes: list[Change],
+    database: str | None,
+) -> tuple[str, str, list[Change]]:
+    """Prepend PostgreSQL preamble SQL (extensions, domains, sequences) to upgrade/rollback SQL."""
+    try:
+        mc = get_multi_db_config()
+        db_name = database or mc.default
+        config = get_database(db_name)
+        if config.database_type != "postgresql":
+            return upgrade_sql, rollback_sql, changes
+
+        if config.pg_sequences or config.pg_domains or config.pg_functions or config.pg_triggers or config.pg_roles or config.pg_default_privileges or config.pg_composite_types or config.pg_extended_statistics or config.pg_event_triggers:
+            from dbwarden.engine.pg_registry import (
+                CompositeTypeHandler,
+                DefaultPrivilegesHandler,
+                DomainHandler,
+                EventTriggerHandler,
+                ExtendedStatisticsHandler,
+                FunctionHandler,
+                RegistryDriver,
+                RoleHandler,
+                SequenceHandler,
+                TriggerHandler,
+            )
+            _reg = RegistryDriver()
+            _reg.register(DomainHandler())
+            _reg.register(SequenceHandler())
+            _reg.register(FunctionHandler())
+            _reg.register(TriggerHandler())
+            _reg.register(RoleHandler())
+            _reg.register(DefaultPrivilegesHandler())
+            _reg.register(CompositeTypeHandler())
+            _reg.register(ExtendedStatisticsHandler())
+            _reg.register(EventTriggerHandler())
+            _up_ops, _rb_ops = _reg.run({"domains": {}, "sequences": {}, "functions": {}, "tables": {}, "roles": {}, "default_privileges": {}, "composite_types": {}, "extended_stats": {}, "event_triggers": {}}, [], config)
+            if _up_ops:
+                _stmts = _reg.emit_all(_up_ops, db_name=db_name)
+                _pg_up = "\n".join(s.upgrade_sql for s in _stmts)
+                _pg_rb = "\n".join(s.rollback_sql for s in reversed(_stmts))
+                if _pg_up.strip():
+                    if upgrade_sql.strip():
+                        upgrade_sql = _pg_up + "\n\n" + upgrade_sql
+                    else:
+                        upgrade_sql = _pg_up
+                if _pg_rb.strip():
+                    if rollback_sql.strip():
+                        rollback_sql = _pg_rb + "\n\n" + rollback_sql
+                    else:
+                        rollback_sql = _pg_rb
+                for op in reversed(_up_ops):
+                    _name = (
+                        op.upgrade_attrs.get("domain_name")
+                        or op.upgrade_attrs.get("seq_name")
+                        or op.upgrade_attrs.get("function_name")
+                        or op.upgrade_attrs.get("role_name")
+                        or op.upgrade_attrs.get("type_name")
+                        or ""
+                    )
+                    changes.insert(0, Change(operation=op.object_type, table=_name))
+
+        if config.pg_extensions:
+            ext_upgrade = "\n".join(
+                f'CREATE EXTENSION IF NOT EXISTS "{ext}";'
+                for ext in config.pg_extensions
+            )
+            ext_rollback = "\n".join(
+                f'DROP EXTENSION IF EXISTS "{ext}";'
+                for ext in reversed(config.pg_extensions)
+            )
+            if upgrade_sql.strip():
+                upgrade_sql = ext_upgrade + "\n\n" + upgrade_sql
+            else:
+                upgrade_sql = ext_upgrade
+            if rollback_sql.strip():
+                rollback_sql = ext_rollback + "\n\n" + rollback_sql
+            else:
+                rollback_sql = ext_rollback
+            for ext in config.pg_extensions:
+                changes.insert(0, Change(operation="create_extension", table=ext))
+    except Exception:
+        pass
+
+    return upgrade_sql, rollback_sql, changes
+
+
 def generate_migration_sql(
     tables: list,
     migrations_dir: str | None = None,
@@ -1148,6 +1304,7 @@ def generate_migration_sql(
         upgrade_parts: list[str] = []
         rollback_parts: list[str] = []
         changes: list[Change] = []
+        backend = _get_backend_name_md(database)
 
         # Emit CREATE TYPE for PG enums before any table that uses them
         enum_types: dict[str, list[str]] = {}
@@ -1177,10 +1334,21 @@ def generate_migration_sql(
             else:
                 for column in table.columns:
                     if column.name.lower() not in existing_columns:
-                        alter_sql = generate_add_column_sql(table.name, column, db_name)
+                        alter_sql = generate_add_column_sql(
+                            table.name, column, db_name, schema=table.schema
+                        )
                         upgrade_parts.append(alter_sql)
+                        if backend == "postgresql":
+                            qtable = _quote_pg(table.name)
+                            qschema = _quote_pg(table.schema) if table.schema else None
+                            col_name_q = _quote_pg(column.name)
+                        else:
+                            qtable = table.name
+                            qschema = table.schema
+                            col_name_q = column.name
+                        qname = _qualified_name(qtable, qschema)
                         rollback_parts.append(
-                            f"ALTER TABLE {table.name} DROP COLUMN {column.name}"
+                            f"ALTER TABLE {qname} DROP COLUMN {col_name_q}"
                         )
                         changes.append(Change(operation="add_column", table=table.name, target=column.name))
                         known_tables.setdefault(table.name, set()).add(column.name.lower())
@@ -1189,16 +1357,37 @@ def generate_migration_sql(
         for table in tables:
             if table.name not in created_tables:
                 continue
+            if backend == "postgresql":
+                qtable = _quote_pg(table.name)
+                qschema = _quote_pg(table.schema) if table.schema else None
+            else:
+                qtable = table.name
+                qschema = table.schema
+            qname = _qualified_name(qtable, qschema)
             for idx in table.indexes:
                 idx_cols = ", ".join(idx.columns)
-                upgrade_parts.append(f"CREATE INDEX IF NOT EXISTS {idx.name} ON {table.name} ({idx_cols});")
-                rollback_parts.append(f"DROP INDEX IF EXISTS {idx.name};")
+                if backend == "clickhouse":
+                    ch_type = idx.clickhouse_type or "minmax"
+                    ch_granularity = idx.clickhouse_granularity or 1
+                    upgrade_parts.append(
+                        f"ALTER TABLE {qname} ADD INDEX IF NOT EXISTS {idx.name} "
+                        f"({idx_cols}) "
+                        f"TYPE {ch_type} "
+                        f"GRANULARITY {ch_granularity};"
+                    )
+                    rollback_parts.append(
+                        f"ALTER TABLE {qname} DROP INDEX {idx.name};"
+                    )
+                else:
+                    upgrade_parts.append(f"CREATE INDEX IF NOT EXISTS {idx.name} ON {qname} ({idx_cols});")
+                    rollback_parts.append(f"DROP INDEX IF EXISTS {idx.name};")
                 changes.append(Change(operation="add_index", table=table.name, target=idx.name))
             for fk in table.foreign_keys:
                 local_cols = ", ".join(fk.get("columns", []))
-                ref_table = fk.get("referred_table", "")
-                ref_cols = ", ".join(fk.get("referred_columns", ["id"]))
-                fk_sql = f"ALTER TABLE {table.name} ADD FOREIGN KEY ({local_cols}) REFERENCES {ref_table} ({ref_cols})"
+                ref_table = _quote_pg(fk.get("referred_table", "")) if backend == "postgresql" else fk.get("referred_table", "")
+                ref_cols = ", ".join(_quote_pg(c) if backend == "postgresql" else c for c in fk.get("referred_columns", ["id"]))
+                loc_cols_q = ", ".join(_quote_pg(c) if backend == "postgresql" else c for c in fk.get("columns", []))
+                fk_sql = f"ALTER TABLE {qname} ADD FOREIGN KEY ({loc_cols_q}) REFERENCES {ref_table} ({ref_cols})"
                 on_delete = fk.get("on_delete", "NO ACTION")
                 on_update = fk.get("on_update", "NO ACTION")
                 if on_delete != "NO ACTION":
@@ -1255,6 +1444,11 @@ def generate_migration_sql(
             upgrade_sql, rollback_sql, changes = _filter_duplicates_from_snapshot_diff(
                 upgrade_sql, rollback_sql, changes, existing_statements
             )
+
+    # Prepend PostgreSQL preamble SQL (extensions, domains, sequences).
+    upgrade_sql, rollback_sql, changes = _prepend_pg_preamble(
+        upgrade_sql, rollback_sql, changes, database,
+    )
 
     return upgrade_sql, rollback_sql, changes
 

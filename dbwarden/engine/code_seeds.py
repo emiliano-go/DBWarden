@@ -118,6 +118,18 @@ def apply_code_seed(
 
     model_cls = cls.model
     table_name = model_cls.__tablename__
+    model_meta = getattr(model_cls, "Meta", None)
+    schema = None
+    if model_meta is not None:
+        schema = getattr(model_meta, "pg_schema", None)
+        if schema is None:
+            backend_table = getattr(model_meta, "backend_table", None)
+            if backend_table is not None:
+                schema = getattr(backend_table, "schema", None)
+    if schema is None:
+        schema = getattr(model_cls.__table__, "schema", None)
+    if schema:
+        table_name = f"{schema}.{table_name}"
     on_conflict = meta.on_conflict
 
     with get_db_connection(db_name) as connection:

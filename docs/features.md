@@ -1,32 +1,6 @@
 ---
-description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
-seo:
-  title: Features - DBWarden Documentation
-  description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
-  canonical: https://dbwarden.emiliano-go.com/features/
-  robots: index,follow
-  og:
-    type: website
-    title: Features - DBWarden Documentation
-    description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
-    url: https://dbwarden.emiliano-go.com/features/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Features - DBWarden Documentation
-    description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Features - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/features/
-    description: Overview of DBWarden features, with short examples for migrations, safety checks, multi-database configs, FastAPI integration, seed management, and more.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+description: Overview of DBWarden features, with short examples for migrations, safety
+  checks, multi-database configs, FastAPI integration, seed management, and more.
 ---
 
 # Features
@@ -91,18 +65,33 @@ Created migration: migrations/primary/primary__0002_add_posts_table.sql
 
 PostgreSQL, MySQL/MariaDB, and ClickHouse support first-class metadata through `class Meta`.
 
-PostgreSQL
+PostgreSQL tables:
 
 ```python
-from dbwarden.databases.pgsql import PGTableMeta, PGColumnMeta
+from dbwarden.databases.pgsql import PGTableMeta, PGColumnMeta, pg
 
 
 class Meta(PGTableMeta):
     pg_fillfactor = 80
+    pg_schema = "app"
 
     class id(PGColumnMeta):
-        pg_identity = "always"
+        pg = pg.field(identity="always")
 ```
+
+PostgreSQL views and materialized views:
+
+```python
+from dbwarden.databases.pgsql import PGViewMeta
+
+
+class Meta(PGViewMeta):
+    pg_view_query = "SELECT id, email FROM users WHERE active = true"
+    pg_view_materialized = False
+    pg_schema = "app"
+```
+
+Set `pg_view_auto_refresh = True` for materialized views that need `REFRESH MATERIALIZED VIEW` on every migration cycle.
 
 MySQL
 

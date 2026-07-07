@@ -4,6 +4,8 @@ from sqlalchemy.engine import make_url
 
 from dbwarden.config import DEFAULT_MIGRATION_TABLE, DEFAULT_SEEDS_TABLE, get_database
 
+DEFAULT_POSTGRES_SCHEMA = "public"
+
 
 class QueryMethod(Enum):
     """Database query methods."""
@@ -161,7 +163,7 @@ SQLITE_QUERIES = {
 
 POSTGRES_QUERIES = {
     QueryMethod.CREATE_MIGRATIONS_TABLE: """
-        CREATE TABLE IF NOT EXISTS {migration_table} (
+        CREATE TABLE IF NOT EXISTS {schema}.{migration_table} (
             version VARCHAR(255) UNIQUE,
             description VARCHAR(500),
             filename VARCHAR(500) UNIQUE,
@@ -171,45 +173,59 @@ POSTGRES_QUERIES = {
         )
     """,
     QueryMethod.CREATE_LOCK_TABLE: """
-        CREATE TABLE IF NOT EXISTS dbwarden_lock (
+        CREATE TABLE IF NOT EXISTS {schema}.dbwarden_lock (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             locked BOOLEAN DEFAULT FALSE,
             acquired_at TIMESTAMP
         )
     """,
     QueryMethod.INSERT_VERSION: """
-        INSERT INTO {migration_table} (version, description, filename, migration_type, checksum)
+        INSERT INTO {schema}.{migration_table} (version, description, filename, migration_type, checksum)
         VALUES (:version, :description, :filename, :migration_type, :checksum)
         ON CONFLICT (version) DO UPDATE SET
             checksum = EXCLUDED.checksum,
             applied_at = CURRENT_TIMESTAMP
     """,
-    QueryMethod.DELETE_VERSION: SQLITE_QUERIES[QueryMethod.DELETE_VERSION],
-    QueryMethod.GET_ALL_MIGRATIONS: SQLITE_QUERIES[QueryMethod.GET_ALL_MIGRATIONS],
-    QueryMethod.GET_LATEST_VERSION: SQLITE_QUERIES[QueryMethod.GET_LATEST_VERSION],
-    QueryMethod.GET_MIGRATED_VERSIONS: SQLITE_QUERIES[
-        QueryMethod.GET_MIGRATED_VERSIONS
-    ],
+    QueryMethod.DELETE_VERSION: """
+        DELETE FROM {schema}.{migration_table} WHERE version = :version
+    """,
+    QueryMethod.GET_ALL_MIGRATIONS: """
+        SELECT version, description, filename, migration_type, applied_at, checksum
+        FROM {schema}.{migration_table}
+        ORDER BY version ASC
+    """,
+    QueryMethod.GET_LATEST_VERSION: """
+        SELECT version FROM {schema}.{migration_table}
+        WHERE migration_type = 'version'
+        ORDER BY version DESC LIMIT 1
+    """,
+    QueryMethod.GET_MIGRATED_VERSIONS: """
+        SELECT version FROM {schema}.{migration_table}
+        WHERE migration_type = 'version'
+        ORDER BY version ASC
+    """,
     QueryMethod.CHECK_IF_MIGRATIONS_TABLE_EXISTS: """
         SELECT tablename FROM pg_catalog.pg_tables
-        WHERE schemaname = current_schema() AND tablename = '{migration_table}'
+        WHERE schemaname = '{schema}' AND tablename = '{migration_table}'
     """,
-    QueryMethod.CHECK_IF_VERSION_EXISTS: SQLITE_QUERIES[
-        QueryMethod.CHECK_IF_VERSION_EXISTS
-    ],
+    QueryMethod.CHECK_IF_VERSION_EXISTS: """
+        SELECT COUNT(*) FROM {schema}.{migration_table} WHERE version = :version
+    """,
     QueryMethod.ACQUIRE_LOCK: """
-        INSERT INTO dbwarden_lock (id, locked, acquired_at)
+        INSERT INTO {schema}.dbwarden_lock (id, locked, acquired_at)
         VALUES (1, TRUE, CURRENT_TIMESTAMP)
         ON CONFLICT (id)
         DO UPDATE SET locked = EXCLUDED.locked, acquired_at = EXCLUDED.acquired_at
     """,
     QueryMethod.RELEASE_LOCK: """
-        INSERT INTO dbwarden_lock (id, locked, acquired_at)
+        INSERT INTO {schema}.dbwarden_lock (id, locked, acquired_at)
         VALUES (1, FALSE, NULL)
         ON CONFLICT (id)
         DO UPDATE SET locked = EXCLUDED.locked, acquired_at = EXCLUDED.acquired_at
     """,
-    QueryMethod.CHECK_LOCK: SQLITE_QUERIES[QueryMethod.CHECK_LOCK],
+    QueryMethod.CHECK_LOCK: """
+        SELECT locked FROM {schema}.dbwarden_lock WHERE id = 1
+    """,
     QueryMethod.GET_TABLE_NAMES: """
         SELECT tablename AS name
         FROM pg_catalog.pg_tables
@@ -227,14 +243,16 @@ POSTGRES_QUERIES = {
         FROM pg_indexes
         WHERE schemaname = current_schema() AND tablename = :table_name
     """,
-    QueryMethod.GET_RUNS_ON_CHANGE_CHECKSUMS: SQLITE_QUERIES[
-        QueryMethod.GET_RUNS_ON_CHANGE_CHECKSUMS
-    ],
-    QueryMethod.GET_RUNS_ALWAYS_FILENAMES: SQLITE_QUERIES[
-        QueryMethod.GET_RUNS_ALWAYS_FILENAMES
-    ],
+    QueryMethod.GET_RUNS_ON_CHANGE_CHECKSUMS: """
+        SELECT filename, checksum FROM {schema}.{migration_table}
+        WHERE migration_type = 'runs_on_change'
+    """,
+    QueryMethod.GET_RUNS_ALWAYS_FILENAMES: """
+        SELECT filename FROM {schema}.{migration_table}
+        WHERE migration_type = 'runs_always'
+    """,
     QueryMethod.UPSERT_REPEATABLE_MIGRATION: """
-        INSERT INTO {migration_table}
+        INSERT INTO {schema}.{migration_table}
         (version, description, filename, migration_type, checksum)
         VALUES (NULL, :description, :filename, :migration_type, :checksum)
         ON CONFLICT (filename)
@@ -244,11 +262,11 @@ POSTGRES_QUERIES = {
             checksum = EXCLUDED.checksum,
             applied_at = CURRENT_TIMESTAMP
     """,
-    QueryMethod.DELETE_REPEATABLE_BY_FILENAME: SQLITE_QUERIES[
-        QueryMethod.DELETE_REPEATABLE_BY_FILENAME
-    ],
+    QueryMethod.DELETE_REPEATABLE_BY_FILENAME: """
+        DELETE FROM {schema}.{migration_table} WHERE filename = :filename
+    """,
     QueryMethod.CREATE_SEEDS_TABLE: """
-        CREATE TABLE IF NOT EXISTS {seed_table} (
+        CREATE TABLE IF NOT EXISTS {schema}.{seed_table} (
             version VARCHAR(255) UNIQUE,
             description VARCHAR(500),
             filename VARCHAR(500) UNIQUE,
@@ -258,33 +276,33 @@ POSTGRES_QUERIES = {
         )
     """,
     QueryMethod.INSERT_SEED: """
-        INSERT INTO {seed_table} (version, description, filename, seed_type, checksum)
+        INSERT INTO {schema}.{seed_table} (version, description, filename, seed_type, checksum)
         VALUES (:version, :description, :filename, :seed_type, :checksum)
         ON CONFLICT (version) DO UPDATE SET
             checksum = EXCLUDED.checksum,
             applied_at = CURRENT_TIMESTAMP
     """,
-    QueryMethod.CHECK_SEED_EXISTS: SQLITE_QUERIES[
-        QueryMethod.CHECK_SEED_EXISTS
-    ],
-    QueryMethod.GET_ALL_SEEDS: SQLITE_QUERIES[
-        QueryMethod.GET_ALL_SEEDS
-    ],
-    QueryMethod.GET_APPLIED_SEED_VERSIONS: SQLITE_QUERIES[
-        QueryMethod.GET_APPLIED_SEED_VERSIONS
-    ],
-    QueryMethod.DELETE_SEED: SQLITE_QUERIES[
-        QueryMethod.DELETE_SEED
-    ],
-    QueryMethod.GET_DISTINCT_CHECKSUMS: SQLITE_QUERIES[
-        QueryMethod.GET_DISTINCT_CHECKSUMS
-    ],
-    QueryMethod.GET_LATEST_VERSIONS_LIMIT: SQLITE_QUERIES[
-        QueryMethod.GET_LATEST_VERSIONS_LIMIT
-    ],
-    QueryMethod.GET_LATEST_VERSIONS_FROM: SQLITE_QUERIES[
-        QueryMethod.GET_LATEST_VERSIONS_FROM
-    ],
+    QueryMethod.CHECK_SEED_EXISTS: """
+        SELECT COUNT(*) FROM {schema}.{seed_table} WHERE version = :version
+    """,
+    QueryMethod.GET_ALL_SEEDS: """
+        SELECT * FROM {schema}.{seed_table} ORDER BY applied_at ASC
+    """,
+    QueryMethod.GET_APPLIED_SEED_VERSIONS: """
+        SELECT version FROM {schema}.{seed_table} ORDER BY applied_at ASC
+    """,
+    QueryMethod.DELETE_SEED: """
+        DELETE FROM {schema}.{seed_table} WHERE version = :version
+    """,
+    QueryMethod.GET_DISTINCT_CHECKSUMS: """
+        SELECT DISTINCT checksum FROM {schema}.{migration_table} WHERE checksum IS NOT NULL
+    """,
+    QueryMethod.GET_LATEST_VERSIONS_LIMIT: """
+        SELECT version FROM {schema}.{migration_table} WHERE version IS NOT NULL ORDER BY applied_at DESC, version DESC LIMIT :limit
+    """,
+    QueryMethod.GET_LATEST_VERSIONS_FROM: """
+        SELECT version FROM {schema}.{migration_table} WHERE version > :starting_version AND version IS NOT NULL ORDER BY applied_at ASC
+    """,
 }
 
 
@@ -576,13 +594,24 @@ def get_migration_table_name(db_name: str | None = None) -> str:
         return DEFAULT_MIGRATION_TABLE
 
 
+def get_schema_name(db_name: str | None = None) -> str:
+    try:
+        return get_database(db_name).postgres_schema or DEFAULT_POSTGRES_SCHEMA
+    except Exception:
+        return DEFAULT_POSTGRES_SCHEMA
+
+
 def get_query(method: QueryMethod, db_name: str | None = None, **kwargs) -> str:
     """Get a SQL query by method for current backend."""
     query = _get_queries_for_backend(db_name).get(method, "")
     if not query:
         return ""
     safe_kwargs = {k: v for k, v in kwargs.items() if k not in ("migration_table", "seed_table")}
-    return query.format(migration_table=get_migration_table_name(db_name), **safe_kwargs)
+    return query.format(
+        migration_table=get_migration_table_name(db_name),
+        schema=get_schema_name(db_name),
+        **safe_kwargs,
+    )
 
 
 def get_seed_table_name(db_name: str | None = None) -> str:
@@ -598,4 +627,8 @@ def get_seed_query(method: QueryMethod, db_name: str | None = None, **kwargs) ->
     if not query:
         return ""
     safe_kwargs = {k: v for k, v in kwargs.items() if k not in ("migration_table", "seed_table")}
-    return query.format(seed_table=get_seed_table_name(db_name), **safe_kwargs)
+    return query.format(
+        seed_table=get_seed_table_name(db_name),
+        schema=get_schema_name(db_name),
+        **safe_kwargs,
+    )

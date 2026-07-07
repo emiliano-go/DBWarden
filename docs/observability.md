@@ -1,35 +1,5 @@
 ---
-seo:
-  title: Observability - DBWarden Documentation
-  description: DBWarden provides Prometheus metrics and structured JSON logging for
-    monitoring and debugging.
-  canonical: https://dbwarden.emiliano-go.com/observability/
-  robots: index,follow
-  og:
-    type: website
-    title: Observability - DBWarden Documentation
-    description: DBWarden provides Prometheus metrics and structured JSON logging
-      for monitoring and debugging.
-    url: https://dbwarden.emiliano-go.com/observability/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Observability - DBWarden Documentation
-    description: DBWarden provides Prometheus metrics and structured JSON logging
-      for monitoring and debugging.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Observability - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/observability/
-    description: DBWarden provides Prometheus metrics and structured JSON logging
-      for monitoring and debugging.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # Observability
@@ -150,5 +120,3 @@ When enabled, all DBWarden log output uses newline-delimited JSON format:
 | `DBWARDEN_HEALTH_AUTH` | API key string | Require `X-API-Key` header for health endpoints |
 
 See also: [Cookbook: Observability](../cookbook/11-observability.md)
-
-

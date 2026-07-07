@@ -1,35 +1,5 @@
 ---
-seo:
-  title: Credentials and Secrets - DBWarden Documentation
-  description: Never hardcode database credentials in dbwarden.py. This page covers
-    how to inject secrets safely.
-  canonical: https://dbwarden.emiliano-go.com/configuration/credentials/
-  robots: index,follow
-  og:
-    type: website
-    title: Credentials and Secrets - DBWarden Documentation
-    description: Never hardcode database credentials in dbwarden.py. This page covers
-      how to inject secrets safely.
-    url: https://dbwarden.emiliano-go.com/configuration/credentials/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Credentials and Secrets - DBWarden Documentation
-    description: Never hardcode database credentials in dbwarden.py. This page covers
-      how to inject secrets safely.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Credentials and Secrets - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/configuration/credentials/
-    description: Never hardcode database credentials in dbwarden.py. This page covers
-      how to inject secrets safely.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # Credentials and Secrets

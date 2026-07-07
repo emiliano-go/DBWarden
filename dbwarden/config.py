@@ -50,6 +50,17 @@ class DatabaseConfig:
     dev_database_url: str | None = None
     dev_database_type: DatabaseType | None = None
     overlap_models: bool = False
+    pg_extensions: list[str] = field(default_factory=list)
+    pg_domains: list[dict] = field(default_factory=list)
+    pg_sequences: list[dict] = field(default_factory=list)
+    pg_functions: list[dict] = field(default_factory=list)
+    pg_triggers: list[dict] = field(default_factory=list)
+    pg_roles: list[dict] = field(default_factory=list)
+    pg_default_privileges: list[dict] = field(default_factory=list)
+    pg_composite_types: list[dict] = field(default_factory=list)
+    pg_extended_statistics: list[dict] = field(default_factory=list)
+    pg_event_triggers: list[dict] = field(default_factory=list)
+    pg_migration_lock_timeout: int | None = None
 
     @property
     def sqlalchemy_url(self) -> str:
@@ -549,10 +560,21 @@ def _finalize_entries(
             migration_table=entry.migration_table or DEFAULT_MIGRATION_TABLE,
             seed_table=entry.seed_table or DEFAULT_SEEDS_TABLE,
             auto_apply_seeds=entry.auto_apply_seeds,
-            postgres_schema=None,
+            postgres_schema=entry.pg_schema,
             dev_database_url=entry.dev_database_url,
             dev_database_type=entry.dev_database_type,
             overlap_models=entry.overlap_models,
+            pg_extensions=entry.pg_extensions or [],
+            pg_domains=entry.pg_domains or [],
+            pg_sequences=entry.pg_sequences or [],
+            pg_functions=entry.pg_functions or [],
+            pg_triggers=entry.pg_triggers or [],
+            pg_roles=entry.pg_roles or [],
+            pg_default_privileges=entry.pg_default_privileges or [],
+            pg_composite_types=entry.pg_composite_types or [],
+            pg_extended_statistics=entry.pg_extended_statistics or [],
+            pg_event_triggers=entry.pg_event_triggers or [],
+            pg_migration_lock_timeout=entry.pg_migration_lock_timeout,
         )
 
     # model_paths overlap validation
@@ -608,6 +630,7 @@ def get_multi_db_config() -> MultiDbConfig:
     base_dir = _import_source(source)
     entries = registered_entries()
     _MULTI_DB_CONFIG_CACHE = _finalize_entries(entries, base_dir, variable_value_expressions)
+    _MULTI_DB_CONFIG_CWD = current_cwd
     return _MULTI_DB_CONFIG_CACHE
 
 

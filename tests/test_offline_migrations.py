@@ -462,7 +462,7 @@ def test_offline_recreate_allows_inline_materialized_view(monkeypatch):
     assert recreate is not None
     from dbwarden.engine.snapshot import snapshot_diff_to_sql
     up_sql, rb_sql, _ = snapshot_diff_to_sql(up_ops, down_ops, db_name="primary")
-    assert "DROP VIEW events" in up_sql
+    assert "DROP VIEW IF EXISTS events" in up_sql
     assert "CREATE MATERIALIZED VIEW IF NOT EXISTS events" in up_sql
 
 
@@ -1804,7 +1804,7 @@ def test_offline_clickhouse_complex_round_trip(monkeypatch):
     assert recreate_mv is not None
 
     up_sql5, rb_sql5, _ = snapshot_diff_to_sql(up_ops5, down_ops5, db_name="primary")
-    assert "DROP VIEW my_mv" in up_sql5
+    assert "DROP VIEW IF EXISTS my_mv" in up_sql5
     assert "CREATE MATERIALIZED VIEW IF NOT EXISTS my_mv" in up_sql5
 
 
@@ -2186,3 +2186,64 @@ def test_offline_clickhouse_prod_like_round_trip():
 
         finally:
             os.chdir(old_cwd)
+
+
+def test_offline_pg_schema_round_trip():
+    """pg_schema is preserved in model_state_to_dict / diff_model_states round-trip."""
+    table = _make_table("users", columns=[_make_col("id")])
+    table.schema = "app"
+    state = model_state_to_dict([table])
+    entry = state["tables"]["users"]
+    assert entry["schema"] == "app"
+
+    tables_out = diff_model_states(state, state)
+    assert len(tables_out[0]) == 0
+
+
+def test_offline_pg_schema_diff_new_table():
+    """A new table with schema generates a create_table op carrying schema in state_table."""
+    prev = model_state_to_dict([])
+    table = _make_table("users", columns=[_make_col("id")])
+    table.schema = "app"
+    curr = model_state_to_dict([table])
+    up, down = diff_model_states(prev, curr)
+    create_ops = [op for op in up if op["type"] == "create_table"]
+    assert len(create_ops) == 1
+    assert create_ops[0]["state_table"].get("schema") == "app"
+
+
+def test_offline_pg_reserved_word_quoting(monkeypatch):
+    """Reserved word table names are quoted in generated SQL."""
+    import dbwarden.engine.model_discovery as md
+    monkeypatch.setattr(md, "_get_backend_name", lambda db_name=None: "postgresql")
+    from dbwarden.engine.model_discovery import generate_create_table_sql
+
+    columns = [ModelColumn("id", "INTEGER", False, True, False, None, None)]
+    table = ModelTable(name="user", columns=columns)
+    sql = generate_create_table_sql(table)
+
+    assert '"user"' in sql
+
+
+def test_offline_pg_extension_sql():
+    """Extensions appear in migration SQL when configured."""
+    from dbwarden.engine.model_discovery import generate_create_table_sql
+    from dbwarden.config import get_database, set_dev_mode
+
+    set_dev_mode(False)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        old_cwd = os.getcwd()
+        try:
+            os.chdir(tmpdir)
+            Path("dbwarden.py").write_text(
+                "from dbwarden import database_config\n\n"
+                "database_config(database_name='primary', default=True, "
+                "database_type='postgresql', database_url_sync='postgresql:///', "
+                "model_paths=['models'], pg_extensions=['citext', 'pgcrypto'])\n",
+                encoding="utf-8",
+            )
+            config = get_database("primary")
+            assert config.pg_extensions == ["citext", "pgcrypto"]
+        finally:
+            os.chdir(old_cwd)
+    set_dev_mode(False)

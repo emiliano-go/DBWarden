@@ -7,14 +7,12 @@ from dbwarden.engine.model_discovery import IndexInfo, ModelColumn, ModelTable
 from dbwarden.engine.snapshot import (
     _check_ch_engine_recreate_allowed,
     _diff_ch_column_extras,
-    _diff_ch_options,
-    _index_op_from_info,
-    _index_sig,
     _normalize_default,
     detect_renames,
     normalize_type,
     snap_to_model_key,
 )
+from dbwarden.engine.pg_registry.ch_table_handler import _CH_OPTION_KEYS
 
 STATE_FORMAT_VERSION = 2
 
@@ -213,6 +211,12 @@ def reconstruct_model_table(table_entry: dict[str, Any]) -> ModelTable:
         excludes=excludes,
         pg_table=pg_table,
         my_table=my_table,
+        schema=table_entry.get("schema"),
+        pg_view_definition=table_entry.get("pg_view_definition"),
+        pg_view_materialized=table_entry.get("pg_view_materialized", False),
+        pg_view_auto_refresh=table_entry.get("pg_view_auto_refresh", False),
+        pg_policies=list(table_entry.get("pg_policies", []) or []),
+        pg_grants=list(table_entry.get("pg_grants", []) or []),
     )
 
 
@@ -241,17 +245,25 @@ def _table_to_state_entry(table: ModelTable) -> dict[str, Any]:
         backend_table_spec["backend"] = "clickhouse"
         backend_table_spec.update({k: _serialize_value(v) for k, v in ch_opts.items() if k.startswith("ch_")})
 
-    pg_table = table.pg_table or {}
+    pg_table = {
+        k: _serialize_value(v)
+        for k, v in (table.pg_table or {}).items()
+        if v is not None
+    }
     if pg_table:
         backend_table_spec["backend"] = "postgresql"
-        backend_table_spec.update({k: _serialize_value(v) for k, v in pg_table.items() if v is not None})
+        backend_table_spec.update(pg_table)
 
-    my_table = table.my_table or {}
+    my_table = {
+        k: _serialize_value(v)
+        for k, v in (table.my_table or {}).items()
+        if v is not None
+    }
     if my_table:
         backend_table_spec["backend"] = "mysql"
-        backend_table_spec.update({k: _serialize_value(v) for k, v in my_table.items() if v is not None})
+        backend_table_spec.update(my_table)
 
-    return {
+    entry = {
         "name": table.name,
         "columns": {col.name: _column_to_entry(col) for col in table.columns},
         "indexes": [idx.to_dict() if hasattr(idx, "to_dict") else idx for idx in table.indexes],
@@ -262,7 +274,17 @@ def _table_to_state_entry(table: ModelTable) -> dict[str, Any]:
         "object_type": table.object_type,
         "backend": backend_table_spec.get("backend"),
         "backend_table_spec": backend_table_spec,
+        "schema": table.schema,
     }
+    if table.pg_view_definition is not None:
+        entry["pg_view_definition"] = table.pg_view_definition
+        entry["pg_view_materialized"] = table.pg_view_materialized
+        entry["pg_view_auto_refresh"] = table.pg_view_auto_refresh
+    if table.pg_policies:
+        entry["pg_policies"] = table.pg_policies
+    if table.pg_grants:
+        entry["pg_grants"] = table.pg_grants
+    return entry
 
 
 def _column_to_entry(col: Any) -> dict[str, Any]:
@@ -593,7 +615,25 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
                 "failed_suffix": "__dbw_old",
             })
         else:
-            _diff_ch_options(prev_ch_spec, curr_ch_spec, table_name, upgrade_ops, rollback_ops)
+            ch_changes: dict[str, dict[str, Any]] = {}
+            for key in _CH_OPTION_KEYS:
+                snap_val = prev_ch_spec.get(key)
+                model_val = curr_ch_spec.get(key)
+                if json.dumps(snap_val, sort_keys=True, default=str) != json.dumps(model_val, sort_keys=True, default=str):
+                    if snap_val is None and model_val is None:
+                        continue
+                    ch_changes[key] = {"from": snap_val, "to": model_val}
+            if ch_changes:
+                upgrade_ops.append({
+                    "type": "alter_ch_options",
+                    "table": table_name,
+                    "changes": ch_changes,
+                })
+                rollback_ops.append({
+                    "type": "alter_ch_options",
+                    "table": table_name,
+                    "changes": {k: {"from": v["to"], "to": v["from"]} for k, v in ch_changes.items()},
+                })
 
         prev_pg_table = prev_spec if prev_spec.get("backend") == "postgresql" else {}
         curr_pg_table = curr_spec if curr_spec.get("backend") == "postgresql" else {}
@@ -641,9 +681,74 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
                 "severity": "INFO",
             })
 
-    _diff_constraints(prev_tables, curr_tables, prev_constraints, curr_constraints, upgrade_ops, rollback_ops)
-    _diff_indexes(prev_indexes, curr_indexes, upgrade_ops, rollback_ops)
+    # --- Constraint diff via ConstraintHandler ---
+    from dbwarden.engine.pg_registry import ConstraintHandler
+    _con_handler = ConstraintHandler()
+    _snap_con = _con_handler.canonicalize(_con_handler.extract(prev_state))
+    _model_con = _con_handler.canonicalize(_con_handler.extract(curr_state))
+    _con_up, _con_rb = _con_handler.diff(_snap_con, _model_con)
+    for op in _con_up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _con_rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+
+    new_tables = {op["table"] for op in upgrade_ops if op["type"] == "create_table"}
+
+    # --- Index diff via IndexHandler ---
+    from dbwarden.engine.pg_registry import IndexHandler
+    _idx_handler = IndexHandler()
+
+    def _group_indexes_by_table(flat: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+        result: dict[str, list[dict[str, Any]]] = {}
+        for _name, _idx in flat.items():
+            _t = _idx.get("table")
+            if _t:
+                result.setdefault(_t, []).append(dict(_idx))
+        return result
+
+    _prev_grouped = _group_indexes_by_table(prev_indexes)
+    _curr_grouped = _group_indexes_by_table({
+        k: v for k, v in curr_indexes.items()
+        if v.get("table") not in new_tables
+    })
+
+    _snap_idx_spec = _idx_handler.canonicalize({
+        "indexes": _prev_grouped,
+        "constraints": {},
+        "snapshot_tables": set(prev_state.get("tables", {})),
+    })
+    _model_idx_spec = _idx_handler.canonicalize({
+        "indexes": {
+            _t: [IndexInfo.from_dict(_d) for _d in _idxs]
+            for _t, _idxs in _curr_grouped.items()
+        },
+        "view_tables": set(),
+    })
+    _idx_up, _idx_rb = _idx_handler.diff(_snap_idx_spec, _model_idx_spec)
+    for _op in _idx_up:
+        upgrade_ops.append({"type": _op.object_type, **{k: v for k, v in _op.upgrade_attrs.items() if v is not None}})
+    for _op in _idx_rb:
+        rollback_ops.insert(0, {"type": _op.object_type, **{k: v for k, v in _op.upgrade_attrs.items() if v is not None}})
+
     _diff_enums(prev_enums, curr_enums, upgrade_ops, rollback_ops)
+
+    # --- Phase 5: PG sub-objects (storage params, RLS, policies, grants) ---
+    from dbwarden.engine.pg_registry import (
+        GrantsHandler,
+        PoliciesHandler,
+        StorageParamsHandler,
+    )
+    for _handler in (StorageParamsHandler(), PoliciesHandler(), GrantsHandler()):
+        _snap_spec = _handler.extract(prev_state)
+        _model_spec = _handler.extract(curr_state)
+        _up, _rb = _handler.diff(
+            _handler.canonicalize(_snap_spec),
+            _handler.canonicalize(_model_spec),
+        )
+        for op in _up:
+            upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+        for op in _rb:
+            rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
     # --- Annotate recreate_ch_table ops with dependent MVs ---
     common_tables = set(prev_tables.keys()) & set(curr_tables.keys())
@@ -778,49 +883,13 @@ def _diff_constraints(
                 })
 
 
-def _diff_indexes(prev_indexes: dict[str, Any], curr_indexes: dict[str, Any], upgrade_ops: list[dict[str, Any]], rollback_ops: list[dict[str, Any]]) -> None:
-    prev_items = [(name, idx) for name, idx in prev_indexes.items()]
-    curr_items = [(name, idx) for name, idx in curr_indexes.items()]
-    prev_sigs = {_index_sig(idx): (name, idx) for name, idx in prev_items}
-    curr_sigs = {_index_sig(idx): (name, idx) for name, idx in curr_items}
-
-    for sig, (name, idx) in prev_sigs.items():
-        if sig not in curr_sigs:
-            upgrade_ops.append({
-                "type": "drop_index", "table": idx["table"], "index_name": name,
-                "columns": idx["columns"], "unique": idx.get("unique", False), "using": idx.get("using"),
-                "where": idx.get("where"), "include": idx.get("include"), "with_params": idx.get("with_params"),
-                "tablespace": idx.get("tablespace"), "nulls_not_distinct": idx.get("nulls_not_distinct", False),
-                "column_sorting": idx.get("column_sorting"), "concurrently": idx.get("concurrently", True),
-                "clickhouse_type": idx.get("clickhouse_type"), "clickhouse_granularity": idx.get("clickhouse_granularity"),
-            })
-            rollback_ops.insert(0, {
-                "type": "add_index", "table": idx["table"], "columns": idx["columns"], "unique": idx.get("unique", False),
-                "using": idx.get("using"), "where": idx.get("where"), "include": idx.get("include"), "with_params": idx.get("with_params"),
-                "tablespace": idx.get("tablespace"), "nulls_not_distinct": idx.get("nulls_not_distinct", False),
-                "column_sorting": idx.get("column_sorting"), "concurrently": idx.get("concurrently", True),
-                "clickhouse_type": idx.get("clickhouse_type"), "clickhouse_granularity": idx.get("clickhouse_granularity"),
-            })
-
-    for sig, (_name, idx) in curr_sigs.items():
-        if sig not in prev_sigs:
-            upgrade_ops.append(_index_op_from_info(IndexInfo.from_dict(idx), idx["table"]))
-            rollback_ops.insert(0, {"type": "drop_index", "table": idx["table"], "index_name": None, "columns": idx["columns"], "unique": idx.get("unique", False)})
-
-
 def _diff_enums(prev_enums: dict[str, list[str]], curr_enums: dict[str, list[str]], upgrade_ops: list[dict[str, Any]], rollback_ops: list[dict[str, Any]]) -> None:
-    for enum_name, curr_values in curr_enums.items():
-        if enum_name not in prev_enums:
-            upgrade_ops.append({"type": "create_type", "enum_name": enum_name, "values": curr_values})
-            rollback_ops.insert(0, {"type": "drop_type", "enum_name": enum_name})
-
-    for enum_name, prev_values in prev_enums.items():
-        curr_values = curr_enums.get(enum_name)
-        if curr_values is None:
-            continue
-        new_values = [v for v in curr_values if v not in prev_values]
-        for v in new_values:
-            idx = curr_values.index(v)
-            after = curr_values[idx - 1] if idx > 0 else None
-            upgrade_ops.append({"type": "alter_enum_add_value", "enum_name": enum_name, "value": v, "after": after})
-            rollback_ops.insert(0, {"type": "alter_enum_add_value", "enum_name": enum_name, "value": v, "revert": True, "after": after})
+    from dbwarden.engine.pg_registry import EnumHandler
+    _handler = EnumHandler()
+    _snap = _handler.canonicalize(prev_enums)
+    _model = _handler.canonicalize(curr_enums)
+    _up, _rb = _handler.diff(_snap, _model)
+    for op in _up:
+        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    for op in _rb:
+        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})

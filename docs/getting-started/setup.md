@@ -1,32 +1,6 @@
 ---
-description: Set up DBWarden in your project, install dependencies, initialize the project, define your first database, and verify that the configuration loads correctly.
-seo:
-  title: Setup - DBWarden Documentation
-  description: Set up DBWarden in your project, install dependencies, initialize the project, define your first database, and verify that the configuration loads correctly.
-  canonical: https://dbwarden.emiliano-go.com/getting-started/setup/
-  robots: index,follow
-  og:
-    type: website
-    title: Setup - DBWarden Documentation
-    description: Set up DBWarden in your project, install dependencies, initialize the project, define your first database, and verify that the configuration loads correctly.
-    url: https://dbwarden.emiliano-go.com/getting-started/setup/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Setup - DBWarden Documentation
-    description: Set up DBWarden in your project, install dependencies, initialize the project, define your first database, and verify that the configuration loads correctly.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Setup - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/getting-started/setup/
-    description: Set up DBWarden in your project, install dependencies, initialize the project, define your first database, and verify that the configuration loads correctly.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+description: Set up DBWarden in your project, install dependencies, initialize the
+  project, define your first database, and verify that the configuration loads correctly.
 ---
 
 # Setup

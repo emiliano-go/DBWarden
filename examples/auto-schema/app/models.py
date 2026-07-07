@@ -1,7 +1,7 @@
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, text
 from sqlalchemy.orm import declarative_base
 from dbwarden import TableMeta
-from dbwarden.schema import auto_schema
+from dbwarden.schema._auto_schema import auto_schema
 
 Base = declarative_base()
 

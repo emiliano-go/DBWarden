@@ -2,6 +2,7 @@ import os
 import re
 import sys
 import time
+import enum as _enum
 from pathlib import Path
 from types import ModuleType
 from dataclasses import dataclass, field
@@ -28,11 +29,7 @@ from dbwarden.exceptions import DBWardenConfigError
 from dbwarden.logging import get_logger
 from dbwarden.models import SchemaDifference
 from dbwarden.databases.clickhouse.projection import ProjectionSpec
-from dbwarden.schema import (
-    apply_meta,
-    read_meta,
-)
-from dbwarden.schema._base import attach_meta
+from dbwarden.schema._base import attach_meta, read_meta
 from dbwarden.schema._meta_reader import (
     _build_dbwarden_meta,
     _collect_meta_chain,
@@ -40,6 +37,7 @@ from dbwarden.schema._meta_reader import (
     _merge_meta_class,
     _type_check_field_attrs,
     _write_column_info,
+    apply_meta,
 )
 
 Base = declarative_base()
@@ -77,6 +75,68 @@ def _apply_meta_fast(cls: type) -> None:
 
 VALID_IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
+_POSTGRES_RESERVED_WORDS: set[str] = {
+    "ALL", "ANALYSE", "ANALYZE", "AND", "ANY", "ARRAY", "AS", "ASC",
+    "ASYMMETRIC", "AUTHORIZATION", "BETWEEN", "BINARY", "BOTH",
+    "CASE", "CAST", "CHECK", "COLLATE", "COLLATION", "COLUMN",
+    "CONCURRENTLY", "CONSTRAINT", "CREATE", "CROSS", "CURRENT_CATALOG",
+    "CURRENT_DATE", "CURRENT_ROLE", "CURRENT_SCHEMA", "CURRENT_TIME",
+    "CURRENT_TIMESTAMP", "CURRENT_USER", "DEFAULT", "DEFERRABLE",
+    "DESC", "DISTINCT", "DO", "ELSE", "END", "EXCEPT", "EXISTS",
+    "EXTRACT", "FALSE", "FETCH", "FILTER", "FOR", "FOREIGN", "FROM",
+    "FULL", "FUNCTION", "GRANT", "GROUP", "GROUPING", "HAVING", "IF",
+    "ILIKE", "IN", "INOUT", "INTERSECT", "INTERVAL", "INTO", "IS",
+    "ISNULL", "JOIN", "LATERAL", "LEADING", "LEFT", "LIKE", "LIMIT",
+    "LOCALTIME", "LOCALTIMESTAMP", "NATURAL", "NEW", "NOT", "NOTNULL",
+    "NULL", "NULLIF", "OF", "OFFSET", "OLD", "ON", "ONLY", "OR",
+    "ORDER", "OUT", "OUTER", "OVER", "OVERLAPS", "PARTITION", "PATH",
+    "PLACING", "PRIMARY", "REFERENCES", "RETURNING", "RIGHT", "ROW",
+    "ROWS", "RULES", "SCHEMA", "SELECT", "SESSION_USER", "SET",
+    "SHOW", "SIMILAR", "SOME", "SYMMETRIC", "TABLE", "TABLESAMPLE",
+    "THEN", "TO", "TRAILING", "TRUE", "UNION", "UNIQUE", "USER",
+    "USING", "VARIADIC", "VERBOSE", "VIEW", "WHEN", "WHERE",
+    "WINDOW", "WITH", "WITHIN", "WITHOUT", "XMLATTRIBUTES",
+    "XMLCONCAT", "XMLELEMENT", "XMLEXISTS", "XMLFOREST",
+    "XMLNAMESPACES", "XMLPARSE", "XMLPI", "XMLROOT", "XMLSERIALIZE",
+    "XMLTABLE", "YEAR", "MONTH", "DAY", "HOUR", "MINUTE", "SECOND",
+    "ZONE", "TYPE", "ADMIN", "AGGREGATE", "BACKWARD", "CACHE",
+    "CLUSTER", "COMMENT", "COMMIT", "COPY", "DEALLOCATE", "DECLARE",
+    "DISCARD", "DOMAIN", "EXTENSION", "FETCH", "FREEZE", "GLOBAL",
+    "HANDLER", "IDENTITY", "IMPORT", "INDEX", "INHERIT", "LANGUAGE",
+    "LISTEN", "LOAD", "LOCK", "LOGIN", "MAPPING", "MOVE", "NAME",
+    "NAMESPACE", "NOTIFY", "OPTIONS", "OWNED", "OWNER", "PARALLEL",
+    "PASSWORD", "PREPARE", "PREPARED", "PRIVILEGES", "PUBLIC",
+    "PUBLICATION", "RECURSIVE", "REF", "REFRESH", "REINDEX",
+    "RELEASE", "RENAME", "REPLACE", "RESET", "REVOKE", "ROLE",
+    "ROLLBACK", "RULE", "SAVEPOINT", "SECURITY", "SEQUENCE",
+    "SERVER", "SESSION", "SIGNAL", "SUBSCRIPTION", "TABLESPACE",
+    "TEMP", "TEMPORARY", "TEXT", "TRANSACTION", "TRIGGER", "TRUNCATE",
+    "TRUSTED", "UNLISTEN", "UNLOGGED", "VACUUM", "VALID", "VALIDATOR",
+    "VALUE", "VOLATILE", "WHITESPACE", "WORK", "WRITE",
+}
+
+def _quote_pg(name: str) -> str:
+    if not name:
+        return name
+    if name.upper() in _POSTGRES_RESERVED_WORDS:
+        return f'"{name}"'
+    return name
+
+
+def _is_expression(s: str) -> bool:
+    """Return True if *s* looks like a PostgreSQL expression (not a simple column name).
+
+    Expressions contain parentheses, type casts (::), operators or function calls.
+    """
+    if not s:
+        return False
+    if s.startswith('"') and s.endswith('"'):
+        return False
+    for ch in s:
+        if ch in ("(", ")", ":", ",", "+", "-", "*", "/", "%", "=", "<", ">", "!", "|", "&", "#", "~"):
+            return True
+    return False
+
 
 def _render_mysql_column_type(type_str: str, meta: dict[str, Any]) -> str:
     rendered = type_str
@@ -109,6 +169,12 @@ def _validate_identifier(name: str, field: str = "identifier") -> None:
             f"Invalid {field}: '{name}'. "
             "Must start with letter/underscore, contain only alphanumeric and underscore."
         )
+
+
+def _qualified_name(name: str, schema: str | None) -> str:
+    if schema:
+        return f"{schema}.{name}"
+    return name
 
 
 def _get_backend_name(db_name: str | None = None) -> str:
@@ -249,10 +315,12 @@ class IndexInfo:
     tablespace: str | None = None
     nulls_not_distinct: bool = False
     column_sorting: dict[str, str] | None = None
+    postgresql_ops: dict[str, str] | None = None
     comment: str | None = None
     concurrently: bool = True
     clickhouse_type: str | None = None
     clickhouse_granularity: int | None = None
+    expression: str | None = None
 
     def to_dict(self) -> dict:
         d: dict[str, Any] = {
@@ -275,6 +343,8 @@ class IndexInfo:
             d["nulls_not_distinct"] = True
         if self.column_sorting is not None:
             d["column_sorting"] = self.column_sorting
+        if self.postgresql_ops is not None:
+            d["postgresql_ops"] = self.postgresql_ops
         if self.comment is not None:
             d["comment"] = self.comment
         if not self.concurrently:
@@ -283,6 +353,8 @@ class IndexInfo:
             d["clickhouse_type"] = self.clickhouse_type
         if self.clickhouse_granularity is not None:
             d["clickhouse_granularity"] = self.clickhouse_granularity
+        if self.expression is not None:
+            d["expression"] = self.expression
         return d
 
     @staticmethod
@@ -298,10 +370,12 @@ class IndexInfo:
             tablespace=d.get("tablespace"),
             nulls_not_distinct=bool(d.get("nulls_not_distinct", False)),
             column_sorting=dict(d.get("column_sorting", {})) if d.get("column_sorting") else None,
+            postgresql_ops=dict(d.get("postgresql_ops", {})) if d.get("postgresql_ops") else None,
             comment=d.get("comment"),
             concurrently=bool(d.get("concurrently", True)),
             clickhouse_type=d.get("clickhouse_type"),
             clickhouse_granularity=d.get("clickhouse_granularity"),
+            expression=d.get("expression"),
         )
 
 
@@ -322,6 +396,12 @@ class ModelTable:
         excludes: Optional[list[dict[str, Any]]] = None,
         pg_table: Optional[dict[str, Any]] = None,
         my_table: Optional[dict[str, Any]] = None,
+        schema: str | None = None,
+        pg_view_definition: str | None = None,
+        pg_view_materialized: bool = False,
+        pg_view_auto_refresh: bool = False,
+        pg_policies: Optional[list[dict[str, Any]]] = None,
+        pg_grants: Optional[list[dict[str, Any]]] = None,
     ):
         self.name = name
         self.columns = columns
@@ -338,6 +418,12 @@ class ModelTable:
         self.excludes = excludes or []
         self.pg_table = pg_table or {}
         self.my_table = my_table or {}
+        self.schema = schema
+        self.pg_view_definition = pg_view_definition
+        self.pg_view_materialized = pg_view_materialized
+        self.pg_view_auto_refresh = pg_view_auto_refresh
+        self.pg_policies = pg_policies or []
+        self.pg_grants = pg_grants or []
 
     def to_dict(self) -> dict:
         return {
@@ -353,6 +439,12 @@ class ModelTable:
             "excludes": self.excludes,
             "pg_table": self.pg_table,
             "my_table": self.my_table,
+            "schema": self.schema,
+            "pg_view_definition": self.pg_view_definition,
+            "pg_view_materialized": self.pg_view_materialized,
+            "pg_view_auto_refresh": self.pg_view_auto_refresh,
+            "pg_policies": self.pg_policies,
+            "pg_grants": self.pg_grants,
         }
 
 
@@ -1059,6 +1151,7 @@ def extract_table_from_model(
                     "referred_columns": [ref_col],
                     "on_delete": fk.ondelete or "NO ACTION",
                     "on_update": fk.onupdate or "NO ACTION",
+                    "match": fk.match,
                 })
         if debug_timing:
             print(f"TIMING {model_class.__name__} columns {len(columns)} {time.time() - start:.3f}s", flush=True)
@@ -1074,10 +1167,27 @@ def extract_table_from_model(
         excludes = []
         pg_table = {}
         my_table = {}
+        schema = None
+        pg_view_definition = None
+        pg_view_materialized = False
+        pg_view_auto_refresh = False
+        pg_policies: list[dict[str, Any]] | None = None
+        pg_grants: list[dict[str, Any]] | None = None
 
         if dw_meta:
             checks = list(getattr(dw_meta, "pg_checks", []) or getattr(dw_meta, "checks", []) or getattr(dw_meta, "my_checks", []))
             uniques = list(getattr(dw_meta, "pg_uniques", []) or getattr(dw_meta, "uniques", []) or getattr(dw_meta, "my_uniques", []))
+            # Extract unique=True from SQLAlchemy column definitions (e.g. email = Column(unique=True))
+            # so the model-side uniques match the constraints PostgreSQL creates from inline UNIQUE.
+            for column in model_class.__table__.columns:
+                if getattr(column, "unique", False):
+                    col_name = column.name
+                    if not any(col_name in u.get("columns", []) for u in uniques):
+                        uniques.append({
+                            "columns": [col_name],
+                            "deferrable": False,
+                            "initially_deferred": False,
+                        })
             excludes = list(getattr(dw_meta, "pg_excludes", []))
             indexes_meta = getattr(dw_meta, "indexes", []) or []
             pg_indexes_meta = getattr(dw_meta, "pg_indexes", []) or []
@@ -1091,34 +1201,94 @@ def extract_table_from_model(
                             f"Index entries must be dicts or typed spec objects, "
                             f"got {type(idx_entry).__name__}"
                         )
+                    raw_cols = list(idx_entry.get("columns", []))
+                    spec_expr = idx_entry.get("expression")
+                    if spec_expr:
+                        clean_cols = [c for c in raw_cols if c != spec_expr]
+                        expr_val = spec_expr
+                    else:
+                        expr_val = None
+                        clean_cols = raw_cols
                     idx_info = IndexInfo(
                         name=idx_entry.get("name"),
-                        columns=list(idx_entry.get("columns", [])),
+                        columns=clean_cols or raw_cols,
                         unique=bool(idx_entry.get("unique", False)),
                         using=idx_entry.get("using"),
                         where=idx_entry.get("where"),
                         include=idx_entry.get("include"),
                         nulls_not_distinct=bool(idx_entry.get("nulls_not_distinct", False)),
                         column_sorting=dict(idx_entry.get("column_sorting", {})) if idx_entry.get("column_sorting") else None,
+                        postgresql_ops=dict(idx_entry.get("postgresql_ops", {})) if idx_entry.get("postgresql_ops") else None,
                         clickhouse_type=idx_entry.get("clickhouse_type"),
                         clickhouse_granularity=idx_entry.get("clickhouse_granularity"),
+                        expression=expr_val,
                     )
                     indexes.append(idx_info)
             if isinstance(dw_meta.backend_table, dict):
-                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
+                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques", "pg_policies", "pg_grants", "pg_storage_params"}
                 pg_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("pg_") and k not in excluded_pg_keys}
                 my_table = {k: v for k, v in dw_meta.backend_table.items() if k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques")}
-            elif any(k.startswith("pg_") for k in getattr(dw_meta, "table_attrs", {})):
-                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques"}
+                schema = pg_table.pop("pg_schema", None)
+                pg_policies = list(dw_meta.backend_table.get("pg_policies", [])) or None
+                pg_grants = list(dw_meta.backend_table.get("pg_grants", [])) or None
+                # Phase 1c: populate pg_storage_params from pg_fillfactor (deprecated alias)
+                storage_params: dict[str, Any] = {}
+                model_storage = dw_meta.backend_table.get("pg_storage_params") or {}
+                if isinstance(model_storage, dict):
+                    storage_params.update(model_storage)
+                if "pg_fillfactor" in pg_table and "fillfactor" not in storage_params:
+                    storage_params["fillfactor"] = pg_table["pg_fillfactor"]
+                pg_table["pg_storage_params"] = storage_params or None
+            # If using PgViewSpec, read view definition before pg_table extraction
+            if type(dw_meta.backend_table).__name__ == "PgViewSpec":
+                object_type = "materialized_view" if dw_meta.backend_table.materialized else "view"
+                pg_view_definition = dw_meta.backend_table.query
+                pg_view_materialized = dw_meta.backend_table.materialized
+                pg_view_auto_refresh = dw_meta.backend_table.auto_refresh
+                if dw_meta.backend_table.schema:
+                    schema = dw_meta.backend_table.schema
+                # Views cannot have indexes, FKs, constraints, or excludes
+                indexes = []
+                foreign_keys = []
+                uniques = []
+                checks = []
+                excludes = []
+            if not pg_table and any(k.startswith("pg_") for k in getattr(dw_meta, "table_attrs", {})):
+                excluded_pg_keys = {"pg_indexes", "pg_checks", "pg_uniques", "pg_view_query", "pg_view_materialized", "pg_schema", "pg_policies", "pg_grants", "pg_storage_params"}
                 pg_table = {
                     k: v for k, v in dw_meta.table_attrs.items()
                     if k.startswith("pg_") and k not in excluded_pg_keys and v is not None
                 }
+                if schema is None:
+                    schema = pg_table.pop("pg_schema", None)
+                # Phase 1c: populate pg_storage_params from pg_fillfactor (deprecated alias)
+                storage_params: dict[str, Any] = {}
+                attrs_storage = dw_meta.table_attrs.get("pg_storage_params") or {}
+                if isinstance(attrs_storage, dict):
+                    storage_params.update(attrs_storage)
+                if "pg_fillfactor" in pg_table and "fillfactor" not in storage_params:
+                    storage_params["fillfactor"] = pg_table["pg_fillfactor"]
+                pg_table["pg_storage_params"] = storage_params or None
+            # If using PgTableSpec, read schema from the typed object
+            if schema is None and type(dw_meta.backend_table).__name__ == "PgTableSpec":
+                schema = dw_meta.backend_table.schema
             if not my_table and any(k.startswith("my_") for k in getattr(dw_meta, "table_attrs", {})):
                 my_table = {
                     k: v for k, v in dw_meta.table_attrs.items()
                     if k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques") and v is not None
                 }
+
+            # Normalize partition strategy to uppercase so that
+            # "range" matches the snapshot's "RANGE" during diff.
+            if "pg_partition" in pg_table:
+                part = pg_table["pg_partition"]
+                if isinstance(part, dict) and "strategy" in part:
+                    part["strategy"] = part["strategy"].upper()
+
+            if pg_policies is None:
+                pg_policies = list(dw_meta.table_attrs.get("pg_policies", [])) or None
+            if pg_grants is None:
+                pg_grants = list(dw_meta.table_attrs.get("pg_grants", [])) or None
 
         if backend == "clickhouse":
             clickhouse_options = _ch_options_from_meta(model_class)
@@ -1139,6 +1309,12 @@ def extract_table_from_model(
             excludes=excludes,
             pg_table=pg_table,
             my_table=my_table,
+            schema=schema,
+            pg_view_definition=pg_view_definition,
+            pg_view_materialized=pg_view_materialized,
+            pg_view_auto_refresh=pg_view_auto_refresh,
+            pg_policies=pg_policies,
+            pg_grants=pg_grants,
         )
     except DBWardenConfigError:
         raise
@@ -1188,9 +1364,24 @@ def extract_column_info(
         unique = column.unique
         autoincrement = column.autoincrement
         default = None
+        default_str = None
         if column.default:
-            default_str = str(column.default)
-            # SQLite doesn't support complex default expressions
+            # Detect Python enum defaults
+            default_arg = getattr(column.default, "arg", None)
+            if default_arg is not None and isinstance(default_arg, _enum.Enum):
+                enum_member = default_arg
+                member_name = enum_member.name  # e.g., "SUCCESS" (matches SQL ENUM)
+                if backend == "postgresql":
+                    type_name = getattr(column.type, "name", None)
+                    if type_name:
+                        default = f"'{member_name}'::{type_name}"
+                    else:
+                        default = f"'{member_name}'"
+                else:
+                    default = f"'{member_name}'"
+            else:
+                default_str = str(column.default)
+        if default_str is not None:
             if default_str.startswith("ScalarElementColumnDefault"):
                 # Extract the actual value from ScalarElementColumnDefault(True/False)
                 import re
@@ -1349,7 +1540,10 @@ def extract_column_info(
             "pg_identity_max",
         ):
             if key in column.info:
-                pg_meta[key] = column.info[key]
+                val = column.info[key]
+                if key == "pg_storage" and val in ("PLAIN", "EXTENDED"):
+                    continue
+                pg_meta[key] = val
         if backend == "postgresql":
             if item_type is not None:
                 pg_meta["pg_type"] = {
@@ -1453,7 +1647,8 @@ def compare_model_to_database(
 
 
 def generate_add_column_sql(
-    table_name: str, column: ModelColumn, db_name: str | None = None
+    table_name: str, column: ModelColumn, db_name: str | None = None,
+    schema: str | None = None,
 ) -> str:
     """Generate SQL for adding a column."""
     _validate_identifier(table_name, "table_name")
@@ -1474,26 +1669,34 @@ def generate_add_column_sql(
         else False
     )
 
-    nullable_sql = "" if column.nullable or is_serial else "NOT NULL"
+    nullable_sql = "" if column.nullable or is_serial or backend == "clickhouse" else "NOT NULL"
     default_sql = f" DEFAULT {column.default}" if column.default else ""
     fk_sql = ""
-    if column.foreign_key:
+    if column.foreign_key and backend != "postgresql":
         fk_sql = f" REFERENCES {column.foreign_key}"
         if column.fk_on_delete and column.fk_on_delete != "NO ACTION":
             fk_sql += f" ON DELETE {column.fk_on_delete}"
         if column.fk_on_update and column.fk_on_update != "NO ACTION":
             fk_sql += f" ON UPDATE {column.fk_on_update}"
-    sql = f"ALTER TABLE {table_name} ADD COLUMN {column.name} {col_type}"
+    if backend == "postgresql":
+        qtable = _quote_pg(table_name)
+        qschema = _quote_pg(schema) if schema else None
+        qname = _qualified_name(qtable, qschema)
+        col_name = _quote_pg(column.name)
+    else:
+        qname = _qualified_name(table_name, schema)
+        col_name = column.name
+    sql = f"ALTER TABLE {qname} ADD COLUMN {col_name} {col_type}"
     if nullable_sql:
         sql += f" {nullable_sql}"
     if default_sql:
         sql += default_sql
-    if backend == "clickhouse" and column.comment:
-        sql += f" COMMENT '{column.comment.replace(chr(39), chr(39) + chr(39))}'"
     if backend == "clickhouse":
         ch_codec = column.codec or column.ch_meta.get("ch_codec")
         if ch_codec:
             sql += f" CODEC({ch_codec})"
+        if column.comment:
+            sql += f" COMMENT '{column.comment.replace(chr(39), chr(39) + chr(39))}'"
     if backend in ("mysql", "mariadb"):
         sql = _append_mysql_column_attrs(sql, column.my_meta)
     if fk_sql:
@@ -1519,14 +1722,15 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             col_type = _render_postgres_column_type(col)
         else:
             col_type = col.type
-        col_def = f"    {col.name} {col_type}"
+        col_name = _quote_pg(col.name) if backend == "postgresql" else col.name
+        col_def = f"    {col_name} {col_type}"
         is_serial = (
             col.type.upper() in ("SERIAL", "BIGSERIAL")
             if backend == "postgresql"
             else False
         )
 
-        if not col.nullable and not is_serial:
+        if not col.nullable and not is_serial and backend != "clickhouse":
             col_def += " NOT NULL"
         if backend != "clickhouse" and col.primary_key:
             col_def += " PRIMARY KEY"
@@ -1538,7 +1742,7 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             col_def += f" COMMENT '{col.comment.replace(chr(39), chr(39) + chr(39))}'"
         if backend in ("mysql", "mariadb"):
             col_def = _append_mysql_column_attrs(col_def, col.my_meta)
-        if col.foreign_key:
+        if col.foreign_key and backend != "postgresql":
             col_def += f" REFERENCES {col.foreign_key}"
             if col.fk_on_delete and col.fk_on_delete != "NO ACTION":
                 col_def += f" ON DELETE {col.fk_on_delete}"
@@ -1546,16 +1750,28 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
                 col_def += f" ON UPDATE {col.fk_on_update}"
         if backend == "clickhouse" and col.codec:
             col_def += f" CODEC({col.codec})"
+        if backend == "clickhouse" and col.comment:
+            col_def += f" COMMENT '{col.comment.replace(chr(39), chr(39) + chr(39))}'"
         column_defs.append(col_def)
 
     if backend == "clickhouse":
         column_defs.extend(f"    {projection_sql}" for projection_sql in _render_clickhouse_projections(table))
 
     columns_sql = ",\n".join(column_defs)
+    if backend == "postgresql":
+        qtable = _quote_pg(table.name)
+        qschema = _quote_pg(table.schema) if table.schema else None
+    else:
+        qtable = table.name
+        qschema = table.schema
+    qname = _qualified_name(qtable, qschema)
     if backend == "clickhouse" and table.object_type == "materialized_view":
         sql = _generate_clickhouse_materialized_view_sql(table, columns_sql)
+    elif backend == "postgresql" and table.object_type in ("view", "materialized_view"):
+        return generate_create_view_sql(table)
     else:
-        sql = f"CREATE TABLE IF NOT EXISTS {table.name} (\n{columns_sql}\n)"
+        unlogged = "UNLOGGED " if table.pg_table and table.pg_table.get("pg_unlogged") else ""
+        sql = f"CREATE {unlogged}TABLE IF NOT EXISTS {qname} (\n{columns_sql}\n)"
     if backend == "clickhouse":
         if table.object_type == "table":
             sql += _render_clickhouse_table_suffix(table)
@@ -1580,10 +1796,105 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
         if pg_partition:
             strategy = pg_partition.get("strategy", "RANGE")
             columns = pg_partition.get("columns", [])
-            sql += f"\nPARTITION BY {strategy} ({', '.join(columns)})"
+            quoted_cols = ", ".join(_quote_pg(c) for c in columns)
+            sql += f"\nPARTITION BY {strategy} ({quoted_cols})"
+        pg_inherits = table.pg_table.get("pg_inherits")
+        if pg_inherits:
+            parent = _quote_pg(pg_inherits) if isinstance(pg_inherits, str) else ", ".join(_quote_pg(p) for p in pg_inherits)
+            sql += f"\nINHERITS ({parent})"
+        pg_tablespace = table.pg_table.get("pg_tablespace")
+        if pg_tablespace:
+            sql += f"\nTABLESPACE {pg_tablespace}"
     if backend == "postgresql" and table.comment:
-        sql += f"\nCOMMENT ON TABLE {table.name} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}';"
+        sql += f";\nCOMMENT ON TABLE {qname} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}';"
+    if backend == "postgresql":
+        pg_rls = table.pg_table.get("pg_rls", False)
+        pg_rls_force = table.pg_table.get("pg_rls_force", False)
+        pg_suffix = ""
+        if pg_rls:
+            pg_suffix += f"\nALTER TABLE {qname} ENABLE ROW LEVEL SECURITY;"
+        if pg_rls_force:
+            pg_suffix += f"\nALTER TABLE {qname} FORCE ROW LEVEL SECURITY;"
+        for policy in table.pg_policies:
+            pg_suffix += f"\n{_build_create_policy_sql(policy, qname)}"
+        for grant_entry in table.pg_grants:
+            pg_suffix += f"\n{_build_grant_sql(grant_entry, qname)}"
+        if pg_suffix:
+            if not sql.endswith(";"):
+                sql += ";"
+            sql += pg_suffix
+    if not sql.endswith(";"):
+        sql += ";"
     return sql
+
+
+def _build_create_policy_sql(policy: dict, qname: str) -> str:
+    parts = [f"CREATE POLICY {_quote_pg(policy['name'])} ON {qname}"]
+    permissive = policy.get("permissive", "PERMISSIVE")
+    if permissive.upper() == "RESTRICTIVE":
+        parts.append("AS RESTRICTIVE")
+    command = policy.get("command", "ALL")
+    parts.append(f"FOR {command}")
+    role = policy.get("role", "PUBLIC")
+    if isinstance(role, str):
+        role = [role]
+    roles = ", ".join(r if r.upper() == "PUBLIC" else _quote_pg(r) for r in role)
+    parts.append(f"TO {roles}")
+    using = policy.get("using")
+    if using:
+        parts.append(f"USING ({using})")
+    with_check = policy.get("with_check")
+    if with_check:
+        parts.append(f"WITH CHECK ({with_check})")
+    return " ".join(parts) + ";"
+
+
+def _build_alter_policy_sql(policy: dict, qname: str) -> str:
+    parts = [f"ALTER POLICY {_quote_pg(policy['name'])} ON {qname}"]
+    role = policy.get("role", "PUBLIC")
+    if isinstance(role, str):
+        role = [role]
+    roles = ", ".join(r if r.upper() == "PUBLIC" else _quote_pg(r) for r in role)
+    parts.append(f"TO {roles}")
+    using = policy.get("using")
+    if using:
+        parts.append(f"USING ({using})")
+    with_check = policy.get("with_check")
+    if with_check:
+        parts.append(f"WITH CHECK ({with_check})")
+    return " ".join(parts) + ";"
+
+
+def _build_drop_policy_sql(policy_name: str, qname: str) -> str:
+    return f"DROP POLICY IF EXISTS {_quote_pg(policy_name)} ON {qname};"
+
+
+def _build_grant_sql(grant_entry: dict, qname: str, object_type: str = "TABLE") -> str:
+    privileges = grant_entry.get("privileges", "ALL")
+    if isinstance(privileges, list):
+        privileges = ", ".join(privileges)
+    role = grant_entry.get("role", "PUBLIC")
+    if isinstance(role, str):
+        role = [role]
+    roles = ", ".join(r if r.upper() == "PUBLIC" else _quote_pg(r) for r in role)
+    sql = f"GRANT {privileges} ON {object_type} {qname} TO {roles}"
+    if grant_entry.get("grantable"):
+        sql += " WITH GRANT OPTION"
+    return sql + ";"
+
+
+def _build_revoke_sql(grant_entry: dict, qname: str, object_type: str = "TABLE") -> str:
+    privileges = grant_entry.get("privileges", "ALL")
+    if isinstance(privileges, list):
+        privileges = ", ".join(privileges)
+    role = grant_entry.get("role", "PUBLIC")
+    if isinstance(role, str):
+        role = [role]
+    roles = ", ".join(r if r.upper() == "PUBLIC" else _quote_pg(r) for r in role)
+    sql = f"REVOKE {privileges} ON {object_type} {qname} FROM {roles}"
+    if grant_entry.get("grantable"):
+        sql += " CASCADE"
+    return sql + ";"
 
 
 def _generate_clickhouse_materialized_view_sql(
@@ -1639,19 +1950,33 @@ def _generate_clickhouse_materialized_view_sql(
     return "\n".join(parts)
 
 
-def generate_drop_table_sql(table_name: str) -> str:
+def generate_create_view_sql(table: ModelTable) -> str:
+    qname = _qualified_name(table.name, table.schema)
+    if table.pg_view_materialized:
+        sql = f"CREATE MATERIALIZED VIEW IF NOT EXISTS {qname} AS {table.pg_view_definition or ''}"
+    else:
+        sql = f"CREATE OR REPLACE VIEW {qname} AS {table.pg_view_definition or ''}"
+    if table.comment:
+        sql += f";\nCOMMENT ON VIEW {qname} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}'"
+    return sql
+
+
+def generate_drop_table_sql(table_name: str, schema: str | None = None) -> str:
     """Generate DROP TABLE SQL."""
     _validate_identifier(table_name, "table_name")
-    return f"DROP TABLE {table_name}"
+    qname = _qualified_name(table_name, schema)
+    return f"DROP TABLE {qname}"
 
 
 def generate_drop_object_sql(table: ModelTable) -> str:
-    _validate_identifier(table.name, "table_name")
-    if table.object_type == "materialized_view":
-        return f"DROP VIEW {table.name}"
+    qname = _qualified_name(table.name, table.schema)
+    if table.object_type == "materialized_view" and table.pg_view_materialized:
+        return f"DROP MATERIALIZED VIEW IF EXISTS {qname}"
+    if table.object_type in ("view", "materialized_view"):
+        return f"DROP VIEW IF EXISTS {qname}"
     if table.object_type == "dictionary":
-        return f"DROP DICTIONARY {table.name}"
-    return generate_drop_table_sql(table.name)
+        return f"DROP DICTIONARY {qname}"
+    return generate_drop_table_sql(table.name, table.schema)
 
 
 def generate_create_dictionary_sql(table: ModelTable) -> str:

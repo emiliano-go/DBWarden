@@ -1,31 +1,5 @@
 ---
-seo:
-  title: snapshot - DBWarden Documentation
-  description: Output the DDL schema of a specific database table.
-  canonical: https://dbwarden.emiliano-go.com/commands/snapshot/
-  robots: index,follow
-  og:
-    type: website
-    title: snapshot - DBWarden Documentation
-    description: Output the DDL schema of a specific database table.
-    url: https://dbwarden.emiliano-go.com/commands/snapshot/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: snapshot - DBWarden Documentation
-    description: Output the DDL schema of a specific database table.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: snapshot - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/commands/snapshot/
-    description: Output the DDL schema of a specific database table.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # `snapshot`

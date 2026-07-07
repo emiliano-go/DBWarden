@@ -1,41 +1,6 @@
 ---
 description: 'Get started with DBWarden: initialize your project, define your database
   configuration, and learn the migration workflow from model changes to applied SQL.'
-seo:
-  title: First Steps - DBWarden Documentation
-  description: 'Get started with DBWarden: initialize your project, define your database
-    configuration, and learn the migration workflow from model changes to applied
-    SQL.'
-  canonical: https://dbwarden.emiliano-go.com/getting-started/first-steps/
-  robots: index,follow
-  og:
-    type: website
-    title: First Steps - DBWarden Documentation
-    description: 'Get started with DBWarden: initialize your project, define your
-      database configuration, and learn the migration workflow from model changes
-      to applied SQL.'
-    url: https://dbwarden.emiliano-go.com/getting-started/first-steps/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: First Steps - DBWarden Documentation
-    description: 'Get started with DBWarden: initialize your project, define your
-      database configuration, and learn the migration workflow from model changes
-      to applied SQL.'
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: First Steps - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/getting-started/first-steps/
-    description: 'Get started with DBWarden: initialize your project, define your
-      database configuration, and learn the migration workflow from model changes
-      to applied SQL.'
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
 ---
 
 # First Steps

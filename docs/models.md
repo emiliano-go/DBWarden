@@ -1,35 +1,5 @@
 ---
-seo:
-  title: SQLAlchemy Models Reference - DBWarden Documentation
-  description: This page is the reference for all supported Meta attributes across
-    every backend. For a step-by-step walkthrough of defining models, see the Modeling...
-  canonical: https://dbwarden.emiliano-go.com/models/
-  robots: index,follow
-  og:
-    type: website
-    title: SQLAlchemy Models Reference - DBWarden Documentation
-    description: This page is the reference for all supported Meta attributes across
-      every backend. For a step-by-step walkthrough of defining models, see the Modeling...
-    url: https://dbwarden.emiliano-go.com/models/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: SQLAlchemy Models Reference - DBWarden Documentation
-    description: This page is the reference for all supported Meta attributes across
-      every backend. For a step-by-step walkthrough of defining models, see the Modeling...
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: SQLAlchemy Models Reference - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/models/
-    description: This page is the reference for all supported Meta attributes across
-      every backend. For a step-by-step walkthrough of defining models, see the Modeling...
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # SQLAlchemy Models Reference
@@ -195,7 +165,7 @@ class User(Base):
         pg_tablespace = "fastspace"
 ```
 
-`PGTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds PostgreSQL-specific ones (`pg_fillfactor`, `pg_tablespace`, `pg_unlogged`, `pg_partition`, `pg_inherits`, `pg_excludes`, `pg_indexes`, `pg_checks`, `pg_uniques`).
+`PGTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds PostgreSQL-specific ones (`pg_schema`, `pg_fillfactor`, `pg_tablespace`, `pg_unlogged`, `pg_partition`, `pg_inherits`, `pg_excludes`, `pg_indexes`, `pg_checks`, `pg_uniques`).
 
 For PostgreSQL-specific indexes, use `PgIndexSpec` in `pg_indexes`:
 
@@ -250,6 +220,49 @@ class User(Base):
 `PGColumnMeta` includes the common `comment` and `public` attributes plus a `pg` attribute of type `PgFieldSpec` that bundles all PostgreSQL-specific column options.
 
 For the full list of supported attributes, see [PostgreSQL Deep Dive](databases/postgresql.md).
+
+### PostgreSQL Views
+
+Use `PGViewMeta` for models that represent PostgreSQL views or materialized views. Set `__tablename__` to the view name:
+
+```python
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from dbwarden.databases.pgsql import PGViewMeta
+
+class Base(DeclarativeBase):
+    pass
+
+class ActiveUser(Base):
+    __tablename__ = "active_users"
+
+    id: Mapped[int] = mapped_column(Integer)
+    email: Mapped[str] = mapped_column(String(255))
+
+    class Meta(PGViewMeta):
+        pg_view_query = "SELECT id, email FROM users WHERE active = true"
+        pg_view_materialized = False
+```
+
+`PGViewMeta` attributes:
+
+| Attribute | Type | Default | SQL |
+|-----------|------|---------|-----|
+| `pg_view_query` | `str` | `None` | `AS <query>` in CREATE VIEW |
+| `pg_view_materialized` | `bool` | `False` | `CREATE MATERIALIZED VIEW` instead of `CREATE VIEW` |
+| `pg_view_auto_refresh` | `bool` | `False` | Emits `REFRESH MATERIALIZED VIEW` in subsequent migrations |
+| `pg_schema` | `str \| None` | `None` | Fully qualifies the view as `schema.view_name` |
+
+Set `pg_view_auto_refresh = True` to keep a materialized view current after each schema change:
+
+```python
+class Meta(PGViewMeta):
+    pg_view_query = "SELECT user_id, count(*) AS total FROM orders GROUP BY user_id"
+    pg_view_materialized = True
+    pg_view_auto_refresh = True
+```
+
+Each `make-migrations` run after the initial CREATE produces a `REFRESH MATERIALIZED VIEW` statement.
 
 ## ClickHouse Model Metadata
 

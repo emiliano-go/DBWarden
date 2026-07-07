@@ -1,31 +1,5 @@
 ---
-seo:
-  title: new - DBWarden Documentation
-  description: Create a manual migration file.
-  canonical: https://dbwarden.emiliano-go.com/commands/new/
-  robots: index,follow
-  og:
-    type: website
-    title: new - DBWarden Documentation
-    description: Create a manual migration file.
-    url: https://dbwarden.emiliano-go.com/commands/new/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: new - DBWarden Documentation
-    description: Create a manual migration file.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: new - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/commands/new/
-    description: Create a manual migration file.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # `new`

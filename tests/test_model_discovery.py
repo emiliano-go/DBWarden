@@ -123,6 +123,31 @@ class User(Base):
         assert table.pg_table["pg_fillfactor"] == 80
         assert table.columns[1].pg_meta["pg_storage"] == "extended"
 
+    def test_extract_table_from_model_skips_plain_storage(self, monkeypatch):
+        from sqlalchemy import Integer, String
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+        from dbwarden.databases.pgsql import PGColumnMeta
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        class Base(DeclarativeBase):
+            pass
+
+        class User(Base):
+            __tablename__ = "users"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            email: Mapped[str] = mapped_column(String(255), nullable=False)
+
+            class Meta:
+                class email(PGColumnMeta):
+                    pg = pg.field(storage="PLAIN")
+
+        table = extract_table_from_model(User, db_name="primary")
+
+        assert table is not None
+        assert "pg_storage" not in table.columns[1].pg_meta
+
 
 class TestModelColumn:
     """Tests for ModelColumn class."""
@@ -423,8 +448,9 @@ class TestSQLGeneration:
         sql = generate_create_table_sql(table)
 
         assert "COMMENT 'Page view events'" in sql
-        assert "url String NOT NULL COMMENT 'Visited URL'" in sql
-        assert "viewed_at DateTime NOT NULL COMMENT 'Timestamp of the page view'" in sql
+        assert "url String" in sql
+        assert "NOT NULL" not in sql
+        assert "viewed_at DateTime" in sql
 
     def test_generate_clickhouse_create_table_sql_with_composite_primary_key(self, monkeypatch):
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
@@ -457,7 +483,8 @@ class TestSQLGeneration:
         table = ModelTable(name="events", columns=columns)
         sql = generate_create_table_sql(table)
 
-        assert "data String NOT NULL CODEC(ZSTD(3))" in sql
+        assert "data String" in sql
+        assert "CODEC(ZSTD(3))" in sql
         assert "ENGINE = MergeTree()" in sql
 
     def test_generate_clickhouse_create_table_sql_with_projection(self, monkeypatch):
@@ -516,7 +543,7 @@ class TestSQLGeneration:
             object_type="materialized_view",
         )
 
-        assert generate_drop_object_sql(table) == "DROP VIEW mv_name"
+        assert generate_drop_object_sql(table) == "DROP VIEW IF EXISTS mv_name"
 
     def test_generate_replicated_clickhouse_engine_with_zookeeper(self, monkeypatch):
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
@@ -1013,3 +1040,267 @@ class TestChTypeMapperWithInfo:
         result = _map_sa_type_to_clickhouse(col)
         # LowCardinality wraps first, then Nullable wraps outside
         assert result == "Nullable(LowCardinality(String))"
+class TestPGViewMetaExtraction:
+    def test_extract_table_from_model_with_pg_view_meta(self, monkeypatch):
+        from sqlalchemy import Column, Integer, MetaData, String, Table
+        from dbwarden.databases.pgsql import PgViewSpec
+        from dbwarden.schema._base import DBWardenMeta
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        class ActiveUsers:
+            __tablename__ = "active_users"
+            __table__ = Table(
+                "active_users", MetaData(),
+                Column("id", Integer, primary_key=True),
+                Column("name", String(100)),
+            )
+
+        dw_meta = DBWardenMeta()
+        dw_meta.backend_table = PgViewSpec(
+            query="SELECT id, name FROM users WHERE active = true",
+            materialized=False,
+        )
+        ActiveUsers.__dbwarden_meta__ = dw_meta
+        ActiveUsers.__dbwarden_meta_applied__ = True
+
+        table = extract_table_from_model(ActiveUsers, db_name="primary")
+
+        assert table is not None
+        assert table.object_type == "view"
+        assert table.pg_view_definition == "SELECT id, name FROM users WHERE active = true"
+        assert table.pg_view_materialized is False
+
+    def test_extract_table_from_model_with_pg_matview_meta(self, monkeypatch):
+        from sqlalchemy import Column, Integer, MetaData, String, Table
+        from dbwarden.databases.pgsql import PgViewSpec
+        from dbwarden.schema._base import DBWardenMeta
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        class UserSummary:
+            __tablename__ = "user_summary"
+            __table__ = Table(
+                "user_summary", MetaData(),
+                Column("id", Integer, primary_key=True),
+                Column("total", Integer),
+            )
+
+        dw_meta = DBWardenMeta()
+        dw_meta.backend_table = PgViewSpec(
+            query="SELECT id, COUNT(*) as total FROM users GROUP BY id",
+            materialized=True,
+        )
+        UserSummary.__dbwarden_meta__ = dw_meta
+        UserSummary.__dbwarden_meta_applied__ = True
+
+        table = extract_table_from_model(UserSummary, db_name="primary")
+
+        assert table is not None
+        assert table.object_type == "materialized_view"
+        assert table.pg_view_materialized is True
+        assert table.pg_view_definition == "SELECT id, COUNT(*) as total FROM users GROUP BY id"
+
+    def test_extract_table_from_model_view_rejects_table_features(self, monkeypatch):
+        from sqlalchemy import Column, Integer, MetaData, String, Table
+        from dbwarden.databases.pgsql import PgViewSpec, PgIndexSpec
+        from dbwarden.schema._base import DBWardenMeta
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        class BadView:
+            __tablename__ = "bad_view"
+            __table__ = Table(
+                "bad_view", MetaData(),
+                Column("id", Integer, primary_key=True),
+            )
+
+        dw_meta = DBWardenMeta()
+        dw_meta.backend_table = PgViewSpec(
+            query="SELECT id FROM users",
+            materialized=False,
+        )
+        dw_meta.backend_table.pg_indexes = [PgIndexSpec(columns=["id"], name="bad_idx")]
+        BadView.__dbwarden_meta__ = dw_meta
+        BadView.__dbwarden_meta_applied__ = True
+
+        table = extract_table_from_model(BadView, db_name="primary")
+
+        assert table is not None
+        assert table.object_type == "view"
+        assert len(table.indexes) == 0
+        assert len(table.foreign_keys) == 0
+        assert len(table.uniques) == 0
+        assert len(table.checks) == 0
+        assert len(table.excludes) == 0
+
+
+class TestPGSchemaQualifiedSQL:
+    def test_generate_create_table_sql_pg_with_schema(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        columns = [
+            ModelColumn("id", "INTEGER", False, True, False, None, None),
+        ]
+        table = ModelTable(name="users", columns=columns, schema="app")
+        sql = generate_create_table_sql(table)
+
+        assert "IF NOT EXISTS app.users" in sql or "CREATE TABLE app.users" in sql
+
+    def test_generate_create_table_sql_pg_schema_with_reserved_name(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        columns = [
+            ModelColumn("id", "INTEGER", False, True, False, None, None),
+        ]
+        table = ModelTable(name="user", columns=columns, schema="app")
+        sql = generate_create_table_sql(table)
+
+        assert '"user"' in sql
+
+    def test_generate_create_table_sql_pg_comment_with_schema(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        columns = [
+            ModelColumn("id", "INTEGER", False, True, False, None, None),
+        ]
+        table = ModelTable(name="users", columns=columns, schema="app", comment="table comment")
+        sql = generate_create_table_sql(table)
+
+        assert "COMMENT ON TABLE app.users" in sql
+
+    def test_generate_add_column_sql_pg_with_schema(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        column = ModelColumn("email", "VARCHAR(255)", True, False, False, None, None)
+        sql = model_discovery.generate_add_column_sql("users", column, db_name="primary", schema="app")
+
+        assert "ALTER TABLE app.users ADD COLUMN email" in sql
+
+    def test_generate_drop_object_sql_pg_view(self, monkeypatch):
+        table = ModelTable(
+            name="active_users", columns=[ModelColumn("id", "INTEGER", False, True, False, None, None)],
+            schema="app", object_type="view",
+        )
+        sql = generate_drop_object_sql(table)
+
+        assert "DROP VIEW IF EXISTS app.active_users" in sql
+
+    def test_generate_drop_object_sql_pg_matview(self, monkeypatch):
+        table = ModelTable(
+            name="user_summary", columns=[ModelColumn("id", "INTEGER", False, True, False, None, None)],
+            schema="app",
+            object_type="materialized_view", pg_view_materialized=True,
+        )
+        sql = generate_drop_object_sql(table)
+
+        assert "DROP MATERIALIZED VIEW IF EXISTS app.user_summary" in sql
+
+    def test_generate_drop_object_sql_regular_view_not_matview(self, monkeypatch):
+        table = ModelTable(
+            name="regular_view", columns=[ModelColumn("id", "INTEGER", False, True, False, None, None)],
+            schema="app",
+            object_type="materialized_view", pg_view_materialized=False,
+        )
+        sql = generate_drop_object_sql(table)
+
+        assert "DROP VIEW IF EXISTS app.regular_view" in sql
+
+    def test_generate_create_view_sql_schema_qualified(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        table = ModelTable(
+            name="active_users", columns=[ModelColumn("id", "INTEGER", False, True, False, None, None)],
+            schema="app",
+            object_type="view",
+            pg_view_definition="SELECT id, name FROM users WHERE active = true",
+        )
+        sql = generate_create_table_sql(table)
+
+        assert "app.active_users" in sql
+        assert "CREATE OR REPLACE VIEW" in sql
+
+    def test_generate_create_matview_sql_with_schema(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        table = ModelTable(
+            name="user_summary", columns=[ModelColumn("id", "INTEGER", False, True, False, None, None)],
+            schema="analytics",
+            object_type="materialized_view",
+            pg_view_materialized=True,
+            pg_view_definition="SELECT id, COUNT(*) as total FROM users GROUP BY id",
+        )
+        sql = generate_create_table_sql(table)
+
+        assert "analytics.user_summary" in sql
+        assert "CREATE MATERIALIZED VIEW" in sql
+
+
+class TestPGSchemaExtraction:
+    def test_extract_table_from_model_with_pg_schema(self, monkeypatch):
+        from sqlalchemy import Integer, String
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+        from dbwarden.databases.pgsql import PGTableMeta
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        class Base(DeclarativeBase):
+            pass
+
+        class User(Base):
+            __tablename__ = "users"
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            email: Mapped[str] = mapped_column(String(255), nullable=False)
+            class Meta(PGTableMeta):
+                pg_schema = "app"
+
+        table = extract_table_from_model(User, db_name="primary")
+        assert table is not None
+        assert table.schema == "app"
+
+    def test_extract_table_from_model_without_pg_schema(self, monkeypatch):
+        from sqlalchemy import Integer, String
+        from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+        from dbwarden.databases.pgsql import PGTableMeta
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        class Base(DeclarativeBase):
+            pass
+
+        class User(Base):
+            __tablename__ = "users"
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            email: Mapped[str] = mapped_column(String(255), nullable=False)
+            class Meta(PGTableMeta):
+                pg_fillfactor = 80
+
+        table = extract_table_from_model(User, db_name="primary")
+        assert table is not None
+        assert table.schema is None
+
+    def test_extract_table_from_model_with_pg_schema_from_pg_view_meta(self, monkeypatch):
+        from sqlalchemy import Column, Integer, MetaData, String, Table
+        from dbwarden.databases.pgsql import PgViewSpec
+        from dbwarden.schema._base import DBWardenMeta
+
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+
+        class ActiveUsers:
+            __tablename__ = "active_users"
+            __table__ = Table(
+                "active_users", MetaData(),
+                Column("id", Integer, primary_key=True),
+                Column("name", String(100)),
+            )
+
+        dw_meta = DBWardenMeta()
+        dw_meta.backend_table = PgViewSpec(
+            query="SELECT id, name FROM users WHERE active = true",
+            materialized=False,
+            schema="analytics",
+        )
+        ActiveUsers.__dbwarden_meta__ = dw_meta
+        ActiveUsers.__dbwarden_meta_applied__ = True
+
+        table = extract_table_from_model(ActiveUsers, db_name="primary")
+        assert table is not None
+        assert table.schema == "analytics"

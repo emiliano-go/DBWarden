@@ -30,6 +30,7 @@ class PgIndexSpec:
     column_sorting: dict[str, str] | None = None
     postgresql_ops: dict[str, str] | None = None
     concurrently: bool = True
+    expression: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {"name": self.name, "columns": list(self.columns)}
@@ -53,6 +54,8 @@ class PgIndexSpec:
             d["postgresql_ops"] = dict(self.postgresql_ops)
         if not self.concurrently:
             d["concurrently"] = False
+        if self.expression is not None:
+            d["expression"] = self.expression
         return d
 
     @classmethod
@@ -70,6 +73,7 @@ class PgIndexSpec:
             column_sorting=d.get("column_sorting"),
             postgresql_ops=d.get("postgresql_ops"),
             concurrently=bool(d.get("concurrently", True)),
+            expression=d.get("expression"),
         )
 
 
@@ -87,6 +91,7 @@ def index(
     column_sorting: dict[str, str] | None = None,
     postgresql_ops: dict[str, str] | None = None,
     concurrently: bool = True,
+    expression: str | None = None,
 ) -> dict[str, Any]:
     d: dict[str, Any] = {"name": name, "columns": list(columns)}
     if unique:
@@ -109,4 +114,6 @@ def index(
         d["postgresql_ops"] = dict(postgresql_ops)
     if not concurrently:
         d["concurrently"] = False
+    if expression is not None:
+        d["expression"] = expression
     return d

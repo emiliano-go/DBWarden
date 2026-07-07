@@ -1,31 +1,5 @@
 ---
-seo:
-  title: make-migrations - DBWarden Documentation
-  description: Generate SQL migration files from SQLAlchemy models.
-  canonical: https://dbwarden.emiliano-go.com/commands/make-migrations/
-  robots: index,follow
-  og:
-    type: website
-    title: make-migrations - DBWarden Documentation
-    description: Generate SQL migration files from SQLAlchemy models.
-    url: https://dbwarden.emiliano-go.com/commands/make-migrations/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: make-migrations - DBWarden Documentation
-    description: Generate SQL migration files from SQLAlchemy models.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: make-migrations - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/commands/make-migrations/
-    description: Generate SQL migration files from SQLAlchemy models.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # `make-migrations`
@@ -307,16 +281,6 @@ Controls whether the preserved old table (renamed to `<table>__dbw_old`) is drop
 - `--keep-preserved-clickhouse-table`: Keep the old table (default in non-TTY)
 
 Interactive terminals are prompted to confirm. The preserved table name always ends with `__dbw_old` for easy identification.
-
-### DROP COLUMN warning
-
-All `DROP COLUMN` statements are prefixed with a warning comment:
-
-```sql
--- WARNING: DROPPING COLUMN users.legacy_field
-
-ALTER TABLE users DROP COLUMN legacy_field
-```
 
 ### DROP COLUMN warning
 

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dbwarden"
-version = "0.12.4"
+version = "0.13.0"
 description = "The SQL-first database toolkit for SQLAlchemy." 
 readme = "README.md"
 license = "MIT"
@@ -30,10 +30,13 @@ classifiers = [
 dependencies = [
     "attrs>=24.2.0",
     "cattrs>=24.1.0",
+    "pyyaml>=6.0.3",
     "rich>=12.2.0",
     "schemap>=0.5.2",
+    "seoslug>=2.0.1",
     "sqlalchemy>=2.0.10",
     "typer>=0.12.3",
+    "zensical>=0.0.44",
 ]
 
 [project.urls]
@@ -49,6 +52,7 @@ dbwarden = "dbwarden.cli.main:main"
 dev = [
     "pytest>=8.4.2",
     "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
     "prometheus-client>=0.21.0",
     "zensical",
     "seoslug",

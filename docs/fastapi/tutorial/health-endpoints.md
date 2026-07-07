@@ -1,31 +1,5 @@
 ---
-seo:
-  title: Health Endpoints - DBWarden Documentation
-  description: Learn how to add database health monitoring to your FastAPI application.
-  canonical: https://dbwarden.emiliano-go.com/fastapi/tutorial/health-endpoints/
-  robots: index,follow
-  og:
-    type: website
-    title: Health Endpoints - DBWarden Documentation
-    description: Learn how to add database health monitoring to your FastAPI application.
-    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/health-endpoints/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Health Endpoints - DBWarden Documentation
-    description: Learn how to add database health monitoring to your FastAPI application.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Health Endpoints - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/fastapi/tutorial/health-endpoints/
-    description: Learn how to add database health monitoring to your FastAPI application.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # Health Endpoints

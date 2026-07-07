@@ -1,35 +1,5 @@
 ---
-seo:
-  title: ClickHouse - DBWarden Documentation
-  description: 'DBWarden treats ClickHouse as a first-class backend: every natively
-    supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-  canonical: https://dbwarden.emiliano-go.com/databases/clickhouse/
-  robots: index,follow
-  og:
-    type: website
-    title: ClickHouse - DBWarden Documentation
-    description: 'DBWarden treats ClickHouse as a first-class backend: every natively
-      supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-    url: https://dbwarden.emiliano-go.com/databases/clickhouse/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: ClickHouse - DBWarden Documentation
-    description: 'DBWarden treats ClickHouse as a first-class backend: every natively
-      supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: ClickHouse - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/databases/clickhouse/
-    description: 'DBWarden treats ClickHouse as a first-class backend: every natively
-      supported feature is reverse-engineered, diffed, and emitted as correct DDL.'
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # ClickHouse

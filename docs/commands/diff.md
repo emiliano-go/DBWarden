@@ -1,31 +1,5 @@
 ---
-seo:
-  title: diff - DBWarden Documentation
-  description: "Show structural differences between SQLAlchemy models and a live database. Read-only: no files are written."
-  canonical: https://dbwarden.emiliano-go.com/commands/diff/
-  robots: index,follow
-  og:
-    type: website
-    title: diff - DBWarden Documentation
-    description: "Show structural differences between SQLAlchemy models and a live database. Read-only: no files are written."
-    url: https://dbwarden.emiliano-go.com/commands/diff/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: diff - DBWarden Documentation
-    description: "Show structural differences between SQLAlchemy models and a live database. Read-only: no files are written."
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: diff - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/commands/diff/
-    description: "Show structural differences between SQLAlchemy models and a live database. Read-only: no files are written."
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # `diff`

@@ -1,38 +1,5 @@
 ---
-seo:
-  title: Migrate from TOML - DBWarden Documentation
-  description: If your project currently uses warden.toml for DBWarden configuration,
-    this guide walks through transitioning to the Python-based databaseconfig... approach.
-  canonical: https://dbwarden.emiliano-go.com/reference/migrate-from-toml/
-  robots: index,follow
-  og:
-    type: website
-    title: Migrate from TOML - DBWarden Documentation
-    description: If your project currently uses warden.toml for DBWarden configuration,
-      this guide walks through transitioning to the Python-based databaseconfig...
-      approach.
-    url: https://dbwarden.emiliano-go.com/reference/migrate-from-toml/
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    site_name: DBWarden Documentation
-  twitter:
-    card: summary_large_image
-    title: Migrate from TOML - DBWarden Documentation
-    description: If your project currently uses warden.toml for DBWarden configuration,
-      this guide walks through transitioning to the Python-based databaseconfig...
-      approach.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-  schema_jsonld:
-    '@context': https://schema.org
-    '@type': WebPage
-    name: Migrate from TOML - DBWarden Documentation
-    url: https://dbwarden.emiliano-go.com/reference/migrate-from-toml/
-    description: If your project currently uses warden.toml for DBWarden configuration,
-      this guide walks through transitioning to the Python-based databaseconfig...
-      approach.
-    image: https://dbwarden.emiliano-go.com/assets/icon.png
-    publisher:
-      '@type': Organization
-      name: Emiliano Gandini Outeda
+{}
 ---
 
 # Migrate from TOML
@@ -282,4 +249,3 @@ If migration causes issues, you can always:
 2. Run DBWarden version that supports TOML (pre-0.5)
 
 However, the Python-based approach is the recommended direction (0.9+) and offers significant benefits.
-
