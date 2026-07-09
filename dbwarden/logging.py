@@ -339,25 +339,29 @@ class DBWardenLogger:
 
         self.verbosity = verbosity
 
-    def debug(self, msg: str, **kwargs) -> None:
+    def debug(self, msg: str, *args, **kwargs) -> None:
         """Log a debug message."""
-        self.logger.debug(msg, extra=kwargs)
+        self.logger.debug(msg, *args, **kwargs)
 
-    def info(self, msg: str, **kwargs) -> None:
+    def info(self, msg: str, *args, **kwargs) -> None:
         """Log an info message."""
-        self.logger.info(msg, extra=kwargs)
+        self.logger.info(msg, *args, **kwargs)
 
-    def warning(self, msg: str, **kwargs) -> None:
+    def warning(self, msg: str, *args, **kwargs) -> None:
         """Log a warning message."""
-        self.logger.warning(msg, extra=kwargs)
+        self.logger.warning(msg, *args, **kwargs)
 
-    def error(self, msg: str, **kwargs) -> None:
+    def error(self, msg: str, *args, **kwargs) -> None:
         """Log an error message."""
-        self.logger.error(msg, extra=kwargs)
+        self.logger.error(msg, *args, **kwargs)
 
-    def critical(self, msg: str, **kwargs) -> None:
+    def critical(self, msg: str, *args, **kwargs) -> None:
         """Log a critical message."""
-        self.logger.critical(msg, extra=kwargs)
+        self.logger.critical(msg, *args, **kwargs)
+
+    def exception(self, msg: str, *args, **kwargs) -> None:
+        """Log an exception message."""
+        self.logger.exception(msg, *args, **kwargs)
 
     def _format_db_context(self) -> str:
         """Format database context for log messages with colors."""

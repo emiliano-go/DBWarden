@@ -374,7 +374,7 @@ class TestJSONLogging:
             old_stream = handler.stream
             handler.stream = captured
 
-            logger.info("test message", db_name="primary")
+            logger.info("test message", extra={"db_name": "primary"})
 
             handler.stream = old_stream
             output = captured.getvalue().strip()
