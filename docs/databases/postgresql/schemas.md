@@ -36,6 +36,57 @@ When a model has `pg_schema`, all DDL references the fully qualified name (`app.
 | Create | `CREATE SCHEMA IF NOT EXISTS name;` |
 | Drop | `DROP SCHEMA IF EXISTS name CASCADE;` |
 
+## Schema Ownership
+
+When a schema is created, it is owned by the role that created it. Set a different owner:
+
+```sql
+ALTER SCHEMA app OWNER TO app_admin;
+```
+
+## Schema Privileges
+
+Schemas require privileges for access:
+
+| Privilege | Effect |
+|-----------|--------|
+| `USAGE` | Allows access to objects in the schema |
+| `CREATE` | Allows creating new objects in the schema |
+
+```sql
+GRANT USAGE ON SCHEMA app TO app_user;
+GRANT CREATE ON SCHEMA app TO app_admin;
+```
+
+Without `USAGE` on a schema, a user cannot see or access any objects within it, even if they have table-level privileges.
+
+## Search Path Resolution
+
+PostgreSQL resolves unqualified names by searching schemas in `search_path` order:
+
+```
+current_schema (first match wins) -> pg_catalog -> public
+```
+
+Use the `current_schema` function to check the effective search path:
+
+```sql
+SELECT current_schema; -- Returns the first schema in the path
+SHOW search_path;      -- Returns the full search path string
+```
+
+The config-level `pg_schema` becomes the first entry in `search_path`, which means it takes precedence for all unqualified references.
+
+## pg_catalog vs public
+
+- `pg_catalog` is always searched unless explicitly excluded
+- `public` schema is accessible by default to all roles
+- Custom schemas require explicit `USAGE` grants
+
+## Temporary Schema
+
+PostgreSQL creates a `pg_temp_*` schema for temporary tables. Temporary tables take precedence over permanent tables when their schema is first in `search_path`. You can reference `pg_temp.schema_name` explicitly.
+
 ## Extensions
 
 Extensions are created during the PREAMBLE phase via `pg_extensions`:

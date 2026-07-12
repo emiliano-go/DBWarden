@@ -15,6 +15,31 @@ Grants are model-derived, declared per-table on the model.
 
 Supported privileges: `SELECT`, `INSERT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES`, `TRIGGER`, `ALL`.
 
+### Column-Level Privileges
+
+Grant access to specific columns only:
+
+```sql
+GRANT SELECT (email, name) ON TABLE users TO read_only_role;
+GRANT UPDATE (email) ON TABLE users TO app_user;
+```
+
+### GRANT OPTION
+
+Allow the grantee to grant the same privilege to others:
+
+```sql
+GRANT SELECT ON TABLE users TO admin_user WITH GRANT OPTION;
+```
+
+### All Tables in Schema
+
+Bulk grant using `ALL TABLES IN SCHEMA`:
+
+```sql
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO read_only_role;
+```
+
 ## Schema Grants
 
 Schema grants use the same `GrantsHandler` with `object_type="schema"`:
@@ -23,6 +48,29 @@ Schema grants use the same `GrantsHandler` with `object_type="schema"`:
 |-----------|-----|
 | Grant | `GRANT USAGE ON SCHEMA schema TO role;` |
 | Revoke | `REVOKE USAGE ON SCHEMA schema FROM role;` |
+
+Additional schema privileges:
+
+| Privilege | Description |
+|-----------|-------------|
+| `USAGE` | Allows access to objects in the schema |
+| `CREATE` | Allows creating objects in the schema |
+| `ALL` | All schema privileges |
+
+## Database-Level Grants
+
+| Operation | DDL |
+|-----------|-----|
+| Grant | `GRANT privilege ON DATABASE db TO role;` |
+| Revoke | `REVOKE privilege ON DATABASE db FROM role;` |
+
+Supported database privileges: `CREATE`, `CONNECT`, `TEMPORARY` (or `TEMP`), `ALL`.
+
+## Type-Level Grants
+
+```sql
+GRANT USAGE ON TYPE my_enum TO app_user;
+```
 
 ## Roles
 
@@ -44,6 +92,30 @@ pg_roles=[
 | Drop | `DROP ROLE IF EXISTS name` |
 
 Roles are filtered to non-bootstrap roles (excludes `pg_*` roles and default cluster roles).
+
+### ADMIN OPTION
+
+A role with `ADMIN OPTION` can grant its role membership to others:
+
+```python
+{"name": "app_admin", "login": True, "membership": ["app_user"], "admin_option": True}
+```
+
+### Role Membership and INHERIT
+
+Role membership grants privileges of the parent role. With `INHERIT` (default), member roles automatically inherit privileges. Without `INHERIT`, use `SET ROLE parent_role` to activate them.
+
+```sql
+-- app_user inherits privileges of base_user
+CREATE ROLE app_user INHERIT IN ROLE base_user;
+```
+
+### SET ROLE / SET SESSION AUTHORIZATION
+
+```sql
+SET ROLE app_user;              -- Switch to role within session
+SET SESSION AUTHORIZATION app_user;  -- Switch session user
+```
 
 ## Default Privileges
 
@@ -76,3 +148,23 @@ pg_default_privileges=[
 | `FUNCTIONS` | Functions, procedures |
 | `TYPES` | Types, domains |
 | `SCHEMAS` | Schemas |
+
+### REVOKE Behaviour
+
+`REVOKE` supports `CASCADE` and `RESTRICT`:
+
+```sql
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM read_only_role CASCADE;
+```
+
+`CASCADE` revokes the privilege from all users who received it through the target role. `RESTRICT` (default) fails if dependent privileges exist.
+
+## BYPASSRLS and RLS Interaction
+
+The `BYPASSRLS` role attribute lets a role bypass Row-Level Security entirely:
+
+```python
+{"name": "admin_user", "login": True, "bypassrls": True}
+```
+
+Roles without `BYPASSRLS` are subject to all RLS policies on accessed tables. See [RLS & Policies](rls-and-policies.md) for details.

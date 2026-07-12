@@ -83,6 +83,8 @@ $ dbwarden make-migrations
 | Views | Regular `CREATE OR REPLACE VIEW`, materialized views with auto-refresh |
 | Schema-level Grants | `GRANT USAGE ON SCHEMA`, `GRANT ALL ON SCHEMA` |
 | Table Grants | `GRANT SELECT/INSERT/UPDATE/DELETE` |
+| Type Mapping | SQLAlchemy type → PostgreSQL native type normalization |
+| Storage Parameters | Table-level and index-level `WITH` options, autovacuum tuning |
 
 ## Documentation Sections
 
@@ -102,4 +104,6 @@ $ dbwarden make-migrations
 - [Event Triggers](event-triggers.md) : DDL event trigger lifecycle
 - [Schemas](schemas.md) : Config-level and model-level schemas, search path
 - [DDL Behavior](ddl-behavior.md) : Transactional DDL, CONCURRENTLY, type change strategies
+- [Type Mapping](type-mapping.md) : SQLAlchemy type → PostgreSQL type normalization
+- [Storage Parameters](storage-params.md) : Table and index storage parameters, autovacuum tuning
 - [Migration Safety](migration-safety.md) : Safety classification table
