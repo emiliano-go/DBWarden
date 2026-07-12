@@ -29,7 +29,7 @@ When you install `dbwarden`, the `[postgres]` extra is included by default (prov
 | `[mariadb]` | `uv add "dbwarden[mariadb]"` | `pymysql` |
 | `[clickhouse]` | `uv add "dbwarden[clickhouse]"` | `clickhouse-connect` |
 
-See [Installation](installation.md) for full details.
+See [Installation](../installation.md) for full details.
 
 ## Config Examples
 
@@ -102,7 +102,7 @@ primary = database_config(
 )
 ```
 
-At the model level, set `pg_schema` on `PGTableMeta` or `PGViewMeta` to scope a specific table or view to a schema. This takes precedence over the config-level `search_path`. See [PostgreSQL Deep Dive](databases/postgresql.md) for full details.
+At the model level, set `pg_schema` on `PGTableMeta` or `PGViewMeta` to scope a specific table or view to a schema. This takes precedence over the config-level `search_path`. See [PostgreSQL Deep Dive](postgresql.md) for full details.
 
 ## Development Database Strategy
 
@@ -135,7 +135,7 @@ When targeting SQLite in dev mode, DBWarden translates unsupported backend-speci
 - Unknown/unsupported types fallback to `TEXT` with warnings
 - `--strict-translation` turns those warnings into errors
 
-Details: [SQL Translation](sql-translation.md)
+Details: [SQL Translation](../sql-translation.md)
 
 ## Backend-Specific Notes
 
@@ -143,16 +143,16 @@ Each backend has deep-dive documentation:
 
 | Backend | Guide |
 |---------|-------|
-| PostgreSQL | [PostgreSQL Deep Dive](databases/postgresql.md) |
-| MySQL / MariaDB | [MySQL Deep Dive](databases/mysql.md) |
-| SQLite | [SQL Databases](databases/sql-databases.md) |
-| ClickHouse | [ClickHouse Deep Dive](databases/clickhouse.md) |
+| PostgreSQL | [PostgreSQL Deep Dive](postgresql.md) |
+| MySQL / MariaDB | [MySQL Deep Dive](mysql.md) |
+| SQLite | [SQL Databases](sql-databases.md) |
+| ClickHouse | [ClickHouse Deep Dive](clickhouse.md) |
 
 ### PostgreSQL
 
 PostgreSQL is a **first-class backend** with full round-trip support. All metadata: identity columns, collation, storage, compression, generated columns, fillfactor, tablespace, inheritance, exclude constraints, deferrable FKs, and advanced index options, is captured by the snapshot, diffed correctly, and emitted as valid DDL.
 
-See [PostgreSQL Deep Dive](databases/postgresql.md) for the complete reference.
+See [PostgreSQL Deep Dive](postgresql.md) for the complete reference.
 
 ### MySQL
 
@@ -167,13 +167,13 @@ Key MySQL DDL behavior:
 - Auto-increment toggle uses `MODIFY COLUMN ... AUTO_INCREMENT`
 - FK drop uses `DROP FOREIGN KEY` (not `DROP CONSTRAINT`)
 
-See [MySQL Deep Dive](databases/mysql.md) for the complete reference.
+See [MySQL Deep Dive](mysql.md) for the complete reference.
 
 ### MariaDB
 
 MariaDB is supported as a separate `database_type` (`mariadb`), but it does **not** have round-trip support. You can use MariaDB as a target database for migrations, but `generate-models` and full schema introspection are not available. Use `make-migrations` to write migrations manually.
 
-See [MySQL Deep Dive](databases/mysql.md) for MariaDB-specific notes.
+See [MySQL Deep Dive](mysql.md) for MariaDB-specific notes.
 
 ### SQLite
 
@@ -181,7 +181,7 @@ See [MySQL Deep Dive](databases/mysql.md) for MariaDB-specific notes.
 - Limited DDL: no `ALTER COLUMN TYPE`, no `SET/DROP NOT NULL`, no FK alterations
 - `--safe-type-change` emits a comment (not supported)
 - Type affinity differs from server databases
-- See [SQL Translation](sql-translation.md) for dev-mode type mapping
+- See [SQL Translation](../sql-translation.md) for dev-mode type mapping
 
 ### ClickHouse
 
@@ -191,7 +191,7 @@ ClickHouse has full round-trip support: `generate-models` reads schema from a li
 - DDL operations now mostly auto-generated: table rename, column type change, nullable/LowCardinality changes, projections. FK, standard indexes, and safe type change still emit comment placeholders.
 - Full engine metadata support via `class Meta(CHTableMeta)` with `ChEngineSpec`, `ProjectionSpec`, `CHColumnMeta`
 - Supports materialized views, projections, dictionaries, replicated engines
-- See [ClickHouse Deep Dive](databases/clickhouse.md) for full details
+- See [ClickHouse Deep Dive](clickhouse.md) for full details
 
 ## Recommended Verification Workflow
 
