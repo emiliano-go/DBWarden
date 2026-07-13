@@ -10,31 +10,20 @@ The current implementation only partially realizes the intended verbosity model.
 
 ## High-Priority Issues
 
-### [High] Query tracing docs describe structured per-query logs, but the implementation emits lossy per-request summaries
+### [High] Query tracing docs describe structured per-query logs, but the implementation emits per-request summaries
 
 - **Category:** `outdated-doc`
 - **Locations:**
   - [dbwarden/fastapi/observability.py:9-18](/home/ahmet/DBWarden/dbwarden/fastapi/observability.py:9)
   - [dbwarden/fastapi/observability.py:50-62](/home/ahmet/DBWarden/dbwarden/fastapi/observability.py:50)
-  - [dbwarden/logging.py:216-235](/home/ahmet/DBWarden/dbwarden/logging.py:216)
+  - [dbwarden/logging.py:233-252](/home/ahmet/DBWarden/dbwarden/logging.py:233)
   - [docs/fastapi/reference.md:681-693](/home/ahmet/DBWarden/docs/fastapi/reference.md:681)
   - [docs/cookbook/11-observability.md:121-125](/home/ahmet/DBWarden/docs/cookbook/11-observability.md:121)
   - [docs/cookbook/11-observability.md:206-207](/home/ahmet/DBWarden/docs/cookbook/11-observability.md:206)
   - [examples/observability/README.md:39-43](/home/ahmet/DBWarden/examples/observability/README.md:39)
-- **Current behavior:** `QueryTracingMiddleware` logs one summary message per request via the child logger `dbwarden.tracing`. It attaches request/query metrics through `extra`, but `JSONFormatter` serializes only `timestamp`, `level`, `logger`, `message`, `db_name`, `db_type`, and `exception`.
-- **Why this may be stale or risky:** The docs currently promise "every SQL query with duration" and list fields like `path`, `query_count`, and `slow_queries`. In practice, the middleware does not log each query, and the default JSON formatter drops those extra fields entirely.
-- **Suggested fix:** Either extend `JSONFormatter` to include arbitrary safe extras and revise middleware docs to describe per-request summaries, or change the middleware to emit the per-query events the docs currently describe.
-
-### [High] Query tracing counters are captured by value, so logged counts/timings can remain zero
-
-- **Category:** `edge-case`
-- **Locations:**
-  - [dbwarden/fastapi/observability.py:39-44](/home/ahmet/DBWarden/dbwarden/fastapi/observability.py:39)
-  - [dbwarden/fastapi/observability.py:124-145](/home/ahmet/DBWarden/dbwarden/fastapi/observability.py:124)
-  - [tests/test_fastapi_lifespan.py:6-29](/home/ahmet/DBWarden/tests/test_fastapi_lifespan.py:6)
-- **Current behavior:** `__call__()` passes primitive counters into `_patch_engine_for_tracing(qc, tqt, sqt, sq, ...)`. The wrapper mutates `_patch_engine_for_tracing`'s local variables, not the `__call__()` locals used for the final log payload.
-- **Why this may be stale or risky:** The log record can claim zero queries and zero query time even after database work occurred. Existing tests only assert that the middleware can be mounted and does not inspect the emitted log payload.
-- **Suggested fix:** Store mutable state in a dict/object/closure owned by `__call__()`, and add log-payload tests that assert non-zero counters after a request that performs queries.
+- **Current behavior:** `QueryTracingMiddleware` logs one summary message per request via the child logger `dbwarden.tracing`. It attaches request/query metrics through `extra`, and `JSONFormatter` now preserves those extra fields in JSON output.
+- **Why this may be stale or risky:** The docs currently promise "every SQL query with duration" and list fields like `path`, `query_count`, and `slow_queries`. In practice, the middleware still does not log each query; it emits one aggregated event per request.
+- **Suggested fix:** Revise the middleware docs/examples to describe per-request summary events, or change the middleware to emit the per-query events the docs currently describe.
 
 ### [High] The mutable singleton can cross-contaminate log context in concurrent or nested workflows
 
@@ -167,12 +156,11 @@ The current implementation only partially realizes the intended verbosity model.
 
 ## Edge Cases Reviewed
 
-- Reviewed stdlib compatibility of facade methods. Found real incompatibilities with `exception()`, positional formatting args, and `exc_info`.
 - Reviewed JSON formatter activation. It works at construction time, but changing `DBWARDEN_LOG_JSON` later does not rebuild handlers.
 - Reviewed ANSI path. `supports_color()` cleanly disables ANSI output when stdout is not a TTY; no direct issue found there.
 - Reviewed duplicate-handler risk. `_setup_logger()` removes existing handlers before adding a new one, so repeated construction does not accumulate duplicates.
 - Reviewed direct child stdlib loggers such as `dbwarden.lock`, `dbwarden.snapshot`, and `dbwarden.tracing`. They are not automatically wrong, but they rely on the `dbwarden` parent logger/formatter and can diverge from facade semantics.
-- Reviewed FastAPI query tracing. Found documentation mismatches, dropped extra fields, and likely-zero counters.
+- Reviewed FastAPI query tracing. The formatter now preserves FastAPI `extra` fields, but the middleware still emits per-request summaries rather than per-query events.
 - Reviewed singleton mutation across CLI and FastAPI paths. Sequential CLI use is mostly fine; concurrent server/library use is risky.
 
 ## Outdated Docs / Comments / Examples
@@ -216,33 +204,29 @@ The current implementation only partially realizes the intended verbosity model.
 - **Why this may be stale or risky:** `--verbose` is defined on individual commands, not as a global app callback option.
 - **Suggested fix:** Change the example to `dbwarden migrate --verbose`.
 
-### [Medium] Observability docs show JSON event shapes the current formatter does not emit
+### [Medium] Observability docs still over-promise the tracing event model
 
 - **Category:** `outdated-doc`
 - **Locations:**
   - [docs/observability.md:124-141](/home/ahmet/DBWarden/docs/observability.md:124)
   - [docs/cookbook/11-observability.md:105-109](/home/ahmet/DBWarden/docs/cookbook/11-observability.md:105)
-- **Current behavior:** The docs show JSON examples with structured event fields such as `event`, `database`, `duration_ms`, `version`, and reliably present `db_name` / `db_type`.
-- **Why this may be stale or risky:** The default formatter only serializes a small fixed field set, and helper-based DB context usually stays embedded inside the message string.
-- **Suggested fix:** Update the examples to match the actual schema, or extend the formatter to include arbitrary structured extras and helper context.
+- **Current behavior:** The docs show tracing examples that imply richer event semantics than the middleware currently emits. The formatter now preserves arbitrary `extra` fields, but helper-based DB context still often stays embedded in the message string unless explicitly attached to the `LogRecord`.
+- **Why this may be stale or risky:** Readers can reasonably expect per-query tracing or consistently structured DB context from those examples, but the current implementation mainly provides per-request summary metrics and only structured fields that were explicitly attached.
+- **Suggested fix:** Update the examples to match the current event model and call out when DB context is or is not attached structurally.
 
 ## Test Coverage Gaps
 
-- No tests cover stdlib-compatible facade behavior for `logger.exception(...)`, positional formatting args, or `exc_info`.
 - No tests assert `QUIET`, `NORMAL`, and `VERBOSE` message selection behavior.
 - No tests verify that direct `logger.info(...)` calls bypass verbosity while helper-backed `INFO` calls are gated.
-- No tests assert JSON timestamp format, so the literal `%f` bug is currently invisible.
 - No tests cover formatter behavior when `DBWARDEN_LOG_JSON` changes after singleton initialization.
 - No tests cover singleton context mutation across multiple `get_logger()` calls with different `db_name` / `db_type`.
-- No tests verify that FastAPI query tracing logs include the documented fields, correct severity, or non-zero counters.
+- No tests verify that FastAPI query tracing logs include the emitted extra fields or correct severity.
 - No tests exercise the broken `seed apply` `-v` option collision.
 
 ## Recommended Follow-Up Work
 
-1. Fix the facade API mismatch first: add stdlib-compatible method signatures, support `exception()`, and repair `exc_info` / `%s` formatting behavior.
-2. Fix JSON formatting correctness: render timestamps correctly and decide whether arbitrary `extra` fields should be serialized.
-3. Decide whether the singleton logger is CLI-only or must be safe for embedded/concurrent FastAPI usage; then align implementation with that decision.
-4. Wire a real configuration path for `verbosity` and `debug_enabled`, or scale back docs/comments that currently promise those controls.
-5. Standardize stale command call sites, starting with rollback/downgrade and other paths that know database context but skip helper-backed logging.
-6. Correct user-facing docs/examples: `--verbose` semantics, JSON log schema, query tracing behavior, and the invalid `dbwarden --verbose migrate` example.
-7. Add focused tests for the logging contract instead of smoke tests: facade compatibility, verbosity behavior, JSON mode, singleton mutation, and tracing payloads.
+1. Decide whether the singleton logger is CLI-only or must be safe for embedded/concurrent FastAPI usage; then align implementation with that decision.
+2. Wire a real configuration path for `verbosity` and `debug_enabled`, or scale back docs/comments that currently promise those controls.
+3. Standardize stale command call sites, starting with rollback/downgrade and other paths that know database context but skip helper-backed logging.
+4. Correct user-facing docs/examples: `--verbose` semantics, query tracing behavior, and the invalid `dbwarden --verbose migrate` example.
+5. Add focused tests for the logging contract instead of smoke tests: verbosity behavior, JSON mode, singleton mutation, and tracing log shape/severity.

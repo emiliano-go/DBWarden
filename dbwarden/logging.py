@@ -208,6 +208,18 @@ class JSONFormatter(logging.Formatter):
     Activated when the ``DBWARDEN_LOG_JSON`` environment variable is set.
     """
 
+    _STANDARD_RECORD_FIELDS = frozenset(logging.makeLogRecord({}).__dict__)
+    _RESERVED_EXTRA_FIELDS = _STANDARD_RECORD_FIELDS | {
+        "asctime",
+        "message",
+        "timestamp",
+        "level",
+        "logger",
+        "exception",
+        "db_name",
+        "db_type",
+    }
+
     def formatTime(
         self,
         record: logging.LogRecord,
@@ -217,6 +229,14 @@ class JSONFormatter(logging.Formatter):
         if datefmt:
             return dt.strftime(datefmt)
         return dt.isoformat(timespec="milliseconds")
+
+    def _extract_extra_fields(self, record: logging.LogRecord) -> dict[str, Any]:
+        extras: dict[str, Any] = {}
+        for key, value in record.__dict__.items():
+            if key in self._RESERVED_EXTRA_FIELDS:
+                continue
+            extras[key] = value
+        return extras
 
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
@@ -229,6 +249,7 @@ class JSONFormatter(logging.Formatter):
             payload["db_name"] = record.db_name
         if hasattr(record, "db_type") and record.db_type:
             payload["db_type"] = record.db_type
+        payload.update(self._extract_extra_fields(record))
         if (
             record.exc_info
             and isinstance(record.exc_info, tuple)
