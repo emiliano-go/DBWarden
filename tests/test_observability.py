@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import sys
+from datetime import datetime, timezone
 
 import pytest
 
@@ -316,6 +317,35 @@ class TestJSONLogging:
             output = fmt.format(record)
             parsed = json.loads(output)
             assert parsed["level"] == logging.getLevelName(level)
+
+    def test_json_formatter_timestamp_is_utc_and_uses_fractional_seconds(self):
+        from dbwarden.logging import JSONFormatter
+
+        fmt = JSONFormatter()
+        record = logging.LogRecord(
+            name="dbwarden",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="hello world",
+            args=(),
+            exc_info=None,
+        )
+        record.created = datetime(
+            2026,
+            1,
+            2,
+            3,
+            4,
+            5,
+            123456,
+            tzinfo=timezone.utc,
+        ).timestamp()
+
+        output = fmt.format(record)
+        parsed = json.loads(output)
+
+        assert parsed["timestamp"] == "2026-01-02T03:04:05.123456Z"
 
     def test_use_json_logging_env_var(self, monkeypatch):
         monkeypatch.setenv("DBWARDEN_LOG_JSON", "true")

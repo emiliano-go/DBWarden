@@ -1,3 +1,4 @@
+import logging
 import os
 import sys
 import tempfile
@@ -18,7 +19,7 @@ from dbwarden.config import (
 )
 from dbwarden.config_schema import DatabaseEntry, structure_database_entry
 from dbwarden.exceptions import ConfigurationError
-from dbwarden.logging import DBWardenLogger, get_logger
+from dbwarden.logging import DBWardenLogger, LogCandidate, Verbosity, get_logger
 
 
 def _write_settings(path: Path, lines: list[str]) -> None:
@@ -683,6 +684,188 @@ class TestLogger:
         logger1 = get_logger()
         logger2 = get_logger()
         assert logger1 is logger2
+
+    def test_get_logger_updates_existing_singleton_debug_enabled_and_verbosity(self):
+        from dbwarden.logging import reset_logger
+
+        reset_logger()
+        try:
+            logger1 = get_logger(
+                debug_enabled=False,
+                verbosity=Verbosity.NORMAL,
+            )
+            logger2 = get_logger(
+                debug_enabled=True,
+                verbosity=Verbosity.VERBOSE,
+            )
+
+            assert logger1 is logger2
+            assert logger2.debug_enabled is True
+            assert logger2.verbosity == Verbosity.VERBOSE
+            assert logger2.logger.level == logging.DEBUG
+        finally:
+            reset_logger()
+
+    def test_log_best_candidate_prefers_debug_candidate_when_debug_enabled(self, monkeypatch):
+        logger = DBWardenLogger(debug_enabled=True, verbosity=Verbosity.QUIET)
+        calls = []
+
+        monkeypatch.setattr(
+            logger,
+            "debug",
+            lambda msg, *args, **kwargs: calls.append(("debug", msg, kwargs)),
+        )
+        monkeypatch.setattr(
+            logger,
+            "info",
+            lambda msg, *args, **kwargs: calls.append(("info", msg, kwargs)),
+        )
+
+        logger._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: "quiet info",
+                    Verbosity.QUIET,
+                ),
+                LogCandidate(
+                    logging.DEBUG,
+                    lambda: "debug message wins",
+                ),
+                LogCandidate(
+                    logging.INFO,
+                    lambda: "verbose info",
+                    Verbosity.VERBOSE,
+                ),
+            ]
+        )
+
+        assert calls == [("debug", "debug message wins", {"stacklevel": 3})]
+
+    @pytest.mark.parametrize(
+        ("verbosity", "expected_message"),
+        [
+            (Verbosity.QUIET, "quiet info"),
+            (Verbosity.NORMAL, "normal info"),
+            (Verbosity.VERBOSE, "verbose info"),
+        ],
+    )
+    def test_log_best_candidate_selects_highest_allowed_info_candidate_for_current_verbosity(
+        self,
+        monkeypatch,
+        verbosity,
+        expected_message,
+    ):
+        logger = DBWardenLogger(debug_enabled=False, verbosity=verbosity)
+        calls = []
+
+        monkeypatch.setattr(
+            logger,
+            "debug",
+            lambda msg, *args, **kwargs: calls.append(("debug", msg, kwargs)),
+        )
+        monkeypatch.setattr(
+            logger,
+            "info",
+            lambda msg, *args, **kwargs: calls.append(("info", msg, kwargs)),
+        )
+
+        logger._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: "quiet info",
+                    Verbosity.QUIET,
+                ),
+                LogCandidate(
+                    logging.INFO,
+                    lambda: "normal info",
+                    Verbosity.NORMAL,
+                ),
+                LogCandidate(
+                    logging.INFO,
+                    lambda: "verbose info",
+                    Verbosity.VERBOSE,
+                ),
+            ]
+        )
+
+        assert calls == [("info", expected_message, {"stacklevel": 3})]
+
+    def test_sql_debug_helper_emits_single_debug_record_with_header_and_sql_body(self):
+        logger = DBWardenLogger(debug_enabled=True)
+        records = []
+
+        class CaptureHandler(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        logger.logger.handlers = [CaptureHandler()]
+        logger.logger.propagate = False
+
+        logger.log_sql_statement("SELECT *\nFROM users")
+
+        assert len(records) == 1
+        message = records[0].getMessage()
+        assert "SQL:" in message
+        assert "SELECT *" in message
+        assert "FROM users" in message
+
+    def test_logger_wrapper_supports_positional_format_args(self):
+        logger = DBWardenLogger(debug_enabled=False)
+        records = []
+
+        class CaptureHandler(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        logger.logger.handlers = [CaptureHandler()]
+        logger.logger.propagate = False
+
+        logger.info("hello %s", "world")
+
+        assert len(records) == 1
+        assert records[0].getMessage() == "hello world"
+
+    def test_logger_wrapper_preserves_explicit_stacklevel(self, monkeypatch):
+        logger = DBWardenLogger(debug_enabled=False)
+        captured = {}
+
+        def fake_info(msg, *args, **kwargs):
+            captured["msg"] = msg
+            captured["args"] = args
+            captured["kwargs"] = kwargs
+
+        monkeypatch.setattr(logger.logger, "info", fake_info)
+
+        logger.info("x", stacklevel=7)
+
+        assert captured["msg"] == "x"
+        assert captured["args"] == ()
+        assert captured["kwargs"]["stacklevel"] == 7
+
+    def test_logging_helper_uses_callsite_stacklevel_four(self):
+        logger = DBWardenLogger(debug_enabled=False)
+        records = []
+
+        class CaptureHandler(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        logger.logger.handlers = [CaptureHandler()]
+        logger.logger.propagate = False
+
+        def helper_call():
+            expected_lineno = sys._getframe().f_lineno + 1
+            logger.log_migration_start("0001", "V1__init.sql")
+            return expected_lineno
+
+        expected_lineno = helper_call()
+
+        assert len(records) == 1
+        record = records[0]
+        assert record.pathname.endswith("test_config.py")
+        assert record.lineno == expected_lineno
 
     def test_reset_logger(self):
         from dbwarden.logging import reset_logger
