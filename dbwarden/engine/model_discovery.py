@@ -177,6 +177,14 @@ def _qualified_name(name: str, schema: str | None) -> str:
     return name
 
 
+def _normalize_clickhouse_default(col_type: str, default: str) -> str:
+    if not default:
+        return default
+    if "bool" in col_type.lower() and default.upper() in ("TRUE", "FALSE"):
+        return default.lower()
+    return default
+
+
 def _get_backend_name(db_name: str | None = None) -> str:
     """Get the database backend name from config."""
     try:
@@ -1670,7 +1678,9 @@ def generate_add_column_sql(
     )
 
     nullable_sql = "" if column.nullable or is_serial or backend == "clickhouse" else "NOT NULL"
-    default_sql = f" DEFAULT {column.default}" if column.default else ""
+    default_sql = ""
+    if column.default:
+        default_sql = f" DEFAULT {_normalize_clickhouse_default(col_type, column.default) if backend == 'clickhouse' else column.default}"
     fk_sql = ""
     if column.foreign_key and backend != "postgresql":
         fk_sql = f" REFERENCES {column.foreign_key}"
@@ -1737,7 +1747,10 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
         elif col.unique:
             col_def += " UNIQUE"
         if col.default and not is_serial:
-            col_def += f" DEFAULT {col.default}"
+            default_value = col.default
+            if backend == "clickhouse":
+                default_value = _normalize_clickhouse_default(col_type, default_value)
+            col_def += f" DEFAULT {default_value}"
         if backend == "clickhouse" and col.comment:
             col_def += f" COMMENT '{col.comment.replace(chr(39), chr(39) + chr(39))}'"
         if backend in ("mysql", "mariadb"):
