@@ -35,6 +35,37 @@ class Verbosity(IntEnum):
     NORMAL = 1
     VERBOSE = 2
 
+_RESERVED_EXTRA_FIELDS = frozenset({
+    "args",
+    "asctime",
+    "created",
+    "exc_info",
+    "exc_text",
+    "filename",
+    "funcName",
+    "levelname",
+    "levelno",
+    "lineno",
+    "message",
+    "module",
+    "msecs",
+    "msg",
+    "name",
+    "pathname",
+    "process",
+    "processName",
+    "relativeCreated",
+    "stack_info",
+    "thread",
+    "threadName",
+    # DBWarden JSON payload keys
+    "timestamp",
+    "level",
+    "logger",
+    "exception",
+    "db_name",
+    "db_type",
+})
 
 ANSI_COLORS = {
     "reset": "\033[0m",
@@ -176,7 +207,7 @@ def colorize_sql(sql: str) -> str:
     )
 
     result = re.sub(
-        r"'[^']*'",
+        r"(?<!\\)'(?:[^'\\]|\\.)*+'",
         lambda m: colorize(m.group(0), ANSI_COLORS["green"]),
         result,
     )
@@ -300,7 +331,7 @@ class DBWardenLogger:
         name: str = "dbwarden",
         verbose: bool = False,
         debug_enabled: bool = False,
-        verbosity: Verbosity = Verbosity.NORMAL,
+        verbosity: Verbosity | None = None,
         db_name: str | None = None,
         db_type: str | None = None,
     ) -> None:
@@ -319,12 +350,17 @@ class DBWardenLogger:
         self.verbose = verbose
         self.debug_enabled = debug_enabled
 
-        if not isinstance(verbosity, Verbosity):
+        if verbosity is not None and not isinstance(verbosity, Verbosity):
             raise TypeError(
                 f"verbosity must be a Verbosity member, got {type(verbosity)}"
             )
 
-        self.verbosity = verbosity
+        if verbosity is not None:
+            self.verbosity = verbosity
+        elif verbose:
+            self.verbosity = Verbosity.VERBOSE
+        else:
+            self.verbosity = Verbosity.NORMAL
         self.db_name = db_name
         self.db_type = db_type
         self._setup_logger()
@@ -347,8 +383,7 @@ class DBWardenLogger:
         self.logger.addHandler(handler)
 
     def _apply_logging_defaults(self, kwargs: dict[str, Any]) -> dict[str, Any]:
-        kwargs.setdefault("stacklevel", 2)
-        return kwargs
+        return dict(kwargs, stacklevel=kwargs.get("stacklevel", 2))
 
     def set_debug_enabled(self, debug_enabled: bool) -> None:
         self.debug_enabled = debug_enabled
@@ -391,8 +426,9 @@ class DBWardenLogger:
 
     def exception(self, msg: str, *args, **kwargs) -> None:
         """Log an exception message."""
-        logging_kwargs = self._apply_logging_defaults(kwargs)
-        self.logger.exception(msg, *args, **logging_kwargs)
+        if sys.exc_info()[0] is not None:
+            logging_kwargs = self._apply_logging_defaults(kwargs)
+            self.logger.exception(msg, *args, **logging_kwargs)
 
     def _format_db_context(self) -> str:
         """Format database context for log messages with colors."""
@@ -709,7 +745,7 @@ _global_logger: Optional[DBWardenLogger] = None
 def get_logger(
     debug_enabled: bool = False,
     verbose: bool = False,
-    verbosity: Verbosity = Verbosity.NORMAL,
+    verbosity: Verbosity | None = None,
     db_name: str | None = None,
     db_type: str | None = None,
 ) -> DBWardenLogger:
@@ -729,6 +765,7 @@ def get_logger(
     if _global_logger is None:
         _global_logger = DBWardenLogger(
             debug_enabled=debug_enabled,
+            verbose=verbose,
             verbosity=verbosity,
             db_name=db_name,
             db_type=db_type,
@@ -736,8 +773,10 @@ def get_logger(
     else:
         if _global_logger.debug_enabled != debug_enabled:
             _global_logger.set_debug_enabled(debug_enabled)
-        if _global_logger.verbosity != verbosity:
+        if verbosity is not None and _global_logger.verbosity != verbosity:
             _global_logger.set_verbosity(verbosity)
+        elif verbosity is None and verbose and _global_logger.verbosity != Verbosity.VERBOSE:
+            _global_logger.set_verbosity(Verbosity.VERBOSE)
         if db_name is not None:
             _global_logger.db_name = db_name
         if db_type is not None:
