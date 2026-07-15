@@ -8,11 +8,11 @@ Practical, runnable examples that walk through the entire DBWarden workflow: fro
 
 ## How to Use
 
-Each cookbook section links to code under the [`examples/`](https://github.com/emiliano-gandini-outeda/DBWarden/tree/main/examples) directory. The **core examples** (sections 1–7) use SQLite and require only `uv add dbwarden`. Advanced examples may need Docker for PostgreSQL, ClickHouse, or Prometheus.
+Each cookbook section links to code under the [`examples/`](https://github.com/emiliano-gandini-outeda/DBWarden/tree/main/examples) directory. The **core examples** (sections 1-7) use SQLite and require only `uv add dbwarden`. Advanced examples may need Docker for PostgreSQL, ClickHouse, or Prometheus.
 
 ```
 examples/
-├── core/                 # Sections 1–7: progressive SQL workflow
+├── core/                 # Sections 1-7: progressive SQL workflow
 ├── multi-database/       # Section 8
 ├── fastapi-app/          # Section 9
 ├── auto-schema/          # Section 10

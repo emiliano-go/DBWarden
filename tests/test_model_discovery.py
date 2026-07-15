@@ -378,6 +378,24 @@ class TestSQLGeneration:
 
         assert "CODEC(ZSTD(3))" in sql
 
+    def test_generate_clickhouse_add_column_sql_for_bool_omits_not_null(self, monkeypatch):
+        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        column = ModelColumn(
+            "is_merge",
+            "Bool",
+            False,
+            False,
+            False,
+            "FALSE",
+            None,
+        )
+
+        sql = model_discovery.generate_add_column_sql("commits", column, db_name="primary")
+
+        assert sql == "ALTER TABLE commits ADD COLUMN is_merge Bool DEFAULT false"
+        assert "NOT NULL" not in sql
+
     def test_generate_postgresql_create_table_sql_uses_enum_type_name(self, monkeypatch):
         monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
 

@@ -51,6 +51,8 @@ DBWarden treats PostgreSQL as a **first-class backend**: every natively supporte
 
 "First-class" means the round-trip is verified: reverse-engineer a live database with `generate-models`, feed the output back into `make-migrations`, and get **zero diff**.
 
+Implementation note: PostgreSQL diffs and SQL emission now flow through the `dbwarden.engine.pg_registry` handler layer. The registry map and pipeline are described in the [Architecture Deep Dive](../../architecture-deep-dive.md#postgresql-registry-pipeline).
+
 ```bash
 $ dbwarden generate-models -d primary --tables users,orders,items
 $ dbwarden make-migrations
@@ -66,7 +68,8 @@ $ dbwarden make-migrations
 | Storage | Per-column `STORAGE` (`PLAIN`, `MAIN`, `EXTERNAL`, `EXTENDED`) |
 | Compression | Per-column `COMPRESSION` (`pglz`, `zstd`) via `pg.field(compression=...)` (PG 14+) |
 | Generated Columns | `GENERATED ALWAYS AS (...) STORED` |
-| Table Properties | Fillfactor, tablespace, unlogged, partitioning, inheritance |
+| Table Properties | Fillfactor, storage params, tablespace, unlogged, partitioning, inheritance |
+| Renames | Table rename, column rename |
 | Constraints | FK (`MATCH FULL/PARTIAL/SIMPLE`, `ON DELETE/UPDATE`, `DEFERRABLE`), unique (`NULLS NOT DISTINCT`, `INCLUDE`, `DEFERRABLE`), check (`NO INHERIT`, `NOT VALID`), exclude |
 | Indexes | B-tree, hash, GiST, GIN, BRIN, SP-GiST; partial, expression, `INCLUDE`, `WHERE`, opclasses, `NULLS NOT DISTINCT`, column sorting, `CONCURRENTLY` |
 | RLS & Policies | `ENABLE`/`DISABLE`/`FORCE`/`NO FORCE` row-level security; permissive/restrictive, role-scoped policies |
@@ -83,12 +86,15 @@ $ dbwarden make-migrations
 | Views | Regular `CREATE OR REPLACE VIEW`, materialized views with auto-refresh |
 | Schema-level Grants | `GRANT USAGE ON SCHEMA`, `GRANT ALL ON SCHEMA` |
 | Table Grants | `GRANT SELECT/INSERT/UPDATE/DELETE` |
+| Type Mapping | SQLAlchemy type → PostgreSQL native type normalization |
+| Storage Parameters | Table-level and index-level `WITH` options, autovacuum tuning |
 
 ## Documentation Sections
 
 - [Config Keys](config-keys.md) : All 12 `pg_*` configuration keys
 - [Declaring Metadata](declaring-metadata.md) : Table-level, column-level, JSONB, FK options
 - [Tables & Columns](tables-and-columns.md) : Column handler, type changes, auto-increment lifecycle
+- [Registry Architecture](../../architecture-deep-dive.md#postgresql-registry-pipeline) : Handler map, phases, online and offline diff flow
 - [Constraints](constraints.md) : FK (MATCH FULL, CASCADE), unique, check, exclude
 - [Indexes](indexes.md) : B-tree, partial, expression indexes, operator classes, NULLS NOT DISTINCT
 - [Types](types.md) : Enums, domains, composite types
@@ -102,4 +108,6 @@ $ dbwarden make-migrations
 - [Event Triggers](event-triggers.md) : DDL event trigger lifecycle
 - [Schemas](schemas.md) : Config-level and model-level schemas, search path
 - [DDL Behavior](ddl-behavior.md) : Transactional DDL, CONCURRENTLY, type change strategies
+- [Type Mapping](type-mapping.md) : SQLAlchemy type → PostgreSQL type normalization
+- [Storage Parameters](storage-params.md) : Table and index storage parameters, autovacuum tuning
 - [Migration Safety](migration-safety.md) : Safety classification table

@@ -82,6 +82,57 @@ Rollback uses the same lock discipline, selecting rollback SQL from applied file
 8. write migration file
 9. write companion `.plan.json` metadata file (with `resolved_from` on rename ops)
 
+## PostgreSQL Registry Pipeline
+
+PostgreSQL support is implemented through the `dbwarden.engine.pg_registry` package. Each handler exposes a small contract: `extract`, `model_spec_from_tables`, `canonicalize`, `diff`, and `emit`.
+
+The `RegistryDriver` runs that contract in order:
+
+1. extract snapshot state into a handler specific shape
+2. derive model state from `ModelTable` objects, or config for preamble handlers
+3. canonicalize both sides
+4. diff into `Op` objects
+5. emit backend SQL from the ops
+
+The SQL assembly layer then sorts statements by `StatementOrder` and joins upgrade and rollback SQL into migration files.
+
+### Handler Groups
+
+| Handler | Purpose |
+|---------|---------|
+| `ColumnHandler` | Column add, drop, type, nullability, default, autoincrement, comment, and backend specific column metadata |
+| `ConstraintHandler` | Unique, check, and foreign key constraints |
+| `IndexHandler` | PostgreSQL and ClickHouse index operations |
+| `TableHandler` | Table create, drop, and table comments |
+| `RenameTableHandler` | Table rename operations |
+| `SchemaHandler` | Schema create and drop |
+| `PgTableHandler` | PostgreSQL table options, inheritance, and exclude constraints |
+| `PartitionHandler` | Native PostgreSQL partitioning and partition attachment |
+| `StorageParamsHandler` | PostgreSQL storage parameter changes |
+| `EnumHandler` | Enum create, drop, and add value |
+| `DomainHandler` | Domain create and drop |
+| `SequenceHandler` | Sequence create and drop |
+| `ViewHandler` | Regular and materialized view changes |
+| `PoliciesHandler` | RLS enablement and policy lifecycle |
+| `GrantsHandler` | Table and schema grants |
+| `RoleHandler` | Role create and alter |
+| `DefaultPrivilegesHandler` | Default privilege grants and revokes |
+| `FunctionHandler` | Function create, replace, and drop |
+| `TriggerHandler` | Trigger create and drop |
+| `EventTriggerHandler` | Event trigger lifecycle |
+| `ExtendedStatisticsHandler` | `CREATE STATISTICS` and drop |
+| `StatisticsHandler` | Extended statistics variants and compatibility helpers |
+| `MyTableHandler` | MySQL table metadata |
+| `ChTableHandler` | ClickHouse table options and engine recreate |
+
+### Online and Offline Paths
+
+The online path uses `diff_models_against_snapshot` and the registry driver directly.
+
+The offline path uses `diff_model_states`, which still keeps a few raw dict comparisons for state only fields such as column diffs, PostgreSQL table scalars, MySQL table metadata, and table comments. Those raw ops still flow through the same emit layer, so the SQL output stays aligned with the handler path.
+
+The equivalence test in `tests/test_snapshot.py` locks that behavior in.
+
 ### Snapshot write lifecycle (in `migrate`)
 
 After applying versioned migrations, `migrate` calls `_write_migration_snapshot()`:

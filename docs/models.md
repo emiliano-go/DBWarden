@@ -28,14 +28,14 @@ Every backend supports a core set of cross-database attributes via `class Meta(T
 | Attribute | Type | SQL | Backends |
 |-----------|------|-----|----------|
 | `comment` | `str` | `COMMENT ON TABLE t IS '...'` | All |
-| `indexes` | `list[IndexSpec \| dict]` | `CREATE INDEX ...` | All |
-| `checks` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` | All |
-| `uniques` | `list[dict]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` | All |
+| `indexes` | `list[IndexSpec]` | `CREATE INDEX ...` | All |
+| `checks` | `list[CheckSpec]` | `ALTER TABLE t ADD CONSTRAINT ... CHECK (...)` | All |
+| `uniques` | `list[UniqueSpec]` | `ALTER TABLE t ADD CONSTRAINT ... UNIQUE (...)` | All |
 
 ```python
 from sqlalchemy import Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from dbwarden.databases import TableMeta, IndexSpec
+from dbwarden.databases import TableMeta, IndexSpec, CheckSpec, UniqueSpec
 
 class Base(DeclarativeBase):
     pass
@@ -53,34 +53,14 @@ class User(Base):
             IndexSpec(name="ix_users_email", columns=["email"]),
         ]
         checks = [
-            {"name": "ck_users_age", "sql": "age >= 0"},
+            CheckSpec(name="ck_users_age", expression="age >= 0"),
         ]
         uniques = [
-            {"name": "uq_users_email", "columns": ["email"]},
+            UniqueSpec(name="uq_users_email", columns=["email"]),
         ]
 ```
 
-For a lighter syntax without the `IndexSpec` import, pass plain dicts for indexes:
-
-```python
-indexes = [
-    {"name": "ix_users_email", "columns": ["email"]},
-]
-```
-
-`IndexSpec` accepts the same fields as the dict form with IDE autocomplete. Use it for cross-backend indexes shared by any `database_type`.
-
-The same dict shorthand applies to `checks` and `uniques`:
-
-```python
-checks = [
-    {"name": "ck_users_age", "sql": "age >= 0"},
-]
-
-uniques = [
-    {"name": "uq_users_email", "columns": ["email"]},
-]
-```
+Typed spec classes (`IndexSpec`, `UniqueSpec`, `CheckSpec`) provide full IDE autocomplete and are the recommended way to declare model metadata. Plain dicts are also accepted for all three lists using the same field names.
 
 ### Column-level
 
@@ -97,6 +77,27 @@ class Meta(TableMeta):
 ```
 
 These attributes work with any `database_type`. Backend-specific subclasses (`PGTableMeta`, `MyTableMeta`, `CHTableMeta`) inherit all common attributes and add their own.
+
+### Typed Spec Classes (Recommended)
+
+Use `IndexSpec`, `UniqueSpec`, and `CheckSpec` from `dbwarden.databases` for cross-backend model metadata. These provide full IDE autocomplete and type checking:
+
+```python
+from dbwarden.databases import IndexSpec, UniqueSpec, CheckSpec
+
+class Meta(TableMeta):
+    indexes = [
+        IndexSpec(name="ix_users_email", columns=["email"]),
+    ]
+    checks = [
+        CheckSpec(name="ck_users_age", expression="age >= 0"),
+    ]
+    uniques = [
+        UniqueSpec(name="uq_users_email", columns=["email"]),
+    ]
+```
+
+Plain dicts using the same field names (`name`, `columns`, `expression`, `sql`) are also accepted for backwards compatibility, but typed specs are the idiomatic form.
 
 ### Column-Level Meta Base Class
 
@@ -163,9 +164,13 @@ class User(Base):
     class Meta(PGTableMeta):
         pg_fillfactor = 80
         pg_tablespace = "fastspace"
+        pg_storage_params = {
+            "fillfactor": 80,
+            "autovacuum_enabled": "false",
+        }
 ```
 
-`PGTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds PostgreSQL-specific ones (`pg_schema`, `pg_fillfactor`, `pg_tablespace`, `pg_unlogged`, `pg_partition`, `pg_inherits`, `pg_excludes`, `pg_indexes`, `pg_checks`, `pg_uniques`).
+`PGTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds PostgreSQL-specific ones (`pg_schema`, `pg_fillfactor`, `pg_tablespace`, `pg_storage_params`, `pg_unlogged`, `pg_partition`, `pg_inherits`, `pg_excludes`, `pg_indexes`, `pg_checks`, `pg_uniques`).
 
 For PostgreSQL-specific indexes, use `PgIndexSpec` in `pg_indexes`:
 
@@ -189,7 +194,7 @@ PgIndexSpec("ix_users_data", ["data"],
 
 This generates `CREATE INDEX ... ON users USING GIN (data jsonb_path_ops)`.
 
-Full `PgIndexSpec` constructor fields: `name`, `columns`, `unique`, `using`, `where`, `include`, `with_params`, `tablespace`, `nulls_not_distinct`, `column_sorting`, `postgresql_ops`, `concurrently`. See [PostgreSQL Deep Dive](databases/postgresql.md) for details.
+Full `PgIndexSpec` constructor fields: `name`, `columns`, `unique`, `using`, `where`, `include`, `with_params`, `tablespace`, `nulls_not_distinct`, `column_sorting`, `postgresql_ops`, `concurrently`. See [Indexes](databases/postgresql/indexes.md) for indexing options and [Declaring Metadata](databases/postgresql/declaring-metadata.md) for the full `PGTableMeta` attribute list.
 
 ### Column-Level Meta
 
@@ -219,7 +224,7 @@ class User(Base):
 
 `PGColumnMeta` includes the common `comment` and `public` attributes plus a `pg` attribute of type `PgFieldSpec` that bundles all PostgreSQL-specific column options.
 
-For the full list of supported attributes, see [PostgreSQL Deep Dive](databases/postgresql.md).
+For the full list of supported attributes, see [Tables & Columns](databases/postgresql/tables-and-columns.md) for column handler details and [Declaring Metadata](databases/postgresql/declaring-metadata.md) for PGColumnMeta options.
 
 ### PostgreSQL Views
 
@@ -263,6 +268,8 @@ class Meta(PGViewMeta):
 ```
 
 Each `make-migrations` run after the initial CREATE produces a `REFRESH MATERIALIZED VIEW` statement.
+
+See [Views](databases/postgresql/views.md) for the full view lifecycle and auto-refresh configuration.
 
 ## ClickHouse Model Metadata
 
@@ -555,3 +562,5 @@ Supported `my.field()` options:
 For MariaDB, use `MdbColumnMeta` and `mdb.field()` which extends `my.field()` with `invisible` and `sequence` options.
 
 Cross-backend column attributes (`comment`, `public`) are set directly on the inner class, not on the spec object.
+
+See [Type Mapping](databases/postgresql/type-mapping.md) for the full SQLAlchemy-to-PostgreSQL type normalization table.
