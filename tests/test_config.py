@@ -607,7 +607,7 @@ class TestConfigSandboxClassification:
             cfg1 = get_database()
             assert cfg1.sqlalchemy_url.endswith("test.db")
 
-            # Second load from the same process -- must re-register after reset
+            # Second load from the same process, must re-register after reset
             cfg2 = get_multi_db_config()
             assert cfg2.default == "primary"
             assert len(cfg2.databases) == 1
