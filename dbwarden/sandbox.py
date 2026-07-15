@@ -100,7 +100,7 @@ class RestrictedModuleFinder(MetaPathFinder):
                 f"Only dbwarden imports are permitted in isolated config files.\n\n"
                 f"This file was loaded as an isolated config module (sandboxed). "
                 f"If it is part of your application package, move the database_config() "
-                f"call into a package module instead -- dbwarden will import it normally."
+                f"call into a package module instead; dbwarden will import it normally."
             )
         return None
 

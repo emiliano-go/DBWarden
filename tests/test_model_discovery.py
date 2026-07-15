@@ -100,7 +100,7 @@ class User(Base):
         from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
         from dbwarden.databases.pgsql import PGColumnMeta, PGTableMeta
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         class Base(DeclarativeBase):
             pass
@@ -128,7 +128,7 @@ class User(Base):
         from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
         from dbwarden.databases.pgsql import PGColumnMeta
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         class Base(DeclarativeBase):
             pass
@@ -265,7 +265,7 @@ class TestSQLGeneration:
         assert "UNIQUE" in sql
 
     def test_generate_postgresql_create_table_sql_includes_comment(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         table = ModelTable(
             name="users",
@@ -295,7 +295,7 @@ class TestSQLGeneration:
         assert "user_id INTEGER NOT NULL REFERENCES users(id)" in sql
 
     def test_generate_mysql_create_table_sql_with_options(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "mysql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "mysql")
 
         columns = [
             ModelColumn("id", "INT", False, True, False, None, None, my_meta={"my_unsigned": True}),
@@ -344,7 +344,7 @@ class TestSQLGeneration:
         assert "AUTO_INCREMENT=10" in sql
 
     def test_generate_mysql_add_column_sql_with_options(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "mysql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "mysql")
 
         column = ModelColumn(
             "updated_at",
@@ -361,7 +361,7 @@ class TestSQLGeneration:
         assert "ALTER TABLE users ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP" in sql
 
     def test_generate_clickhouse_add_column_sql_includes_codec(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         column = ModelColumn(
             "payload",
@@ -379,7 +379,7 @@ class TestSQLGeneration:
         assert "CODEC(ZSTD(3))" in sql
 
     def test_generate_clickhouse_add_column_sql_for_bool_omits_not_null(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         column = ModelColumn(
             "is_merge",
@@ -393,11 +393,11 @@ class TestSQLGeneration:
 
         sql = model_discovery.generate_add_column_sql("commits", column, db_name="primary")
 
-        assert sql == "ALTER TABLE commits ADD COLUMN is_merge Bool DEFAULT false"
+        assert sql == "ALTER TABLE commits ADD COLUMN is_merge Bool DEFAULT FALSE"
         assert "NOT NULL" not in sql
 
     def test_generate_postgresql_create_table_sql_uses_enum_type_name(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         columns = [
             ModelColumn(
@@ -419,7 +419,7 @@ class TestSQLGeneration:
         assert "resource enum" not in sql
 
     def test_generate_clickhouse_create_table_sql_with_options(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         columns = [
             ModelColumn("region", "String", False, True, False, None, None),
@@ -449,7 +449,7 @@ class TestSQLGeneration:
         assert "TTL event_time + INTERVAL 1 MONTH DELETE" in sql
 
     def test_generate_clickhouse_create_table_sql_with_comments(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         columns = [
             ModelColumn("id", "UInt64", False, True, False, None, None),
@@ -471,7 +471,7 @@ class TestSQLGeneration:
         assert "viewed_at DateTime" in sql
 
     def test_generate_clickhouse_create_table_sql_with_composite_primary_key(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         columns = [
             ModelColumn("region", "String", False, False, False, None, None),
@@ -492,7 +492,7 @@ class TestSQLGeneration:
         assert "PRIMARY KEY (region, event_time)" in sql
 
     def test_generate_clickhouse_create_table_sql_with_codec(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         columns = [
             ModelColumn("data", "String", False, False, False, None, None, codec="ZSTD(3)"),
@@ -506,7 +506,7 @@ class TestSQLGeneration:
         assert "ENGINE = MergeTree()" in sql
 
     def test_generate_clickhouse_create_table_sql_with_projection(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         columns = [
             ModelColumn("author", "String", False, False, False, None, None),
@@ -529,7 +529,7 @@ class TestSQLGeneration:
         assert "PROJECTION by_author (SELECT * ORDER BY author)" in sql
 
     def test_generate_clickhouse_materialized_view_sql(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         columns = [
             ModelColumn("group_col", "String", False, True, False, None, None),
@@ -564,7 +564,7 @@ class TestSQLGeneration:
         assert generate_drop_object_sql(table) == "DROP VIEW IF EXISTS mv_name"
 
     def test_generate_replicated_clickhouse_engine_with_zookeeper(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         columns = [
             ModelColumn("id", "UInt64", False, True, False, None, None),
@@ -587,7 +587,7 @@ class TestSQLGeneration:
         assert "ENGINE = ReplicatedMergeTree('/clickhouse/tables/shard1', '{replica}')" in sql
 
     def test_generate_replicated_clickhouse_engine_with_zookeeper_tuple(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         table = ModelTable(
             name="replicated_table",
@@ -605,7 +605,7 @@ class TestSQLGeneration:
         assert "ENGINE = ReplicatedReplacingMergeTree('/zk/path', '{replica}', ver_col)" in sql
 
     def test_generate_dictionary_sql(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         columns = [
             ModelColumn("code", "String", False, True, False, None, None),
@@ -643,7 +643,7 @@ class TestSQLGeneration:
         assert generate_drop_object_sql(table) == "DROP DICTIONARY country_codes"
 
     def test_generate_clickhouse_create_table_sql_with_settings(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         columns = [
             ModelColumn("id", "UInt64", False, True, False, None, None),
@@ -705,7 +705,7 @@ class TestColumnExtraction:
         from sqlalchemy import Column
         from sqlalchemy.dialects.postgresql import JSONB
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "sqlite")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "sqlite")
 
         col_obj = Column("payload", JSONB)
 
@@ -718,7 +718,7 @@ class TestColumnExtraction:
         from sqlalchemy import Column
         from sqlalchemy.dialects.postgresql import JSONB
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         col_obj = Column("payload", JSONB)
 
@@ -732,7 +732,7 @@ class TestColumnExtraction:
         from sqlalchemy import Column
         from sqlalchemy.types import UserDefinedType
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "sqlite")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "sqlite")
 
         class Geography(UserDefinedType):
             def get_col_spec(self, **kw):
@@ -748,7 +748,7 @@ class TestColumnExtraction:
     def test_extract_column_uses_clickhouse_type_and_codec_hints(self, monkeypatch):
         from sqlalchemy import Column, String
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         col_obj = Column(
             "payload",
@@ -771,7 +771,7 @@ class TestColumnExtraction:
         from sqlalchemy import Column
         from sqlalchemy.types import UserDefinedType
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         class LowCardinalityString(UserDefinedType):
             def get_col_spec(self, **kw):
@@ -792,7 +792,7 @@ class TestMetaBasedClickHouse:
         from sqlalchemy import Column, Integer, String, MetaData, Table
         from dbwarden.schema._base import DBWardenMeta
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         class Event:
             __tablename__ = "events"
@@ -820,7 +820,7 @@ class TestMetaBasedClickHouse:
         from sqlalchemy import Column, MetaData, String, Table
         from dbwarden.schema._base import DBWardenMeta
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         class EventView:
             __tablename__ = "mv_name"
@@ -846,7 +846,7 @@ class TestMetaBasedClickHouse:
         from sqlalchemy import Column, MetaData, String, Table
         from dbwarden.schema._base import DBWardenMeta
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         class Event:
             __tablename__ = "events"
@@ -874,7 +874,7 @@ class TestClickHouseTypeMapping:
     def test_clickhouse_type_extraction_from_info(self, monkeypatch):
         """CH type hints in column.info are extracted correctly."""
         from sqlalchemy import Column, String
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
         col_obj = Column(
             "payload",
             String,
@@ -885,7 +885,7 @@ class TestClickHouseTypeMapping:
 
     def test_extract_column_ch_meta_info(self, monkeypatch):
         from sqlalchemy import Column, String
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
         col_obj = Column(
             "payload",
             String,
@@ -1039,21 +1039,21 @@ class TestChTypeMapperWithInfo:
     def test_map_sa_type_with_low_cardinality(self, monkeypatch):
         from dbwarden.engine.model_discovery import _map_sa_type_to_clickhouse
         from sqlalchemy import Column, String
-        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "clickhouse")
         col = Column("name", String(255), info={"ch_low_cardinality": True})
         assert _map_sa_type_to_clickhouse(col) == "LowCardinality(String)"
 
     def test_map_sa_type_with_nullable(self, monkeypatch):
         from dbwarden.engine.model_discovery import _map_sa_type_to_clickhouse
         from sqlalchemy import Column, Integer
-        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "clickhouse")
         col = Column("age", Integer, info={"ch_nullable": True})
         assert _map_sa_type_to_clickhouse(col) == "Nullable(Int32)"
 
     def test_map_sa_type_with_both_wrappers(self, monkeypatch):
         from dbwarden.engine.model_discovery import _map_sa_type_to_clickhouse
         from sqlalchemy import Column, String
-        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "clickhouse")
         col = Column("name", String(255), info={"ch_low_cardinality": True, "ch_nullable": True})
         result = _map_sa_type_to_clickhouse(col)
         # LowCardinality wraps first, then Nullable wraps outside
@@ -1064,7 +1064,7 @@ class TestPGViewMetaExtraction:
         from dbwarden.databases.pgsql import PgViewSpec
         from dbwarden.schema._base import DBWardenMeta
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         class ActiveUsers:
             __tablename__ = "active_users"
@@ -1094,7 +1094,7 @@ class TestPGViewMetaExtraction:
         from dbwarden.databases.pgsql import PgViewSpec
         from dbwarden.schema._base import DBWardenMeta
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         class UserSummary:
             __tablename__ = "user_summary"
@@ -1124,7 +1124,7 @@ class TestPGViewMetaExtraction:
         from dbwarden.databases.pgsql import PgViewSpec, PgIndexSpec
         from dbwarden.schema._base import DBWardenMeta
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         class BadView:
             __tablename__ = "bad_view"
@@ -1155,7 +1155,7 @@ class TestPGViewMetaExtraction:
 
 class TestPGSchemaQualifiedSQL:
     def test_generate_create_table_sql_pg_with_schema(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         columns = [
             ModelColumn("id", "INTEGER", False, True, False, None, None),
@@ -1166,7 +1166,7 @@ class TestPGSchemaQualifiedSQL:
         assert "IF NOT EXISTS app.users" in sql or "CREATE TABLE app.users" in sql
 
     def test_generate_create_table_sql_pg_schema_with_reserved_name(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         columns = [
             ModelColumn("id", "INTEGER", False, True, False, None, None),
@@ -1177,7 +1177,7 @@ class TestPGSchemaQualifiedSQL:
         assert '"user"' in sql
 
     def test_generate_create_table_sql_pg_comment_with_schema(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         columns = [
             ModelColumn("id", "INTEGER", False, True, False, None, None),
@@ -1188,7 +1188,7 @@ class TestPGSchemaQualifiedSQL:
         assert "COMMENT ON TABLE app.users" in sql
 
     def test_generate_add_column_sql_pg_with_schema(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         column = ModelColumn("email", "VARCHAR(255)", True, False, False, None, None)
         sql = model_discovery.generate_add_column_sql("users", column, db_name="primary", schema="app")
@@ -1225,7 +1225,7 @@ class TestPGSchemaQualifiedSQL:
         assert "DROP VIEW IF EXISTS app.regular_view" in sql
 
     def test_generate_create_view_sql_schema_qualified(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
         table = ModelTable(
             name="active_users", columns=[ModelColumn("id", "INTEGER", False, True, False, None, None)],
             schema="app",
@@ -1238,7 +1238,7 @@ class TestPGSchemaQualifiedSQL:
         assert "CREATE OR REPLACE VIEW" in sql
 
     def test_generate_create_matview_sql_with_schema(self, monkeypatch):
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
         table = ModelTable(
             name="user_summary", columns=[ModelColumn("id", "INTEGER", False, True, False, None, None)],
             schema="analytics",
@@ -1258,7 +1258,7 @@ class TestPGSchemaExtraction:
         from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
         from dbwarden.databases.pgsql import PGTableMeta
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         class Base(DeclarativeBase):
             pass
@@ -1279,7 +1279,7 @@ class TestPGSchemaExtraction:
         from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
         from dbwarden.databases.pgsql import PGTableMeta
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         class Base(DeclarativeBase):
             pass
@@ -1300,7 +1300,7 @@ class TestPGSchemaExtraction:
         from dbwarden.databases.pgsql import PgViewSpec
         from dbwarden.schema._base import DBWardenMeta
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         class ActiveUsers:
             __tablename__ = "active_users"

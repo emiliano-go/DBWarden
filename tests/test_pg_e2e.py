@@ -48,7 +48,7 @@ def test_partition_extraction(engine, snap):
                              "FOR VALUES FROM ('2024-01-01') TO ('2025-01-01')"))
 
     fresh = _refresh()
-    from dbwarden.engine.pg_registry import PartitionHandler
+    from dbwarden.engine.backends.postgresql.handlers import PartitionHandler
     spec = PartitionHandler().extract(fresh)
     assert "e2e_part_parent" in spec, f"parent not found in {list(spec.keys())}"
     entry = spec["e2e_part_parent"]
@@ -72,7 +72,7 @@ def test_function_extraction(engine, snap):
                              "LANGUAGE sql AS $$ SELECT 'hello'::text $$"))
 
     fresh = _refresh()
-    from dbwarden.engine.pg_registry import FunctionHandler
+    from dbwarden.engine.backends.postgresql.handlers import FunctionHandler
     spec = FunctionHandler().extract(fresh)
     assert "e2e_hello" in spec, f"e2e_hello not found in {list(spec.keys())}"
     entry = spec["e2e_hello"]
@@ -96,7 +96,7 @@ def test_trigger_extraction(engine, snap):
                              "FOR EACH ROW EXECUTE FUNCTION e2e_trg_func()"))
 
     fresh = _refresh()
-    from dbwarden.engine.pg_registry import TriggerHandler
+    from dbwarden.engine.backends.postgresql.handlers import TriggerHandler
     spec = TriggerHandler().extract(fresh)
     assert "e2e_trigger_target" in spec
     trigs = spec["e2e_trigger_target"]
@@ -112,7 +112,7 @@ def test_trigger_extraction(engine, snap):
 # ---------------------------------------------------------------------------
 
 def test_role_extraction(engine, snap):
-    from dbwarden.engine.pg_registry import RoleHandler
+    from dbwarden.engine.backends.postgresql.handlers import RoleHandler
     spec = RoleHandler().extract(snap)
     assert "postgres" in spec  # superuser role is visible
     assert "pg_execute_server_programs" not in spec  # starts with pg_ is excluded
@@ -124,7 +124,7 @@ def test_role_extraction(engine, snap):
 # ---------------------------------------------------------------------------
 
 def test_domain_extraction(engine, snap):
-    from dbwarden.engine.pg_registry import DomainHandler
+    from dbwarden.engine.backends.postgresql.handlers import DomainHandler
     spec = DomainHandler().extract(snap)
     assert isinstance(spec, dict)
 
@@ -134,7 +134,7 @@ def test_domain_extraction(engine, snap):
 # ---------------------------------------------------------------------------
 
 def test_enum_extraction(engine, snap):
-    from dbwarden.engine.pg_registry import EnumHandler
+    from dbwarden.engine.backends.postgresql.handlers import EnumHandler
     spec = EnumHandler().extract(snap)
     assert isinstance(spec, dict)
 
@@ -144,7 +144,7 @@ def test_enum_extraction(engine, snap):
 # ---------------------------------------------------------------------------
 
 def test_sequence_extraction(engine, snap):
-    from dbwarden.engine.pg_registry import SequenceHandler
+    from dbwarden.engine.backends.postgresql.handlers import SequenceHandler
     spec = SequenceHandler().extract(snap)
     assert isinstance(spec, dict)
 
@@ -159,7 +159,7 @@ def test_composite_type_extraction(engine, snap):
         conn.execute(sa.text("CREATE TYPE e2e_comp AS (a int, b text)"))
 
     fresh = _refresh()
-    from dbwarden.engine.pg_registry import CompositeTypeHandler
+    from dbwarden.engine.backends.postgresql.handlers import CompositeTypeHandler
     spec = CompositeTypeHandler().extract(fresh)
     assert "e2e_comp" in spec, f"e2e_comp not found in {list(spec.keys())}"
     entry = spec["e2e_comp"]
@@ -182,7 +182,7 @@ def test_statistics_extraction(engine, snap):
         conn.execute(sa.text("ALTER TABLE e2e_stat_test ALTER COLUMN val SET STATISTICS 42"))
 
     fresh = _refresh()
-    from dbwarden.engine.pg_registry import StatisticsHandler
+    from dbwarden.engine.backends.postgresql.handlers import StatisticsHandler
     spec = StatisticsHandler().extract(fresh)
     assert "e2e_stat_test" in spec, f"e2e_stat_test not found in {list(spec.keys())}"
     assert spec["e2e_stat_test"].get("val") == 42
@@ -201,7 +201,7 @@ def test_extended_statistics_extraction(engine, snap):
         conn.execute(sa.text("CREATE STATISTICS e2e_s3 ON a, b FROM e2e_stats"))
 
     fresh = _refresh()
-    from dbwarden.engine.pg_registry.extended_statistics_handler import ExtendedStatisticsHandler
+    from dbwarden.engine.backends.postgresql.handlers.extended_statistics_handler import ExtendedStatisticsHandler
     spec = ExtendedStatisticsHandler().extract(fresh)
     assert "e2e_s1" in spec, f"e2e_s1 not found in {list(spec.keys())}"
     assert "e2e_s2" in spec, f"e2e_s2 not found in {list(spec.keys())}"
@@ -232,7 +232,7 @@ def test_event_trigger_extraction(engine, snap):
         """))
 
     fresh = _refresh()
-    from dbwarden.engine.pg_registry.event_trigger_handler import EventTriggerHandler
+    from dbwarden.engine.backends.postgresql.handlers.event_trigger_handler import EventTriggerHandler
     spec = EventTriggerHandler().extract(fresh)
     assert "e2e_evt_trg" in spec, f"e2e_evt_trg not found in {list(spec.keys())}"
     entry = spec["e2e_evt_trg"]

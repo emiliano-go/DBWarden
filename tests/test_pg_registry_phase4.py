@@ -7,7 +7,8 @@ from typing import Any
 import pytest
 
 from dbwarden.engine.migration_name import Change
-from dbwarden.engine.pg_registry import DomainHandler, RegistryDriver, SequenceHandler
+from dbwarden.engine.core.registry import RegistryDriver
+from dbwarden.engine.backends.postgresql.handlers import DomainHandler, SequenceHandler
 from dbwarden.engine.snapshot import (
     MigrationStatement,
     StatementOrder,
@@ -15,7 +16,7 @@ from dbwarden.engine.snapshot import (
 )
 
 # ---------------------------------------------------------------------------
-# Inline reference implementations — match current preamble behavior
+# Inline reference implementations - match current preamble behavior
 # ---------------------------------------------------------------------------
 
 
@@ -157,7 +158,7 @@ class TestDomainHandlerGolden:
         config = FakeConfig(domains, [])
         snap: dict[str, Any] = {"domains": {}}
 
-        # Inline — always emits all domains
+        # Inline : always emits all domains
         inline_stmts = _inline_domain_preamble(domains)
         inline_up, inline_rb = _assemble_migration(inline_stmts)
 
@@ -507,7 +508,7 @@ class TestPhase4Driver:
 
     def test_driver_with_all_three_handlers(self) -> None:
         """Domain, sequence, and enum handlers together."""
-        from dbwarden.engine.pg_registry import EnumHandler
+        from dbwarden.engine.backends.postgresql.handlers import EnumHandler
 
         driver = RegistryDriver()
         driver.register(SequenceHandler())

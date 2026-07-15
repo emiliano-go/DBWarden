@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 
 from dbwarden.engine.migration_name import Change
-from dbwarden.engine.pg_registry import EnumHandler
+from dbwarden.engine.backends.postgresql.handlers import EnumHandler
 from dbwarden.engine.snapshot import (
     MigrationStatement,
     StatementOrder,
@@ -43,7 +43,7 @@ def _make_model_table(cols: list[dict[str, Any]]) -> list[FakeTable]:
 
 
 def _model_enum_values(model_tables: list[FakeTable]) -> dict[str, list[str]]:
-    """Inline extraction — exact copy of snapshot.py:3395-3396."""
+    """Inline extraction : exact copy of snapshot.py:3395-3396."""
     model_enum_values: dict[str, list[str]] = {}
     for table in model_tables:
         for col in table.columns:
@@ -59,7 +59,7 @@ def _inline_enum_diff(
     snapshot: dict[str, Any],
     model_tables: list[FakeTable],
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Inline diff — exact copy of snapshot.py:3393-3426."""
+    """Inline diff : exact copy of snapshot.py:3393-3426."""
     snap_enums: dict[str, list[str]] = snapshot.get("enums", {})
     model_enum_values = _model_enum_values(model_tables)
 
@@ -102,7 +102,7 @@ def _inline_enum_diff(
 def _inline_enum_emit(
     ops: list[dict[str, Any]],
 ) -> list[MigrationStatement]:
-    """Inline emit — exact copy of snapshot.py:4403-4441."""
+    """Inline emit : exact copy of snapshot.py:4403-4441."""
     statements: list[MigrationStatement] = []
     for op in ops:
         if op.get("type") == "alter_enum_add_value":
@@ -432,7 +432,7 @@ class TestEnumHandlerContract:
             HANDLER.model_spec_from_tables(bad_model)
 
     def test_forward_then_rollback_revert_comment(self) -> None:
-        """Emit produces -- Revert: for add-value ops."""
+        """Emit produces, Revert: for add-value ops."""
         snap_spec = HANDLER.canonicalize(HANDLER.extract(SNAPSHOT_MOOD))
         model_spec = HANDLER.canonicalize(
             HANDLER.model_spec_from_tables(MODEL_MOOD_PLUS_ECSTATIC)
@@ -454,14 +454,14 @@ class TestEnumHandlerContract:
 
 class TestRegistryDriver:
     def test_zero_handlers_returns_empty(self) -> None:
-        from dbwarden.engine.pg_registry import RegistryDriver
+        from dbwarden.engine.core.registry import RegistryDriver
         driver = RegistryDriver()
         up, rb = driver.run({}, [], None)
         assert up == []
         assert rb == []
 
     def test_driver_with_enum_handler_add_value(self) -> None:
-        from dbwarden.engine.pg_registry import RegistryDriver
+        from dbwarden.engine.core.registry import RegistryDriver
         driver = RegistryDriver()
         driver.register(HANDLER)
         up, rb = driver.run(SNAPSHOT_MOOD, MODEL_MOOD_PLUS_ECSTATIC, None)
@@ -470,7 +470,7 @@ class TestRegistryDriver:
         assert up[0].irreversible
 
     def test_driver_with_enum_handler_create_type(self) -> None:
-        from dbwarden.engine.pg_registry import RegistryDriver
+        from dbwarden.engine.core.registry import RegistryDriver
         driver = RegistryDriver()
         driver.register(HANDLER)
         up, rb = driver.run(SNAPSHOT_NO_ENUMS, MODEL_NEW_SIZE, None)
@@ -478,7 +478,7 @@ class TestRegistryDriver:
         assert len(create_types) == 1
 
     def test_driver_emit_all(self) -> None:
-        from dbwarden.engine.pg_registry import RegistryDriver
+        from dbwarden.engine.core.registry import RegistryDriver
         driver = RegistryDriver()
         driver.register(HANDLER)
         up, rb = driver.run(SNAPSHOT_MOOD, MODEL_MOOD_PLUS_ECSTATIC, None)

@@ -453,7 +453,7 @@ def test_offline_recreate_preserves_projections():
 
 def test_offline_recreate_allows_inline_materialized_view(monkeypatch):
     """Inline MV (no TO target) now recreates with DROP VIEW + CREATE MATERIALIZED VIEW."""
-    monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+    monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "clickhouse")
     monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "clickhouse")
     prev = model_state_to_dict([_make_table("events", object_type="materialized_view", ch_opts={"ch_engine": "MergeTree", "ch_select_statement": "SELECT id FROM source"})])
     curr = model_state_to_dict([_make_table("events", object_type="materialized_view", ch_opts={"ch_engine": "ReplicatedMergeTree"})])
@@ -476,7 +476,7 @@ def test_offline_recreate_blocks_on_mv_with_to_table():
 
 
 def test_offline_recreate_dictionary_sql(monkeypatch):
-    monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+    monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "clickhouse")
     prev = model_state_to_dict([_make_table("events", object_type="dictionary", ch_opts={"ch_engine": "MergeTree", "ch_dictionary": True, "ch_dict_layout": "flat()", "ch_dict_source": "FILE(path='/data/test.csv' format 'CSV')", "ch_dict_lifetime": "300"})])
     curr = model_state_to_dict([_make_table("events", object_type="dictionary", ch_opts={"ch_engine": "ReplicatedMergeTree", "ch_dictionary": True, "ch_dict_layout": "flat()", "ch_dict_source": "FILE(path='/data/test.csv' format 'CSV')", "ch_dict_lifetime": "300"})])
     up_ops, down_ops = diff_model_states(prev, curr)
@@ -1684,7 +1684,7 @@ def test_offline_clickhouse_complex_round_trip(monkeypatch):
     to exercise CH-specific features: engine recreation, projections, codecs,
     Nullable/LowCardinality columns, ORDER BY changes, and round-trip stability.
     """
-    monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "clickhouse")
+    monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "clickhouse")
     monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "clickhouse")
 
     col_id = _make_col("id", "UInt64", pk=True)
@@ -2215,7 +2215,7 @@ def test_offline_pg_schema_diff_new_table():
 def test_offline_pg_reserved_word_quoting(monkeypatch):
     """Reserved word table names are quoted in generated SQL."""
     import dbwarden.engine.model_discovery as md
-    monkeypatch.setattr(md, "_get_backend_name", lambda db_name=None: "postgresql")
+    monkeypatch.setattr(md.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
     from dbwarden.engine.model_discovery import generate_create_table_sql
 
     columns = [ModelColumn("id", "INTEGER", False, True, False, None, None)]

@@ -8,10 +8,10 @@ from typing import Any
 import pytest
 
 from dbwarden.engine.migration_name import Change
-from dbwarden.engine.pg_registry import (
+from dbwarden.engine.core.registry import RegistryDriver
+from dbwarden.engine.backends.postgresql.handlers import (
     GrantsHandler,
     PoliciesHandler,
-    RegistryDriver,
     StorageParamsHandler,
 )
 from dbwarden.engine.snapshot import (
@@ -761,7 +761,7 @@ class TestStorageParamsHandlerContract:
         assert "fillfactor" in up_keys
 
     def test_emit_reset_when_value_none(self) -> None:
-        from dbwarden.engine.pg_registry.protocol import Op
+        from dbwarden.engine.core.protocol import Op
         op = Op(
             object_type="alter_pg_storage_param",
             upgrade_attrs={"table": "users", "param": "fillfactor", "to_value": None},

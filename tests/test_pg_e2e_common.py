@@ -130,7 +130,7 @@ def test_column_add_drop(engine):
     with engine.begin() as conn:
         conn.execute(sa.text("CREATE TABLE e2e_c_add (id int PRIMARY KEY, name text)"))
     snap = _refresh()
-    from dbwarden.engine.pg_registry import ColumnHandler
+    from dbwarden.engine.backends.postgresql.handlers import ColumnHandler
     h = ColumnHandler()
     snap_spec = h.extract(snap)
     model_tables = [
@@ -151,7 +151,7 @@ def test_column_type_change(engine):
     with engine.begin() as conn:
         conn.execute(sa.text("CREATE TABLE e2e_c_type (id int PRIMARY KEY, val varchar(255))"))
     snap = _refresh()
-    from dbwarden.engine.pg_registry import ColumnHandler
+    from dbwarden.engine.backends.postgresql.handlers import ColumnHandler
     h = ColumnHandler()
     snap_spec = h.extract(snap)
     model_spec = _build_column_model_spec(snap_spec, [])
@@ -171,7 +171,7 @@ def test_column_nullable_flip(engine):
     with engine.begin() as conn:
         conn.execute(sa.text("CREATE TABLE e2e_c_null (id int PRIMARY KEY, val int NOT NULL)"))
     snap = _refresh()
-    from dbwarden.engine.pg_registry import ColumnHandler
+    from dbwarden.engine.backends.postgresql.handlers import ColumnHandler
     h = ColumnHandler()
     snap_spec = h.extract(snap)
     model_spec = _build_column_model_spec(snap_spec, [])
@@ -195,7 +195,7 @@ def test_index_btree(engine):
         conn.execute(sa.text("CREATE TABLE e2e_i_btree (id int PRIMARY KEY, val int)"))
         conn.execute(sa.text("CREATE INDEX e2e_i_btree_val_idx ON e2e_i_btree (val)"))
     snap = _refresh()
-    from dbwarden.engine.pg_registry.index_handler import IndexHandler
+    from dbwarden.engine.backends.postgresql.handlers.index_handler import IndexHandler
     h = IndexHandler()
     spec = h.extract(snap)
     idxs = spec.get("indexes", {})
@@ -215,7 +215,7 @@ def test_index_partial(engine):
         conn.execute(sa.text("CREATE TABLE e2e_i_part (id int PRIMARY KEY, active bool)"))
         conn.execute(sa.text("CREATE INDEX e2e_i_part_active_idx ON e2e_i_part (active) WHERE active = true"))
     snap = _refresh()
-    from dbwarden.engine.pg_registry.index_handler import IndexHandler
+    from dbwarden.engine.backends.postgresql.handlers.index_handler import IndexHandler
     h = IndexHandler()
     spec = h.extract(snap)
     idxs = spec.get("indexes", {})
@@ -235,7 +235,7 @@ def test_index_expression(engine):
         conn.execute(sa.text("CREATE TABLE e2e_i_expr (id int PRIMARY KEY, email text)"))
         conn.execute(sa.text("CREATE INDEX e2e_i_expr_lower_email_idx ON e2e_i_expr (lower(email))"))
     snap = _refresh()
-    from dbwarden.engine.pg_registry.index_handler import IndexHandler
+    from dbwarden.engine.backends.postgresql.handlers.index_handler import IndexHandler
     from dbwarden.engine.model_discovery import IndexInfo
     h = IndexHandler()
     spec = h.extract(snap)
@@ -265,7 +265,7 @@ def test_index_expression_change_detected(engine):
         conn.execute(sa.text("CREATE TABLE e2e_i_expr_chg (id int PRIMARY KEY, email text, name text)"))
         conn.execute(sa.text("CREATE INDEX e2e_i_expr_chg_lower_email_idx ON e2e_i_expr_chg (lower(email))"))
     snap = _refresh()
-    from dbwarden.engine.pg_registry.index_handler import IndexHandler
+    from dbwarden.engine.backends.postgresql.handlers.index_handler import IndexHandler
     from dbwarden.engine.model_discovery import IndexInfo
     h = IndexHandler()
     snap_spec = h.extract(snap)
@@ -303,7 +303,7 @@ def test_table_create_drop(engine):
         conn.execute(sa.text("CREATE TABLE e2e_t_life (id int PRIMARY KEY, val text)"))
     snap = _refresh()
     assert "e2e_t_life" in snap["tables"]
-    from dbwarden.engine.pg_registry import TableHandler
+    from dbwarden.engine.backends.postgresql.handlers import TableHandler
     h = TableHandler()
     snap_spec = h.extract(snap)
     c_snap = h.canonicalize(snap_spec)
@@ -324,7 +324,7 @@ def test_fk_match_full(engine):
                              "CONSTRAINT e2e_fk_m_main_fkey FOREIGN KEY (ref_id) "
                              "REFERENCES e2e_fk_m_ref (id) MATCH FULL)"))
     snap = _refresh()
-    from dbwarden.engine.pg_registry.constraint_handler import ConstraintHandler
+    from dbwarden.engine.backends.postgresql.handlers.constraint_handler import ConstraintHandler
     h = ConstraintHandler()
     h._snapshot = snap
     snap_spec = h.extract(snap)
@@ -342,7 +342,7 @@ def test_fk_cascade(engine):
                              "CONSTRAINT e2e_fk_c_main_fkey FOREIGN KEY (ref_id) "
                              "REFERENCES e2e_fk_c_ref (id) ON DELETE CASCADE)"))
     snap = _refresh()
-    from dbwarden.engine.pg_registry.constraint_handler import ConstraintHandler
+    from dbwarden.engine.backends.postgresql.handlers.constraint_handler import ConstraintHandler
     h = ConstraintHandler()
     h._snapshot = snap
     snap_spec = h.extract(snap)
@@ -358,7 +358,7 @@ def test_unique_constraint(engine):
         conn.execute(sa.text("CREATE TABLE e2e_uq (id int PRIMARY KEY, email text)"))
         conn.execute(sa.text("ALTER TABLE e2e_uq ADD CONSTRAINT e2e_uq_email_key UNIQUE (email)"))
     snap = _refresh()
-    from dbwarden.engine.pg_registry.constraint_handler import ConstraintHandler
+    from dbwarden.engine.backends.postgresql.handlers.constraint_handler import ConstraintHandler
     h = ConstraintHandler()
     h._snapshot = snap
     snap_spec = h.extract(snap)
@@ -374,7 +374,7 @@ def test_check_constraint(engine):
         conn.execute(sa.text("CREATE TABLE e2e_ck (id int PRIMARY KEY, val int)"))
         conn.execute(sa.text("ALTER TABLE e2e_ck ADD CONSTRAINT e2e_ck_val_check CHECK (val > 0)"))
     snap = _refresh()
-    from dbwarden.engine.pg_registry.constraint_handler import ConstraintHandler
+    from dbwarden.engine.backends.postgresql.handlers.constraint_handler import ConstraintHandler
     h = ConstraintHandler()
     h._snapshot = snap
     snap_spec = h.extract(snap)
@@ -406,7 +406,7 @@ def test_combined_schema_convergence(engine):
     assert "e2e_comb_main" in snap["tables"]
     assert "e2e_comb_info" in snap["tables"]
 
-    from dbwarden.engine.pg_registry.constraint_handler import ConstraintHandler
+    from dbwarden.engine.backends.postgresql.handlers.constraint_handler import ConstraintHandler
 
     h = ConstraintHandler()
     h._snapshot = snap

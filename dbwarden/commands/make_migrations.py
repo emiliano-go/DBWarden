@@ -1021,7 +1021,7 @@ def _merge_pending_migrations_into_snapshot(
                     }
 
 
-# Kept for backward compatibility — referenced by tests.
+    # Kept for backward compatibility. Referenced by tests.
 # These helper functions have been replaced by RegistryDriver handlers
 # (DomainHandler, SequenceHandler) in _prepend_pg_preamble.
 def _build_domain_sql(domain: dict) -> str:
@@ -1090,14 +1090,14 @@ def _prepend_pg_preamble(
             return upgrade_sql, rollback_sql, changes
 
         if config.pg_sequences or config.pg_domains or config.pg_functions or config.pg_triggers or config.pg_roles or config.pg_default_privileges or config.pg_composite_types or config.pg_extended_statistics or config.pg_event_triggers:
-            from dbwarden.engine.pg_registry import (
+            from dbwarden.engine.core.registry import RegistryDriver
+            from dbwarden.engine.backends.postgresql.handlers import (
                 CompositeTypeHandler,
                 DefaultPrivilegesHandler,
                 DomainHandler,
                 EventTriggerHandler,
                 ExtendedStatisticsHandler,
                 FunctionHandler,
-                RegistryDriver,
                 RoleHandler,
                 SequenceHandler,
                 TriggerHandler,

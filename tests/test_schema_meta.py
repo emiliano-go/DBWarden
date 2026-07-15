@@ -131,7 +131,7 @@ class TestMetaReader:
                 class payload(CHColumnMeta):
                     ch = ch.field(codec="ZSTD(3)")
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         table = extract_table_from_model(Event)
 
@@ -151,7 +151,7 @@ class TestMetaReader:
                 class title(PGColumnMeta):
                     pg = pg.field(storage="extended")
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "sqlite")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "sqlite")
 
         table = extract_table_from_model(Report)
 
@@ -244,7 +244,7 @@ class TestMetaIndexes:
                     index("ix_posts_title", ["title"]),
                 ]
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         table = extract_table_from_model(Post)
         assert table is not None
@@ -270,7 +270,7 @@ class TestMetaIndexes:
                     index("ix_meta_title", ["title"]),
                 ]
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "postgresql")
 
         table = extract_table_from_model(BlogPost)
         assert table is not None
@@ -315,7 +315,7 @@ class TestCHTableMeta:
                 ch_order_by = ["id"]
                 ch_partition_by = ["toYYYYMM(created_at)"]
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         table = extract_table_from_model(Event)
         engine_raw = table.clickhouse_options["ch_engine_raw"]
@@ -341,7 +341,7 @@ class TestCHTableMeta:
                     ProjectionSpec(name="proj_day", query="SELECT id, toDate(created_at) AS day GROUP BY day"),
                 ]
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         table = extract_table_from_model(Event)
         projections = table.clickhouse_options["ch_projections"]
@@ -366,7 +366,7 @@ class TestCHTableMeta:
             class Meta(BaseCH.Meta):
                 ch_partition_by = ["toYYYYMM(created_at)"]
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         table = extract_table_from_model(DerivedCH)
         assert table.clickhouse_options["ch_engine"] == "ReplicatedMergeTree"
@@ -387,7 +387,7 @@ class TestCHTableMeta:
                 class payload(CHColumnMeta):
                     ch = ch.field(codec="ZSTD(3)")
 
-        monkeypatch.setattr(model_discovery, "_get_backend_name", lambda db_name=None: "clickhouse")
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
 
         table = extract_table_from_model(NoCompat)
         for col in table.columns:

@@ -73,8 +73,8 @@ VALIDATE CONSTRAINT ck2;
 class TestNotValidValidate:
     def test_fk_not_valid_emits_not_valid_and_validate(self, monkeypatch):
         from dbwarden.engine.file_parser import DBWARDEN_AUTOCOMMIT_MARKER
-        from dbwarden.engine.pg_registry import ConstraintHandler
-        from dbwarden.engine.pg_registry.protocol import Op
+        from dbwarden.engine.backends.postgresql.handlers import ConstraintHandler
+        from dbwarden.engine.core.protocol import Op
 
         monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
 
@@ -100,8 +100,8 @@ class TestNotValidValidate:
         assert stmts[1].order == StatementOrder.VALIDATE_CONSTRAINT
 
     def test_fk_validated_does_not_emit_not_valid(self, monkeypatch):
-        from dbwarden.engine.pg_registry import ConstraintHandler
-        from dbwarden.engine.pg_registry.protocol import Op
+        from dbwarden.engine.backends.postgresql.handlers import ConstraintHandler
+        from dbwarden.engine.core.protocol import Op
 
         monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
 
@@ -124,8 +124,8 @@ class TestNotValidValidate:
         assert "CASCADE" in stmts[0].upgrade_sql
 
     def test_fk_default_validated_true(self, monkeypatch):
-        from dbwarden.engine.pg_registry import ConstraintHandler
-        from dbwarden.engine.pg_registry.protocol import Op
+        from dbwarden.engine.backends.postgresql.handlers import ConstraintHandler
+        from dbwarden.engine.core.protocol import Op
 
         monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
 
@@ -143,8 +143,8 @@ class TestNotValidValidate:
         assert "NOT VALID" not in stmts[0].upgrade_sql
 
     def test_fk_drop_rollback_preserves_not_valid(self, monkeypatch):
-        from dbwarden.engine.pg_registry import ConstraintHandler
-        from dbwarden.engine.pg_registry.protocol import Op
+        from dbwarden.engine.backends.postgresql.handlers import ConstraintHandler
+        from dbwarden.engine.core.protocol import Op
 
         monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
 
@@ -399,7 +399,7 @@ class TestDomainSnapshot:
 
 class TestPgCreateTableInline:
     def test_unlogged_in_create_table(self, monkeypatch):
-        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "postgresql")
         from dbwarden.engine.model_discovery import generate_create_table_sql, ModelTable
         table = ModelTable(
             name="test_table",
@@ -410,7 +410,7 @@ class TestPgCreateTableInline:
         assert "CREATE UNLOGGED TABLE IF NOT EXISTS test_table" in sql
 
     def test_logged_default_no_unlogged(self, monkeypatch):
-        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "postgresql")
         from dbwarden.engine.model_discovery import generate_create_table_sql, ModelTable
         table = ModelTable(
             name="test_table",
@@ -421,7 +421,7 @@ class TestPgCreateTableInline:
         assert sql.startswith("CREATE TABLE IF NOT EXISTS test_table")
 
     def test_no_pg_table_no_unlogged(self, monkeypatch):
-        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "postgresql")
         from dbwarden.engine.model_discovery import generate_create_table_sql, ModelTable
         table = ModelTable(
             name="test_table",
@@ -431,7 +431,7 @@ class TestPgCreateTableInline:
         assert sql.startswith("CREATE TABLE IF NOT EXISTS test_table")
 
     def test_inherits_in_create_table(self, monkeypatch):
-        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "postgresql")
         from dbwarden.engine.model_discovery import generate_create_table_sql, ModelTable
         table = ModelTable(
             name="child_table",
@@ -442,7 +442,7 @@ class TestPgCreateTableInline:
         assert "INHERITS (parent_table)" in sql
 
     def test_tablespace_in_create_table(self, monkeypatch):
-        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "postgresql")
         from dbwarden.engine.model_discovery import generate_create_table_sql, ModelTable
         table = ModelTable(
             name="test_table",
@@ -453,7 +453,7 @@ class TestPgCreateTableInline:
         assert "TABLESPACE fast_ssd" in sql
 
     def test_all_inline_attrs_together(self, monkeypatch):
-        monkeypatch.setattr("dbwarden.engine.model_discovery._get_backend_name", lambda db_name=None: "postgresql")
+        monkeypatch.setattr("dbwarden.engine.model_discovery.type_mapping._get_backend_name", lambda db_name=None: "postgresql")
         from dbwarden.engine.model_discovery import generate_create_table_sql, ModelTable
         table = ModelTable(
             name="test_table",
