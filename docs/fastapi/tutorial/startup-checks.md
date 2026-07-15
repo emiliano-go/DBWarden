@@ -37,7 +37,7 @@ Add a startup check in **3 lines**:
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import migration_context
+from dbwarden.extensions.fastapi import migration_context
 
 
 @asynccontextmanager
@@ -58,7 +58,7 @@ Let's start with a complete minimal example:
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import migration_context
+from dbwarden.extensions.fastapi import migration_context
 
 
 @asynccontextmanager
@@ -491,7 +491,7 @@ If you don't want to use `migration_context`, you can call the helpers directly:
 Read-only validation:
 
 ```python
-from dbwarden.fastapi import check_schema_on_startup
+from dbwarden.extensions.fastapi import check_schema_on_startup
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -526,7 +526,7 @@ def check_schema_on_startup(
 Apply migrations:
 
 ```python
-from dbwarden.fastapi import migrate_on_startup
+from dbwarden.extensions.fastapi import migrate_on_startup
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

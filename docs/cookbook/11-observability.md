@@ -38,7 +38,7 @@ DBWarden exposes six Prometheus metric families:
 ## Step 2: Add Metrics to FastAPI
 
 ```python
-from dbwarden.fastapi import MetricsMiddleware, MetricsRouter
+from dbwarden.extensions.fastapi import MetricsMiddleware, MetricsRouter
 
 # Middleware captures request duration and counts
 app.add_middleware(MetricsMiddleware)
@@ -87,7 +87,7 @@ JSON logs are easier to ingest into ELK, Datadog, or other log aggregators.
 ## Step 4: Query Tracing
 
 ```python
-from dbwarden.fastapi import QueryTracingMiddleware
+from dbwarden.extensions.fastapi import QueryTracingMiddleware
 
 app.add_middleware(QueryTracingMiddleware)
 ```
@@ -106,7 +106,7 @@ Useful for:
 ## Step 5: Pool Metrics Collector
 
 ```python
-from dbwarden.fastapi import PoolMetricsCollector
+from dbwarden.extensions.fastapi import PoolMetricsCollector
 ```
 
 This monitors SQLAlchemy connection pool health and exposes:
@@ -121,7 +121,7 @@ This monitors SQLAlchemy connection pool health and exposes:
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import (
+from dbwarden.extensions.fastapi import (
     DBWardenHealthRouter,
     dbwarden_lifespan,
     MetricsMiddleware,

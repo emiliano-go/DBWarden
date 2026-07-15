@@ -23,7 +23,7 @@ Add health endpoints to your app in **one line**:
 
 ```python
 from fastapi import FastAPI
-from dbwarden.fastapi import DBWardenHealthRouter
+from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
 app = FastAPI()
 app.include_router(DBWardenHealthRouter(), prefix="/health")
@@ -40,7 +40,7 @@ Let's start with a complete minimal example:
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import DBWardenHealthRouter, migration_context
+from dbwarden.extensions.fastapi import DBWardenHealthRouter, migration_context
 
 
 @asynccontextmanager
@@ -292,7 +292,7 @@ For more control, use different endpoints:
 
 ```python
 from fastapi import FastAPI
-from dbwarden.fastapi import DBWardenHealthRouter
+from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
 app = FastAPI()
 
@@ -460,7 +460,7 @@ Health endpoints and startup checks serve different purposes:
 
 ```python
 from contextlib import asynccontextmanager
-from dbwarden.fastapi import migration_context
+from dbwarden.extensions.fastapi import migration_context
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -472,7 +472,7 @@ async def lifespan(app: FastAPI):
 ### Runtime Health (HTTP Endpoint)
 
 ```python
-from dbwarden.fastapi import DBWardenHealthRouter
+from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
 #  Always available - returns status code based on health
 app.include_router(DBWardenHealthRouter(), prefix="/health")
@@ -486,7 +486,7 @@ Both use the same underlying `check_database_health()` function, so behavior is 
 
 ```python
 from fastapi import FastAPI
-from dbwarden.fastapi import DBWardenHealthRouter
+from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
 app = FastAPI()
 app.include_router(DBWardenHealthRouter(), prefix="/health")
@@ -496,7 +496,7 @@ app.include_router(DBWardenHealthRouter(), prefix="/health")
 
 ```python
 from fastapi import FastAPI
-from dbwarden.fastapi import DBWardenHealthRouter
+from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
 app = FastAPI()
 

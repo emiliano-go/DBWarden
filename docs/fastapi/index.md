@@ -22,7 +22,7 @@ Create your first FastAPI app with DBWarden:
 
 ```python
 from fastapi import FastAPI
-from dbwarden.fastapi import dbwarden_lifespan
+from dbwarden.extensions.fastapi import dbwarden_lifespan
 from contextlib import asynccontextmanager
 
 @asynccontextmanager
@@ -91,7 +91,7 @@ async def list_users(session: primary.async_session):
 Production-ready health checks out of the box:
 
 ```python
-from dbwarden.fastapi import DBWardenHealthRouter
+from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
 app.include_router(DBWardenHealthRouter(), prefix="/health")
 ```
@@ -106,7 +106,7 @@ app.include_router(DBWardenHealthRouter(), prefix="/health")
 Monitor and trigger migrations at runtime:
 
 ```python
-from dbwarden.fastapi import DBWardenRouter
+from dbwarden.extensions.fastapi import DBWardenRouter
 
 app.include_router(DBWardenRouter(), prefix="/db")
 
@@ -124,7 +124,7 @@ app.include_router(DBWardenRouter(), prefix="/db")
 Expose migration metrics for monitoring:
 
 ```python
-from dbwarden.fastapi import MetricsRouter, MetricsMiddleware
+from dbwarden.extensions.fastapi import MetricsRouter, MetricsMiddleware
 
 app.add_middleware(MetricsMiddleware)
 app.include_router(MetricsRouter(), prefix="/metrics")
@@ -140,7 +140,7 @@ app.include_router(MetricsRouter(), prefix="/metrics")
 Coordinate migrations across multiple application instances with Redis:
 
 ```python
-from dbwarden.fastapi import migration_lock, sync_migration_lock
+from dbwarden.extensions.fastapi import migration_lock, sync_migration_lock
 ```
 
 - Prevents concurrent migrations across pods
@@ -152,7 +152,7 @@ from dbwarden.fastapi import migration_lock, sync_migration_lock
 Properly dispose engines on shutdown:
 
 ```python
-from dbwarden.fastapi import dispose_engines
+from dbwarden.extensions.fastapi import dispose_engines
 ```
 
 - Closes all cached engines and clients
@@ -165,7 +165,7 @@ Ensure your database is ready before accepting traffic:
 
 ```python
 from contextlib import asynccontextmanager
-from dbwarden.fastapi import migration_context
+from dbwarden.extensions.fastapi import migration_context
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

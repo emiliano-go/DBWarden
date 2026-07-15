@@ -142,10 +142,10 @@ $ dbwarden status --database primary
 
 For multi-instance deployments where multiple application replicas could
 trigger migrations concurrently, DBWarden provides a Redis-backed
-distributed lock through `dbwarden.fastapi.lock`:
+distributed lock through `dbwarden.extensions.fastapi.lock`:
 
 ```python
-from dbwarden.fastapi import migration_lock
+from dbwarden.extensions.fastapi import migration_lock
 
 # Within a FastAPI route or lifespan:
 async with migration_lock() as locked:
@@ -185,7 +185,7 @@ migration context:
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import dbwarden_lifespan, migration_lock
+from dbwarden.extensions.fastapi import dbwarden_lifespan, migration_lock
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

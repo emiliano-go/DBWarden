@@ -45,7 +45,7 @@ The `MetricsRouter` exposes a `GET /metrics` endpoint in Prometheus text format:
 
 ```python
 from fastapi import FastAPI
-from dbwarden.fastapi import MetricsRouter
+from dbwarden.extensions.fastapi import MetricsRouter
 
 app = FastAPI()
 app.include_router(MetricsRouter(), prefix="/metrics")
@@ -70,7 +70,7 @@ The `MetricsMiddleware` is an ASGI middleware that refreshes pending-migration g
 
 ```python
 from fastapi import FastAPI
-from dbwarden.fastapi import MetricsMiddleware, MetricsRouter
+from dbwarden.extensions.fastapi import MetricsMiddleware, MetricsRouter
 
 app = FastAPI()
 app.add_middleware(MetricsMiddleware)

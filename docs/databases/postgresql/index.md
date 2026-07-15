@@ -51,7 +51,7 @@ DBWarden treats PostgreSQL as a **first-class backend**: every natively supporte
 
 "First-class" means the round-trip is verified: reverse-engineer a live database with `generate-models`, feed the output back into `make-migrations`, and get **zero diff**.
 
-Implementation note: PostgreSQL diffs and SQL emission now flow through the `dbwarden.engine.pg_registry` handler layer. The registry map and pipeline are described in the [Architecture Deep Dive](../../architecture-deep-dive.md#postgresql-registry-pipeline).
+Implementation note: PostgreSQL diffs and SQL emission flow through the `dbwarden.engine.backends.postgresql.handlers` handler package. The handler pipeline is described in the [Architecture Deep Dive](../../architecture-deep-dive.md#postgresql-handler-pipeline).
 
 ```bash
 $ dbwarden generate-models -d primary --tables users,orders,items

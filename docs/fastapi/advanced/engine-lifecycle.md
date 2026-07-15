@@ -86,7 +86,7 @@ DBWarden provides a built-in `dispose_engines()` function that closes all cached
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import dispose_engines
+from dbwarden.extensions.fastapi import dispose_engines
 
 
 @asynccontextmanager

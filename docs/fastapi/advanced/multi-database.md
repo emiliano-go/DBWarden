@@ -173,7 +173,7 @@ Check all databases on startup:
 
 ```python
 from contextlib import asynccontextmanager
-from dbwarden.fastapi import migration_context
+from dbwarden.extensions.fastapi import migration_context
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -190,7 +190,7 @@ async def lifespan(app: FastAPI):
 Health endpoints automatically report all databases:
 
 ```python
-from dbwarden.fastapi import DBWardenHealthRouter
+from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
 app.include_router(DBWardenHealthRouter(), prefix="/health")
 ```

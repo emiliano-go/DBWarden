@@ -289,13 +289,13 @@ If you see errors about accessing attributes after commit, ensure you are using 
 
 ## Using `get_session` Directly
 
-The `get_session()` function is also available from `dbwarden.fastapi` for advanced cases where you need to create session dependencies dynamically:
+The `get_session()` function is also available from `dbwarden.extensions.fastapi` for advanced cases where you need to create session dependencies dynamically:
 
 ```python
 from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from dbwarden.fastapi import get_session
+from dbwarden.extensions.fastapi import get_session
 
 # Named database
 SessionDep = Annotated[AsyncSession, Depends(get_session())]

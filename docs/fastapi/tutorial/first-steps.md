@@ -34,7 +34,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from dbwarden import database_config
-from dbwarden.fastapi import migration_context
+from dbwarden.extensions.fastapi import migration_context
 
 
 @asynccontextmanager
@@ -119,7 +119,7 @@ Open <http://127.0.0.1:8000/docs> to see the Swagger UI with your route.
 Let's add health checking in **one line**:
 
 ```python
-from dbwarden.fastapi import DBWardenHealthRouter
+from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
 # Add this line after creating the app
 app.include_router(DBWardenHealthRouter(), prefix="/health")
@@ -152,7 +152,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from dbwarden import database_config
-from dbwarden.fastapi import DBWardenHealthRouter, migration_context
+from dbwarden.extensions.fastapi import DBWardenHealthRouter, migration_context
 
 
 @asynccontextmanager

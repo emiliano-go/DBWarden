@@ -309,7 +309,7 @@ def DBWardenHealthRouter(
 ### Examples
 
 ```python
-from dbwarden.fastapi import DBWardenHealthRouter
+from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
 app = FastAPI()
 app.include_router(DBWardenHealthRouter(), prefix="/health")
@@ -406,7 +406,7 @@ def DBWardenRouter(
 ### Examples
 
 ```python
-from dbwarden.fastapi import DBWardenRouter
+from dbwarden.extensions.fastapi import DBWardenRouter
 
 app = FastAPI()
 app.include_router(DBWardenRouter(), prefix="/db")
@@ -491,7 +491,7 @@ Only active when `prometheus_client` is installed and `DBWARDEN_METRICS=true` is
 ### Examples
 
 ```python
-from dbwarden.fastapi import MetricsRouter
+from dbwarden.extensions.fastapi import MetricsRouter
 
 app = FastAPI()
 app.include_router(MetricsRouter(), prefix="/metrics")
@@ -526,7 +526,7 @@ class MetricsMiddleware
 ### Usage
 
 ```python
-from dbwarden.fastapi import MetricsMiddleware, MetricsRouter
+from dbwarden.extensions.fastapi import MetricsMiddleware, MetricsRouter
 
 app = FastAPI()
 app.add_middleware(MetricsMiddleware)
@@ -552,7 +552,7 @@ def dispose_engines() -> None
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import dispose_engines
+from dbwarden.extensions.fastapi import dispose_engines
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -613,7 +613,7 @@ The remaining parameters (`dev`, `strict_translation`, `with_backup`, etc.) are 
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import dbwarden_lifespan
+from dbwarden.extensions.fastapi import dbwarden_lifespan
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -647,7 +647,7 @@ def QueryTracingMiddleware(
 ### Usage
 
 ```python
-from dbwarden.fastapi import QueryTracingMiddleware
+from dbwarden.extensions.fastapi import QueryTracingMiddleware
 
 app.add_middleware(QueryTracingMiddleware, slow_query_threshold_ms=100)
 ```
@@ -687,7 +687,7 @@ class PoolMetricsCollector()
 ### Usage
 
 ```python
-from dbwarden.fastapi import PoolMetricsCollector
+from dbwarden.extensions.fastapi import PoolMetricsCollector
 from sqlalchemy import create_engine
 
 collector = PoolMetricsCollector()
@@ -736,7 +736,7 @@ async def override_database(
 ### Usage
 
 ```python
-from dbwarden.fastapi import override_database
+from dbwarden.extensions.fastapi import override_database
 
 async with override_database("primary", "sqlite+aiosqlite:///:memory:",
                              run_migrations=True):
@@ -771,7 +771,7 @@ async def migration_state(
 ### Usage
 
 ```python
-from dbwarden.fastapi import migration_state
+from dbwarden.extensions.fastapi import migration_state
 
 async with migration_state(applied=["0001", "0002"]):
     # Database appears to have migrations 0001 and 0002 applied
@@ -827,7 +827,7 @@ def sync_migration_lock(
 ```python
 import redis.asyncio as aioredis
 from contextlib import asynccontextmanager
-from dbwarden.fastapi import migration_context, migration_lock
+from dbwarden.extensions.fastapi import migration_context, migration_lock
 
 redis_client = aioredis.from_url("redis://localhost:6379")
 
@@ -840,7 +840,7 @@ async def lifespan(app: FastAPI):
 
 ```python
 import redis
-from dbwarden.fastapi import migration_context, sync_migration_lock
+from dbwarden.extensions.fastapi import migration_context, sync_migration_lock
 
 redis_client = redis.from_url("redis://localhost:6379")
 
@@ -879,7 +879,7 @@ If you prefer the `Annotated` pattern, use `get_session()`:
 from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from dbwarden.fastapi import get_session
+from dbwarden.extensions.fastapi import get_session
 
 SessionDep = Annotated[AsyncSession, Depends(get_session())]
 ```

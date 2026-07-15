@@ -82,9 +82,9 @@ Rollback uses the same lock discipline, selecting rollback SQL from applied file
 8. write migration file
 9. write companion `.plan.json` metadata file (with `resolved_from` on rename ops)
 
-## PostgreSQL Registry Pipeline
+## PostgreSQL Handler Pipeline
 
-PostgreSQL support is implemented through the `dbwarden.engine.pg_registry` package. Each handler exposes a small contract: `extract`, `model_spec_from_tables`, `canonicalize`, `diff`, and `emit`.
+PostgreSQL support is implemented through `dbwarden.engine.backends.postgresql.handlers`. Each handler exposes a small contract: `extract`, `model_spec_from_tables`, `canonicalize`, `diff`, and `emit`.
 
 The `RegistryDriver` runs that contract in order:
 
@@ -131,7 +131,7 @@ The online path uses `diff_models_against_snapshot` and the registry driver dire
 
 The offline path uses `diff_model_states`, which still keeps a few raw dict comparisons for state only fields such as column diffs, PostgreSQL table scalars, MySQL table metadata, and table comments. Those raw ops still flow through the same emit layer, so the SQL output stays aligned with the handler path.
 
-The equivalence test in `tests/test_snapshot.py` locks that behavior in.
+The equivalence tests in `tests/test_pg_registry.py` and `tests/engine/snapshot/test_backend.py` lock that behavior in.
 
 ### Snapshot write lifecycle (in `migrate`)
 

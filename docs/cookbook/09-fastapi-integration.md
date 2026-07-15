@@ -38,7 +38,7 @@ The `primary` object is a `DatabaseHandle`. It exposes `primary.async_session` a
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import dbwarden_lifespan
+from dbwarden.extensions.fastapi import dbwarden_lifespan
 
 
 @asynccontextmanager
@@ -91,7 +91,7 @@ The session is automatically:
 ## Step 4: Health Endpoints
 
 ```python
-from dbwarden.fastapi import DBWardenHealthRouter
+from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
 app.include_router(DBWardenHealthRouter(), prefix="/health")
 ```
@@ -125,7 +125,7 @@ Sample response:
 ## Step 5: Migration Endpoints
 
 ```python
-from dbwarden.fastapi import DBWardenRouter
+from dbwarden.extensions.fastapi import DBWardenRouter
 
 app.include_router(DBWardenRouter(), prefix="/db")
 ```
@@ -142,7 +142,7 @@ These endpoints are useful for management UIs or automated deployment tooling.
 ```python
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import (
+from dbwarden.extensions.fastapi import (
     DBWardenHealthRouter,
     DBWardenRouter,
     dbwarden_lifespan,

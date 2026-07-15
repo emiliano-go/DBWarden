@@ -275,7 +275,7 @@ Create `app/main.py`:
 # app/main.py
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from dbwarden.fastapi import DBWardenHealthRouter, migration_context
+from dbwarden.extensions.fastapi import DBWardenHealthRouter, migration_context
 
 from app.routes import users
 
