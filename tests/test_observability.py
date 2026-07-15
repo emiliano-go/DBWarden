@@ -232,6 +232,60 @@ class TestMetricsRouter:
 class TestJSONLogging:
     """Tests for JSON logging via DBWARDEN_LOG_JSON."""
 
+    def test_color_helpers_and_status_use_expected_ansi_sequences(self, monkeypatch):
+        from dbwarden import logging as logging_module
+
+        monkeypatch.setattr(logging_module, "supports_color", lambda: True)
+
+        assert logging_module.colorize("hello", logging_module.ANSI_COLORS["red"]) == (
+            f"{logging_module.ANSI_COLORS['red']}hello{logging_module.ANSI_COLORS['reset']}"
+        )
+        assert logging_module.colorize_status("applied") == (
+            f"{logging_module.STATUS_COLORS['APPLIED']}[APPLIED]{logging_module.ANSI_COLORS['reset']}"
+        )
+        assert logging_module.colorize_status("unknown") == (
+            f"{logging_module.ANSI_COLORS['reset']}[UNKNOWN]{logging_module.ANSI_COLORS['reset']}"
+        )
+
+    def test_colorize_sql_highlights_keywords_strings_and_comments(self, monkeypatch):
+        from dbwarden import logging as logging_module
+
+        monkeypatch.setattr(logging_module, "supports_color", lambda: True)
+
+        output = logging_module.colorize_sql("SELECT 'value' -- comment")
+
+        assert "SELECT" in output
+        assert "'value'" in output
+        assert "-- comment" in output
+        assert logging_module.ANSI_COLORS["magenta"] in output
+        assert logging_module.ANSI_COLORS["green"] in output
+        assert (
+            logging_module.ANSI_COLORS["dim"] + logging_module.ANSI_COLORS["cyan"]
+        ) in output
+
+    def test_colored_formatter_applies_level_color_when_supported(self, monkeypatch):
+        from dbwarden import logging as logging_module
+
+        monkeypatch.setattr(logging_module, "supports_color", lambda: True)
+
+        formatter = logging_module.ColoredFormatter("%(message)s")
+        record = logging.LogRecord(
+            name="dbwarden",
+            level=logging.ERROR,
+            pathname="test.py",
+            lineno=1,
+            msg="boom",
+            args=(),
+            exc_info=None,
+        )
+
+        output = formatter.format(record)
+
+        assert output == (
+            f"{logging_module.LOG_COLORS[logging.ERROR]}boom"
+            f"{logging_module.ANSI_COLORS['reset']}"
+        )
+
     def test_json_formatter_outputs_valid_json(self):
         from dbwarden.logging import JSONFormatter
 
@@ -346,6 +400,72 @@ class TestJSONLogging:
         parsed = json.loads(output)
 
         assert parsed["timestamp"] == "2026-01-02T03:04:05.123456Z"
+
+    def test_json_formatter_default_format_time_uses_millisecond_precision(self):
+        from dbwarden.logging import JSONFormatter
+
+        fmt = JSONFormatter()
+        record = logging.LogRecord(
+            name="dbwarden",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="hello world",
+            args=(),
+            exc_info=None,
+        )
+        record.created = datetime(
+            2026,
+            1,
+            2,
+            3,
+            4,
+            5,
+            123456,
+            tzinfo=timezone.utc,
+        ).timestamp()
+
+        assert fmt.formatTime(record) == "2026-01-02T03:04:05.123+00:00"
+
+    def test_json_formatter_includes_non_reserved_extra_fields(self):
+        from dbwarden.logging import JSONFormatter
+
+        fmt = JSONFormatter()
+        record = logging.LogRecord(
+            name="dbwarden",
+            level=logging.INFO,
+            pathname="test.py",
+            lineno=1,
+            msg="hello world",
+            args=(),
+            exc_info=None,
+        )
+        record.request_id = "req-123"
+
+        output = fmt.format(record)
+        parsed = json.loads(output)
+
+        assert parsed["request_id"] == "req-123"
+
+    def test_json_formatter_prefers_exc_text_when_present(self):
+        from dbwarden.logging import JSONFormatter
+
+        fmt = JSONFormatter()
+        record = logging.LogRecord(
+            name="dbwarden",
+            level=logging.ERROR,
+            pathname="test.py",
+            lineno=1,
+            msg="boom",
+            args=(),
+            exc_info=None,
+        )
+        record.exc_text = "cached traceback text"
+
+        output = fmt.format(record)
+        parsed = json.loads(output)
+
+        assert parsed["exception"] == "cached traceback text"
 
     def test_use_json_logging_env_var(self, monkeypatch):
         monkeypatch.setenv("DBWARDEN_LOG_JSON", "true")

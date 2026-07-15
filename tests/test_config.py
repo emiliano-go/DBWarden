@@ -632,10 +632,19 @@ class TestLogger:
         assert logger.debug_enabled is False
         assert logger.logger.level == 20
 
+    def test_logger_rejects_invalid_constructor_verbosity(self):
+        with pytest.raises(TypeError, match="verbosity must be a Verbosity member"):
+            DBWardenLogger(debug_enabled=False, verbosity="verbose")
+
     def test_logger_debug_enabled_level(self):
         logger = DBWardenLogger(debug_enabled=True)
         assert logger.debug_enabled is True
         assert logger.logger.level == 10
+
+    def test_logger_verbose_flag_sets_verbose_verbosity(self):
+        logger = DBWardenLogger(debug_enabled=False, verbose=True)
+
+        assert logger.verbosity == Verbosity.VERBOSE
 
     def test_logger_set_debug_enabled(self):
         logger = DBWardenLogger(debug_enabled=False)
@@ -643,9 +652,57 @@ class TestLogger:
         assert logger.debug_enabled is True
         assert logger.logger.level == 10
 
+    def test_logger_set_verbosity_rejects_invalid_value(self):
+        logger = DBWardenLogger(debug_enabled=False)
+
+        with pytest.raises(TypeError, match="verbosity must be a Verbosity member"):
+            logger.set_verbosity("quiet")
+
     def test_logger_info(self):
         logger = DBWardenLogger(debug_enabled=False)
         logger.info("Test message")
+
+    def test_logger_error_and_critical_apply_default_stacklevel(self, monkeypatch):
+        logger = DBWardenLogger(debug_enabled=False)
+        calls = []
+
+        monkeypatch.setattr(
+            logger.logger,
+            "error",
+            lambda msg, *args, **kwargs: calls.append(("error", msg, kwargs)),
+        )
+        monkeypatch.setattr(
+            logger.logger,
+            "critical",
+            lambda msg, *args, **kwargs: calls.append(("critical", msg, kwargs)),
+        )
+
+        logger.error("error message")
+        logger.critical("critical message")
+
+        assert calls == [
+            ("error", "error message", {"stacklevel": 2}),
+            ("critical", "critical message", {"stacklevel": 2}),
+        ]
+
+    def test_logger_exception_only_logs_when_exception_is_active(self, monkeypatch):
+        logger = DBWardenLogger(debug_enabled=False)
+        calls = []
+
+        monkeypatch.setattr(
+            logger.logger,
+            "exception",
+            lambda msg, *args, **kwargs: calls.append((msg, kwargs)),
+        )
+
+        logger.exception("no exception")
+
+        try:
+            raise ValueError("boom")
+        except ValueError:
+            logger.exception("with exception")
+
+        assert calls == [("with exception", {"stacklevel": 2})]
 
     def test_logger_debug(self):
         logger = DBWardenLogger(debug_enabled=True)
@@ -655,10 +712,32 @@ class TestLogger:
     def test_logger_log_connection_init(self):
         logger = DBWardenLogger(debug_enabled=False)
         logger.log_connection_init("postgresql")
+        assert logger.db_type == "postgresql"
+
+    def test_logger_log_connection_init_without_db_type_preserves_existing_type(self):
+        logger = DBWardenLogger(debug_enabled=False, db_type="sqlite")
+
+        logger.log_connection_init()
+
+        assert logger.db_type == "sqlite"
 
     def test_logger_log_pending_migrations(self):
         logger = DBWardenLogger(debug_enabled=False)
         logger.log_pending_migrations(["V1__init.sql", "V2__add_users.sql"])
+
+    def test_logger_log_pending_migrations_empty_list_is_noop(self, monkeypatch):
+        logger = DBWardenLogger(debug_enabled=False)
+        calls = []
+
+        monkeypatch.setattr(
+            logger,
+            "_log_best_candidate",
+            lambda *args, **kwargs: calls.append((args, kwargs)),
+        )
+
+        logger.log_pending_migrations([])
+
+        assert calls == []
 
     def test_logger_log_migration_start(self):
         logger = DBWardenLogger(debug_enabled=False)
@@ -672,6 +751,24 @@ class TestLogger:
         logger = DBWardenLogger(debug_enabled=False)
         logger.log_rollback_end("0001", "V1__init.sql", 0.03)
 
+    def test_logger_log_rollback_start(self):
+        logger = DBWardenLogger(debug_enabled=False)
+        records = []
+
+        class CaptureHandler(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        logger.logger.handlers = [CaptureHandler()]
+        logger.logger.propagate = False
+
+        logger.log_rollback_start("0001", "V1__init.sql")
+
+        assert len(records) == 1
+        assert records[0].getMessage() == (
+            "Rolling back migration: V1__init.sql (version: 0001)"
+        )
+
     def test_logger_log_backup_created(self):
         logger = DBWardenLogger(debug_enabled=False)
         logger.log_backup_created("/path/to/backup.db")
@@ -679,6 +776,22 @@ class TestLogger:
     def test_logger_log_baseline_set(self):
         logger = DBWardenLogger(debug_enabled=False)
         logger.log_baseline_set("0001")
+
+    def test_logger_log_seed_migration(self):
+        logger = DBWardenLogger(debug_enabled=False)
+        records = []
+
+        class CaptureHandler(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        logger.logger.handlers = [CaptureHandler()]
+        logger.logger.propagate = False
+
+        logger.log_seed_migration("V0001__seed.sql")
+
+        assert len(records) == 1
+        assert "Seed data applied: V0001__seed.sql" in records[0].getMessage()
 
     def test_get_logger_returns_same_instance(self):
         logger1 = get_logger()
@@ -703,6 +816,19 @@ class TestLogger:
             assert logger2.debug_enabled is True
             assert logger2.verbosity == Verbosity.VERBOSE
             assert logger2.logger.level == logging.DEBUG
+        finally:
+            reset_logger()
+
+    def test_get_logger_promotes_existing_singleton_to_verbose_from_flag(self):
+        from dbwarden.logging import reset_logger
+
+        reset_logger()
+        try:
+            logger1 = get_logger(verbose=False, verbosity=Verbosity.NORMAL)
+            logger2 = get_logger(verbose=True)
+
+            assert logger1 is logger2
+            assert logger2.verbosity == Verbosity.VERBOSE
         finally:
             reset_logger()
 
@@ -741,6 +867,36 @@ class TestLogger:
         )
 
         assert calls == [("debug", "debug message wins", {"stacklevel": 3})]
+
+    def test_log_best_candidate_falls_back_to_info_when_debug_enabled_but_no_debug_candidate(
+        self,
+        monkeypatch,
+    ):
+        logger = DBWardenLogger(debug_enabled=True, verbosity=Verbosity.NORMAL)
+        calls = []
+
+        monkeypatch.setattr(
+            logger,
+            "debug",
+            lambda msg, *args, **kwargs: calls.append(("debug", msg, kwargs)),
+        )
+        monkeypatch.setattr(
+            logger,
+            "info",
+            lambda msg, *args, **kwargs: calls.append(("info", msg, kwargs)),
+        )
+
+        logger._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: "normal info",
+                    Verbosity.NORMAL,
+                ),
+            ]
+        )
+
+        assert calls == [("info", "normal info", {"stacklevel": 3})]
 
     @pytest.mark.parametrize(
         ("verbosity", "expected_message"),
@@ -791,6 +947,29 @@ class TestLogger:
         )
 
         assert calls == [("info", expected_message, {"stacklevel": 3})]
+
+    def test_log_best_candidate_returns_when_info_is_disabled(self, monkeypatch):
+        logger = DBWardenLogger(debug_enabled=False, verbosity=Verbosity.NORMAL)
+        logger.logger.setLevel(logging.WARNING)
+        calls = []
+
+        monkeypatch.setattr(
+            logger,
+            "info",
+            lambda msg, *args, **kwargs: calls.append(("info", msg, kwargs)),
+        )
+
+        logger._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: "normal info",
+                    Verbosity.NORMAL,
+                ),
+            ]
+        )
+
+        assert calls == []
 
     def test_sql_debug_helper_emits_single_debug_record_with_header_and_sql_body(self):
         logger = DBWardenLogger(debug_enabled=True)
@@ -844,6 +1023,26 @@ class TestLogger:
         assert captured["args"] == ()
         assert captured["kwargs"]["stacklevel"] == 7
 
+    def test_format_db_context_with_db_name_only(self, monkeypatch):
+        logger = DBWardenLogger(debug_enabled=False, db_name="primary")
+
+        monkeypatch.setattr(
+            "dbwarden.logging.colorize",
+            lambda text, color: f"<{color}>{text}</{color}>",
+        )
+
+        assert logger._format_db_context() == "[<\033[36m>primary</\033[36m>]"
+
+    def test_format_db_context_with_db_type_only(self, monkeypatch):
+        logger = DBWardenLogger(debug_enabled=False, db_type="postgresql")
+
+        monkeypatch.setattr(
+            "dbwarden.logging.colorize",
+            lambda text, color: f"<{color}>{text}</{color}>",
+        )
+
+        assert logger._format_db_context() == "[<\033[35m>postgresql</\033[35m>]"
+
     def test_logging_helper_uses_callsite_stacklevel_four(self):
         logger = DBWardenLogger(debug_enabled=False)
         records = []
@@ -866,6 +1065,42 @@ class TestLogger:
         record = records[0]
         assert record.pathname.endswith("test_config.py")
         assert record.lineno == expected_lineno
+
+    def test_log_table_columns_emits_debug_message(self):
+        logger = DBWardenLogger(debug_enabled=True)
+        records = []
+
+        class CaptureHandler(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        logger.logger.handlers = [CaptureHandler()]
+        logger.logger.propagate = False
+
+        logger.log_table_columns(
+            "users",
+            [{"name": "id"}, {"name": "email"}],
+        )
+
+        assert len(records) == 1
+        assert records[0].getMessage() == "Table users columns: id, email"
+
+    def test_log_migration_sql_gen_emits_debug_message(self):
+        logger = DBWardenLogger(debug_enabled=True)
+        records = []
+
+        class CaptureHandler(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        logger.logger.handlers = [CaptureHandler()]
+        logger.logger.propagate = False
+
+        logger.log_migration_sql_gen("users", "SELECT 1")
+
+        assert len(records) == 1
+        assert "Generated SQL for users:" in records[0].getMessage()
+        assert "SELECT 1" in records[0].getMessage()
 
     def test_reset_logger(self):
         from dbwarden.logging import reset_logger
