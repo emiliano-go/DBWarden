@@ -51,7 +51,7 @@ class HealthResult:
 
     def to_database_health(self) -> "DatabaseHealth":
         """Convert to Pydantic model - explicit construction."""
-        from dbwarden.fastapi.types import DatabaseHealth
+        from dbwarden.extensions.fastapi.types import DatabaseHealth
         return DatabaseHealth(
             database=self.database,
             status=self.status,

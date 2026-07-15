@@ -1,6 +1,6 @@
 from dbwarden.seed import SeedRow, seed_data
 from dbwarden.seed import SeedMeta
-from dbwarden.schema.seed import DBWardenSeed
+from dbwarden.schema import DBWardenSeed
 
 
 def test_seed_row_construction():

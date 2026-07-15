@@ -7,21 +7,7 @@ from dbwarden.metrics import metrics_enabled
 
 
 class QueryTracingMiddleware:
-    """ASGI middleware that emits per-request structured query tracing logs.
-
-    Tracks query count, total duration, slowest query, and slow query
-    threshold breaches for each HTTP request.
-
-    Usage::
-
-        from dbwarden.fastapi import QueryTracingMiddleware
-        app.add_middleware(QueryTracingMiddleware, slow_query_threshold_ms=100)
-
-    Args:
-        app: The ASGI application to wrap.
-        slow_query_threshold_ms: Queries exceeding this duration (ms)
-          are logged as slow. Default 100.
-    """
+    """ASGI middleware that emits per-request structured query tracing logs."""
 
     def __init__(self, app, slow_query_threshold_ms: int = 100):
         self.app = app
@@ -70,40 +56,15 @@ class QueryTracingMiddleware:
 
 
 class PoolMetricsCollector:
-    """Collector for SQLAlchemy connection pool metrics.
-
-    Exposes pool metrics that can be integrated with Prometheus.
-
-    Usage::
-
-        from dbwarden.fastapi import PoolMetricsCollector
-        collector = PoolMetricsCollector()
-
-        # In a metrics endpoint or background task:
-        metrics = collector.collect()
-    """
+    """Collector for SQLAlchemy connection pool metrics."""
 
     def __init__(self):
         self._engines: dict[str, Any] = {}
 
     def register(self, name: str, engine) -> None:
-        """Register an engine for pool metrics collection."""
         self._engines[name] = engine
 
     def collect(self) -> dict[str, dict[str, int]]:
-        """Collect pool metrics from all registered engines.
-
-        Returns::
-
-            {
-                "primary": {
-                    "pool_size": 5,
-                    "checked_out": 2,
-                    "overflow": 0,
-                    "checked_in": 3,
-                }
-            }
-        """
         metrics: dict[str, dict[str, int]] = {}
         for name, engine in self._engines.items():
             pool = getattr(engine, "pool", None)
@@ -122,11 +83,6 @@ class PoolMetricsCollector:
 
 
 def _patch_engine_for_tracing(qc, tqt, sqt, sq, threshold_ms):
-    """Wrap SQLAlchemy Connection.execute to count queries.
-
-    This is a lightweight approach. For production tracing, integrate
-    with OpenTelemetry or similar.
-    """
     import sqlalchemy as sa
 
     original_connect = sa.engine.Engine.connect
@@ -153,3 +109,9 @@ def _patch_engine_for_tracing(qc, tqt, sqt, sq, threshold_ms):
         return connection
 
     sa.engine.Engine.connect = traced_connect
+
+
+__all__ = [
+    "PoolMetricsCollector",
+    "QueryTracingMiddleware",
+]

@@ -7,7 +7,7 @@ class TestQueryTracingMiddleware:
     def test_middleware_applied(self):
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
-        from dbwarden.fastapi import QueryTracingMiddleware
+        from dbwarden.extensions.fastapi import QueryTracingMiddleware
 
         app = FastAPI()
         app.add_middleware(QueryTracingMiddleware, slow_query_threshold_ms=50)
@@ -20,7 +20,7 @@ class TestQueryTracingMiddleware:
         assert resp.status_code == 200
 
     def test_middleware_passthrough_non_http(self):
-        from dbwarden.fastapi import QueryTracingMiddleware
+        from dbwarden.extensions.fastapi import QueryTracingMiddleware
 
         async def noop_app(scope, receive, send):
             await send({"type": "websocket.send", "text": "ok"})
@@ -32,7 +32,7 @@ class TestQueryTracingMiddleware:
 class TestPoolMetricsCollector:
     def test_collect_returns_metrics(self):
         from sqlalchemy import create_engine
-        from dbwarden.fastapi import PoolMetricsCollector
+        from dbwarden.extensions.fastapi import PoolMetricsCollector
 
         collector = PoolMetricsCollector()
         engine = create_engine("sqlite:///:memory:")
@@ -44,12 +44,12 @@ class TestPoolMetricsCollector:
         assert metrics["test_db"]["overflow"] >= 0
 
     def test_empty_collector(self):
-        from dbwarden.fastapi import PoolMetricsCollector
+        from dbwarden.extensions.fastapi import PoolMetricsCollector
         assert PoolMetricsCollector().collect() == {}
 
     def test_multiple_engines(self):
         from sqlalchemy import create_engine
-        from dbwarden.fastapi import PoolMetricsCollector
+        from dbwarden.extensions.fastapi import PoolMetricsCollector
 
         collector = PoolMetricsCollector()
         collector.register("a", create_engine("sqlite:///:memory:"))
@@ -62,7 +62,7 @@ class TestOverrideDatabase:
     @pytest.mark.asyncio
     async def test_override_and_restore(self, monkeypatch):
         from dbwarden.config import DatabaseConfig
-        from dbwarden.fastapi.testing import override_database
+        from dbwarden.extensions.fastapi.testing import override_database
 
         mock_config = DatabaseConfig(
             database_type="sqlite",
@@ -86,7 +86,7 @@ class TestOverrideDatabase:
     @pytest.mark.asyncio
     async def test_override_restores_on_error(self, monkeypatch):
         from dbwarden.config import DatabaseConfig
-        from dbwarden.fastapi.testing import override_database
+        from dbwarden.extensions.fastapi.testing import override_database
 
         mock_config = DatabaseConfig(
             database_type="sqlite",
@@ -112,13 +112,13 @@ class TestOverrideDatabase:
 
 class TestMigrationState:
     def test_migration_state_can_be_instantiated(self):
-        from dbwarden.fastapi import migration_state
+        from dbwarden.extensions.fastapi import migration_state
         assert migration_state is not None
 
 
 class TestDBWardenLifespan:
     def test_readiness_gate_raises_on_bad_db(self, monkeypatch):
-        from dbwarden.fastapi.lifespan import _check_readiness
+        from dbwarden.extensions.fastapi.lifespan import _check_readiness
 
         class MockResult:
             status = "error"
@@ -126,13 +126,13 @@ class TestDBWardenLifespan:
         def mock_health(name):
             return MockResult()
 
-        monkeypatch.setattr("dbwarden.fastapi.runtime.check_database_health", mock_health)
-        monkeypatch.setattr("dbwarden.fastapi.runtime.resolved_databases", lambda all_databases=False, database=None: ["bad_db"])
+        monkeypatch.setattr("dbwarden.extensions.fastapi.runtime.check_database_health", mock_health)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.runtime.resolved_databases", lambda all_databases=False, database=None: ["bad_db"])
 
         import pytest
         with pytest.raises(RuntimeError, match="Readiness gate failed"):
             _check_readiness(database="bad_db")
 
     def test_warmup_pools_does_not_crash(self):
-        from dbwarden.fastapi.lifespan import _warmup_pools
+        from dbwarden.extensions.fastapi.lifespan import _warmup_pools
         _warmup_pools(database="test_ovr", size=1)

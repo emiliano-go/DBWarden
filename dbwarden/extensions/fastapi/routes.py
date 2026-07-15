@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from dbwarden.commands.migrate import migrate_cmd
 from dbwarden.config import get_multi_db_config
-from dbwarden.fastapi.runtime import check_startup, compute_pending_migrations
+from dbwarden.extensions.fastapi.runtime import check_startup, compute_pending_migrations
 from dbwarden.repositories import check_lock, get_migrated_versions
 from dbwarden.repositories.migrations_repo import migrations_table_exists
 from dbwarden.repositories.seeds_repo import (

@@ -3,8 +3,8 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from dbwarden.fastapi.engines import dispose_engines
-from dbwarden.fastapi.context import migration_context
+from dbwarden.extensions.fastapi.engines import dispose_engines
+from dbwarden.extensions.fastapi.context import migration_context
 
 
 @asynccontextmanager
@@ -37,7 +37,7 @@ async def dbwarden_lifespan(
 
         from contextlib import asynccontextmanager
         from fastapi import FastAPI
-        from dbwarden.fastapi import dbwarden_lifespan
+        from dbwarden.extensions.fastapi import dbwarden_lifespan
 
         @asynccontextmanager
         async def lifespan(app: FastAPI):
@@ -102,14 +102,14 @@ async def dbwarden_lifespan(
 
 def _check_readiness(database: str | None = None, all_databases: bool = False) -> None:
     """Raise RuntimeError if any target database is unreachable."""
-    from dbwarden.fastapi.runtime import check_startup, resolved_databases
+    from dbwarden.extensions.fastapi.runtime import check_startup, resolved_databases
 
     targets = resolved_databases(all_databases) if all_databases else (
         [database] if database else resolved_databases(True)
     )
     for name in targets:
         try:
-            from dbwarden.fastapi.runtime import check_database_health
+            from dbwarden.extensions.fastapi.runtime import check_database_health
             result = check_database_health(name)
             if result.status != "ok":
                 raise RuntimeError(f"Readiness gate failed: database '{name}' status is '{result.status}'")

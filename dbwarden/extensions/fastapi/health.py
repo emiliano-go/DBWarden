@@ -10,8 +10,8 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 
 from dbwarden.config import get_multi_db_config
-from dbwarden.fastapi.runtime import check_database_health, check_startup
-from dbwarden.fastapi.types import DatabaseHealth, HealthResponse
+from dbwarden.extensions.fastapi.runtime import check_database_health, check_startup
+from dbwarden.extensions.fastapi.types import DatabaseHealth, HealthResponse
 
 
 class HealthAuthMode(str, Enum):

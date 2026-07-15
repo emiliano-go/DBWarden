@@ -25,7 +25,7 @@ async def migration_lock(
     Example::
 
         from redis.asyncio import Redis
-        from dbwarden.fastapi import migration_lock
+        from dbwarden.extensions.fastapi import migration_lock
 
         redis = Redis.from_url("redis://localhost:6379")
 
@@ -73,7 +73,7 @@ def sync_migration_lock(
     Example::
 
         from redis import Redis
-        from dbwarden.fastapi import sync_migration_lock
+        from dbwarden.extensions.fastapi import sync_migration_lock
 
         redis = Redis.from_url("redis://localhost:6379")
 

@@ -14,7 +14,7 @@ class TestMigrationLock:
 
     @pytest.mark.asyncio
     async def test_async_lock_acquire_and_release(self):
-        from dbwarden.fastapi.lock import migration_lock
+        from dbwarden.extensions.fastapi.lock import migration_lock
 
         redis = AsyncMock()
         redis.setnx.return_value = True
@@ -27,7 +27,7 @@ class TestMigrationLock:
 
     @pytest.mark.asyncio
     async def test_async_lock_already_held(self):
-        from dbwarden.fastapi.lock import migration_lock
+        from dbwarden.extensions.fastapi.lock import migration_lock
         from dbwarden.exceptions import LockError
 
         redis = AsyncMock()
@@ -40,7 +40,7 @@ class TestMigrationLock:
         redis.delete.assert_not_awaited()
 
     def test_sync_lock_acquire_and_release(self):
-        from dbwarden.fastapi.lock import sync_migration_lock
+        from dbwarden.extensions.fastapi.lock import sync_migration_lock
 
         redis = MagicMock()
         redis.setnx.return_value = True
@@ -52,7 +52,7 @@ class TestMigrationLock:
         redis.delete.assert_called_once_with("test_lock")
 
     def test_sync_lock_already_held(self):
-        from dbwarden.fastapi.lock import sync_migration_lock
+        from dbwarden.extensions.fastapi.lock import sync_migration_lock
         from dbwarden.exceptions import LockError
 
         redis = MagicMock()
@@ -77,10 +77,10 @@ class TestStatusEndpoint:
         class FakeCfg:
             databases = {"primary": FakeDB(), "analytics": FakeDB()}
 
-        monkeypatch.setattr("dbwarden.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
 
         def fake_status(name):
-            from dbwarden.fastapi.routes import DatabaseStatus
+            from dbwarden.extensions.fastapi.routes import DatabaseStatus
             return DatabaseStatus(
                 database=name,
                 status="ok",
@@ -93,9 +93,9 @@ class TestStatusEndpoint:
                 error=None,
             )
 
-        monkeypatch.setattr("dbwarden.fastapi.routes._compute_migration_status", fake_status)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes._compute_migration_status", fake_status)
 
-        from dbwarden.fastapi.routes import DBWardenRouter
+        from dbwarden.extensions.fastapi.routes import DBWardenRouter
 
         app.include_router(DBWardenRouter(), prefix="/dbwarden")
         client = TestClient(app)
@@ -116,12 +116,12 @@ class TestStatusEndpoint:
         class FakeCfg:
             databases = {"primary": FakeDB()}
 
-        monkeypatch.setattr("dbwarden.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
 
-        from dbwarden.fastapi.routes import DatabaseStatus
+        from dbwarden.extensions.fastapi.routes import DatabaseStatus
 
         monkeypatch.setattr(
-            "dbwarden.fastapi.routes._compute_migration_status",
+            "dbwarden.extensions.fastapi.routes._compute_migration_status",
             lambda n: DatabaseStatus(
                 database=n,
                 status="ok",
@@ -135,7 +135,7 @@ class TestStatusEndpoint:
             ),
         )
 
-        from dbwarden.fastapi.routes import DBWardenRouter
+        from dbwarden.extensions.fastapi.routes import DBWardenRouter
 
         app.include_router(
             DBWardenRouter(auth_mode="authenticated", api_key="secret"),
@@ -168,10 +168,10 @@ class TestMigrateEndpoint:
         class FakeCfg:
             databases = {"primary": FakeDB()}
 
-        monkeypatch.setattr("dbwarden.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
-        monkeypatch.setattr("dbwarden.fastapi.routes.migrate_cmd", lambda **kw: None)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.migrate_cmd", lambda **kw: None)
 
-        from dbwarden.fastapi.routes import DBWardenRouter
+        from dbwarden.extensions.fastapi.routes import DBWardenRouter
 
         app.include_router(DBWardenRouter(), prefix="/dbwarden")
         client = TestClient(app)
@@ -191,10 +191,10 @@ class TestMigrateEndpoint:
         class FakeCfg:
             databases = {"primary": FakeDB(), "analytics": FakeDB()}
 
-        monkeypatch.setattr("dbwarden.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
-        monkeypatch.setattr("dbwarden.fastapi.routes.migrate_cmd", lambda **kw: None)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.migrate_cmd", lambda **kw: None)
 
-        from dbwarden.fastapi.routes import DBWardenRouter
+        from dbwarden.extensions.fastapi.routes import DBWardenRouter
 
         app.include_router(DBWardenRouter(), prefix="/dbwarden")
         client = TestClient(app)
@@ -213,9 +213,9 @@ class TestMigrateEndpoint:
         class FakeCfg:
             databases = {"primary": FakeDB()}
 
-        monkeypatch.setattr("dbwarden.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
 
-        from dbwarden.fastapi.routes import DBWardenRouter
+        from dbwarden.extensions.fastapi.routes import DBWardenRouter
 
         app.include_router(DBWardenRouter(), prefix="/dbwarden")
         client = TestClient(app)
@@ -232,10 +232,10 @@ class TestMigrateEndpoint:
         class FakeCfg:
             databases = {"primary": FakeDB()}
 
-        monkeypatch.setattr("dbwarden.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
-        monkeypatch.setattr("dbwarden.fastapi.routes.migrate_cmd", lambda **kw: None)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.migrate_cmd", lambda **kw: None)
 
-        from dbwarden.fastapi.routes import DBWardenRouter
+        from dbwarden.extensions.fastapi.routes import DBWardenRouter
 
         app.include_router(
             DBWardenRouter(auth_mode="authenticated", api_key="secret"),
@@ -264,13 +264,13 @@ class TestMigrateEndpoint:
         class FakeCfg:
             databases = {"primary": FakeDB()}
 
-        monkeypatch.setattr("dbwarden.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
         monkeypatch.setattr(
-            "dbwarden.fastapi.routes.migrate_cmd",
+            "dbwarden.extensions.fastapi.routes.migrate_cmd",
             lambda **kw: (_ for _ in ()).throw(RuntimeError("migration failed")),
         )
 
-        from dbwarden.fastapi.routes import DBWardenRouter
+        from dbwarden.extensions.fastapi.routes import DBWardenRouter
 
         app.include_router(DBWardenRouter(), prefix="/dbwarden")
         client = TestClient(app)
@@ -289,15 +289,15 @@ class TestMigrateEndpoint:
         class FakeCfg:
             databases = {"primary": FakeDB()}
 
-        monkeypatch.setattr("dbwarden.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.get_multi_db_config", lambda: FakeCfg())
         captured = {}
 
         def fake_migrate(**kw):
             captured.update(kw)
 
-        monkeypatch.setattr("dbwarden.fastapi.routes.migrate_cmd", fake_migrate)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.routes.migrate_cmd", fake_migrate)
 
-        from dbwarden.fastapi.routes import DBWardenRouter
+        from dbwarden.extensions.fastapi.routes import DBWardenRouter
 
         app.include_router(DBWardenRouter(), prefix="/dbwarden")
         client = TestClient(app)

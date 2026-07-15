@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.orm import Session, sessionmaker
 
 from dbwarden.config import get_database
-from dbwarden.fastapi.runtime import runtime_flags
+from dbwarden.extensions.fastapi.runtime import runtime_flags
 
 _ASYNC_SESSION_FACTORIES: dict[str, async_sessionmaker[AsyncSession]] = {}
 _SYNC_SESSION_FACTORIES: dict[str, sessionmaker[Session]] = {}

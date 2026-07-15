@@ -15,28 +15,28 @@ class TestGetSession:
 
     def test_get_session_returns_callable(self):
         """get_session() should return a callable."""
-        from dbwarden.fastapi import get_session
+        from dbwarden.extensions.fastapi import get_session
 
         result = get_session()
         assert callable(result)
 
     def test_get_session_with_database_param(self):
         """get_session('database_name') should work."""
-        from dbwarden.fastapi import get_session
+        from dbwarden.extensions.fastapi import get_session
 
         result = get_session("primary")
         assert callable(result)
 
     def test_get_session_with_dev_param(self):
         """get_session(dev=True) should work."""
-        from dbwarden.fastapi import get_session
+        from dbwarden.extensions.fastapi import get_session
 
         result = get_session(dev=True)
         assert callable(result)
 
     def test_get_session_with_both_params(self):
         """get_session('database', dev=True) should work."""
-        from dbwarden.fastapi import get_session
+        from dbwarden.extensions.fastapi import get_session
 
         result = get_session("primary", dev=True)
         assert callable(result)
@@ -68,7 +68,7 @@ class TestGetSession:
         monkeypatch.setattr("dbwarden.config.is_strict_translation", lambda: False)
 
         # Also patch session module imports
-        import dbwarden.fastapi.session as session_module
+        import dbwarden.extensions.fastapi.session as session_module
 
         # Mock the session factory to return a mock session
         mock_session = AsyncMock(spec=AsyncSession)
@@ -83,11 +83,11 @@ class TestGetSession:
         mock_sessionmaker.return_value = mock_factory
 
         monkeypatch.setattr(
-            "dbwarden.fastapi.session._session_factory",
+            "dbwarden.extensions.fastapi.session._session_factory",
             lambda database, dev: mock_sessionmaker
         )
 
-        from dbwarden.fastapi import get_session
+        from dbwarden.extensions.fastapi import get_session
 
         SessionDep = Annotated[AsyncSession, Depends(get_session())]
 
@@ -108,7 +108,7 @@ class TestGetSessionErrors:
 
     def test_get_session_no_config(self, monkeypatch):
         """get_session should raise if no config is loaded."""
-        from dbwarden.fastapi import get_session
+        from dbwarden.extensions.fastapi import get_session
 
         # Make get_database raise
         def mock_get_database(name=None):
@@ -123,7 +123,7 @@ class TestGetSessionErrors:
 
     def test_get_session_unsupported_database_type(self, monkeypatch):
         """get_session should raise for unsupported database types."""
-        from dbwarden.fastapi import get_session
+        from dbwarden.extensions.fastapi import get_session
 
         mock_db = MagicMock()
         mock_db.database_name = "primary"

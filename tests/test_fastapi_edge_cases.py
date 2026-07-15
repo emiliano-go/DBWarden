@@ -8,7 +8,7 @@ fastapi = pytest.importorskip("fastapi")
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dbwarden.fastapi.runtime import HealthResult
+from dbwarden.extensions.fastapi.runtime import HealthResult
 
 
 class TestHealthRouterEdgeCases:
@@ -30,9 +30,9 @@ class TestHealthRouterEdgeCases:
                 )
             ]
 
-        monkeypatch.setattr("dbwarden.fastapi.health.check_startup", fake_check_startup)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.health.check_startup", fake_check_startup)
         app.include_router(
-            __import__("dbwarden.fastapi", fromlist=["DBWardenHealthRouter"]).DBWardenHealthRouter(),
+            __import__("dbwarden.extensions.fastapi", fromlist=["DBWardenHealthRouter"]).DBWardenHealthRouter(),
             prefix="/health"
         )
         client = TestClient(app)
@@ -57,9 +57,9 @@ class TestHealthRouterEdgeCases:
                 )
             ]
 
-        monkeypatch.setattr("dbwarden.fastapi.health.check_startup", fake_check_startup)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.health.check_startup", fake_check_startup)
         app.include_router(
-            __import__("dbwarden.fastapi", fromlist=["DBWardenHealthRouter"]).DBWardenHealthRouter(),
+            __import__("dbwarden.extensions.fastapi", fromlist=["DBWardenHealthRouter"]).DBWardenHealthRouter(),
             prefix="/health"
         )
         client = TestClient(app)
@@ -85,7 +85,7 @@ class TestHealthRouterEdgeCases:
                 )
             ]
 
-        monkeypatch.setattr("dbwarden.fastapi.health.check_startup", fake_check_startup)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.health.check_startup", fake_check_startup)
 
         # Mock config to say primary exists but analytics doesn't
         class FakeDB:
@@ -94,10 +94,10 @@ class TestHealthRouterEdgeCases:
         class FakeCfg:
             databases = {"primary": FakeDB()}
 
-        monkeypatch.setattr("dbwarden.fastapi.health.get_multi_db_config", lambda: FakeCfg())
+        monkeypatch.setattr("dbwarden.extensions.fastapi.health.get_multi_db_config", lambda: FakeCfg())
 
         app.include_router(
-            __import__("dbwarden.fastapi", fromlist=["DBWardenHealthRouter"]).DBWardenHealthRouter(),
+            __import__("dbwarden.extensions.fastapi", fromlist=["DBWardenHealthRouter"]).DBWardenHealthRouter(),
             prefix="/health"
         )
         client = TestClient(app)
@@ -129,9 +129,9 @@ class TestHealthRouterEdgeCases:
                 ),
             ]
 
-        monkeypatch.setattr("dbwarden.fastapi.health.check_startup", fake_check_startup)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.health.check_startup", fake_check_startup)
         app.include_router(
-            __import__("dbwarden.fastapi", fromlist=["DBWardenHealthRouter"]).DBWardenHealthRouter(),
+            __import__("dbwarden.extensions.fastapi", fromlist=["DBWardenHealthRouter"]).DBWardenHealthRouter(),
             prefix="/health"
         )
         client = TestClient(app)
@@ -166,9 +166,9 @@ class TestHealthRouterEdgeCases:
                 ),
             ]
 
-        monkeypatch.setattr("dbwarden.fastapi.health.check_startup", fake_check_startup)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.health.check_startup", fake_check_startup)
         app.include_router(
-            __import__("dbwarden.fastapi", fromlist=["DBWardenHealthRouter"]).DBWardenHealthRouter(),
+            __import__("dbwarden.extensions.fastapi", fromlist=["DBWardenHealthRouter"]).DBWardenHealthRouter(),
             prefix="/health"
         )
         client = TestClient(app)
@@ -198,9 +198,9 @@ class TestMigrationContextEdgeCases:
                 )
             ]
 
-        monkeypatch.setattr("dbwarden.fastapi.context.check_startup", fake_check_startup)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.context.check_startup", fake_check_startup)
 
-        from dbwarden.fastapi import migration_context
+        from dbwarden.extensions.fastapi import migration_context
         import asyncio
 
         # This should not raise, just warn
@@ -251,10 +251,10 @@ class TestMigrationContextEdgeCases:
             "lock_active": False,
             "error": None
         }
-        monkeypatch.setattr("dbwarden.fastapi.runtime.check_startup", lambda **kwargs: [mock_result])
-        monkeypatch.setattr("dbwarden.fastapi.context.check_startup", lambda **kwargs: [mock_result])
+        monkeypatch.setattr("dbwarden.extensions.fastapi.runtime.check_startup", lambda **kwargs: [mock_result])
+        monkeypatch.setattr("dbwarden.extensions.fastapi.context.check_startup", lambda **kwargs: [mock_result])
 
-        from dbwarden.fastapi import migration_context
+        from dbwarden.extensions.fastapi import migration_context
 
         async def test():
             async with migration_context(mode="check", all_databases=True):
@@ -273,8 +273,8 @@ class TestGetSessionEdgeCases:
 
     def test_session_caching(self, monkeypatch):
         """Multiple calls to get_session with same params should work correctly."""
-        from dbwarden.fastapi import get_session
-        from dbwarden.fastapi import session as session_module
+        from dbwarden.extensions.fastapi import get_session
+        from dbwarden.extensions.fastapi import session as session_module
 
         mock_db = MagicMock()
         mock_db.database_name = "primary"
@@ -303,7 +303,7 @@ class TestGetSessionEdgeCases:
 
     def test_get_session_multiple_calls_create_dependencies(self, monkeypatch):
         """Each call to get_session creates a new dependency function."""
-        from dbwarden.fastapi import get_session
+        from dbwarden.extensions.fastapi import get_session
 
         mock_db = MagicMock()
         mock_db.database_name = "primary"
@@ -327,7 +327,7 @@ class TestGetSessionEdgeCases:
 
     def test_get_session_supports_keyword_only_dev(self):
         """dev parameter should be keyword-only."""
-        from dbwarden.fastapi import get_session
+        from dbwarden.extensions.fastapi import get_session
         import inspect
 
         sig = inspect.signature(get_session)
@@ -342,7 +342,7 @@ class TestRuntimeFlags:
 
     def test_runtime_flags_restores_previous_state(self, monkeypatch):
         """runtime_flags should restore previous dev mode on exit."""
-        from dbwarden.fastapi.runtime import runtime_flags
+        from dbwarden.extensions.fastapi.runtime import runtime_flags
         from dbwarden.config import is_dev_mode, set_dev_mode
 
         # Set initial state
@@ -357,7 +357,7 @@ class TestRuntimeFlags:
 
     def test_runtime_flags_restores_on_exception(self, monkeypatch):
         """runtime_flags should restore state even on exception."""
-        from dbwarden.fastapi.runtime import runtime_flags
+        from dbwarden.extensions.fastapi.runtime import runtime_flags
         from dbwarden.config import is_dev_mode, set_dev_mode
 
         set_dev_mode(True)
@@ -378,8 +378,8 @@ class TestDBWardenLifespan:
 
     def test_lifespan_mode_check_calls_dispose(self):
         """dbwarden_lifespan(mode='check') should call dispose_engines on exit."""
-        from dbwarden.fastapi.lifespan import dbwarden_lifespan
-        from dbwarden.fastapi import engines
+        from dbwarden.extensions.fastapi.lifespan import dbwarden_lifespan
+        from dbwarden.extensions.fastapi import engines
 
         engines._ASYNC_SESSION_FACTORIES["lifespan_test"] = "fake"
 
@@ -394,7 +394,7 @@ class TestDBWardenLifespan:
 
     def test_lifespan_mode_none_skips_startup_checks(self):
         """dbwarden_lifespan(mode='none') should yield without running checks."""
-        from dbwarden.fastapi.lifespan import dbwarden_lifespan
+        from dbwarden.extensions.fastapi.lifespan import dbwarden_lifespan
 
         ran = False
 

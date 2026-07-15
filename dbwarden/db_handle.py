@@ -48,7 +48,7 @@ class DatabaseHandle:
             from fastapi import Depends
             from sqlalchemy.ext.asyncio import AsyncSession
 
-            from dbwarden.fastapi.engines import _make_session_dep
+            from dbwarden.extensions.fastapi.engines import _make_session_dep
 
             return Annotated[
                 AsyncSession, Depends(_make_session_dep(self._name))
@@ -58,7 +58,7 @@ class DatabaseHandle:
             from fastapi import Depends
             from clickhouse_connect.driver.asyncclient import AsyncClient
 
-            from dbwarden.fastapi.engines import _make_clickhouse_dep
+            from dbwarden.extensions.fastapi.engines import _make_clickhouse_dep
 
             return Annotated[
                 AsyncClient, Depends(_make_clickhouse_dep(self._name))
@@ -81,7 +81,7 @@ class DatabaseHandle:
             from fastapi import Depends
             from sqlalchemy.orm import Session
 
-            from dbwarden.fastapi.engines import _make_sync_session_dep
+            from dbwarden.extensions.fastapi.engines import _make_sync_session_dep
 
             return Annotated[
                 Session, Depends(_make_sync_session_dep(self._name))
@@ -91,7 +91,7 @@ class DatabaseHandle:
             from fastapi import Depends
             from clickhouse_connect.driver.client import Client as SyncClickHouseClient
 
-            from dbwarden.fastapi.engines import _make_sync_clickhouse_dep
+            from dbwarden.extensions.fastapi.engines import _make_sync_clickhouse_dep
 
             return Annotated[
                 SyncClickHouseClient, Depends(_make_sync_clickhouse_dep(self._name))

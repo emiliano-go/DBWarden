@@ -5,7 +5,7 @@ import time
 from fastapi import APIRouter, Request
 from fastapi.responses import PlainTextResponse
 
-from dbwarden.fastapi.runtime import resolved_databases
+from dbwarden.extensions.fastapi.runtime import resolved_databases
 from dbwarden.metrics import (
     generate_metrics,
     metrics_enabled,
@@ -58,7 +58,7 @@ class MetricsMiddleware:
                 # Refresh pending-migration gauges on each request
                 try:
                     for name in resolved_databases(all_databases=True):
-                        from dbwarden.fastapi.runtime import compute_pending_migrations
+                        from dbwarden.extensions.fastapi.runtime import compute_pending_migrations
 
                         count = compute_pending_migrations(name)
                         set_pending_migrations(name, count)

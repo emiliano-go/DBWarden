@@ -105,7 +105,7 @@ class TestMakeSessionDep:
     """Tests for _make_session_dep factory."""
 
     def test_returns_callable(self):
-        from dbwarden.fastapi.engines import _make_session_dep
+        from dbwarden.extensions.fastapi.engines import _make_session_dep
 
         dep = _make_session_dep("primary")
         assert callable(dep)
@@ -121,13 +121,13 @@ class TestMakeSessionDep:
         def mock_get_database(name=None):
             return mock_db
 
-        monkeypatch.setattr("dbwarden.fastapi.engines.get_database", mock_get_database)
-        monkeypatch.setattr("dbwarden.fastapi.engines.runtime_flags", lambda dev, strict_translation: type("ctx", (), {
+        monkeypatch.setattr("dbwarden.extensions.fastapi.engines.get_database", mock_get_database)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.engines.runtime_flags", lambda dev, strict_translation: type("ctx", (), {
             "__enter__": lambda s: None,
             "__exit__": lambda s, *a: None,
         })())
 
-        from dbwarden.fastapi.engines import _make_session_dep
+        from dbwarden.extensions.fastapi.engines import _make_session_dep
 
         dep = _make_session_dep("primary")
         import inspect
@@ -135,7 +135,7 @@ class TestMakeSessionDep:
         assert inspect.isasyncgenfunction(dep)
 
     def test_session_dep_works_with_annotation(self):
-        from dbwarden.fastapi.engines import _make_session_dep
+        from dbwarden.extensions.fastapi.engines import _make_session_dep
 
         dep = _make_session_dep("primary")
 
@@ -150,13 +150,13 @@ class TestMakeClickHouseDep:
     """Tests for _make_clickhouse_dep factory."""
 
     def test_returns_callable(self):
-        from dbwarden.fastapi.engines import _make_clickhouse_dep
+        from dbwarden.extensions.fastapi.engines import _make_clickhouse_dep
 
         dep = _make_clickhouse_dep("analytics")
         assert callable(dep)
 
     def test_dependency_is_async_generator_function(self):
-        from dbwarden.fastapi.engines import _make_clickhouse_dep
+        from dbwarden.extensions.fastapi.engines import _make_clickhouse_dep
 
         dep = _make_clickhouse_dep("analytics")
         import inspect
@@ -164,7 +164,7 @@ class TestMakeClickHouseDep:
         assert inspect.isasyncgenfunction(dep)
 
     def test_clickhouse_dep_works_with_annotation(self):
-        from dbwarden.fastapi.engines import _make_clickhouse_dep
+        from dbwarden.extensions.fastapi.engines import _make_clickhouse_dep
 
         dep = _make_clickhouse_dep("analytics")
         from clickhouse_connect.driver.asyncclient import AsyncClient
@@ -180,7 +180,7 @@ class TestDisposeEngines:
     """Tests for dispose_engines cleanup."""
 
     def test_dispose_engines_clears_fake_entries(self):
-        from dbwarden.fastapi import engines
+        from dbwarden.extensions.fastapi import engines
 
         engines._ASYNC_SESSION_FACTORIES["test"] = "fake"
         engines._CLICKHOUSE_ASYNC_CLIENTS["test"] = "fake"
@@ -192,7 +192,7 @@ class TestDisposeEngines:
 
     def test_dispose_engines_skips_non_bind_factories(self):
         """_dispose_one should not crash on factories without a bind."""
-        from dbwarden.fastapi.engines import _dispose_one
+        from dbwarden.extensions.fastapi.engines import _dispose_one
 
         class FakeNoBind:
             pass

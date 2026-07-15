@@ -167,7 +167,7 @@ class TestMetricsRouter:
         fastapi = pytest.importorskip("fastapi")
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
-        from dbwarden.fastapi import MetricsRouter
+        from dbwarden.extensions.fastapi import MetricsRouter
 
         app = FastAPI()
         app.include_router(MetricsRouter())
@@ -183,7 +183,7 @@ class TestMetricsRouter:
         fastapi = pytest.importorskip("fastapi")
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
-        from dbwarden.fastapi import MetricsRouter
+        from dbwarden.extensions.fastapi import MetricsRouter
 
         app = FastAPI()
         app.include_router(MetricsRouter())
@@ -199,7 +199,7 @@ class TestMetricsRouter:
         fastapi = pytest.importorskip("fastapi")
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
-        from dbwarden.fastapi import MetricsRouter
+        from dbwarden.extensions.fastapi import MetricsRouter
 
         app = FastAPI()
         app.include_router(MetricsRouter())
@@ -214,7 +214,7 @@ class TestMetricsRouter:
         fastapi = pytest.importorskip("fastapi")
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
-        from dbwarden.fastapi import MetricsRouter
+        from dbwarden.extensions.fastapi import MetricsRouter
 
         app = FastAPI()
         app.include_router(MetricsRouter(), prefix="/dbwarden")
@@ -288,7 +288,7 @@ class TestMetricsEdgeCases:
         fastapi = pytest.importorskip("fastapi")
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
-        from dbwarden.fastapi import MetricsRouter
+        from dbwarden.extensions.fastapi import MetricsRouter
 
         app = FastAPI()
         app.include_router(MetricsRouter())

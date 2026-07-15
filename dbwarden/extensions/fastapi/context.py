@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal
 
 from dbwarden.commands.migrate import migrate_cmd
-from dbwarden.fastapi.runtime import (
+from dbwarden.extensions.fastapi.runtime import (
     HealthResult,
     check_startup,
     duration_ms,

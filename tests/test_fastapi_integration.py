@@ -7,12 +7,12 @@ fastapi = pytest.importorskip("fastapi")
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from dbwarden.fastapi import (
+from dbwarden.extensions.fastapi import (
     DBWardenHealthRouter,
     check_schema_on_startup,
     migrate_on_startup,
 )
-from dbwarden.fastapi.runtime import HealthResult
+from dbwarden.extensions.fastapi.runtime import HealthResult
 
 
 class TestStartupHelpers:
@@ -24,7 +24,7 @@ class TestStartupHelpers:
             called["value"] = True
             return []
 
-        monkeypatch.setattr("dbwarden.fastapi.context.check_startup", fake_check_startup)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.context.check_startup", fake_check_startup)
 
         result = check_schema_on_startup(only_dev=True)
         assert result == []
@@ -45,7 +45,7 @@ class TestStartupHelpers:
                 )
             ]
 
-        monkeypatch.setattr("dbwarden.fastapi.context.check_startup", fake_check_startup)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.context.check_startup", fake_check_startup)
 
         with pytest.raises(RuntimeError, match="Startup check failed"):
             check_schema_on_startup(fail_fast=True)
@@ -57,7 +57,7 @@ class TestStartupHelpers:
         def fake_migrate_cmd(**_kwargs):
             called["value"] = True
 
-        monkeypatch.setattr("dbwarden.fastapi.context.migrate_cmd", fake_migrate_cmd)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.context.migrate_cmd", fake_migrate_cmd)
 
         migrate_on_startup(only_dev=True, allow_in_production=True)
         assert called["value"] is False
@@ -85,7 +85,7 @@ class TestHealthRouter:
                 )
             ]
 
-        monkeypatch.setattr("dbwarden.fastapi.health.check_startup", fake_check_startup)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.health.check_startup", fake_check_startup)
 
         app.include_router(DBWardenHealthRouter(), prefix="/health")
         client = TestClient(app)
@@ -102,7 +102,7 @@ class TestHealthRouter:
         class FakeCfg:
             databases = {"primary": object()}
 
-        monkeypatch.setattr("dbwarden.fastapi.health.get_multi_db_config", lambda: FakeCfg())
+        monkeypatch.setattr("dbwarden.extensions.fastapi.health.get_multi_db_config", lambda: FakeCfg())
         app.include_router(DBWardenHealthRouter(), prefix="/health")
         client = TestClient(app)
 
@@ -112,7 +112,7 @@ class TestHealthRouter:
     def test_liveness_endpoint(self):
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
-        from dbwarden.fastapi import DBWardenHealthRouter
+        from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
         app = FastAPI()
         app.include_router(DBWardenHealthRouter(), prefix="/health")
@@ -125,7 +125,7 @@ class TestHealthRouter:
     def test_readiness_endpoint(self, monkeypatch):
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
-        from dbwarden.fastapi import DBWardenHealthRouter
+        from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
         app = FastAPI()
 
@@ -141,7 +141,7 @@ class TestHealthRouter:
             lock_active = False
 
             def to_database_health(self):
-                from dbwarden.fastapi.types import DatabaseHealth
+                from dbwarden.extensions.fastapi.types import DatabaseHealth
                 return DatabaseHealth(
                     database=self.database, status=self.status,
                     connected=self.connected, pending_migrations=self.pending_migrations,
@@ -157,8 +157,8 @@ class TestHealthRouter:
                 databases = {"primary": object()}
             return Cfg()
 
-        monkeypatch.setattr("dbwarden.fastapi.health.check_startup", fake_check)
-        monkeypatch.setattr("dbwarden.fastapi.health.get_multi_db_config", fake_cfg)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.health.check_startup", fake_check)
+        monkeypatch.setattr("dbwarden.extensions.fastapi.health.get_multi_db_config", fake_cfg)
 
         app.include_router(DBWardenHealthRouter(), prefix="/health")
         client = TestClient(app)
@@ -171,7 +171,7 @@ class TestHealthRouter:
     def test_liveness_auth_required(self):
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
-        from dbwarden.fastapi import DBWardenHealthRouter
+        from dbwarden.extensions.fastapi import DBWardenHealthRouter
 
         app = FastAPI()
         app.include_router(DBWardenHealthRouter(auth_mode="authenticated", api_key="secret"), prefix="/health")
