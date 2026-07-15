@@ -1,0 +1,92 @@
+from __future__ import annotations
+
+import re
+from typing import Any
+
+from dbwarden.engine.backends.clickhouse.generate_models import _render_ch_meta
+from dbwarden.engine.backends.mysql.generate_models import _render_mysql_meta
+from dbwarden.engine.backends.postgresql.generate_models import (
+    _format_pg_type,
+    _render_postgresql_meta,
+)
+from dbwarden.engine.core.type_parsing import _format_default, _parse_type
+from dbwarden.engine.shared.format_utils import _format_meta_value
+
+
+def _format_column(col: dict) -> str:
+    col_name = col["name"]
+    sa_type = _format_pg_type(col) or _parse_type(col["type"], col.get("dialect"))
+
+    col_args = [f"{col_name} = Column({col_name!r}, {sa_type}"]
+    if col.get("foreign_key"):
+        fk_opts = col.get("fk_options", {})
+        fk_parts: list[str] = []
+        for opt_key, sa_key in (("ondelete", "ondelete"), ("onupdate", "onupdate"), ("deferrable", "deferrable")):
+            val = fk_opts.get(opt_key)
+            if opt_key == "deferrable":
+                if val:
+                    fk_parts.append("deferrable=True")
+            elif val and val != "NO ACTION":
+                fk_parts.append(f"{sa_key}={val!r}")
+        if fk_parts:
+            col_args.append(f"ForeignKey('{col['foreign_key']}', {', '.join(fk_parts)})")
+        else:
+            col_args.append(f"ForeignKey('{col['foreign_key']}')")
+    if col.get("primary_key"):
+        col_args.append("primary_key=True")
+    if not col.get("nullable", True):
+        col_args.append("nullable=False")
+    if col.get("unique"):
+        col_args.append("unique=True")
+    default = _format_default(col.get("default"))
+    if default is not None:
+        col_args.append(f"default={default}")
+    if col.get("server_default"):
+        col_args.append(f"server_default=text({col['server_default']!r})")
+    if col.get("autoincrement") is False:
+        col_args.append("autoincrement=False")
+
+    col_args.append(")")
+    return ",\n        ".join(col_args)
+
+
+def _generate_table_code(
+    table_name: str,
+    columns: list[dict],
+    clickhouse_options: dict | None = None,
+    object_type: str = "table",
+    pg_meta: dict | None = None,
+    my_meta: dict | None = None,
+    base_class_name: str = "Base",
+) -> str:
+    class_name = "".join(part.capitalize() for part in re.split(r"[_\s]", table_name) if part)
+    if not class_name:
+        class_name = table_name.capitalize()
+
+    lines: list[str] = []
+    lines.append(f"class {class_name}({base_class_name}):")
+    lines.append(f"    __tablename__ = {table_name!r}")
+    for col in columns:
+        col_line = _format_column(col)
+        if col_line:
+            lines.append(f"    {col_line}")
+
+    primary_key_cols = None
+    if my_meta and my_meta.get("primary_key"):
+        primary_key_cols = my_meta["primary_key"]
+    elif pg_meta and pg_meta.get("primary_key"):
+        primary_key_cols = pg_meta["primary_key"]
+    if primary_key_cols:
+        lines.append(f"    __mapper_args__ = {{'primary_key': {primary_key_cols!r}}}")
+
+    if clickhouse_options:
+        lines.append("")
+        lines.append("    class Meta(CHTableMeta):")
+        lines.extend(_render_ch_meta(columns, clickhouse_options, object_type))
+    if pg_meta or any(col.get("pg_meta") for col in columns):
+        lines.append("")
+        lines.extend(_render_postgresql_meta(columns, pg_meta))
+    if my_meta or any(col.get("my_meta") or col.get("comment") for col in columns):
+        lines.append("")
+        lines.extend(_render_mysql_meta(columns, my_meta))
+    return "\n".join(lines) + "\n"
