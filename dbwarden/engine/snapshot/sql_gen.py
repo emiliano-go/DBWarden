@@ -62,7 +62,7 @@ def snapshot_diff_to_sql(
         TriggerHandler,
         ViewHandler,
     )
-    from dbwarden.engine.backends.clickhouse.handlers import ChTableHandler
+    from dbwarden.engine.backends.clickhouse.handlers import ChColumnHandler, ChTableHandler
     from dbwarden.engine.backends.mysql.handlers import MyTableHandler
     from dbwarden.engine.core.protocol import Op
 
@@ -70,6 +70,7 @@ def snapshot_diff_to_sql(
     for _h in (
         ChTableHandler(),
         ColumnHandler(),
+        ChColumnHandler(),
         CompositeTypeHandler(),
         ConstraintHandler(),
         DefaultPrivilegesHandler(),

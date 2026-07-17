@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from dbwarden.engine.backends.mysql.extract import (
@@ -156,18 +157,30 @@ def _build_ch_projection_sql(
             rb_stmts.append(f"ALTER TABLE {table} ADD PROJECTION {name} {snap_p.get('query', '')}")
 
 
-def _build_create_table_sequence(table: ModelTable, db_name: str | None) -> list[MigrationStatement]:
+def _build_create_table_sequence(
+    table: ModelTable, db_name: str | None,
+    cluster_ctx: Any = None,
+) -> list[MigrationStatement]:
     from dbwarden.engine.discovery import generate_create_table_sql, generate_drop_object_sql
     from dbwarden.engine.snapshot.utils import _get_backend
+    from dbwarden.engine.backends.clickhouse.cluster import ClusterableStatement
+    from dbwarden.databases.clickhouse.cluster import ClusterMode
 
     backend = _get_backend(db_name)
     order = StatementOrder.CREATE_VIEW if table.object_type in ("view", "materialized_view") else StatementOrder.CREATE_TABLE
+
+    upgrade = generate_create_table_sql(table, db_name)
+    rollback = generate_drop_object_sql(table)
+
+    # Apply ON CLUSTER via ClusterableStatement if configured
+    if cluster_ctx is not None and cluster_ctx.mode is ClusterMode.ON_CLUSTER:
+        cs = ClusterableStatement.from_sql(upgrade)
+        upgrade = cs.render(cluster_ctx)
+        cs_rb = ClusterableStatement.from_sql(rollback)
+        rollback = cs_rb.render(cluster_ctx)
+
     statements: list[MigrationStatement] = [
-        MigrationStatement(
-            order=order,
-            upgrade_sql=generate_create_table_sql(table, db_name),
-            rollback_sql=generate_drop_object_sql(table),
-        )
+        MigrationStatement(order=order, upgrade_sql=upgrade, rollback_sql=rollback),
     ]
 
     for idx in table.indexes:
@@ -176,13 +189,46 @@ def _build_create_table_sequence(table: ModelTable, db_name: str | None) -> list
     return statements
 
 
-def _join_creation_sql(table: ModelTable, db_name: str | None) -> str:
-    return "\n\n".join(stmt.upgrade_sql for stmt in _build_create_table_sequence(table, db_name))
+def _join_creation_sql(
+    table: ModelTable, db_name: str | None,
+    cluster_ctx: Any = None,
+) -> str:
+    return "\n\n".join(
+        stmt.upgrade_sql
+        for stmt in _build_create_table_sequence(table, db_name, cluster_ctx=cluster_ctx)
+    )
 
 
-def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None) -> list[MigrationStatement]:
+def _build_clickhouse_recreate_table_sql(
+    op: dict[str, Any],
+    db_name: str | None,
+    cluster_ctx: Any = None,
+) -> list[MigrationStatement]:
+    from dbwarden.databases.clickhouse.cluster import ClusterContext, ClusterMode
+    from dbwarden.engine.backends.clickhouse.cluster import ClusterableStatement
     from dbwarden.engine.discovery import generate_drop_object_sql
     from dbwarden.engine.offline import reconstruct_model_table
+
+    def _cluster(prefix: str, suffix: str = "") -> str:
+        """Render a ClusterableStatement with the given prefix+suffix."""
+        cs = ClusterableStatement(prefix=prefix, suffix=suffix)
+        if cluster_ctx:
+            return cs.render(cluster_ctx)
+        return cs.render(ClusterContext.from_config(type("_", (), {})()))
+
+    def _cluster_sql(sql: str) -> str:
+        """Parse a DDL string and apply ON CLUSTER via from_sql.
+
+        Used for statement shapes where prefix/suffix construction is
+        impractical (RENAME TABLE with multiple pairs, DROP from
+        generate_drop_object_sql).  Non-DDL passes through unchanged.
+        """
+        import re
+        if not re.match(r'\s*(CREATE|ALTER|DROP|RENAME|DETACH|ATTACH)\b', sql, re.IGNORECASE):
+            return sql
+        return ClusterableStatement.from_sql(sql).render(
+            cluster_ctx or ClusterContext.from_config(type("_", (), {})())
+        )
 
     table_name = op["table"]
     from_table = reconstruct_model_table(op["from_table"])
@@ -190,12 +236,12 @@ def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None
 
     if from_table.object_type == "dictionary" or to_table.object_type == "dictionary":
         upgrade_sql = (
-            f"{generate_drop_object_sql(from_table)};\n"
-            f"{_join_creation_sql(to_table, db_name)};"
+            f"{_cluster_sql(generate_drop_object_sql(from_table))};\n"
+            f"{_join_creation_sql(to_table, db_name, cluster_ctx=cluster_ctx)};"
         )
         rollback_sql = (
-            f"{generate_drop_object_sql(to_table)};\n"
-            f"{_join_creation_sql(from_table, db_name)};"
+            f"{_cluster_sql(generate_drop_object_sql(to_table))};\n"
+            f"{_join_creation_sql(from_table, db_name, cluster_ctx=cluster_ctx)};"
         )
         return [
             MigrationStatement(
@@ -207,12 +253,12 @@ def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None
 
     if from_table.object_type == "materialized_view" or to_table.object_type == "materialized_view":
         upgrade_sql = (
-            f"{generate_drop_object_sql(from_table)};\n"
-            f"{_join_creation_sql(to_table, db_name)};"
+            f"{_cluster_sql(generate_drop_object_sql(from_table))};\n"
+            f"{_join_creation_sql(to_table, db_name, cluster_ctx=cluster_ctx)};"
         )
         rollback_sql = (
-            f"{generate_drop_object_sql(to_table)};\n"
-            f"{_join_creation_sql(from_table, db_name)};"
+            f"{_cluster_sql(generate_drop_object_sql(to_table))};\n"
+            f"{_join_creation_sql(from_table, db_name, cluster_ctx=cluster_ctx)};"
         )
         return [
             MigrationStatement(
@@ -233,7 +279,9 @@ def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None
 
     upgrade_parts = []
     if dependent_mvs:
-        upgrade_parts.append("; ".join(f"DETACH TABLE {mv}" for mv in dependent_mvs) + ";")
+        upgrade_parts.append(
+            ";\n".join(_cluster(f"DETACH TABLE {mv}", "") for mv in dependent_mvs) + ";"
+        )
     upgrade_parts += [
         _join_creation_sql(ModelTable(
             name=new_name,
@@ -247,21 +295,27 @@ def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None
             uniques=to_table.uniques,
             excludes=to_table.excludes,
             pg_table=to_table.pg_table,
-        ), db_name),
+        ), db_name, cluster_ctx=cluster_ctx),
+        # INSERT INTO is non-DDL — pass through without cluster decoration
         f"INSERT INTO {new_name} ({copy_cols_sql}) SELECT {copy_cols_sql} FROM {table_name};",
-        f"RENAME TABLE {table_name} TO {preserved_name}, {new_name} TO {table_name};",
+        # RENAME TABLE needs from_sql because insertion point is end-of-statement
+        _cluster_sql(f"RENAME TABLE {table_name} TO {preserved_name}, {new_name} TO {table_name};"),
     ]
     if drop_old_after_swap:
-        upgrade_parts.append(generate_drop_object_sql(ModelTable(name=preserved_name, columns=[], object_type=to_table.object_type)))
+        upgrade_parts.append(_cluster_sql(generate_drop_object_sql(ModelTable(name=preserved_name, columns=[], object_type=to_table.object_type))))
     else:
         upgrade_parts.append(f"-- Preserved previous table as {preserved_name}. Drop it after validation:\n-- DROP TABLE {preserved_name};")
 
     if dependent_mvs:
-        upgrade_parts.append("; ".join(f"ATTACH TABLE {mv}" for mv in dependent_mvs) + ";")
+        upgrade_parts.append(
+            ";\n".join(_cluster(f"ATTACH TABLE {mv}", "") for mv in dependent_mvs) + ";"
+        )
 
     rollback_parts = []
     if dependent_mvs:
-        rollback_parts.append("; ".join(f"DETACH TABLE {mv}" for mv in dependent_mvs) + ";")
+        rollback_parts.append(
+            ";\n".join(_cluster(f"DETACH TABLE {mv}", "") for mv in dependent_mvs) + ";"
+        )
     rollback_parts.append(_join_creation_sql(ModelTable(
         name=failed_name,
         columns=from_table.columns,
@@ -274,13 +328,15 @@ def _build_clickhouse_recreate_table_sql(op: dict[str, Any], db_name: str | None
         uniques=from_table.uniques,
         excludes=from_table.excludes,
         pg_table=from_table.pg_table,
-    ), db_name))
+    ), db_name, cluster_ctx=cluster_ctx))
     rollback_copy_columns = [col.name for col in from_table.columns if any(dst.name == col.name for dst in to_table.columns)]
     rollback_cols_sql = ", ".join(rollback_copy_columns)
     rollback_parts.append(f"INSERT INTO {failed_name} ({rollback_cols_sql}) SELECT {rollback_cols_sql} FROM {table_name};")
-    rollback_parts.append(f"RENAME TABLE {table_name} TO {preserved_name}, {failed_name} TO {table_name};")
+    rollback_parts.append(_cluster_sql(f"RENAME TABLE {table_name} TO {preserved_name}, {failed_name} TO {table_name};"))
     if dependent_mvs:
-        rollback_parts.append("; ".join(f"ATTACH TABLE {mv}" for mv in dependent_mvs) + ";")
+        rollback_parts.append(
+            ";\n".join(_cluster(f"ATTACH TABLE {mv}", "") for mv in dependent_mvs) + ";"
+        )
     rollback_parts.append(f"-- Preserved forward table as {preserved_name}. Drop it after validation:\n-- DROP TABLE {preserved_name};")
 
     return [
