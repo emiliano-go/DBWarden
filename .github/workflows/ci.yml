@@ -67,7 +67,11 @@ jobs:
         ports:
           - 8123/tcp
           - 9000/tcp
-        options: --health-cmd "clickhouse-client --query 'SELECT 1'" --health-interval 5s --health-timeout 5s --health-retries 5
+        options: >-
+          --health-cmd "clickhouse-client --password clickhouse --query 'SELECT 1'"
+          --health-interval 5s --health-timeout 5s --health-retries 5
+          --env CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=0
+          --env CLICKHOUSE_PASSWORD=clickhouse
     steps:
       - uses: actions/checkout@v4
 
@@ -86,4 +90,46 @@ jobs:
         env:
           CLICKHOUSE_HOST: localhost
           CLICKHOUSE_PORT: ${{ job.services.clickhouse.ports[8123] }}
+          CLICKHOUSE_USERNAME: default
+          CLICKHOUSE_PASSWORD: clickhouse
         run: uv run pytest tests/integration/ -m integration --ch-integration --tb=short -v
+
+  pg-integration:
+    needs: [test]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13-alpine
+        ports:
+          - 5432/tcp
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dbwarden_test
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12.7"
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Install PG test dependencies
+        run: uv pip install psycopg2-binary sqlalchemy
+
+      - name: PostgreSQL integration convergence test
+        env:
+          PG_HOST: localhost
+          PG_PORT: ${{ job.services.postgres.ports[5432] }}
+          PG_USER: postgres
+          PG_PASSWORD: postgres
+          PG_DATABASE: dbwarden_test
+        run: uv run pytest tests/integration/ -m integration --pg-integration --tb=short -v

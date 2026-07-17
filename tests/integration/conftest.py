@@ -1,4 +1,4 @@
-"""Integration test fixtures for ClickHouse container."""
+"""Integration test fixtures for database containers."""
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -12,4 +12,10 @@ def pytest_addoption(parser):
         action="store",
         default="clickhouse/clickhouse-server:24.3",
         help="ClickHouse Docker image tag for integration tests",
+    )
+    parser.addoption(
+        "--pg-integration",
+        action="store_true",
+        default=False,
+        help="Run PostgreSQL integration tests that require a live container",
     )

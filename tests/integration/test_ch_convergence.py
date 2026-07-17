@@ -29,7 +29,12 @@ def _get_ch_client():
     host = os.environ.get("CLICKHOUSE_HOST")
     native_port = os.environ.get("CLICKHOUSE_PORT")
     if host and native_port:
-        return clickhouse_connect.get_client(host=host, port=int(native_port))
+        return clickhouse_connect.get_client(
+            host=host,
+            port=int(native_port),
+            username=os.environ.get("CLICKHOUSE_USERNAME", "default"),
+            password=os.environ.get("CLICKHOUSE_PASSWORD", ""),
+        )
 
     from testcontainers.clickhouse import ClickHouseContainer
 
