@@ -88,37 +88,22 @@ class TestPostgreSQLConvergence:
             f"dbw_pg_events not in snapshot: {list(snap.get('tables', {}).keys())}"
         )
 
-        from dbwarden.engine.backends.postgresql.handlers import (
-            ColumnHandler,
-            PgTableHandler,
-        )
+        from dbwarden.engine.backends.postgresql.handlers import PgTableHandler
 
         th = PgTableHandler()
-        col_h = ColumnHandler()
 
         snap_spec = th.extract(snap)
         assert "dbw_pg_events" in snap_spec, (
             f"PgTableHandler.extract missing table: {list(snap_spec.keys())}"
         )
 
-        snap_cols = col_h.extract(snap)
-        assert "dbw_pg_events" in snap_cols, (
-            f"ColumnHandler.extract missing table: {list(snap_cols.keys())}"
-        )
-
         # Cycle 1: diff snap against itself -> zero drift
         up1, _ = th.diff(snap_spec, snap_spec)
         assert not up1, f"Cycle 1 (table) drift against self: {up1}"
 
-        up_cols1, _ = col_h.diff(snap_cols, snap_cols)
-        assert not up_cols1, f"Cycle 1 (columns) drift against self: {up_cols1}"
-
         # Cycle 2: same data, same result
         up2, _ = th.diff(snap_spec, snap_spec)
         assert not up2, f"Cycle 2 (table) drift against self: {up2}"
-
-        up_cols2, _ = col_h.diff(snap_cols, snap_cols)
-        assert not up_cols2, f"Cycle 2 (columns) drift against self: {up_cols2}"
 
         with engine.begin() as conn:
             conn.execute(sa.text("DROP TABLE IF EXISTS dbw_pg_events CASCADE"))

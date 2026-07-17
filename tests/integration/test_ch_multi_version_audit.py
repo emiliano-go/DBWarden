@@ -370,8 +370,7 @@ class TestChMultiVersionAudit:
         import clickhouse_connect
         from testcontainers.clickhouse import ClickHouseContainer
 
-        ch = ClickHouseContainer(image)
-        ch.with_env("CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT", "0")
+        ch = ClickHouseContainer(image, username="test", password="test")
         ch.start()
         host = ch.get_container_host_ip()
         port = ch.get_exposed_port(8123)
