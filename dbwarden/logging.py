@@ -1,11 +1,71 @@
+"""
+Logging utilities with severity-based levels and configurable verbosity.
+
+This module builds on Python's standard logging library rather than modifying it. Standard logging levels DEBUG, INFO, WARNING, ERROR, and CRITICAL continue to represent message severity.
+
+In addition to severity, this module introduces a seperate verbosity concept for user-facing INFO output. Verbosity controls how much detail is emitted without changing the semantic meaning of standard logging levels.
+
+The supported verbosity levels are:
+    QUIET: Emit only essential INFO messages and details.
+    NORMAL: Emit standard INFO progress messages.
+    VERBOSE: Emit additional explanatory or diagnostic informational messages.
+
+This seperation allows callers to distinguish between dev diagnostics (DEBUG) and detailed user-facing output (INFO gated by verbosity).
+
+Verbosity may be configured from multiple sources, such as constructor arguments, config files, env vars, or CLI options.
+
+"""
+
 import json
 import logging
 import os
 import re
 import sys
+from datetime import datetime, timezone
 from typing import Any, Optional
+from enum import IntEnum
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 
 from dbwarden.constants import LOG_FORMAT
+
+
+class Verbosity(IntEnum):
+    QUIET = 0
+    NORMAL = 1
+    VERBOSE = 2
+
+_RESERVED_EXTRA_FIELDS = frozenset({
+    "args",
+    "asctime",
+    "created",
+    "exc_info",
+    "exc_text",
+    "filename",
+    "funcName",
+    "levelname",
+    "levelno",
+    "lineno",
+    "message",
+    "module",
+    "msecs",
+    "msg",
+    "name",
+    "pathname",
+    "process",
+    "processName",
+    "relativeCreated",
+    "stack_info",
+    "thread",
+    "threadName",
+    # DBWarden JSON payload keys
+    "timestamp",
+    "level",
+    "logger",
+    "exception",
+    "db_name",
+    "db_type",
+})
 
 ANSI_COLORS = {
     "reset": "\033[0m",
@@ -139,19 +199,15 @@ def colorize_sql(sql: str) -> str:
     if not supports_color():
         return sql
 
-    result = sql
-
-    for keyword in SQL_KEYWORDS:
-        pattern = rf"\b{keyword}\b"
-        result = re.sub(
-            pattern,
-            lambda m: colorize(m.group(0), ANSI_COLORS["magenta"]),
-            result,
-            flags=re.IGNORECASE,
-        )
+    result = re.sub(
+        r"\b(" + "|".join(re.escape(keyword) for keyword in SQL_KEYWORDS) + r")\b",
+        lambda m: colorize(m.group(0), ANSI_COLORS["magenta"]),
+        sql,
+        flags=re.IGNORECASE,
+    )
 
     result = re.sub(
-        r"'[^']*'",
+        r"(?<!\\)'(?:[^'\\]|\\.)*+'",
         lambda m: colorize(m.group(0), ANSI_COLORS["green"]),
         result,
     )
@@ -183,6 +239,36 @@ class JSONFormatter(logging.Formatter):
     Activated when the ``DBWARDEN_LOG_JSON`` environment variable is set.
     """
 
+    _STANDARD_RECORD_FIELDS = frozenset(logging.makeLogRecord({}).__dict__)
+    _RESERVED_EXTRA_FIELDS = _STANDARD_RECORD_FIELDS | {
+        "asctime",
+        "message",
+        "timestamp",
+        "level",
+        "logger",
+        "exception",
+        "db_name",
+        "db_type",
+    }
+
+    def formatTime(
+        self,
+        record: logging.LogRecord,
+        datefmt: str | None = None,
+    ) -> str:
+        dt = datetime.fromtimestamp(record.created, timezone.utc)
+        if datefmt:
+            return dt.strftime(datefmt)
+        return dt.isoformat(timespec="milliseconds")
+
+    def _extract_extra_fields(self, record: logging.LogRecord) -> dict[str, Any]:
+        extras: dict[str, Any] = {}
+        for key, value in record.__dict__.items():
+            if key in self._RESERVED_EXTRA_FIELDS:
+                continue
+            extras[key] = value
+        return extras
+
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
             "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%S.%fZ"),
@@ -194,7 +280,12 @@ class JSONFormatter(logging.Formatter):
             payload["db_name"] = record.db_name
         if hasattr(record, "db_type") and record.db_type:
             payload["db_type"] = record.db_type
-        if record.exc_info and isinstance(record.exc_info, tuple) and record.exc_info[0]:
+        payload.update(self._extract_extra_fields(record))
+        if (
+            record.exc_info
+            and isinstance(record.exc_info, tuple)
+            and record.exc_info[0]
+        ):
             payload["exception"] = self.formatException(record.exc_info)
         if record.exc_text:
             payload["exception"] = record.exc_text
@@ -209,6 +300,24 @@ def _use_json_logging() -> bool:
     )
 
 
+LogMessage = Callable[[], str]
+
+@dataclass(frozen=True)
+class LogCandidate:
+    """Candidate log entry keyed by a stdlib Python logging level.
+
+    log_severity_level intentionally uses int because Python's logging
+    module defines levels like logging.DEBUG and logging.INFO as integer
+    constants. Storing the raw stdlib level keeps this class directly
+    compatible with logging APIs and avoids wrapping or translating
+    those values through a separate enum.
+    """
+
+    log_severity_level: int
+    message_factory: LogMessage
+    log_verbosity_level: Verbosity = Verbosity.NORMAL
+
+
 class DBWardenLogger:
     """
     Structured logging for DBWarden operations.
@@ -217,37 +326,60 @@ class DBWardenLogger:
     for migration operations with database context.
     """
 
+    Verbosity = Verbosity
+
     def __init__(
         self,
         name: str = "dbwarden",
         verbose: bool = False,
+        debug_enabled: bool = False,
+        verbosity: Verbosity | None = None,
         db_name: str | None = None,
         db_type: str | None = None,
-    ):
+    ) -> None:
         """
         Initialize the DBWarden logger.
 
         Args:
             name: Logger name (default: "dbwarden")
-            verbose: If True, sets level to DEBUG; otherwise INFO.
+            verbose: Legacy compatibility flag. When ``verbosity`` is not set,
+                ``True`` maps to ``Verbosity.VERBOSE`` and ``False`` falls back
+                to ``Verbosity.NORMAL``.
+            debug_enabled: Switches between ``logging.DEBUG`` when true and
+                ``logging.INFO`` when false.
+            verbosity: Explicit INFO-output verbosity. When provided, it takes
+                precedence over ``verbose``.
             db_name: Database name from multi-db config.
             db_type: Database type (sqlite, postgresql, mysql, mariadb, clickhouse).
         """
         self.logger = logging.getLogger(name)
         self.verbose = verbose
+        self.debug_enabled = debug_enabled
+
+        if verbosity is not None and not isinstance(verbosity, Verbosity):
+            raise TypeError(
+                f"verbosity must be a Verbosity member, got {type(verbosity)}"
+            )
+
+        if verbosity is not None:
+            self.verbosity = verbosity
+        elif verbose:
+            self.verbosity = Verbosity.VERBOSE
+        else:
+            self.verbosity = Verbosity.NORMAL
         self.db_name = db_name
         self.db_type = db_type
         self._setup_logger()
 
     def _setup_logger(self) -> None:
         """Configure the logger with appropriate handlers and level."""
-        self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)
+        self.logger.setLevel(logging.DEBUG if self.debug_enabled else logging.INFO)
 
         for handler in self.logger.handlers[:]:
             self.logger.removeHandler(handler)
 
         handler = logging.StreamHandler(sys.stdout)
-        handler.setLevel(logging.DEBUG if self.verbose else logging.INFO)
+        handler.setLevel(logging.DEBUG if self.debug_enabled else logging.INFO)
 
         if _use_json_logging():
             formatter: logging.Formatter = JSONFormatter()
@@ -256,37 +388,60 @@ class DBWardenLogger:
         handler.setFormatter(formatter)
         self.logger.addHandler(handler)
 
-    def set_verbose(self, verbose: bool) -> None:
-        """
-        Update verbosity level.
+    def _apply_logging_defaults(self, kwargs: dict[str, Any]) -> dict[str, Any]:
+        return dict(kwargs, stacklevel=kwargs.get("stacklevel", 2))
 
-        Args:
-            verbose: New verbosity setting.
-        """
-        self.verbose = verbose
-        self.logger.setLevel(logging.DEBUG if verbose else logging.INFO)
+    def set_debug_enabled(self, debug_enabled: bool) -> None:
+        self.debug_enabled = debug_enabled
+        self.logger.setLevel(logging.DEBUG if debug_enabled else logging.INFO)
         for handler in self.logger.handlers:
-            handler.setLevel(logging.DEBUG if verbose else logging.INFO)
+            handler.setLevel(logging.DEBUG if debug_enabled else logging.INFO)
 
-    def debug(self, msg: str, **kwargs) -> None:
+    def set_verbosity(self, verbosity: Verbosity) -> None:
+        if not isinstance(verbosity, Verbosity):
+            raise TypeError(
+                f"verbosity must be a Verbosity member, got {type(verbosity)}"
+            )
+
+        self.verbosity = verbosity
+
+    def set_verbose(self, verbose: bool) -> None:
+        if not isinstance(verbose, bool):
+            raise TypeError(f"verbose must be a bool, got {type(verbose)}")
+
+        self.verbose = verbose
+        self.verbosity = Verbosity.VERBOSE if verbose else Verbosity.NORMAL
+
+    def debug(self, msg: str, *args, **kwargs) -> None:
         """Log a debug message."""
-        self.logger.debug(msg, extra=kwargs)
+        logging_kwargs = self._apply_logging_defaults(kwargs)
+        self.logger.debug(msg, *args, **logging_kwargs)
 
-    def info(self, msg: str, **kwargs) -> None:
+    def info(self, msg: str, *args, **kwargs) -> None:
         """Log an info message."""
-        self.logger.info(msg, extra=kwargs)
+        logging_kwargs = self._apply_logging_defaults(kwargs)
+        self.logger.info(msg, *args, **logging_kwargs)
 
-    def warning(self, msg: str, **kwargs) -> None:
+    def warning(self, msg: str, *args, **kwargs) -> None:
         """Log a warning message."""
-        self.logger.warning(msg, extra=kwargs)
+        logging_kwargs = self._apply_logging_defaults(kwargs)
+        self.logger.warning(msg, *args, **logging_kwargs)
 
-    def error(self, msg: str, **kwargs) -> None:
+    def error(self, msg: str, *args, **kwargs) -> None:
         """Log an error message."""
-        self.logger.error(msg, extra=kwargs)
+        logging_kwargs = self._apply_logging_defaults(kwargs)
+        self.logger.error(msg, *args, **logging_kwargs)
 
-    def critical(self, msg: str, **kwargs) -> None:
+    def critical(self, msg: str, *args, **kwargs) -> None:
         """Log a critical message."""
-        self.logger.critical(msg, extra=kwargs)
+        logging_kwargs = self._apply_logging_defaults(kwargs)
+        self.logger.critical(msg, *args, **logging_kwargs)
+
+    def exception(self, msg: str, *args, **kwargs) -> None:
+        """Log an exception message."""
+        if sys.exc_info()[0] is not None:
+            logging_kwargs = self._apply_logging_defaults(kwargs)
+            self.logger.exception(msg, *args, **logging_kwargs)
 
     def _format_db_context(self) -> str:
         """Format database context for log messages with colors."""
@@ -298,137 +453,312 @@ class DBWardenLogger:
             return f"[{colorize(self.db_type, ANSI_COLORS['magenta'])}]"
         return ""
 
+    def _prefixed(self, msg: str) -> str:
+        ctx = self._format_db_context()
+        return f"{ctx} {msg}" if ctx else msg
+
+    def _log_best_candidate(
+        self,
+        candidates: Sequence[LogCandidate],
+        *,
+        stacklevel: int = 3,
+    ) -> None:
+        """Log the selected message variant for the current logger state.
+
+        This helper currently assumes there is one log format for each of these
+        cases: DEBUG, INFO at VERBOSE verbosity, INFO at NORMAL verbosity, and
+        INFO at QUIET verbosity. It only considers DEBUG and INFO candidates
+        today. WARNING, ERROR, and CRITICAL candidates could be added here
+        later, but they are not part of the current selection logic.
+
+        LogCandidate.log_severity_level is treated as a Python stdlib
+        logging level integer here on purpose. Call sites can pass
+        logging.DEBUG or logging.INFO directly, which matches what
+        logging.Logger expects and keeps severity selection aligned with
+        the standard library's level model.
+        """
+        if self.logger.isEnabledFor(logging.DEBUG):
+            for candidate in candidates:
+                if candidate.log_severity_level == logging.DEBUG:
+                    message = candidate.message_factory()
+                    self.debug(self._prefixed(message), stacklevel=stacklevel)
+                    return
+
+        if not self.logger.isEnabledFor(logging.INFO):
+            return
+
+        info_candidates = [
+                candidate
+                for candidate in candidates
+                if candidate.log_severity_level == logging.INFO
+                and self.verbosity >= candidate.log_verbosity_level
+        ]
+
+        # No try/except here: each logging helper defines its LogCandidate
+        # set statically, so this branch expects well-formed internal
+        # candidates rather than arbitrary user-provided input.
+        if not info_candidates:
+            return
+
+        selected = max(
+                info_candidates,
+                key=lambda candidate: candidate.log_verbosity_level,
+        )
+
+        message = selected.message_factory()
+        self.info(self._prefixed(message), stacklevel=stacklevel)
+
     def log_connection_init(self, db_type: str | None = None) -> None:
         """Log database connection initialization."""
         if db_type:
             self.db_type = db_type
-        ctx = self._format_db_context()
-        if ctx:
-            self.info(f"Connected to {ctx}")
-        else:
-            self.info("Database connection initialized")
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: "Database connection initialized",
+                    Verbosity.NORMAL,
+                ),
+            ],
+            stacklevel=4,
+        )
 
     def log_pending_migrations(self, migrations: list[str]) -> None:
         """Log list of pending migrations."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
         if migrations:
-            self.info(f"{prefix}Pending migrations ({len(migrations)}):")
+            self._log_best_candidate(
+                [
+                    LogCandidate(
+                        logging.INFO,
+                        lambda: f"Pending migrations ({len(migrations)}):",
+                        Verbosity.NORMAL,
+                    ),
+                ],
+                stacklevel=4,
+            )
             for m in migrations:
-                self.info(
-                    f"  {colorize('[PENDING]', ANSI_COLORS['yellow'])} {colorize(m, ANSI_COLORS['white'])}"
+                self._log_best_candidate(
+                    [
+                        LogCandidate(
+                            logging.INFO,
+                            lambda m=m: (
+                                f"  {colorize('[PENDING]', ANSI_COLORS['yellow'])} "
+                                f"{colorize(m, ANSI_COLORS['white'])}"
+                            ),
+                            Verbosity.NORMAL,
+                        ),
+                    ],
+                    stacklevel=4,
                 )
 
     def log_migration_start(self, version: str, filename: str) -> None:
         """Log migration start."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
-        self.info(f"{prefix}Starting migration: {filename} (version: {version})")
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: f"Starting migration: {filename} (version: {version})",
+                    Verbosity.NORMAL,
+                ),
+            ],
+            stacklevel=4,
+        )
 
     def log_migration_end(self, version: str, filename: str, duration: float) -> None:
         """Log migration end with duration."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
-        self.info(
-            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Completed migration: {colorize(filename, ANSI_COLORS['white'])} (version: {colorize(version, ANSI_COLORS['dim'] + ANSI_COLORS['cyan'])}) in {colorize(f'{duration:.2f}s', ANSI_COLORS['dim'])}"
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[APPLIED]', ANSI_COLORS['green'])} "
+                        f"Completed migration: {colorize(filename, ANSI_COLORS['white'])} "
+                        f"(version: {colorize(version, ANSI_COLORS['dim'] + ANSI_COLORS['cyan'])}) "
+                        f"in {colorize(f'{duration:.2f}s', ANSI_COLORS['dim'])}"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ],
+            stacklevel=4,
         )
 
     def log_migration_skipped(self, version: str, filename: str, checksum: str) -> None:
         """Log migration skipped because checksum already applied."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
-        self.info(
-            f"{prefix}{colorize('[SKIPPED]', STATUS_COLORS['SKIPPED'])} Migration already applied: {colorize(filename, ANSI_COLORS['white'])} (version: {version}, checksum: {checksum[:16]}...)"
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[SKIPPED]', STATUS_COLORS['SKIPPED'])} "
+                        f"Migration already applied: {colorize(filename, ANSI_COLORS['white'])} "
+                        f"(version: {version}, checksum: {checksum[:16]}...)"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ],
+            stacklevel=4,
         )
 
     def log_rollback_start(self, version: str, filename: str) -> None:
         """Log rollback start."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
-        self.info(f"{prefix}Rolling back migration: {filename} (version: {version})")
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: f"Rolling back migration: {filename} (version: {version})",
+                    Verbosity.NORMAL,
+                ),
+            ],
+            stacklevel=4,
+        )
 
     def log_rollback_end(self, version: str, filename: str, duration: float) -> None:
         """Log rollback end with duration."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
-        self.info(
-            f"{prefix}{colorize('[ROLLED_BACK]', ANSI_COLORS['red'])} Rollback completed: {filename} (version: {version}) in {duration:.2f}s"
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[ROLLED_BACK]', ANSI_COLORS['red'])} "
+                        f"Rollback completed: {filename} (version: {version}) "
+                        f"in {duration:.2f}s"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ],
+            stacklevel=4,
         )
 
     def log_sql_statement(self, sql: str) -> None:
-        """Log SQL statement with syntax highlighting (verbose only)."""
-        if self.verbose:
-            ctx = self._format_db_context()
-            prefix = f"{ctx} " if ctx else ""
-            self.debug(
-                f"{prefix}{colorize('SQL:', ANSI_COLORS['bold'] + ANSI_COLORS['blue'])}"
-            )
-            for line in sql.strip().split("\n"):
-                if line.strip():
-                    self.debug(colorize_sql(line))
+        """Log SQL statement with syntax highlighting."""
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.DEBUG,
+                    lambda: "\n".join(
+                        [
+                            colorize("SQL:", ANSI_COLORS["bold"] + ANSI_COLORS["blue"]),
+                            *[
+                                colorize_sql(line)
+                                for line in sql.strip().split("\n")
+                                if line.strip()
+                            ],
+                        ]
+                    ),
+                ),
+            ],
+            stacklevel=4,
+        )
 
     def log_backup_created(self, backup_path: str) -> None:
         """Log backup creation."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
-        self.info(
-            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Backup created: {backup_path}"
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[APPLIED]', ANSI_COLORS['green'])} "
+                        f"Backup created: {backup_path}"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ],
+            stacklevel=4,
         )
 
     def log_baseline_set(self, version: str) -> None:
         """Log baseline migration set."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
-        self.info(
-            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Baseline set at version: {version}"
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[APPLIED]', ANSI_COLORS['green'])} "
+                        f"Baseline set at version: {version}"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ],
+            stacklevel=4,
         )
 
     def log_seed_migration(self, filename: str) -> None:
         """Log seed migration."""
-        ctx = self._format_db_context()
-        prefix = f"{ctx} " if ctx else ""
-        self.info(
-            f"{prefix}{colorize('[APPLIED]', ANSI_COLORS['green'])} Seed data applied: {filename}"
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.INFO,
+                    lambda: (
+                        f"{colorize('[APPLIED]', ANSI_COLORS['green'])} "
+                        f"Seed data applied: {filename}"
+                    ),
+                    Verbosity.NORMAL,
+                ),
+            ],
+            stacklevel=4,
         )
 
     def log_model_discovered(self, table_name: str, columns: list) -> None:
-        """Log model discovered from SQLAlchemy models (verbose only)."""
-        if self.verbose:
-            ctx = self._format_db_context()
-            prefix = f"{ctx} " if ctx else ""
-            self.debug(
-                f"{prefix}Discovered model: {table_name} with {len(columns)} columns"
-            )
+        """Log model discovered from SQLAlchemy models (debug_enabled only)."""
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.DEBUG,
+                    lambda: f"Discovered model: {table_name} with {len(columns)} columns",
+                ),
+            ],
+            stacklevel=4,
+        )
 
     def log_model_paths(self, paths: list[str]) -> None:
-        """Log model paths being used (verbose only)."""
-        if self.verbose:
-            ctx = self._format_db_context()
-            prefix = f"{ctx} " if ctx else ""
-            self.debug(f"{prefix}Using model paths: {paths}")
+        """Log model paths being used (debug_enabled only)."""
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.DEBUG,
+                    lambda: f"Using model paths: {paths}",
+                ),
+            ],
+            stacklevel=4,
+        )
 
     def log_table_columns(self, table_name: str, columns: list) -> None:
-        """Log table columns (verbose only)."""
-        if self.verbose:
-            ctx = self._format_db_context()
-            prefix = f"{ctx} " if ctx else ""
-            col_info = ", ".join(c["name"] for c in columns)
-            self.debug(f"{prefix}Table {table_name} columns: {col_info}")
+        """Log table columns (debug_enabled only)."""
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.DEBUG,
+                    lambda: (
+                        f"Table {table_name} columns: "
+                        f"{', '.join(c['name'] for c in columns)}"
+                    ),
+                ),
+            ],
+            stacklevel=4,
+        )
 
     def log_migration_sql_gen(self, table_name: str, sql: str) -> None:
-        """Log generated migration SQL (verbose only)."""
-        if self.verbose:
-            highlighted = colorize_sql(sql)
-            ctx = self._format_db_context()
-            prefix = f"{ctx} " if ctx else ""
-            self.debug(f"{prefix}Generated SQL for {table_name}:\n{highlighted}")
+        """Log generated migration SQL (debug_enabled only)."""
+        self._log_best_candidate(
+            [
+                LogCandidate(
+                    logging.DEBUG,
+                    lambda: (
+                        f"Generated SQL for {table_name}:\n{colorize_sql(sql)}"
+                    ),
+                ),
+            ],
+            stacklevel=4,
+        )
 
 
 _global_logger: Optional[DBWardenLogger] = None
 
 
 def get_logger(
-    verbose: bool = False,
+    debug_enabled: bool = False,
+    verbose: bool | None = None,
+    verbosity: Verbosity | None = None,
     db_name: str | None = None,
     db_type: str | None = None,
 ) -> DBWardenLogger:
@@ -436,7 +766,13 @@ def get_logger(
     Get the global DBWarden logger instance.
 
     Args:
-        verbose: If True, sets logger to DEBUG level.
+        debug_enabled: If True, sets logger to DEBUG level.
+        verbose: Legacy compatibility flag. Used only when explicitly
+            provided and ``verbosity`` is not set, where ``True`` maps to
+            ``Verbosity.VERBOSE`` and ``False`` maps to ``Verbosity.NORMAL``.
+            When omitted, the existing singleton verbosity is left unchanged.
+        verbosity: Explicit INFO-output verbosity. When provided, it takes
+            precedence over ``verbose``.
         db_name: Database name from multi-db config.
         db_type: Database type (sqlite, postgresql, mysql, mariadb, clickhouse).
 
@@ -446,10 +782,18 @@ def get_logger(
     global _global_logger
     if _global_logger is None:
         _global_logger = DBWardenLogger(
-            verbose=verbose, db_name=db_name, db_type=db_type
+            debug_enabled=debug_enabled,
+            verbose=verbose if verbose is not None else False,
+            verbosity=verbosity,
+            db_name=db_name,
+            db_type=db_type,
         )
     else:
-        if _global_logger.verbose != verbose:
+        if _global_logger.debug_enabled != debug_enabled:
+            _global_logger.set_debug_enabled(debug_enabled)
+        if verbosity is not None and _global_logger.verbosity != verbosity:
+            _global_logger.set_verbosity(verbosity)
+        elif verbose is not None and _global_logger.verbose != verbose:
             _global_logger.set_verbose(verbose)
         if db_name is not None:
             _global_logger.db_name = db_name
