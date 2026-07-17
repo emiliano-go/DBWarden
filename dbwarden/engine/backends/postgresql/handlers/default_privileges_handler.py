@@ -158,7 +158,7 @@ class DefaultPrivilegesHandler(ObjectHandler):
 
     def emit(
         self, op: Op, db_name: Optional[str] = None
-    ) -> List[MigrationStatement]:
+    , **kwargs: Any) -> List[MigrationStatement]:
         stmts: list[MigrationStatement] = []
 
         if op.object_type == "alter_default_privileges":

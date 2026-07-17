@@ -103,7 +103,7 @@ class GrantsHandler(ObjectHandler):
 
     def emit(
         self, op: Op, db_name: Optional[str] = None
-    ) -> List[MigrationStatement]:
+    , **kwargs: Any) -> List[MigrationStatement]:
         from dbwarden.engine.model_discovery import (
             _build_grant_sql,
             _build_revoke_sql,

@@ -93,7 +93,7 @@ class StorageParamsHandler(ObjectHandler):
 
     def emit(
         self, op: Op, db_name: Optional[str] = None
-    ) -> List[MigrationStatement]:
+    , **kwargs: Any) -> List[MigrationStatement]:
         stmts: list[MigrationStatement] = []
         table = op.upgrade_attrs["table"]
         param = op.upgrade_attrs["param"]

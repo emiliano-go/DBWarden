@@ -131,7 +131,7 @@ class TriggerHandler(ObjectHandler):
 
     def emit(
         self, op: Op, db_name: Optional[str] = None
-    ) -> List[MigrationStatement]:
+    , **kwargs: Any) -> List[MigrationStatement]:
         from dbwarden.engine.model_discovery import _qualified_name
 
         stmts: list[MigrationStatement] = []

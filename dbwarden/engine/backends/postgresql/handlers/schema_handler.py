@@ -37,7 +37,7 @@ class SchemaHandler(ObjectHandler):
 
     def emit(
         self, op: Op, db_name: Optional[str] = None
-    ) -> List[MigrationStatement]:
+    , **kwargs: Any) -> List[MigrationStatement]:
         s = op.upgrade_attrs.get("schema", "")
         if op.object_type == "create_schema":
             return [MigrationStatement(

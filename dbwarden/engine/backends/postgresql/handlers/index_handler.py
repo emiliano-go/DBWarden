@@ -162,7 +162,7 @@ class IndexHandler(ObjectHandler):
 
     def emit(
         self, op: Op, db_name: Optional[str] = None
-    ) -> List[MigrationStatement]:
+    , **kwargs: Any) -> List[MigrationStatement]:
         from dbwarden.engine.snapshot import _build_index_sql, _get_backend
 
         backend = _get_backend(db_name)

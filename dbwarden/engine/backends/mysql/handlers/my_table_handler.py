@@ -98,7 +98,7 @@ class MyTableHandler(ObjectHandler):
 
     def emit(
         self, op: Op, db_name: Optional[str] = None
-    ) -> List[MigrationStatement]:
+    , **kwargs: Any) -> List[MigrationStatement]:
         from dbwarden.engine.snapshot import _get_backend
 
         stmts: list[MigrationStatement] = []

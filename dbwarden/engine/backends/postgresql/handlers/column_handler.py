@@ -24,7 +24,6 @@ class ColumnHandler(ObjectHandler):
         "alter_column_comment",
         "alter_pg_column_meta",
         "alter_my_column_meta",
-        "alter_ch_column",
         "rename_column",
     )
     run_phase: RunPhase = RunPhase.DIFF
@@ -51,13 +50,6 @@ class ColumnHandler(ObjectHandler):
 
     def canonicalize(self, spec: dict[str, Any]) -> dict[str, Any]:
         return spec
-
-    def _ch_diff_wrapper(self, snap_ch, model_ch, tname, col_name):
-        from dbwarden.engine.snapshot import _diff_ch_column_extras
-        temp_up: list[dict] = []
-        temp_rb: list[dict] = []
-        _diff_ch_column_extras(snap_ch, model_ch, tname, col_name, temp_up, temp_rb)
-        return temp_up, temp_rb
 
     def diff(
         self,
@@ -306,24 +298,6 @@ class ColumnHandler(ObjectHandler):
                         },
                     ))
 
-                snap_ch_col = snap_col.get("ch_column") or {}
-                model_ch_col = model_col.ch_meta or {}
-                temp_up, temp_rb = self._ch_diff_wrapper(
-                    snap_ch_col, model_ch_col, tname, col_name
-                )
-                for d in temp_up:
-                    upgrade_ops.append(Op(
-                        object_type="alter_ch_column",
-                        upgrade_attrs={k: v for k, v in d.items() if k != "type"},
-                        rollback_attrs={},
-                    ))
-                for d in temp_rb:
-                    rollback_ops.append(Op(
-                        object_type="alter_ch_column",
-                        upgrade_attrs={k: v for k, v in d.items() if k != "type"},
-                        rollback_attrs={},
-                    ))
-
                 snap_my_col = snap_col.get("my_column") or {}
                 model_my_col = model_col.my_meta or {}
                 if snap_my_col != model_my_col:
@@ -541,7 +515,7 @@ class ColumnHandler(ObjectHandler):
 
     def emit(
         self, op: Op, db_name: Optional[str] = None
-    ) -> List[MigrationStatement]:
+    , **kwargs: Any) -> List[MigrationStatement]:
         from dbwarden.engine.snapshot import (
             _build_alter_default_sql,
             _build_alter_nullable_sql,
@@ -755,75 +729,6 @@ class ColumnHandler(ObjectHandler):
                 stmts.append(MigrationStatement(
                     order=StatementOrder.ALTER_COLUMN_TYPE,
                     upgrade_sql=up, rollback_sql=rb,
-                ))
-
-        elif op.object_type == "alter_ch_column":
-            column = op.upgrade_attrs["column"]
-            from_ch = op.upgrade_attrs.get("from_ch_column", {}) or {}
-            to_ch = op.upgrade_attrs.get("to_ch_column", {}) or {}
-            base_type = to_ch.get("ch_type") or from_ch.get("ch_type") or ""
-            up_parts: list[str] = []
-            rb_parts: list[str] = []
-            if to_ch.get("ch_type") and to_ch.get("ch_type") != from_ch.get("ch_type"):
-                up_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {to_ch['ch_type']}")
-                rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {from_ch.get('ch_type', base_type)}")
-            if to_ch.get("ch_codec") != from_ch.get("ch_codec"):
-                if to_ch.get("ch_codec"):
-                    up_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} CODEC({to_ch['ch_codec']})")
-                else:
-                    up_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} REMOVE CODEC")
-                if from_ch.get("ch_codec"):
-                    rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} CODEC({from_ch['ch_codec']})")
-                else:
-                    rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} REMOVE CODEC")
-            if to_ch.get("ch_ttl") != from_ch.get("ch_ttl"):
-                if to_ch.get("ch_ttl"):
-                    up_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} TTL {to_ch['ch_ttl']}")
-                if from_ch.get("ch_ttl"):
-                    rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} TTL {from_ch['ch_ttl']}")
-            if to_ch.get("ch_default_expression") != from_ch.get("ch_default_expression"):
-                if to_ch.get("ch_default_expression"):
-                    up_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} DEFAULT {to_ch['ch_default_expression']}")
-                else:
-                    up_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} REMOVE DEFAULT")
-                if from_ch.get("ch_default_expression"):
-                    rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} DEFAULT {from_ch['ch_default_expression']}")
-                else:
-                    rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} REMOVE DEFAULT")
-            if to_ch.get("ch_materialized") != from_ch.get("ch_materialized"):
-                if to_ch.get("ch_materialized"):
-                    up_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} MATERIALIZED {to_ch['ch_materialized']}")
-                if from_ch.get("ch_materialized"):
-                    rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} MATERIALIZED {from_ch['ch_materialized']}")
-            if to_ch.get("ch_alias") != from_ch.get("ch_alias"):
-                if to_ch.get("ch_alias"):
-                    up_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} ALIAS {to_ch['ch_alias']}")
-                if from_ch.get("ch_alias"):
-                    rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} ALIAS {from_ch['ch_alias']}")
-            _ch_type_changed = to_ch.get("ch_type") and to_ch.get("ch_type") != from_ch.get("ch_type")
-            if not _ch_type_changed:
-                ch_lc_diff = to_ch.get("ch_low_cardinality") != from_ch.get("ch_low_cardinality")
-                ch_null_diff = to_ch.get("ch_nullable") != from_ch.get("ch_nullable")
-                if ch_lc_diff or ch_null_diff:
-                    _base = _strip_ch_type_wrappers(to_ch.get("ch_type") or from_ch.get("ch_type") or "")
-                    target = _base
-                    if to_ch.get("ch_low_cardinality"):
-                        target = f"LowCardinality({target})"
-                    if to_ch.get("ch_nullable"):
-                        target = f"Nullable({target})"
-                    up_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {target}")
-                    _base_rb = _strip_ch_type_wrappers(from_ch.get("ch_type") or to_ch.get("ch_type") or "")
-                    rb_target = _base_rb
-                    if from_ch.get("ch_low_cardinality"):
-                        rb_target = f"LowCardinality({rb_target})"
-                    if from_ch.get("ch_nullable"):
-                        rb_target = f"Nullable({rb_target})"
-                    rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {rb_target}")
-            if up_parts:
-                stmts.append(MigrationStatement(
-                    order=StatementOrder.ALTER_COLUMN_TYPE,
-                    upgrade_sql=";\n".join(up_parts),
-                    rollback_sql=";\n".join(rb_parts),
                 ))
 
         return stmts

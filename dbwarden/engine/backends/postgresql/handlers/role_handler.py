@@ -103,7 +103,7 @@ class RoleHandler(ObjectHandler):
 
     def emit(
         self, op: Op, db_name: Optional[str] = None
-    ) -> List[MigrationStatement]:
+    , **kwargs: Any) -> List[MigrationStatement]:
         stmts: list[MigrationStatement] = []
         name = op.upgrade_attrs["role_name"]
 
