@@ -68,3 +68,15 @@ class DBDisconnectedError(DatabaseError):
     """Raised when the database is unreachable after retries."""
 
     pass
+
+
+class ImmutableChangeError(DBWardenError):
+    """Raised when a schema change would require modifying an immutable option.
+
+    Some ClickHouse table options (e.g. PARTITION BY, PRIMARY KEY) cannot be
+    changed after table creation.  This error refuses the change and explains
+    the immutable constraint and available alternatives (recreate + data copy
+    via ``data_op()``).
+    """
+
+    pass

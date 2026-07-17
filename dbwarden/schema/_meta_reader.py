@@ -44,6 +44,7 @@ _KNOWN_TABLE_ATTRS = frozenset({
     "ch_to_table", "ch_indexes", "ch_dictionary", "ch_dict_layout",
     "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key",
     "ch_projections",
+    "ch",  # ch_table() spec object
     "my_engine", "my_charset", "my_collate", "my_row_format",
     "my_auto_increment", "my_indexes", "my_checks", "my_uniques",
     "mdb_page_compressed", "mdb_page_compression_level",
@@ -243,7 +244,21 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
             inherits=list(pg_inherits) if pg_inherits else None,
             schema=table_attrs.get("pg_schema") or None,
         )
+    elif isinstance(table_attrs.get("ch"), ChTableSpec):
+        ts: ChTableSpec = table_attrs["ch"]
+        meta.backend_table = ts
+        loose_ch_present = any(k.startswith("ch_") for k in table_attrs if k != "ch")
+        if loose_ch_present:
+            table_attrs["_ch_from_loose"] = True
+            meta.table_attrs["_ch_from_loose"] = True
+        if ts.indexes:
+            meta.ch_indexes = [i.to_dict() if hasattr(i, "to_dict") else i for i in ts.indexes]
+        if ts.projections:
+            proj_dicts = [p.to_dict() if hasattr(p, "to_dict") else p for p in ts.projections]
+            meta.table_attrs["ch_projections"] = proj_dicts
     elif any(k.startswith("ch_") and k not in ("ch_indexes", "ch_projections", "ch_settings", "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key") for k in table_attrs):
+        table_attrs["_ch_from_loose"] = True
+        meta.table_attrs["_ch_from_loose"] = True
         meta.backend_table = ChTableSpec(
             engine=table_attrs.get("ch_engine", "MergeTree"),
             order_by=list(table_attrs.get("ch_order_by", [])) if table_attrs.get("ch_order_by") else None,
@@ -254,7 +269,6 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
             settings=dict(table_attrs.get("ch_settings", {})) if table_attrs.get("ch_settings") else None,
             zookeeper_path=table_attrs.get("ch_zookeeper_path"),
             replica_name=table_attrs.get("ch_replica_name"),
-            object_type=table_attrs.get("ch_object_type", "table"),
             select_statement=table_attrs.get("ch_select_statement"),
             to_table=table_attrs.get("ch_to_table"),
         )

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import typing
 from typing import Any
 
 from dbwarden.schema._base import _MetaValidator
@@ -75,24 +76,43 @@ class PGViewMeta(TableMeta):
     pg_schema: str | None = None
 
 
+if typing.TYPE_CHECKING:
+    from dbwarden.databases.clickhouse import (
+        ChEngineSpec,
+        ChIndexSpec,
+        ChTableSpec,
+        MergeTreeSettings,
+        ProjectionSpec,
+    )
+
+
 class CHTableMeta(TableMeta):
     """ClickHouse table-level metadata; inherit in ``class Meta``.
 
-    All table options use ``ch_*`` typed attributes. Skip indexes use the
-    dedicated ``ch_indexes`` field with ``ChIndexSpec``.
+    Two forms are supported — the typed builder (preferred) and loose attrs
+    (backward-compatible):
 
-    Example::
+    **Preferred — typed builder with full IDE autocomplete**::
 
-        from dbwarden import ChIndexSpec
+        from dbwarden import ch_table, merge_tree, ChIndexSpec
+
+        class Meta(CHTableMeta):
+            ch = ch_table(
+                engine=merge_tree(),
+                order_by=["id", "created_at"],
+                partition_by="toYYYYMM(created_at)",
+                indexes=[
+                    ChIndexSpec("ix_payload", ["payload"],
+                        type="bloom_filter", granularity=1),
+                ],
+            )
+
+    **Legacy — loose attributes** (still supported, no autocomplete)::
 
         class Meta(CHTableMeta):
             ch_engine = ChEngineSpec("MergeTree")
             ch_order_by = ["id", "created_at"]
             ch_partition_by = "toYYYYMM(created_at)"
-            ch_indexes = [
-                ChIndexSpec("ix_payload", ["payload"],
-                    type="bloom_filter", granularity=1),
-            ]
     """
     comment: str | None = None
     indexes: list[Any] = []
@@ -100,13 +120,15 @@ class CHTableMeta(TableMeta):
     uniques: list[Any] = []
     ch_indexes: list[Any] = []
 
+    ch: Any = None
+
     ch_engine: Any = None
     ch_order_by: str | list[str] | None = None
     ch_primary_key: str | list[str] | None = None
     ch_partition_by: str | None = None
     ch_sample_by: str | None = None
     ch_ttl: list[str] | None = None
-    ch_settings: dict[str, str] | None = None
+    ch_settings: Any = None
 
     ch_object_type: str | None = None
 

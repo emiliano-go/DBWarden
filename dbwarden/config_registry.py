@@ -73,6 +73,13 @@ def database_config(
     pg_event_triggers: list[dict] | None = None,
     pg_schema: str | None = None,
     pg_migration_lock_timeout: int | None = None,
+    ch_named_collections: list[Any] | None = None,
+    ch_roles: list[Any] | None = None,
+    ch_users: list[Any] | None = None,
+    ch_row_policies: list[Any] | None = None,
+    ch_quotas: list[Any] | None = None,
+    ch_settings_profiles: list[Any] | None = None,
+    ch_grants: list[Any] | None = None,
 ) -> DatabaseHandle:
     from dbwarden.db_handle import DatabaseHandle as _DH
 
@@ -105,6 +112,13 @@ def database_config(
             pg_event_triggers=pg_event_triggers or [],
             pg_schema=pg_schema,
             pg_migration_lock_timeout=pg_migration_lock_timeout,
+            ch_named_collections=ch_named_collections or [],
+            ch_roles=ch_roles or [],
+            ch_users=ch_users or [],
+            ch_row_policies=ch_row_policies or [],
+            ch_quotas=ch_quotas or [],
+            ch_settings_profiles=ch_settings_profiles or [],
+            ch_grants=ch_grants or [],
         )
     )
     _REGISTRY.add(entry)

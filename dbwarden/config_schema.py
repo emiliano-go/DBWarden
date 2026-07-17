@@ -114,6 +114,13 @@ class DatabaseEntry:
     pg_event_triggers: list[dict] = field(factory=list)
     pg_schema: str | None = None
     pg_migration_lock_timeout: int | None = None
+    ch_named_collections: list[dict] = field(factory=list)
+    ch_roles: list[dict] = field(factory=list)
+    ch_users: list[dict] = field(factory=list)
+    ch_row_policies: list[dict] = field(factory=list)
+    ch_quotas: list[dict] = field(factory=list)
+    ch_settings_profiles: list[dict] = field(factory=list)
+    ch_grants: list[dict] = field(factory=list)
 
 
 @define(slots=False)
