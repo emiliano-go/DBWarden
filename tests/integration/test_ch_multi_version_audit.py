@@ -256,6 +256,48 @@ def make_cases():
         {"engine": merge_tree(), "order_by": "a", "ttl": ["b + INTERVAL 1 DAY"]},
         [{"name": "a", "type": "UInt64"}, {"name": "b", "type": "DateTime"}])
 
+    # ── Cases 37–39: compiled expression verification ──
+    #
+    # These test that render_expr() output matches what the server reports.
+    # If compiled expressions diverge from server form, the whole widening is
+    # wrong — which is why these MUST be audit cases against a live server,
+    # not unit tests.
+
+    # Case 37: partition_by=func.toYYYYMM(...) — compiled expression vs server form
+    add("compiled_partition",
+        "CREATE TABLE compiled_partition (event_date Date, amount Float64) "
+        "ENGINE = MergeTree ORDER BY event_date PARTITION BY toYYYYMM(event_date)",
+        {"engine": merge_tree(), "order_by": "event_date",
+         "partition_by": "toYYYYMM(event_date)"},
+        [{"name": "event_date", "type": "Date"},
+         {"name": "amount", "type": "Float64"}])
+
+    # Case 38: compiled expression + alias in an MV body
+    add("compiled_mv_group_by",
+        "CREATE TABLE compiled_mv_target (day Date, cnt UInt64) ENGINE = MergeTree ORDER BY day",
+        {"engine": None, "order_by": None, "object_type": "materialized_view",
+         "select_statement": "SELECT toDate(event_time) AS day, count() AS cnt FROM compiled_mv_source GROUP BY day",
+         "to_table": "compiled_mv_target"},
+        [{"name": "day", "type": "Date"}, {"name": "cnt", "type": "UInt64"}],
+        extra_sql=[
+            "CREATE TABLE compiled_mv_source (event_time DateTime) ENGINE = MergeTree ORDER BY event_time",
+            "CREATE MATERIALIZED VIEW compiled_mv_group_by TO compiled_mv_target AS "
+            "SELECT toDate(event_time) AS day, count() AS cnt FROM compiled_mv_source GROUP BY day",
+        ])
+
+    # Case 39: compiled aggregate in a projection (select item)
+    add("compiled_mv_select",
+        "CREATE TABLE compiled_mv_select_target (total Float64) ENGINE = SummingMergeTree ORDER BY total",
+        {"engine": None, "order_by": None, "object_type": "materialized_view",
+         "select_statement": "SELECT sum(amount) AS total FROM compiled_mv_select_source",
+         "to_table": "compiled_mv_select_target"},
+        [{"name": "total", "type": "Float64"}],
+        extra_sql=[
+            "CREATE TABLE compiled_mv_select_source (amount Float64) ENGINE = MergeTree ORDER BY amount",
+            "CREATE MATERIALIZED VIEW compiled_mv_select TO compiled_mv_select_target AS "
+            "SELECT sum(amount) AS total FROM compiled_mv_select_source",
+        ])
+
     return cases
 
 
