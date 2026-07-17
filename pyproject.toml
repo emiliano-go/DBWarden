@@ -94,6 +94,12 @@ markers = [
     "integration: Tests requiring a live ClickHouse container (--ch-integration)",
 ]
 
+[tool.coverage.run]
+source = ["dbwarden"]
+
+[tool.coverage.report]
+omit = ["tests/*"]
+
 [tool.uv]
 environments = ["sys_platform == 'linux'"]
 
