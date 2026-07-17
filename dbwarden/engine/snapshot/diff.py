@@ -55,11 +55,43 @@ def diff_models_against_snapshot(
     for op in _col_rb:
         rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
 
-    from dbwarden.engine.backends.clickhouse.handlers import ChTableHandler
+    from dbwarden.engine.backends.clickhouse.handlers import (
+        ChAggTargetHandler,
+        ChColumnHandler,
+        ChCommentHandler,
+        ChDataOpHandler,
+        ChDictionaryHandler,
+        ChGrantHandler,
+        ChMaterializedViewHandler,
+        ChNamedCollectionHandler,
+        ChProjectionHandler,
+        ChQuotaHandler,
+        ChRoleHandler,
+        ChRowPolicyHandler,
+        ChSettingsProfileHandler,
+        ChSkipIndexHandler,
+        ChTableHandler,
+        ChUserHandler,
+    )
     _ch_handler = ChTableHandler()
     _ch_handler.clickhouse_engine_recreate = clickhouse_engine_recreate
     _ch_driver = RegistryDriver()
     _ch_driver.register(_ch_handler)
+    _ch_driver.register(ChColumnHandler())
+    _ch_driver.register(ChMaterializedViewHandler())
+    _ch_driver.register(ChDictionaryHandler())
+    _ch_driver.register(ChProjectionHandler())
+    _ch_driver.register(ChSkipIndexHandler())
+    _ch_driver.register(ChAggTargetHandler())
+    _ch_driver.register(ChDataOpHandler())
+    _ch_driver.register(ChNamedCollectionHandler())
+    _ch_driver.register(ChSettingsProfileHandler())
+    _ch_driver.register(ChRoleHandler())
+    _ch_driver.register(ChUserHandler())
+    _ch_driver.register(ChQuotaHandler())
+    _ch_driver.register(ChRowPolicyHandler())
+    _ch_driver.register(ChGrantHandler())
+    _ch_driver.register(ChCommentHandler())
     _ch_up, _ch_rb = _ch_driver.run(snapshot, model_tables, None)
     for op in _ch_up:
         upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
