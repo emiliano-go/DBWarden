@@ -9,15 +9,58 @@ import sys as _sys
 ch = _sys.modules[__name__]
 from dbwarden.databases.clickhouse.engine import (
     aggregating_merge_tree,
+    buffer,
+    collapsing_merge_tree,
+    dictionary_engine,
+    distributed,
+    file_engine,
+    graphite_merge_tree,
+    hdfs,
+    join_engine,
+    kafka,
+    log,
+    memory,
+    merge,
     merge_tree,
+    mongodb,
+    mysql_engine,
+    nats,
+    null,
+    postgresql_engine,
+    rabbitmq,
+    redis,
     replicated_merge_tree,
     replacing_merge_tree,
+    s3,
+    s3_queue,
+    set_engine,
+    stripe_log,
     summing_merge_tree,
+    tiny_log,
+    url_engine,
+    versioned_collapsing_merge_tree,
+    KafkaSettings,
+    MergeTreeSettings,
+    NATSSettings,
+    RabbitMQSettings,
+    RedisSettings,
+    S3QueueSettings,
+    S3Settings,
+    URLSettings,
 )
 from dbwarden.databases.clickhouse.index import skip_index
 from dbwarden.databases.clickhouse.projection import projection
-from dbwarden.databases.clickhouse.dictionary import dictionary
-from dbwarden.databases.clickhouse.materialized_view import materialized_view
+from dbwarden.databases.clickhouse.agg import AggExpr, ChAggStateType, agg, ch_agg_state
+from dbwarden.databases.clickhouse.cluster import ClusterMode
+from dbwarden.databases.clickhouse.data_op import DataOp, data_op
+from dbwarden.databases.clickhouse.dictionary import DictSpec, dictionary
+from dbwarden.databases.clickhouse.materialized_view import (
+    aggregating_view,
+    materialized_view,
+    MaterializedViewSpec,
+)
+from dbwarden.databases.clickhouse.named_collection import NamedCollectionSpec, named_collection
+from dbwarden.databases.clickhouse.raw import ChRaw, ch_raw
 from dbwarden.databases.clickhouse.engine import ChEngineSpec
 from dbwarden.databases.clickhouse.projection import ProjectionSpec
 from dbwarden.schema.table_meta import CHColumnMeta, CHTableMeta
@@ -39,7 +82,7 @@ class ChIndexSpec:
     """
     name: str
     columns: list[str]
-    type: str
+    type: Literal["minmax", "set", "bloom_filter", "ngrambf_v1", "tokenbf_v1", "hypothesis"] | str = "minmax"
     granularity: int = 1
     expr: str | None = None
 
@@ -67,37 +110,128 @@ class ChIndexSpec:
 
 @dataclass
 class ChTableSpec:
-    engine: str = "MergeTree"
-    order_by: list[str] | None = None
-    primary_key: str | list[str] | None = None
+    engine: ChEngineSpec | str | None = None
+    order_by: list[str] | str | None = None
+    primary_key: list[str] | str | None = None
     partition_by: str | None = None
     sample_by: str | None = None
-    ttl: str | None = None
-    settings: dict[str, str] | None = None
+    ttl: list[str] | str | None = None
+    settings: MergeTreeSettings | None = None
+    projections: list[ProjectionSpec] | None = None
+    indexes: list[ChIndexSpec] | None = None
     zookeeper_path: str | None = None
     replica_name: str | None = None
-    object_type: str = "table"
     select_statement: str | None = None
     to_table: str | None = None
+
+
+def ch_table(
+    *,
+    engine: ChEngineSpec | str | None = None,
+    order_by: list[str] | str | None = None,
+    primary_key: list[str] | str | None = None,
+    partition_by: str | None = None,
+    sample_by: str | None = None,
+    ttl: list[str] | str | None = None,
+    settings: MergeTreeSettings | None = None,
+    projections: list[ProjectionSpec] | None = None,
+    indexes: list[ChIndexSpec] | None = None,
+    zookeeper_path: str | None = None,
+    replica_name: str | None = None,
+) -> ChTableSpec:
+    """Declare a ClickHouse table.
+
+    All keyword arguments — full signature autocomplete in any modern IDE.
+
+    Returns a ``ChTableSpec``.  Use in ``class Meta``::
+
+        class Meta(CHTableMeta):
+            ch = ch_table(
+                engine=merge_tree(),
+                order_by=["user_id", "event_time"],
+                partition_by="toYYYYMM(event_time)",
+            )
+    """
+    return ChTableSpec(
+        engine=engine,
+        order_by=order_by,
+        primary_key=primary_key,
+        partition_by=partition_by,
+        sample_by=sample_by,
+        ttl=ttl,
+        settings=settings,
+        projections=projections,
+        indexes=indexes,
+        zookeeper_path=zookeeper_path,
+        replica_name=replica_name,
+    )
 
 
 __all__ = [
     "CHColumnMeta",
     "CHTableMeta",
+    "AggExpr",
+    "ChAggStateType",
     "ChEngineSpec",
     "ChFieldSpec",
     "ChIndexSpec",
+    "ChRaw",
     "ChTableSpec",
+    "ClusterMode",
+    "DataOp",
+    "DictSpec",
+    "KafkaSettings",
+    "MaterializedViewSpec",
+    "MergeTreeSettings",
+    "NamedCollectionSpec",
+    "NATSSettings",
     "ProjectionSpec",
+    "RabbitMQSettings",
+    "RedisSettings",
+    "S3QueueSettings",
+    "S3Settings",
+    "URLSettings",
+    "agg",
     "aggregating_merge_tree",
+    "aggregating_view",
+    "buffer",
     "ch",
+    "ch_agg_state",
+    "ch_raw",
+    "ch_table",
+    "collapsing_merge_tree",
     "dictionary",
+    "dictionary_engine",
+    "distributed",
     "field",
+    "file_engine",
+    "graphite_merge_tree",
+    "hdfs",
+    "join_engine",
+    "kafka",
+    "log",
     "materialized_view",
+    "memory",
+    "merge",
     "merge_tree",
+    "mongodb",
+    "mysql_engine",
+    "named_collection",
+    "nats",
+    "null",
+    "postgresql_engine",
     "projection",
+    "rabbitmq",
+    "redis",
     "replicated_merge_tree",
     "replacing_merge_tree",
+    "s3",
+    "s3_queue",
+    "set_engine",
     "skip_index",
+    "stripe_log",
     "summing_merge_tree",
+    "tiny_log",
+    "url_engine",
+    "versioned_collapsing_merge_tree",
 ]
