@@ -89,6 +89,10 @@ packages = ["dbwarden"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+markers = [
+    "p0: Two-cycle convergence gate — must never regress",
+    "integration: Tests requiring a live ClickHouse container (--ch-integration)",
+]
 
 [tool.uv]
 environments = ["sys_platform == 'linux'"]
