@@ -8,9 +8,14 @@ from typing import Any
 class MaterializedViewSpec:
     """Typed spec for a ClickHouse materialized view.
 
+    Expression fields (select, order_by, partition_by, ttl) accept
+    :class:`~sqlalchemy.sql.ColumnElement`, :class:`ChRaw`, or plain ``str``.
+    When a ``ColumnElement`` is provided, it is rendered to ClickHouse SQL via
+    :func:`render_expr`.
+
     Attributes:
         name: View name.
-        select: The SELECT query as a string or ``ch_raw()``.
+        select: The SELECT query.
         to_table: Explicit target table, or None for implicit ``.inner.`` storage.
         refresh: Refresh schedule (e.g. ``"EVERY 1 HOUR"``).
         populate: If True, emit ``POPULATE`` for one-time backfill.
@@ -21,20 +26,22 @@ class MaterializedViewSpec:
         settings: Optional engine SETTINGS.
     """
     name: str
-    select: str
+    select: Any = None
     to_table: str | None = None
     refresh: str | None = None
     populate: bool = False
     engine: Any = None
-    order_by: str | list[str] | None = None
-    partition_by: str | None = None
-    ttl: str | list[str] | None = None
+    order_by: Any = None
+    partition_by: Any = None
+    ttl: Any = None
     settings: dict[str, str] | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        from dbwarden.databases.clickhouse.compiler import render_expr, render_expr_list
+
         d: dict[str, Any] = {
             "ch_object_type": "materialized_view",
-            "ch_select_statement": self.select,
+            "ch_select_statement": render_expr(self.select) if self.select is not None else None,
         }
         if self.to_table is not None:
             d["ch_to_table"] = self.to_table
@@ -50,11 +57,19 @@ class MaterializedViewSpec:
             else:
                 d["ch_engine"] = self.engine
         if self.order_by is not None:
-            d["ch_order_by"] = self.order_by
+            d["ch_order_by"] = (
+                render_expr_list(self.order_by)
+                if isinstance(self.order_by, list)
+                else render_expr(self.order_by)
+            )
         if self.partition_by is not None:
-            d["ch_partition_by"] = self.partition_by
+            d["ch_partition_by"] = render_expr(self.partition_by)
         if self.ttl is not None:
-            d["ch_ttl"] = self.ttl if isinstance(self.ttl, list) else [self.ttl]
+            d["ch_ttl"] = (
+                render_expr_list(self.ttl)
+                if isinstance(self.ttl, list)
+                else [render_expr(self.ttl)]
+            )
         if self.settings is not None:
             d["ch_settings"] = dict(self.settings)
         return d
@@ -63,14 +78,14 @@ class MaterializedViewSpec:
 def materialized_view(
     *,
     name: str,
-    select: str | Any,
+    select: Any = None,
     to_table: str | None = None,
     refresh: str | None = None,
     populate: bool = False,
     engine: Any = None,
-    order_by: str | list[str] | None = None,
-    partition_by: str | None = None,
-    ttl: str | list[str] | None = None,
+    order_by: Any = None,
+    partition_by: Any = None,
+    ttl: Any = None,
     settings: dict[str, str] | None = None,
 ) -> MaterializedViewSpec:
     """Declare a ClickHouse materialized view.
@@ -83,10 +98,15 @@ def materialized_view(
 
     Returns a ``MaterializedViewSpec``; call ``.to_dict()`` at the model boundary.
 
+    Expression fields (select, order_by, partition_by, ttl) accept
+    :class:`~sqlalchemy.sql.ColumnElement`, :class:`ChRaw`, or plain ``str``.
+    When a ``ColumnElement`` is provided, it is rendered to ClickHouse SQL via
+    :func:`render_expr`.
+
     Args:
         name: View name.
-        select: The SELECT.  A plain string or ``ch_raw()`` is canonicalized but
-            not parsed.
+        select: The SELECT.  A :class:`~sqlalchemy.sql.ColumnElement`,
+            ``ch_raw()``, or plain string.
         to_table: Explicit target table name, or None for implicit storage.
         refresh: Refresh schedule for refreshable MVs, e.g. ``"EVERY 1 HOUR"``.
             This IS converged schema state — changing it emits an ALTER.
@@ -114,16 +134,9 @@ def materialized_view(
             "materialized_view: populate and refresh are mutually exclusive"
         )
 
-    from dbwarden.databases.clickhouse.raw import ChRaw
-
-    if isinstance(select, ChRaw):
-        select_sql = select.sql
-    else:
-        select_sql = str(select)
-
     return MaterializedViewSpec(
         name=name,
-        select=select_sql,
+        select=select,
         to_table=to_table,
         refresh=refresh,
         populate=populate,
@@ -139,11 +152,11 @@ def aggregating_view(
     *,
     name: str,
     source: Any,
-    group_by: list,
-    aggregates: list,
-    order_by: list,
-    partition_by: str | None = None,
-    ttl: str | list[str] | None = None,
+    group_by: Any = None,
+    aggregates: Any = None,
+    order_by: Any = None,
+    partition_by: Any = None,
+    ttl: Any = None,
     settings: dict[str, str] | None = None,
     target_name: str | None = None,
 ) -> dict[str, Any]:
@@ -161,12 +174,18 @@ def aggregating_view(
     that is manual and drift-prone in the string-SELECT form is here derived and
     safe.
 
+    Expression fields (group_by, order_by, partition_by, ttl) accept
+    :class:`~sqlalchemy.sql.ColumnElement`, :class:`ChRaw`, or plain ``str``.
+    When a ``ColumnElement`` is provided, it is rendered to ClickHouse SQL via
+    :func:`render_expr`.
+
     Args:
         name: Logical name; the MV is ``<name>_mv`` and the target defaults to
             ``<name>_agg`` unless ``target_name`` is given.
         source: The source table name (a model class or string).  The MV's
             ``FROM`` clause references this.
-        group_by: ``GROUP BY`` keys — strings or ``ch_raw()`` expressions.
+        group_by: ``GROUP BY`` keys — :class:`~sqlalchemy.sql.ColumnElement`,
+            ``ch_raw()``, or strings.
         aggregates: The aggregate columns, as ``AggExpr`` (from ``agg.*``), each
             with ``.as_(alias)`` set.
         order_by: ``ORDER BY`` for the ``AggregatingMergeTree`` target.
@@ -186,13 +205,14 @@ def aggregating_view(
         from dbwarden.databases.clickhouse import (
             CHTableMeta, aggregating_view, agg, merge_tree, ch_raw,
         )
+        import sqlalchemy as sa
 
         class Events(Base):
             __tablename__ = "events"
 
             class Meta(CHTableMeta):
                 ch_engine = merge_tree()
-                ch_order_by = ["user_id", "event_time"]
+                ch_order_by = [Events.user_id, Events.event_time]
 
             user_id:    Mapped[int] = mapped_column(BigInteger)
             event_time: Mapped[datetime] = mapped_column(DateTime)
@@ -201,15 +221,25 @@ def aggregating_view(
         events_daily = aggregating_view(
             name="events_daily",
             source="events",
-            group_by=["user_id", ch_raw("toDate(event_time) AS day")],
+            group_by=[Events.user_id, func.toDate(Events.event_time).label("day")],
             aggregates=[
                 agg.sum(Events.amount, "Float64").as_("amount_sum"),
                 agg.count().as_("event_count"),
             ],
-            order_by=["user_id", "day"],
-            partition_by="toYYYYMM(day)",
+            order_by=[Events.user_id, "day"],
+            partition_by=func.toYYYYMM(column("day")),
         )
     """
+    from dbwarden.databases.clickhouse.compiler import (
+        render_expr,
+        render_expr_list,
+        column_name_from_expr,
+    )
+
+    group_by = group_by or []
+    aggregates = aggregates or []
+    order_by = order_by or []
+
     if not aggregates:
         raise ValueError("aggregating_view: at least one aggregate is required")
     if not all(hasattr(a, "alias") and a.alias for a in aggregates):
@@ -221,23 +251,12 @@ def aggregating_view(
     source_name = _resolve_source(source)
 
     # Build the column list for the AggregatingMergeTree target
-    target_columns = []
-    for g in group_by:
-        raw = getattr(g, "sql", None) or str(g)
-        alias = getattr(g, "alias", None)
-        col_name = alias or raw.split()[-1] if raw else str(g)
-        col_name = col_name.split(" AS ")[-1].strip()
-        target_columns.append(col_name)
-
-    select_parts: list[str] = []
+    target_columns = [column_name_from_expr(g) for g in group_by]
     for a in aggregates:
         target_columns.append(a.alias)
 
     # Build the SELECT for the MV
-    group_parts = [
-        getattr(g, "sql", None) or str(g)
-        for g in group_by
-    ]
+    group_parts = [render_expr(g) for g in group_by]
     select_items = list(group_parts) + [
         a.state_combinator() for a in aggregates
     ]
@@ -246,8 +265,7 @@ def aggregating_view(
         "SELECT\n    " + ",\n    ".join(select_items) +
         "\nFROM " + source_name +
         "\nGROUP BY " + ", ".join(
-            getattr(g, "alias", None) or _bare_name(getattr(g, "sql", None) or str(g))
-            for g in group_by
+            column_name_from_expr(g) for g in group_by
         )
     )
 
@@ -263,9 +281,9 @@ def aggregating_view(
             "name": target,
             "columns": target_columns,
             "aggregates": aggregates,
-            "order_by": order_by,
-            "partition_by": partition_by,
-            "ttl": ttl,
+            "order_by": render_expr_list(order_by if isinstance(order_by, list) else [order_by]),
+            "partition_by": render_expr(partition_by) if partition_by is not None else None,
+            "ttl": render_expr_list(ttl if isinstance(ttl, list) else [ttl]) if ttl is not None else None,
             "settings": settings,
         },
         "ch_agg_mv": mv_spec.to_dict(),
@@ -282,12 +300,4 @@ def _resolve_source(source: Any) -> str:
     return str(source)
 
 
-def _bare_name(expr: str) -> str:
-    """Extract the last identifier from an expression.
 
-    ``"toDate(event_time) AS day"`` → ``"day"``
-    ``"user_id"`` → ``"user_id"``
-    """
-    if " AS " in expr.upper():
-        return expr.split(" AS ")[-1].strip()
-    return expr.strip()

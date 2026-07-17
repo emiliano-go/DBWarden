@@ -60,6 +60,7 @@ from dbwarden.databases.clickhouse.materialized_view import (
     MaterializedViewSpec,
 )
 from dbwarden.databases.clickhouse.named_collection import NamedCollectionSpec, named_collection
+from dbwarden.databases.clickhouse.compiler import render_expr, render_expr_list, column_name_from_expr
 from dbwarden.databases.clickhouse.raw import ChRaw, ch_raw
 from dbwarden.databases.clickhouse.engine import ChEngineSpec
 from dbwarden.databases.clickhouse.projection import ProjectionSpec
@@ -110,29 +111,36 @@ class ChIndexSpec:
 
 @dataclass
 class ChTableSpec:
+    """Typed spec for a ClickHouse table.
+
+    Expression fields (order_by, partition_by, etc.) accept
+    :class:`~sqlalchemy.sql.ColumnElement`, :class:`ChRaw`, or plain ``str``.
+    When a ``ColumnElement`` is provided, it is rendered to ClickHouse SQL via
+    :func:`render_expr`.
+    """
     engine: ChEngineSpec | str | None = None
-    order_by: list[str] | str | None = None
-    primary_key: list[str] | str | None = None
-    partition_by: str | None = None
-    sample_by: str | None = None
-    ttl: list[str] | str | None = None
+    order_by: list[Any] | Any | None = None
+    primary_key: list[Any] | Any | None = None
+    partition_by: Any | None = None
+    sample_by: Any | None = None
+    ttl: list[Any] | Any | None = None
     settings: MergeTreeSettings | None = None
     projections: list[ProjectionSpec] | None = None
     indexes: list[ChIndexSpec] | None = None
     zookeeper_path: str | None = None
     replica_name: str | None = None
-    select_statement: str | None = None
+    select_statement: Any | None = None
     to_table: str | None = None
 
 
 def ch_table(
     *,
     engine: ChEngineSpec | str | None = None,
-    order_by: list[str] | str | None = None,
-    primary_key: list[str] | str | None = None,
-    partition_by: str | None = None,
-    sample_by: str | None = None,
-    ttl: list[str] | str | None = None,
+    order_by: Any = None,
+    primary_key: Any = None,
+    partition_by: Any = None,
+    sample_by: Any = None,
+    ttl: Any = None,
     settings: MergeTreeSettings | None = None,
     projections: list[ProjectionSpec] | None = None,
     indexes: list[ChIndexSpec] | None = None,
@@ -141,15 +149,16 @@ def ch_table(
 ) -> ChTableSpec:
     """Declare a ClickHouse table.
 
-    All keyword arguments — full signature autocomplete in any modern IDE.
+    Expression fields (order_by, partition_by, etc.) accept
+    :class:`~sqlalchemy.sql.ColumnElement`, :class:`ChRaw`, or plain ``str``.
 
     Returns a ``ChTableSpec``.  Use in ``class Meta``::
 
         class Meta(CHTableMeta):
             ch = ch_table(
                 engine=merge_tree(),
-                order_by=["user_id", "event_time"],
-                partition_by="toYYYYMM(event_time)",
+                order_by=[Events.event_date],
+                partition_by=func.toYYYYMM(Events.event_date),
             )
     """
     return ChTableSpec(
@@ -199,6 +208,9 @@ __all__ = [
     "ch_agg_state",
     "ch_raw",
     "ch_table",
+    "column_name_from_expr",
+    "render_expr",
+    "render_expr_list",
     "collapsing_merge_tree",
     "dictionary",
     "dictionary_engine",
