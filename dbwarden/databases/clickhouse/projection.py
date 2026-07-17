@@ -17,5 +17,9 @@ class ProjectionSpec:
         return cls(name=d["name"], query=d.get("query", ""))
 
 
-def projection(name: str, query: str) -> dict[str, Any]:
-    return {"name": name, "query": query}
+def projection(name: str, query: str) -> ProjectionSpec:
+    """Declare a ClickHouse projection.
+
+    Returns a ``ProjectionSpec``; call ``.to_dict()`` at the model boundary.
+    """
+    return ProjectionSpec(name=name, query=query)
