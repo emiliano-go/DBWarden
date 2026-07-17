@@ -85,5 +85,5 @@ jobs:
       - name: ClickHouse integration convergence test
         env:
           CLICKHOUSE_HOST: localhost
-          CLICKHOUSE_PORT: ${{ job.services.clickhouse.ports[9000] }}
+          CLICKHOUSE_PORT: ${{ job.services.clickhouse.ports[8123] }}
         run: uv run pytest tests/integration/ -m integration --ch-integration --tb=short -v
