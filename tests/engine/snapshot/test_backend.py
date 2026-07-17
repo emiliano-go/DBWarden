@@ -355,8 +355,9 @@ class TestHandlerConvergence:
                 ],
                 clickhouse_options={
                     "ch_engine": "ReplacingMergeTree",
-                    "ch_order_by": ["ts", "id"],
+                    "ch_order_by": ["id", "ts"],
                     "ch_partition_by": "toYYYYMM(ts)",
+                    "ch_ttl": ["ts + INTERVAL 1 DAY"],
                 },
             ),
             ModelTable(
@@ -557,7 +558,7 @@ class TestClickHouseDiff:
             "constraints": {},
         }
 
-        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot, clickhouse_engine_recreate=True)
 
         assert any(op["type"] == "recreate_ch_table" for op in upgrade)
         assert any(op["type"] == "recreate_ch_table" for op in rollback)
@@ -598,7 +599,7 @@ class TestClickHouseDiff:
             "indexes": {},
             "constraints": {},
         }
-        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot, clickhouse_engine_recreate=True)
         assert any(op["type"] == "recreate_ch_table" for op in upgrade)
 
     def test_recreate_inline_materialized_view(self):
@@ -638,7 +639,7 @@ class TestClickHouseDiff:
             "indexes": {},
             "constraints": {},
         }
-        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot, clickhouse_engine_recreate=True)
         recreate = next(op for op in upgrade if op["type"] == "recreate_ch_table")
         assert recreate is not None
 
@@ -678,7 +679,7 @@ class TestClickHouseDiff:
             "indexes": {},
             "constraints": {},
         }
-        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot, clickhouse_engine_recreate=True)
         assert any(op["type"] == "recreate_ch_table" for op in upgrade)
 
     def test_recreate_annotates_dependent_mvs(self):
@@ -744,7 +745,7 @@ class TestClickHouseDiff:
             "indexes": {},
             "constraints": {},
         }
-        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
+        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot, clickhouse_engine_recreate=True)
         recreate = next(op for op in upgrade if op["type"] == "recreate_ch_table")
         assert recreate.get("dependent_mvs") == ["events_mv"]
 

@@ -147,13 +147,13 @@ def test_analyze_schema_ttl_change_is_warning():
     assert issues[0].required_flag == "--force"
 
 
-def test_analyze_schema_partition_change_is_warning():
+def test_analyze_schema_ttl_change_is_warning():
     model_tables = [
         ModelTable(
             name="events",
             columns=[ModelColumn("id", "UInt64", False, True, False, None, None)],
             clickhouse_options={
-                "ch_partition_by": "toYYYYMM(event_time)",
+                "ch_ttl": "event_time + INTERVAL 30 DAY",
             },
         )
     ]
@@ -163,7 +163,7 @@ def test_analyze_schema_partition_change_is_warning():
             "object_type": "table",
             "columns": {"id": {"type": "UInt64", "nullable": False, "default": None}},
             "clickhouse_options": {
-                "ch_partition_by": "toYYYYMM(created_at)",
+                "ch_ttl": "event_time + INTERVAL 90 DAY",
             },
         }
     }
@@ -442,8 +442,8 @@ class TestCHSafetyClassifiers:
 
     def test_classify_ch_options_change_warn(self):
         from dbwarden.engine.safety import classify_ch_options_change
-        assert classify_ch_options_change("ch_partition_by") == "WARN"
         assert classify_ch_options_change("ch_settings") == "WARN"
+        assert classify_ch_options_change("ch_zookeeper_path") == "WARN"
         assert classify_ch_options_change("ch_zookeeper_path") == "WARN"
         assert classify_ch_options_change("ch_replica_name") == "WARN"
         assert classify_ch_options_change("ch_dict_layout") == "WARN"

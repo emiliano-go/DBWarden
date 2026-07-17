@@ -462,7 +462,6 @@ class TestChEngineSpec:
         assert spec.args == ()
         assert spec.zookeeper_path is None
         assert spec.replica_name is None
-        assert spec.settings is None
 
     def test_with_args(self):
         from dbwarden.databases.clickhouse.engine import ChEngineSpec
@@ -477,24 +476,16 @@ class TestChEngineSpec:
         assert spec.zookeeper_path == "/zk/path"
         assert spec.replica_name == "{replica}"
 
-    def test_with_settings(self):
-        from dbwarden.databases.clickhouse.engine import ChEngineSpec
-        spec = ChEngineSpec("MergeTree",
-            settings={"index_granularity": "8192"})
-        assert spec.settings == {"index_granularity": "8192"}
-
     def test_to_dict_roundtrip(self):
         from dbwarden.databases.clickhouse.engine import ChEngineSpec
         spec = ChEngineSpec("ReplicatedMergeTree",
-            args=("ver",), zookeeper_path="/zk", replica_name="{r}",
-            settings={"s": "1"})
+            args=("ver",), zookeeper_path="/zk", replica_name="{r}")
         d = spec.to_dict()
         restored = ChEngineSpec.from_dict(d)
         assert restored.name == spec.name
         assert restored.args == spec.args
         assert restored.zookeeper_path == spec.zookeeper_path
         assert restored.replica_name == spec.replica_name
-        assert restored.settings == spec.settings
 
     def test_to_dict_omits_defaults(self):
         from dbwarden.databases.clickhouse.engine import ChEngineSpec

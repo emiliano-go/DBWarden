@@ -24,4 +24,6 @@ class TestProjectionSpec:
 class TestProjectionFactory:
     def test_basic(self):
         result = projection("p", "SELECT 1")
-        assert result == {"name": "p", "query": "SELECT 1"}
+        assert isinstance(result, ProjectionSpec)
+        assert result.name == "p"
+        assert result.query == "SELECT 1"
