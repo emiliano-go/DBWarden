@@ -20,7 +20,7 @@ def extract_balanced_parens(match: re.Match) -> str | None:
 
 def parse_ttl_expressions(create_query: str) -> list[str]:
     ttl_match = re.search(
-        r"\bTTL\s+(.+?)(?:\n(?:SETTINGS|COMMENT|AS|PRIMARY KEY|ORDER BY|PARTITION BY|SAMPLE BY)\b|$)",
+        r"\bTTL\s+(.+?)(?:\s+SETTINGS\b|\s+COMMENT\b|\s+AS\b|$)",
         create_query,
         re.IGNORECASE | re.DOTALL,
     )
@@ -59,6 +59,27 @@ def parse_mv_query(create_query: str) -> str | None:
 def parse_mv_to_table(create_query: str) -> str | None:
     match = re.search(r"\bTO\s+([a-zA-Z_][a-zA-Z0-9_\.]*)", create_query, re.IGNORECASE)
     return match.group(1) if match else None
+
+
+def parse_mv_refresh(create_query: str) -> str | None:
+    """Parse REFRESH clause from a materialized view CREATE statement.
+
+    Matches ``REFRESH ... `` up to the next keyword (TO, AS, ENGINE, etc.).
+    Returns the full refresh schedule string, e.g. ``"EVERY 1 HOUR"``,
+    or ``None`` if no REFRESH clause is present.
+    """
+    match = re.search(
+        r"\bREFRESH\s+(.+?)(?=\s+(?:TO|AS|ENGINE|SETTINGS|ORDER\s+BY|PRIMARY\s+KEY|PARTITION\s+BY|TTL|POPULATE)\b)",
+        create_query,
+        re.IGNORECASE | re.DOTALL,
+    )
+    if match:
+        return match.group(1).strip()
+    # Handle REFRESH at end of statement (no following keywords)
+    match = re.search(r"\bREFRESH\s+(.+?)\s*$", create_query, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return None
 
 
 def parse_zookeeper_path(create_query: str, engine: str) -> str | None:

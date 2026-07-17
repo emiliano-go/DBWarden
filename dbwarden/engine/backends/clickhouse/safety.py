@@ -18,7 +18,13 @@ CH_COLUMN_CRITICAL = frozenset({"ch_type", "ch_low_cardinality", "ch_nullable"})
 CH_COLUMN_WARN = frozenset({"ch_codec", "ch_default_expression", "ch_materialized", "ch_alias", "ch_ttl"})
 
 
-def classify_ch_column_change(key: str) -> Safety:
+def classify_ch_column_change(key: str, *, change: dict | None = None) -> Safety:
+    if key == "ch_type" and change:
+        to_val = str(change.get("to", ""))
+        from_val = str(change.get("from", ""))
+        if "AggregateFunction" in to_val or "AggregateFunction" in from_val:
+            return Safety.CRITICAL
+        return Safety.WARN
     if key in CH_COLUMN_CRITICAL:
         return Safety.CRITICAL
     if key in CH_COLUMN_WARN:
@@ -31,7 +37,7 @@ CH_OPTION_CRITICAL = frozenset({
     "ch_select_statement", "ch_to_table", "ch_dictionary",
 })
 CH_OPTION_WARN = frozenset({
-    "ch_partition_by", "ch_settings", "ch_zookeeper_path", "ch_replica_name",
+    "ch_settings", "ch_zookeeper_path", "ch_replica_name",
     "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key",
 })
 
@@ -59,7 +65,6 @@ _CH_OPTION_KEY_MAP: dict[str, str] = {
 
 _CH_OPTION_RULES: dict[str, tuple[str, str | None, str]] = {
     "ch_order_by": ("WARNING", "--force", "Change ORDER BY for '{table}'"),
-    "ch_partition_by": ("WARNING", "--force", "Change PARTITION BY for '{table}'"),
     "ch_ttl": ("WARNING", "--force", "Change TTL for '{table}'"),
     "ch_engine": ("WARNING", "--force", "Change engine for '{table}'"),
     "ch_select_statement": ("WARNING", "--force", "Change materialized view query for '{table}'"),
@@ -156,7 +161,7 @@ def classify_ch_safety(
                 change_type="change_ch_column",
                 table_name=op["table"],
                 column_name=op["column"],
-                severity=classify_ch_column_change(key),
+                severity=classify_ch_column_change(key, change=change),
                 message=f"CH column {op['column']} {key}: {change.get('from')} -> {change.get('to')}",
             ))
     elif op["type"] == "alter_ch_options":

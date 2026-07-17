@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Optional, Tuple
 
+from dbwarden.engine.backends.clickhouse.cluster import emit_with_cluster
+
 from dbwarden.engine.core.protocol import ObjectHandler, Op, RunPhase
 from dbwarden.engine.model_discovery import _format_clickhouse_expression
 from dbwarden.engine.snapshot import (
@@ -32,35 +34,25 @@ _CH_SETTING_KEYS: frozenset[str] = frozenset({
     "ch_object_type",
 })
 
+# NOTE: immutable keys (ch_partition_by, ch_primary_key, ch_sample_by) are
+# deliberately excluded — they are refused by check_immutable() before this
+# list is iterated.  Never add them back here.
 _CH_OPTION_KEYS: frozenset[str] = frozenset({
     "ch_engine",
     "ch_order_by",
-    "ch_primary_key",
-    "ch_partition_by",
-    "ch_sample_by",
     "ch_ttl",
     "ch_settings",
     "ch_object_type",
     "ch_select_statement",
     "ch_to_table",
-    "ch_dictionary",
-    "ch_dict_layout",
-    "ch_dict_source",
-    "ch_dict_lifetime",
-    "ch_dict_primary_key",
     "ch_zookeeper_path",
     "ch_replica_name",
-    "ch_projections",
 })
 
 _RECREATE_REQUIRED_CH_KEYS: frozenset[str] = frozenset({
+    "ch_engine",
     "ch_select_statement",
     "ch_to_table",
-    "ch_dictionary",
-    "ch_dict_layout",
-    "ch_dict_source",
-    "ch_dict_lifetime",
-    "ch_dict_primary_key",
     "ch_zookeeper_path",
     "ch_replica_name",
     "ch_object_type",
@@ -110,8 +102,6 @@ class ChTableHandler(ObjectHandler):
         snap_spec: dict[str, Any],
         model_spec: dict[str, Any],
     ) -> Tuple[List[Op], List[Op]]:
-        from dbwarden.engine.snapshot import _check_ch_engine_recreate_allowed
-
         upgrade_ops: list[Op] = []
         rollback_ops: list[Op] = []
 
@@ -127,71 +117,9 @@ class ChTableHandler(ObjectHandler):
             snapshot_table = snap_entry.get("snapshot_table")
             model_table = model_entry.get("model_table")
 
-            # Engine change -> recreate
-            if (
-                snap_opts.get("ch_engine") != model_opts.get("ch_engine")
-                and snap_opts.get("ch_engine") is not None
-                and model_opts.get("ch_engine") is not None
-                and snapshot_table is not None
-                and model_table is not None
-            ):
-                _check_ch_engine_recreate_allowed(snap_opts, model_opts, tname)
-                from dbwarden.engine.offline import _table_to_state_entry
-
-                from_dict = {
-                    "name": tname,
-                    **snapshot_table,
-                    "backend_table_spec": {"backend": "clickhouse", **snap_opts},
-                }
-                to_dict = _table_to_state_entry(model_table)
-                to_snap_dict = {
-                    "name": tname,
-                    **snapshot_table,
-                    "backend_table_spec": {"backend": "clickhouse", **snap_opts},
-                }
-                upgrade_ops.append(Op(
-                    object_type="recreate_ch_table",
-                    upgrade_attrs={
-                        "table": tname,
-                        "reason": "ch_engine",
-                        "from_table": from_dict,
-                        "to_table": to_dict,
-                        "drop_old_after_swap": False,
-                        "preserve_old_suffix": "__dbw_old",
-                        "failed_suffix": "__dbw_failed",
-                    },
-                    rollback_attrs={
-                        "table": tname,
-                        "reason": "ch_engine",
-                        "from_table": to_dict,
-                        "to_table": to_snap_dict,
-                        "drop_old_after_swap": False,
-                        "preserve_old_suffix": "__dbw_failed",
-                        "failed_suffix": "__dbw_old",
-                    },
-                ))
-                rollback_ops.append(Op(
-                    object_type="recreate_ch_table",
-                    upgrade_attrs={
-                        "table": tname,
-                        "reason": "ch_engine",
-                        "from_table": to_dict,
-                        "to_table": to_snap_dict,
-                        "drop_old_after_swap": False,
-                        "preserve_old_suffix": "__dbw_failed",
-                        "failed_suffix": "__dbw_old",
-                    },
-                    rollback_attrs={
-                        "table": tname,
-                        "reason": "ch_engine",
-                        "from_table": from_dict,
-                        "to_table": to_dict,
-                        "drop_old_after_swap": False,
-                        "preserve_old_suffix": "__dbw_old",
-                        "failed_suffix": "__dbw_failed",
-                    },
-                ))
-                continue
+            # Check for immutable key changes BEFORE the alter-changes path
+            from dbwarden.engine.backends.clickhouse.canonicalize import check_immutable
+            check_immutable(snap_opts, model_opts, tname)
 
             ch_changes: dict[str, dict[str, Any]] = {}
             for key in _CH_OPTION_KEYS:
@@ -288,68 +216,78 @@ class ChTableHandler(ObjectHandler):
 
         return upgrade_ops, rollback_ops
 
+    @emit_with_cluster
     def emit(
         self, op: Op, db_name: Optional[str] = None
-    ) -> List[MigrationStatement]:
-        from dbwarden.engine.snapshot import _build_clickhouse_recreate_table_sql, _get_backend, _build_ch_projection_sql
+    , **kwargs: Any) -> List[MigrationStatement]:
+        from dbwarden.engine.snapshot import _build_clickhouse_recreate_table_sql
+        from dbwarden.engine.backends.clickhouse.cluster import ClusterableStatement
 
         stmts: list[MigrationStatement] = []
 
         if op.object_type == "recreate_ch_table":
             return _build_clickhouse_recreate_table_sql(
-                op.upgrade_attrs, db_name
+                op.upgrade_attrs, db_name, cluster_ctx=self._cluster_ctx,
             )
 
         if op.object_type == "alter_ch_options":
             changes_map = op.upgrade_attrs.get("changes", {})
-            up_stmts: list[str] = []
-            rb_stmts: list[str] = []
+            up_stmts: list[ClusterableStatement | str] = []
+            rb_stmts: list[ClusterableStatement | str] = []
             table = op.upgrade_attrs["table"]
+            prefix = f"ALTER TABLE {table}"
             for key, change in changes_map.items():
                 to_val = change.get("to")
                 from_val = change.get("from")
                 if key == "ch_settings" and isinstance(to_val, dict):
                     for setting_key, setting_value in to_val.items():
-                        up_stmts.append(f"ALTER TABLE {table} MODIFY SETTING {setting_key} = {setting_value}")
+                        suffix = f"MODIFY SETTING {setting_key} = {setting_value}"
+                        up_stmts.append(ClusterableStatement(prefix, suffix))
                     if isinstance(from_val, dict):
                         for setting_key, setting_value in from_val.items():
-                            rb_stmts.append(f"ALTER TABLE {table} MODIFY SETTING {setting_key} = {setting_value}")
+                            suffix = f"MODIFY SETTING {setting_key} = {setting_value}"
+                            rb_stmts.append(ClusterableStatement(prefix, suffix))
                 elif key == "ch_ttl" and to_val:
                     ttl_sql = ", ".join(to_val) if isinstance(to_val, list) else str(to_val)
-                    up_stmts.append(f"ALTER TABLE {table} MODIFY TTL {ttl_sql}")
+                    up_stmts.append(ClusterableStatement(prefix, f"MODIFY TTL {ttl_sql}"))
                     if from_val:
                         prev_ttl = ", ".join(from_val) if isinstance(from_val, list) else str(from_val)
-                        rb_stmts.append(f"ALTER TABLE {table} MODIFY TTL {prev_ttl}")
+                        rb_stmts.append(ClusterableStatement(prefix, f"MODIFY TTL {prev_ttl}"))
                 elif key == "ch_order_by" and to_val:
-                    up_stmts.append(f"ALTER TABLE {table} MODIFY ORDER BY {_format_clickhouse_expression(to_val)}")
+                    up_stmts.append(ClusterableStatement(prefix, f"MODIFY ORDER BY {_format_clickhouse_expression(to_val)}"))
                     if from_val:
-                        rb_stmts.append(f"ALTER TABLE {table} MODIFY ORDER BY {_format_clickhouse_expression(from_val)}")
-                elif key == "ch_primary_key" and to_val:
-                    up_stmts.append(f"ALTER TABLE {table} MODIFY PRIMARY KEY {_format_clickhouse_expression(to_val)}")
-                    if from_val:
-                        rb_stmts.append(f"ALTER TABLE {table} MODIFY PRIMARY KEY {_format_clickhouse_expression(from_val)}")
-                elif key == "ch_partition_by" and to_val:
-                    up_stmts.append(f"ALTER TABLE {table} MODIFY PARTITION BY {to_val}")
-                    if from_val:
-                        rb_stmts.append(f"ALTER TABLE {table} MODIFY PARTITION BY {from_val}")
-                elif key == "ch_sample_by" and to_val:
-                    up_stmts.append(f"ALTER TABLE {table} MODIFY SAMPLE BY {to_val}")
-                    if from_val:
-                        rb_stmts.append(f"ALTER TABLE {table} MODIFY SAMPLE BY {from_val}")
-                elif key == "ch_engine":
-                    up_stmts.append(f"-- ENGINE change for {table} requires table recreation")
-                    rb_stmts.append(f"-- ENGINE change for {table} requires table recreation")
-                elif key == "ch_projections":
-                    _build_ch_projection_sql(table, to_val, from_val, up_stmts, rb_stmts)
+                        rb_stmts.append(ClusterableStatement(prefix, f"MODIFY ORDER BY {_format_clickhouse_expression(from_val)}"))
                 elif key in _RECREATE_REQUIRED_CH_KEYS:
-                    up_stmts.append(f"-- {key} changed for {table}. Re-run with --clickhouse-engine-recreate to auto-generate recreation SQL.")
-                    rb_stmts.append(f"-- {key} changed for {table}. Re-run with --clickhouse-engine-recreate to auto-generate recreation SQL.")
+                    if key == "ch_engine":
+                        note = (
+                            f"-- ENGINE is immutable for '{table}'. "
+                            f"To change the engine, author a data_op() with a controlled "
+                            f"rebuild: CREATE TABLE new (...), INSERT ... SELECT, RENAME swap, "
+                            f"DROP old. Re-run with --clickhouse-engine-recreate to "
+                            f"auto-generate the swap sequence."
+                        )
+                    else:
+                        note = (
+                            f"-- {key} changed for '{table}'. "
+                            f"Re-run with --clickhouse-engine-recreate to "
+                            f"auto-generate recreation SQL."
+                        )
+                    up_stmts.append(note)
+                    rb_stmts.append(note)
 
             if up_stmts or rb_stmts:
+                up_rendered = "\n".join(
+                    s.render(self._cluster_ctx) if isinstance(s, ClusterableStatement) else s
+                    for s in up_stmts
+                ) if up_stmts else "-- no-op"
+                rb_rendered = "\n".join(
+                    s.render(self._cluster_ctx) if isinstance(s, ClusterableStatement) else s
+                    for s in rb_stmts
+                ) if rb_stmts else "-- no-op"
                 stmts.append(MigrationStatement(
                     order=StatementOrder.ALTER_TABLE_OPTIONS,
-                    upgrade_sql="\n".join(up_stmts) if up_stmts else "-- no-op",
-                    rollback_sql="\n".join(rb_stmts) if rb_stmts else "-- no-op",
+                    upgrade_sql=up_rendered,
+                    rollback_sql=rb_rendered,
                 ))
 
         return stmts

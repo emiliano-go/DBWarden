@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 from dbwarden.databases.clickhouse import ChTableSpec
@@ -19,6 +20,13 @@ def _ch_options_from_meta(model_class: type) -> dict:
         return {}
 
     options: dict[str, Any] = {}
+
+    if dw_meta.table_attrs.get("_ch_from_loose"):
+        warnings.warn(
+            "Loose ch_* attributes are deprecated. Use `ch = ch_table(...)` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     if isinstance(raw, dict):
         for key in (
@@ -60,12 +68,17 @@ def _ch_options_from_meta(model_class: type) -> dict:
         options["ch_zookeeper_path"] = raw.zookeeper_path
     if raw.replica_name is not None:
         options["ch_replica_name"] = raw.replica_name
-    if raw.object_type is not None:
-        options["ch_object_type"] = raw.object_type
+    ch_object_type = dw_meta.table_attrs.get("ch_object_type", "table")
+    options["ch_object_type"] = ch_object_type if ch_object_type is not None else "table"
     if raw.select_statement is not None:
         options["ch_select_statement"] = raw.select_statement
     if raw.to_table is not None:
         options["ch_to_table"] = raw.to_table
+    if raw.projections is not None:
+        options["ch_projections"] = [
+            p.to_dict() if isinstance(p, ProjectionSpec) else p
+            for p in raw.projections
+        ]
 
     attrs = dw_meta.table_attrs
     if attrs.get("ch_dictionary"):
@@ -73,11 +86,14 @@ def _ch_options_from_meta(model_class: type) -> dict:
     for key in ("ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key"):
         if key in attrs:
             options[key] = attrs[key]
-    projections = attrs.get("ch_projections") or []
-    options["ch_projections"] = [
-        p.to_dict() if isinstance(p, ProjectionSpec) else p
-        for p in projections
-    ]
+
+    # Fallback: if ch_projections was set via loose attrs (not ch_table spec)
+    if "ch_projections" not in options:
+        projections = attrs.get("ch_projections") or []
+        options["ch_projections"] = [
+            p.to_dict() if isinstance(p, ProjectionSpec) else p
+            for p in projections
+        ]
 
     _validate_ch_options(options)
     return options
@@ -94,6 +110,23 @@ def _serialize_ch_engine(engine: Any) -> str | tuple | None:
         return tuple(args)
     if isinstance(engine, (str, tuple, list)):
         return engine
+    return None
+
+
+def _is_merge_tree_family(engine_name: str) -> bool:
+    return engine_name.endswith("MergeTree")
+
+
+def _get_engine_name(options: dict) -> str | None:
+    engine = options.get("ch_engine")
+    if isinstance(engine, str):
+        return engine
+    if isinstance(engine, (tuple, list)):
+        return str(engine[0]) if engine else None
+    # Plain string in ch_engine_raw
+    raw = options.get("ch_engine_raw")
+    if isinstance(raw, str):
+        return raw
     return None
 
 
