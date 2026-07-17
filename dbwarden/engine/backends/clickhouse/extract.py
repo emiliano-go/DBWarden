@@ -3,7 +3,7 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
-from dbwarden.databases.clickhouse import ChTableSpec
+from dbwarden.databases.clickhouse import ChTableSpec, MaterializedViewSpec
 from dbwarden.databases.clickhouse.engine import ChEngineSpec
 from dbwarden.databases.clickhouse.projection import ProjectionSpec
 from dbwarden.exceptions import DBWardenConfigError
@@ -43,6 +43,16 @@ def _ch_options_from_meta(model_class: type) -> dict:
             p.to_dict() if isinstance(p, ProjectionSpec) else p
             for p in ch_projections
         ]
+        _validate_ch_options(options)
+        return options
+
+    if isinstance(raw, MaterializedViewSpec):
+        mvd = raw.to_dict()
+        options.update(mvd)
+        if raw.engine is not None:
+            options["ch_engine_raw"] = raw.engine
+        if raw.settings is not None:
+            options["ch_settings"] = dict(raw.settings)
         _validate_ch_options(options)
         return options
 

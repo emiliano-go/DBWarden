@@ -100,6 +100,7 @@ def _collect_meta_chain(cls: type) -> list[type]:
 
 def _get_backend_for_class(cls: type) -> str:
     from dbwarden.databases.clickhouse import CHTableMeta
+    from dbwarden.schema.table_meta import CHViewMeta
     from dbwarden.databases.pgsql import PGTableMeta, PGViewMeta
     from dbwarden.databases.mysql import MyTableMeta
     from dbwarden.databases.mariadb import MdbTableMeta
@@ -111,7 +112,7 @@ def _get_backend_for_class(cls: type) -> str:
         meta = klass.__dict__.get("Meta")
         if meta is not None and isinstance(meta, type):
             for base in meta.__mro__:
-                if base is CHTableMeta:
+                if base is CHTableMeta or base is CHViewMeta:
                     return "clickhouse"
                 if base is PGTableMeta or base is PGViewMeta:
                     return "postgresql"
@@ -203,7 +204,7 @@ def _to_dict(value: Any) -> Any:
 
 def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
     from dbwarden.databases.pgsql import PgTableSpec, PgViewSpec
-    from dbwarden.databases.clickhouse import ChTableSpec
+    from dbwarden.databases.clickhouse import ChTableSpec, MaterializedViewSpec
     from dbwarden.databases.mysql import MyTableSpec
     from dbwarden.databases.mariadb import MdbTableSpec
     from dbwarden.databases.sqlite import SqTableSpec
@@ -226,7 +227,11 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
     meta.sq_indexes = list(table_attrs.get("sq_indexes", []))
     meta.table_attrs = dict(table_attrs)
 
-    if any(k.startswith("pg_view_") for k in table_attrs):
+    if isinstance(table_attrs.get("ch"), MaterializedViewSpec):
+        mv: MaterializedViewSpec = table_attrs["ch"]
+        meta.backend_table = mv
+        meta.table_attrs.update(mv.to_dict())
+    elif any(k.startswith("pg_view_") for k in table_attrs):
         meta.backend_table = PgViewSpec(
             query=table_attrs.get("pg_view_query"),
             materialized=table_attrs.get("pg_view_materialized", False),

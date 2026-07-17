@@ -7,7 +7,11 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 import dbwarden.engine.model_discovery as model_discovery
 from dbwarden.engine.model_discovery import extract_table_from_model
 from dbwarden.exceptions import DBWardenConfigError
-from dbwarden.databases.clickhouse import CHColumnMeta, CHTableMeta
+from dbwarden.databases.clickhouse import (
+    CHColumnMeta, CHTableMeta, ChView, MaterializedView,
+    AggregatingView, materialized_view, MaterializedViewSpec,
+)
+from dbwarden.schema.table_meta import CHViewMeta
 from dbwarden.databases import check, ch, index, pg, unique
 from dbwarden.databases.clickhouse.engine import ChEngineSpec
 from dbwarden.databases.clickhouse.projection import ProjectionSpec
@@ -414,6 +418,89 @@ class TestCHTableMeta:
         body_info = CHModel.__table__.c.body.info
         assert body_info["ch_codec"] == "ZSTD(3)"
         assert body_info["dw_comment"] == "body column"
+
+
+class TestCHViewMeta:
+    def test_ch_view_meta_has_fields(self):
+        assert hasattr(CHViewMeta, "ch")
+        assert hasattr(CHViewMeta, "ch_object_type")
+        assert hasattr(CHViewMeta, "comment")
+
+    def test_ch_view_mixin_provides_meta(self):
+        class ViewModel(Base, ChView):
+            __tablename__ = "ch_view_model"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+        assert hasattr(ViewModel, "Meta")
+        assert issubclass(ViewModel.Meta, CHViewMeta)
+
+    def test_materialized_view_mixin_provides_meta(self):
+        class ViewModel(Base, MaterializedView):
+            __tablename__ = "ch_mv_model"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+        assert hasattr(ViewModel, "Meta")
+        assert issubclass(ViewModel.Meta, CHViewMeta)
+
+    def test_aggregating_view_mixin_provides_meta(self):
+        class ViewModel(Base, AggregatingView):
+            __tablename__ = "ch_agg_view_model"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+        assert hasattr(ViewModel, "Meta")
+        assert issubclass(ViewModel.Meta, CHViewMeta)
+
+    def test_view_meta_with_materialized_view_spec(self, monkeypatch):
+        class ViewTarget(Base):
+            __tablename__ = "view_target"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+        class ViewModel(Base):
+            __tablename__ = "ch_view_spec"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+            class Meta(CHViewMeta):
+                ch = materialized_view(
+                    name="ch_view_spec",
+                    select="SELECT id FROM view_target",
+                    to_table="view_target",
+                )
+
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name",
+                            lambda db_name=None: "clickhouse")
+
+        table = extract_table_from_model(ViewModel)
+        assert table.object_type == "materialized_view"
+        assert table.clickhouse_options["ch_select_statement"] == "SELECT id FROM view_target"
+        assert table.clickhouse_options["ch_to_table"] == "view_target"
+
+    def test_view_meta_extract_backend(self, monkeypatch):
+        class ViewModel(Base):
+            __tablename__ = "ch_view_backend"
+
+            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+
+            class Meta(CHViewMeta):
+                ch = materialized_view(
+                    name="ch_view_backend",
+                    select="SELECT id FROM some_source",
+                    to_table="some_source",
+                )
+
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name",
+                            lambda db_name=None: "clickhouse")
+
+        apply_meta(ViewModel)
+        meta = read_meta(ViewModel)
+        assert meta is not None
+        assert isinstance(meta.backend_table, MaterializedViewSpec)
+        assert meta.backend_table.name == "ch_view_backend"
+        assert meta.backend_table.to_table == "some_source"
 
 
 class TestIndexSpecExtensions:

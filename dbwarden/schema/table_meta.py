@@ -76,11 +76,34 @@ class PGViewMeta(TableMeta):
     pg_schema: str | None = None
 
 
+class CHViewMeta(TableMeta):
+    """ClickHouse view-level metadata; inherit in ``class Meta`` for autocomplete.
+
+    Use with :func:`materialized_view` or :func:`aggregating_view`::
+
+        from dbwarden.databases.clickhouse import CHViewMeta, materialized_view
+
+        class Meta(CHViewMeta):
+            ch = materialized_view(
+                select=func.sum(Events.amount).label("total"),
+                to_table="daily_target",
+            )
+    """
+    comment: str | None = None
+    indexes: list[Any] = []
+    checks: list[Any] = []
+    uniques: list[Any] = []
+
+    ch: Any = None
+    ch_object_type: str | None = "materialized_view"
+
+
 if typing.TYPE_CHECKING:
     from dbwarden.databases.clickhouse import (
         ChEngineSpec,
         ChIndexSpec,
         ChTableSpec,
+        MaterializedViewSpec,
         MergeTreeSettings,
         ProjectionSpec,
     )
