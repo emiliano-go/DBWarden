@@ -40,3 +40,50 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
+
+  convergence-audit:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: P0 convergence audit
+        run: uv run pytest -m p0 --tb=short
+
+  ch-integration:
+    needs: [test]
+    runs-on: ubuntu-latest
+    services:
+      clickhouse:
+        image: clickhouse/clickhouse-server:24.3
+        ports:
+          - 8123/tcp
+          - 9000/tcp
+        options: --health-cmd "clickhouse-client --query 'SELECT 1'" --health-interval 5s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Install CH test dependencies
+        run: uv pip install testcontainers clickhouse-connect
+
+      - name: ClickHouse integration convergence test
+        env:
+          CLICKHOUSE_HOST: localhost
+          CLICKHOUSE_PORT: ${{ job.services.clickhouse.ports[9000] }}
+        run: uv run pytest tests/integration/ -m integration --ch-integration --tb=short -v
