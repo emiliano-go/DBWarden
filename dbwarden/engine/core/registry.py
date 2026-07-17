@@ -46,6 +46,7 @@ class RegistryDriver:
         self,
         ops: List[Op],
         db_name: Optional[str] = None,
+        cluster_ctx: Any = None,
     ) -> List[MigrationStatement]:
         stmts: list[MigrationStatement] = []
         ops_by_type: dict[str, list[Op]] = {}
@@ -55,7 +56,7 @@ class RegistryDriver:
             handler_op_types = getattr(handler, "op_types", (handler.object_type,))
             for ot in handler_op_types:
                 for op in ops_by_type.get(ot, []):
-                    stmts.extend(handler.emit(op, db_name=db_name))
+                    stmts.extend(handler.emit(op, db_name=db_name, cluster_ctx=cluster_ctx))
         return stmts
 
     def emit_op_to_sql(
@@ -63,10 +64,11 @@ class RegistryDriver:
         upgrade_ops: List[Op],
         rollback_ops: List[Op],
         db_name: Optional[str] = None,
+        cluster_ctx: Any = None,
     ) -> Tuple[str, str, List[Change]]:
         all_stmts = (
-            self.emit_all(upgrade_ops, db_name=db_name)
-            + self.emit_all(rollback_ops, db_name=db_name)
+            self.emit_all(upgrade_ops, db_name=db_name, cluster_ctx=cluster_ctx)
+            + self.emit_all(rollback_ops, db_name=db_name, cluster_ctx=cluster_ctx)
         )
         up_sql, rb_sql = _assemble_migration(all_stmts)
         changes: list[Change] = []
