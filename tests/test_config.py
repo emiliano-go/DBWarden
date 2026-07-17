@@ -427,7 +427,7 @@ class TestConfigSandboxClassification:
                 "database_config(database_name='primary', default=True, "
                 "database_type='sqlite', database_url_sync='sqlite:///./test.db')\n"
             )
-            from dbwarden.sandbox import SecurityError
+            from dbwarden.extensions.sandbox import SecurityError
 
             with pytest.raises(SecurityError, match=f"Import '{banned_mod}' not allowed"):
                 get_config()
@@ -481,7 +481,7 @@ class TestConfigSandboxClassification:
                 "database_config(database_name='primary', default=True, "
                 "database_type='sqlite', database_url_sync='sqlite:///./test.db')\n"
             )
-            from dbwarden.sandbox import SecurityError
+            from dbwarden.extensions.sandbox import SecurityError
 
             with pytest.raises(SecurityError, match=f"Import '{banned_mod}' not allowed"):
                 get_config()
