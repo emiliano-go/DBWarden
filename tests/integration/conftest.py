@@ -1,8 +1,5 @@
 """Integration test fixtures for ClickHouse container."""
 
-pytest_plugins = []
-
-
 def pytest_addoption(parser):
     parser.addoption(
         "--ch-integration",
