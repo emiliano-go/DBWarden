@@ -47,6 +47,7 @@ class ObjectHandler(Protocol):
         ...
 
     def emit(
-        self, op: Op, db_name: Optional[str] = None
+        self, op: Op, db_name: Optional[str] = None,
+        **kwargs: Any,
     ) -> List[MigrationStatement]:
         ...
