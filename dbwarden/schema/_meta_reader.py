@@ -269,19 +269,30 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
     elif any(k.startswith("ch_") and k not in ("ch_indexes", "ch_projections", "ch_settings", "ch_dict_layout", "ch_dict_source", "ch_dict_lifetime", "ch_dict_primary_key") for k in table_attrs):
         table_attrs["_ch_from_loose"] = True
         meta.table_attrs["_ch_from_loose"] = True
-        meta.backend_table = ChTableSpec(
-            engine=table_attrs.get("ch_engine", "MergeTree"),
-            order_by=list(table_attrs.get("ch_order_by", [])) if table_attrs.get("ch_order_by") else None,
-            primary_key=table_attrs.get("ch_primary_key"),
-            partition_by=table_attrs.get("ch_partition_by"),
-            sample_by=table_attrs.get("ch_sample_by"),
-            ttl=table_attrs.get("ch_ttl"),
-            settings=dict(table_attrs.get("ch_settings", {})) if table_attrs.get("ch_settings") else None,
-            zookeeper_path=table_attrs.get("ch_zookeeper_path"),
-            replica_name=table_attrs.get("ch_replica_name"),
-            select_statement=table_attrs.get("ch_select_statement"),
-            to_table=table_attrs.get("ch_to_table"),
-        )
+        is_loose_mv = bool(table_attrs.get("ch_select_statement"))
+        if is_loose_mv:
+            meta.backend_table = MaterializedViewSpec(
+                name=table_attrs.get("ch_name"),
+                select=table_attrs.get("ch_select_statement"),
+                to_table=table_attrs.get("ch_to_table"),
+                engine=table_attrs.get("ch_engine"),
+                order_by=table_attrs.get("ch_order_by"),
+                partition_by=table_attrs.get("ch_partition_by"),
+                ttl=table_attrs.get("ch_ttl"),
+                settings=dict(table_attrs.get("ch_settings", {})) if table_attrs.get("ch_settings") else None,
+            )
+        else:
+            meta.backend_table = ChTableSpec(
+                engine=table_attrs.get("ch_engine", "MergeTree"),
+                order_by=list(table_attrs.get("ch_order_by", [])) if table_attrs.get("ch_order_by") else None,
+                primary_key=table_attrs.get("ch_primary_key"),
+                partition_by=table_attrs.get("ch_partition_by"),
+                sample_by=table_attrs.get("ch_sample_by"),
+                ttl=table_attrs.get("ch_ttl"),
+                settings=dict(table_attrs.get("ch_settings", {})) if table_attrs.get("ch_settings") else None,
+                zookeeper_path=table_attrs.get("ch_zookeeper_path"),
+                replica_name=table_attrs.get("ch_replica_name"),
+            )
     elif any(k.startswith("mdb_") and k not in ("mdb_page_compressed", "mdb_page_compression_level") or k.startswith("my_") and k not in ("my_indexes", "my_checks", "my_uniques") for k in table_attrs):
         is_mariadb = any(k.startswith("mdb_") for k in table_attrs)
         cls = MdbTableSpec if is_mariadb else MyTableSpec

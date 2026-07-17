@@ -22,11 +22,20 @@ def _ch_options_from_meta(model_class: type) -> dict:
     options: dict[str, Any] = {}
 
     if dw_meta.table_attrs.get("_ch_from_loose"):
-        warnings.warn(
-            "Loose ch_* attributes are deprecated. Use `ch = ch_table(...)` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
+        is_view = bool(dw_meta.table_attrs.get("ch_select_statement"))
+        if is_view:
+            warnings.warn(
+                "Loose ch_* attributes are deprecated for materialized views. "
+                "Use `ch = materialized_view(...)` in class Meta instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        else:
+            warnings.warn(
+                "Loose ch_* attributes are deprecated. Use `ch = ch_table(...)` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
     if isinstance(raw, dict) and "ch_agg_target" in raw and "ch_agg_mv" in raw:
         options.update(raw["ch_agg_mv"])
