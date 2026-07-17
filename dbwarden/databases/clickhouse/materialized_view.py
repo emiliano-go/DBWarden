@@ -25,7 +25,7 @@ class MaterializedViewSpec:
         ttl: Optional TTL expression(s).
         settings: Optional engine SETTINGS.
     """
-    name: str
+    name: str | None = None
     select: Any = None
     to_table: str | None = None
     refresh: str | None = None
@@ -77,7 +77,7 @@ class MaterializedViewSpec:
 
 def materialized_view(
     *,
-    name: str,
+    name: str | None = None,
     select: Any = None,
     to_table: str | None = None,
     refresh: str | None = None,
@@ -129,6 +129,10 @@ def materialized_view(
             "materialized_view: engine is required when to_table is None "
             "(implicit .inner. storage)"
         )
+    if to_table is None and engine is not None:
+        from dbwarden.databases.clickhouse.views import _validate_mv_engine
+        engine_name = engine.name if hasattr(engine, "name") else str(engine)
+        _validate_mv_engine(engine_name)
     if populate and refresh:
         raise ValueError(
             "materialized_view: populate and refresh are mutually exclusive"

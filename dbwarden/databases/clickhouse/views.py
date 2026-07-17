@@ -73,6 +73,32 @@ def derive_agg_target_columns(agg_result: dict) -> list[str]:
     return list(target_info.get("columns", []))
 
 
+def _validate_mv_engine(engine_name: str) -> None:
+    """Validate that an engine is in the MergeTree family for implicit-storage MVs.
+
+    Implicit-storage materialized views (``to_table=None``) must use a
+    MergeTree-family engine because ClickHouse requires it for the
+    ``.inner.`` table that backs the view.
+
+    Raises:
+        ValueError: if engine is not MergeTree-family.
+    """
+    allowed = (
+        "MergeTree", "ReplicatedMergeTree",
+        "SummingMergeTree", "ReplicatedSummingMergeTree",
+        "AggregatingMergeTree", "ReplicatedAggregatingMergeTree",
+        "ReplacingMergeTree", "ReplicatedReplacingMergeTree",
+        "CollapsingMergeTree", "ReplicatedCollapsingMergeTree",
+        "VersionedCollapsingMergeTree", "ReplicatedVersionedCollapsingMergeTree",
+        "GraphiteMergeTree", "ReplicatedGraphiteMergeTree",
+    )
+    if engine_name not in allowed:
+        raise ValueError(
+            f"Invalid engine for implicit-storage materialized view: "
+            f"{engine_name!r}. Must be one of MergeTree family: {', '.join(allowed)}."
+        )
+
+
 def _validate_view_class(model_class: type) -> None:
     """Validate that a ClickHouse view model class is properly configured.
 

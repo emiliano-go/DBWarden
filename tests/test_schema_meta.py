@@ -579,6 +579,33 @@ class TestCHViewMeta:
         assert "ch_agg_mv" in meta.backend_table
 
 
+class TestCHViewValidation:
+    def test_validate_mv_engine_merge_tree(self):
+        from dbwarden.databases.clickhouse.views import _validate_mv_engine
+        # Should not raise for MergeTree family
+        _validate_mv_engine("MergeTree")
+        _validate_mv_engine("ReplicatedMergeTree")
+        _validate_mv_engine("SummingMergeTree")
+        _validate_mv_engine("AggregatingMergeTree")
+
+    def test_validate_mv_engine_rejects_non_mt(self):
+        from dbwarden.databases.clickhouse.views import _validate_mv_engine
+        import pytest
+        with pytest.raises(ValueError, match="Invalid engine"):
+            _validate_mv_engine("Null")
+        with pytest.raises(ValueError, match="Invalid engine"):
+            _validate_mv_engine("Memory")
+        with pytest.raises(ValueError, match="Invalid engine"):
+            _validate_mv_engine("Merge")
+        with pytest.raises(ValueError, match="Invalid engine"):
+            _validate_mv_engine("Distributed")
+
+    def test_materialized_view_optional_name(self):
+        from dbwarden.databases.clickhouse import MaterializedViewSpec
+        spec = MaterializedViewSpec(select="SELECT 1")
+        assert spec.name is None
+
+
 class TestIndexSpecExtensions:
     def test_index_spec_to_dict_from_dict(self):
         from dbwarden.schema.index import IndexSpec
