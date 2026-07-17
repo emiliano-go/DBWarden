@@ -64,7 +64,11 @@ from dbwarden.databases.clickhouse.compiler import render_expr, render_expr_list
 from dbwarden.databases.clickhouse.raw import ChRaw, ch_raw
 from dbwarden.databases.clickhouse.engine import ChEngineSpec
 from dbwarden.databases.clickhouse.projection import ProjectionSpec
-from dbwarden.databases.clickhouse.views import ChView, MaterializedView, AggregatingView, _validate_view_class, derive_agg_target_columns
+from dbwarden.databases.clickhouse.views import (
+    ChView, MaterializedView, AggregatingView,
+    _validate_view_class, derive_agg_target_columns,
+    get_all_ch_views, ch_view_tables_from_models,
+)
 from dbwarden.schema.table_meta import CHColumnMeta, CHTableMeta
 
 
@@ -184,6 +188,8 @@ __all__ = [
     "MaterializedView",
     "AggregatingView",
     "derive_agg_target_columns",
+    "get_all_ch_views",
+    "ch_view_tables_from_models",
     "AggExpr",
     "ChAggStateType",
     "ChEngineSpec",

@@ -113,6 +113,18 @@ def get_all_model_tables(
             table = extract_table_from_model(attr, db_name=db_name)
             if table:
                 tables.append(table)
+                # Expand aggregating views: the model class is the MV;
+                # also add the synthetic target table ModelTable.
+                from dbwarden.databases.clickhouse.views import _expand_agg_target
+                from dbwarden.schema._base import read_meta
+                dw_meta = read_meta(attr)
+                if dw_meta and isinstance(dw_meta.backend_table, dict):
+                    bt = dw_meta.backend_table
+                    if "ch_agg_target" in bt and "ch_agg_mv" in bt:
+                        target = _expand_agg_target(attr, bt)
+                        if target and target.name not in seen_tables:
+                            seen_tables.add(target.name)
+                            tables.append(target)
 
     _get_all_model_tables_cache[cache_key] = (signature, tables)
     return tables

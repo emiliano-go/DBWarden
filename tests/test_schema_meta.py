@@ -11,6 +11,7 @@ from dbwarden.databases.clickhouse import (
     CHColumnMeta, CHTableMeta, ChView, MaterializedView,
     AggregatingView, materialized_view, MaterializedViewSpec,
     aggregating_view, derive_agg_target_columns,
+    get_all_ch_views, ch_view_tables_from_models,
 )
 from dbwarden.schema.table_meta import CHViewMeta
 from dbwarden.databases import check, ch, index, pg, unique
@@ -604,6 +605,54 @@ class TestCHViewValidation:
         from dbwarden.databases.clickhouse import MaterializedViewSpec
         spec = MaterializedViewSpec(select="SELECT 1")
         assert spec.name is None
+
+
+class TestCHViewDiscovery:
+    def test_get_all_ch_views_empty(self, monkeypatch):
+        """No model paths → returns empty."""
+        monkeypatch.setattr(
+            "dbwarden.engine.model_discovery.path_discovery.auto_discover_model_paths",
+            lambda: [],
+        )
+        views = get_all_ch_views()
+        assert views == []
+
+    def test_expand_agg_target(self):
+        from sqlalchemy import String
+        from dbwarden.databases.clickhouse.agg import agg
+        from sqlalchemy import column, func
+
+        class Base(DeclarativeBase):
+            pass
+
+        class ViewModel(Base):
+            __tablename__ = "test_agg_expand"
+
+            day: Mapped[str] = mapped_column(String, primary_key=True)
+            total: Mapped[str] = mapped_column(String)
+
+            class Meta(CHViewMeta):
+                ch = aggregating_view(
+                    name="test_agg_expand",
+                    source="events",
+                    group_by=[func.toDate(column("event_time")).label("day")],
+                    aggregates=[
+                        agg.sum(column("amount"), "Float64").as_("total"),
+                    ],
+                    order_by=[column("day")],
+                )
+
+        from dbwarden.databases.clickhouse.views import _expand_agg_target
+        from dbwarden.schema._meta_reader import apply_meta
+        apply_meta(ViewModel)
+
+        spec = ViewModel.Meta.ch
+        assert isinstance(spec, dict)
+        target = _expand_agg_target(ViewModel, spec)
+        assert target is not None
+        assert target.name == "test_agg_expand_agg"
+        assert target.object_type == "table"
+        assert "AggregatingMergeTree" in str(target.clickhouse_options.get("ch_engine", ""))
 
 
 class TestIndexSpecExtensions:
