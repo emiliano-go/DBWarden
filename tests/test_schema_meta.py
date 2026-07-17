@@ -10,6 +10,7 @@ from dbwarden.exceptions import DBWardenConfigError
 from dbwarden.databases.clickhouse import (
     CHColumnMeta, CHTableMeta, ChView, MaterializedView,
     AggregatingView, materialized_view, MaterializedViewSpec,
+    aggregating_view, derive_agg_target_columns,
 )
 from dbwarden.schema.table_meta import CHViewMeta
 from dbwarden.databases import check, ch, index, pg, unique
@@ -501,6 +502,81 @@ class TestCHViewMeta:
         assert isinstance(meta.backend_table, MaterializedViewSpec)
         assert meta.backend_table.name == "ch_view_backend"
         assert meta.backend_table.to_table == "some_source"
+
+    def test_derive_agg_target_columns(self):
+        from dbwarden.databases.clickhouse.agg import agg
+        from sqlalchemy import column, func
+
+        result = aggregating_view(
+            name="test_agg",
+            source="events",
+            group_by=[func.toDate(column("event_time")).label("day")],
+            aggregates=[
+                agg.sum(column("amount"), "Float64").as_("total"),
+            ],
+            order_by=[column("day")],
+        )
+        cols = derive_agg_target_columns(result)
+        assert cols == ["day", "total"]
+
+    def test_aggregating_view_meta_payload(self, monkeypatch):
+        from dbwarden.databases.clickhouse.agg import agg
+        from sqlalchemy import column, func
+
+        class ViewModel(Base):
+            __tablename__ = "ch_agg_payload"
+
+            day: Mapped[str] = mapped_column(String, primary_key=True)
+            total: Mapped[str] = mapped_column(String)
+
+            class Meta(CHViewMeta):
+                ch = aggregating_view(
+                    name="ch_agg_payload",
+                    source="events",
+                    group_by=[func.toDate(column("event_time")).label("day")],
+                    aggregates=[
+                        agg.sum(column("amount"), "Float64").as_("total"),
+                    ],
+                    order_by=[column("day")],
+                )
+
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name",
+                            lambda db_name=None: "clickhouse")
+
+        table = extract_table_from_model(ViewModel)
+        assert table.object_type == "materialized_view"
+        assert table.clickhouse_options["ch_object_type"] == "materialized_view"
+
+    def test_aggregating_view_backend_table(self, monkeypatch):
+        from dbwarden.databases.clickhouse.agg import agg
+        from sqlalchemy import column, func
+
+        class ViewModel(Base):
+            __tablename__ = "ch_agg_backend"
+
+            day: Mapped[str] = mapped_column(String, primary_key=True)
+            total: Mapped[str] = mapped_column(String)
+
+            class Meta(CHViewMeta):
+                ch = aggregating_view(
+                    name="ch_agg_backend",
+                    source="events",
+                    group_by=[func.toDate(column("event_time")).label("day")],
+                    aggregates=[
+                        agg.sum(column("amount"), "Float64").as_("total"),
+                    ],
+                    order_by=[column("day")],
+                )
+
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name",
+                            lambda db_name=None: "clickhouse")
+
+        apply_meta(ViewModel)
+        meta = read_meta(ViewModel)
+        assert meta is not None
+        assert isinstance(meta.backend_table, dict)
+        assert "ch_agg_target" in meta.backend_table
+        assert "ch_agg_mv" in meta.backend_table
 
 
 class TestIndexSpecExtensions:

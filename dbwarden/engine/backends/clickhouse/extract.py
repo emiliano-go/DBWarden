@@ -28,6 +28,11 @@ def _ch_options_from_meta(model_class: type) -> dict:
             stacklevel=2,
         )
 
+    if isinstance(raw, dict) and "ch_agg_target" in raw and "ch_agg_mv" in raw:
+        options.update(raw["ch_agg_mv"])
+        _validate_ch_options(options)
+        return options
+
     if isinstance(raw, dict):
         for key in (
             "ch_engine", "ch_order_by", "ch_primary_key", "ch_partition_by",

@@ -231,6 +231,11 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
         mv: MaterializedViewSpec = table_attrs["ch"]
         meta.backend_table = mv
         meta.table_attrs.update(mv.to_dict())
+    elif isinstance(table_attrs.get("ch"), dict) and "ch_agg_target" in table_attrs["ch"]:
+        agg_result = table_attrs["ch"]
+        meta.backend_table = agg_result
+        meta.table_attrs["ch_agg_target"] = agg_result["ch_agg_target"]
+        meta.table_attrs["ch_agg_mv"] = agg_result["ch_agg_mv"]
     elif any(k.startswith("pg_view_") for k in table_attrs):
         meta.backend_table = PgViewSpec(
             query=table_attrs.get("pg_view_query"),

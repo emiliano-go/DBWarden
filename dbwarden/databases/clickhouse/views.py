@@ -57,6 +57,22 @@ class AggregatingView(ChView):
     """
 
 
+def derive_agg_target_columns(agg_result: dict) -> list[str]:
+    """Extract target table column names from an :func:`aggregating_view` result.
+
+    The target columns are: group-by keys (by name) followed by aggregate
+    aliases, in the same order as produced by :func:`aggregating_view`.
+
+    Args:
+        agg_result: The dict returned by :func:`aggregating_view`.
+
+    Returns:
+        List of column names for the ``AggregatingMergeTree`` target table.
+    """
+    target_info = agg_result.get("ch_agg_target", {})
+    return list(target_info.get("columns", []))
+
+
 def _validate_view_class(model_class: type) -> None:
     """Validate that a ClickHouse view model class is properly configured.
 
