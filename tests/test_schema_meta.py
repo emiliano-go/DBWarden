@@ -692,6 +692,33 @@ class TestCHViewValidation:
         spec = GoodMV.Meta.ch
         assert spec.name == "my_view"
 
+    def test_materialized_view_class_discovery(self):
+        """Part 0 probe: MaterializedView subclass registers and emits ModelTable."""
+        from sqlalchemy import Date as sa_Date, Float as sa_Float, func
+        from sqlalchemy.orm import Mapped, mapped_column
+        from dbwarden.databases.clickhouse import (
+            ChView, MaterializedView, materialized_view,
+            summing_merge_tree, ch_view_tables_from_models,
+        )
+        from dbwarden.schema.table_meta import CHViewMeta
+
+        class _Probe(MaterializedView):
+            __tablename__ = "_probe_mv"
+            date: Mapped[str] = mapped_column(sa_Date, primary_key=True)
+            total: Mapped[float] = mapped_column(sa_Float)
+            class Meta(CHViewMeta):
+                ch = materialized_view(
+                    select=[func.now().label("date"), func.now().label("total")],
+                    engine=summing_merge_tree(),
+                    order_by=["date"],
+                )
+
+        assert _Probe in ChView._ch_view_registry, "FAIL: not in registry"
+        tables = ch_view_tables_from_models()
+        assert any(t.name == "_probe_mv" for t in tables), (
+            f"FAIL: no ModelTable (found {[t.name for t in tables]})"
+        )
+
 
 class TestCHViewDiscovery:
     def test_get_all_ch_views(self):

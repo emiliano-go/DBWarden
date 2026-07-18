@@ -43,7 +43,11 @@ class MaterializedViewSpec:
 
         d: dict[str, Any] = {
             "ch_object_type": "materialized_view",
-            "ch_select_statement": render_expr(self.select) if self.select is not None else None,
+            "ch_select_statement": (
+                ", ".join(render_expr(item) for item in self.select)
+                if isinstance(self.select, (list, tuple))
+                else render_expr(self.select)
+            ) if self.select is not None else None,
         }
         if self.to is not None:
             d["ch_to_table"] = self.to

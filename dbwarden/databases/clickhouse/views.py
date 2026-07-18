@@ -43,7 +43,10 @@ class ChView:
 
     def __init_subclass__(cls, **kw: Any) -> None:
         super().__init_subclass__(**kw)
-        if getattr(cls, "__abstract__", False):
+        # Only skip if __abstract__ is set on THIS class, not inherited.
+        # MaterializedView/AggregatingView are abstract bases; their concrete
+        # subclasses must NOT be skipped.
+        if cls.__dict__.get("__abstract__", False):
             return
         _validate_view_class(cls)
         ChView._ch_view_registry.append(cls)
@@ -224,10 +227,15 @@ def ch_view_tables_from_models(
     """Extract ModelTables from CH view model classes, expanding aggregating
     views into their constituent MV + target table.
 
+    ChView subclasses are NOT SQLAlchemy-mapped, so this function builds
+    ModelTable objects directly from the class annotations and the spec.
+
     Returns a list of ``ModelTable`` instances that can be appended to the
     output of ``get_all_model_tables()``.
     """
-    from dbwarden.engine.model_discovery.extraction import extract_table_from_model
+    from dbwarden.engine.model_discovery.extraction import (
+        extract_column_info, _map_sa_type_to_clickhouse,
+    )
 
     views = get_all_ch_views(model_paths=model_paths, db_name=db_name)
     tables: list[ModelTable] = []
@@ -235,15 +243,46 @@ def ch_view_tables_from_models(
     for entry in views:
         model_class = entry["model_class"]
         view_type = entry["view_type"]
+        spec = entry["spec"]
+        tablename = model_class.__tablename__
 
-        # Extract the MV's ModelTable
-        mv_table = extract_table_from_model(model_class, db_name=db_name)
-        if mv_table:
-            tables.append(mv_table)
+        # Build columns from MappedColumn descriptors on the class (Mode A).
+        # ChView subclasses are NOT SA-mapped, so columns exist as
+        # MappedColumn descriptors in __dict__ with Column objects inside
+        # columns_to_assign.
+        columns: list[ModelColumn] = []
+        from sqlalchemy.orm import MappedColumn as _MappedColumn
+        for attr_name, val in model_class.__dict__.items():
+            if attr_name.startswith("_"):
+                continue
+            if isinstance(val, _MappedColumn):
+                # The underlying Column is stored in columns_to_assign
+                col_pairs = getattr(val, "columns_to_assign", None)
+                if col_pairs:
+                    sa_col = col_pairs[0][0]
+                    ch_type = _map_sa_type_to_clickhouse(sa_col) if sa_col is not None else "String"
+                    columns.append(ModelColumn(
+                        name=attr_name,
+                        type=ch_type,
+                        nullable=getattr(sa_col, "nullable", True),
+                        primary_key=getattr(sa_col, "primary_key", False),
+                        unique=False, default=None, foreign_key=None,
+                    ))
+
+        # Build clickhouse_options from spec
+        clickhouse_options = spec.to_dict()
+
+        mv_table = ModelTable(
+            name=tablename,
+            columns=columns,
+            clickhouse_options=clickhouse_options,
+            object_type="materialized_view",
+        )
+        tables.append(mv_table)
 
         # For aggregating views, also create the target table ModelTable
         if view_type == "aggregating_view":
-            target_table = _expand_agg_target(model_class, entry["spec"])
+            target_table = _expand_agg_target(model_class, spec)
             if target_table:
                 tables.append(target_table)
 
