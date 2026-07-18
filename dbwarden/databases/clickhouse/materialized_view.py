@@ -75,6 +75,31 @@ class MaterializedViewSpec:
         return d
 
 
+def _select_items_have_aggregates(items: list) -> bool:
+    """Check if a structured select list contains aggregate functions."""
+    from sqlalchemy.sql.elements import Label
+    from sqlalchemy.sql.functions import FunctionElement
+
+    _AGGREGATE_NAMES = frozenset({
+        "sum", "count", "avg", "min", "max", "any", "uniq",
+        "groupArray", "groupUniqArray",
+    })
+
+    for item in items:
+        inner = item
+        # Unwrap Label to get the underlying expression
+        if isinstance(inner, Label):
+            inner = inner.element
+        if isinstance(inner, FunctionElement):
+            name = getattr(inner, "name", None) or getattr(inner, "__class__", None)
+            func_name = str(name).lower().split(".")[-1] if name else ""
+            if func_name in _AGGREGATE_NAMES:
+                return True
+            if func_name.endswith("state") or func_name.endswith("merge"):
+                return True
+    return False
+
+
 def materialized_view(
     *,
     name: str | None = None,
@@ -131,8 +156,17 @@ def materialized_view(
         )
     if to_table is None and engine is not None:
         from dbwarden.databases.clickhouse.views import _validate_mv_engine
+        from dbwarden.databases.clickhouse.raw import ChRaw
         engine_name = engine.name if hasattr(engine, "name") else str(engine)
-        _validate_mv_engine(engine_name, select=select)
+        select_is_raw = isinstance(select, (str, ChRaw))
+        has_aggregates = False
+        if not select_is_raw and isinstance(select, (list, tuple)):
+            has_aggregates = _select_items_have_aggregates(select)
+        _validate_mv_engine(
+            engine_name,
+            has_aggregates=has_aggregates,
+            select_is_raw=select_is_raw,
+        )
     if populate and refresh:
         raise ValueError(
             "materialized_view: populate and refresh are mutually exclusive"

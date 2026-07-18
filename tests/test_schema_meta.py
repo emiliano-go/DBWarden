@@ -425,7 +425,6 @@ class TestCHTableMeta:
 class TestCHViewMeta:
     def test_ch_view_meta_has_fields(self):
         assert hasattr(CHViewMeta, "ch")
-        assert hasattr(CHViewMeta, "ch_object_type")
         assert hasattr(CHViewMeta, "comment")
 
     def test_ch_view_mixin_provides_meta(self):

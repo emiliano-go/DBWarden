@@ -69,7 +69,10 @@ def _ch_options_from_meta(model_class: type) -> dict:
             options["ch_engine_raw"] = raw.engine
             engine_name = raw.engine.name if hasattr(raw.engine, "name") else str(raw.engine)
             from dbwarden.databases.clickhouse.views import _validate_mv_engine
-            _validate_mv_engine(engine_name, select=mvd.get("ch_select_statement"))
+            from dbwarden.databases.clickhouse.raw import ChRaw
+            select_str = mvd.get("ch_select_statement")
+            select_is_raw = isinstance(select_str, (str, ChRaw))
+            _validate_mv_engine(engine_name, select_is_raw=select_is_raw)
         if raw.settings is not None:
             options["ch_settings"] = dict(raw.settings)
         _validate_ch_options(options)

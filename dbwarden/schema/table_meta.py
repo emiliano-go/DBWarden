@@ -95,7 +95,6 @@ class CHViewMeta(TableMeta):
     uniques: list[Any] = []
 
     ch: Any = None
-    ch_object_type: str | None = "materialized_view"
 
 
 if typing.TYPE_CHECKING:

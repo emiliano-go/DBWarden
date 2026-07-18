@@ -79,48 +79,85 @@ def derive_agg_target_columns(agg_result: AggregatingViewSpec | dict) -> list[st
     return list(target_info.get("columns", []))
 
 
-def _validate_mv_engine(engine_name: str, select: str | None = None) -> None:
-    """Validate that an engine is in the MergeTree family for implicit-storage MVs.
+_COLLAPSING_ENGINES = frozenset({
+    "SummingMergeTree", "ReplicatedSummingMergeTree",
+    "AggregatingMergeTree", "ReplicatedAggregatingMergeTree",
+    "ReplacingMergeTree", "ReplicatedReplacingMergeTree",
+    "CollapsingMergeTree", "ReplicatedCollapsingMergeTree",
+    "VersionedCollapsingMergeTree", "ReplicatedVersionedCollapsingMergeTree",
+    "GraphiteMergeTree", "ReplicatedGraphiteMergeTree",
+})
 
-    Implicit-storage materialized views (``to_table=None``) must use a
-    MergeTree-family engine because ClickHouse requires it for the
-    ``.inner.`` table that backs the view.
+_MERGETREE_FAMILY = frozenset({
+    "MergeTree", "ReplicatedMergeTree",
+    "SummingMergeTree", "ReplicatedSummingMergeTree",
+    "AggregatingMergeTree", "ReplicatedAggregatingMergeTree",
+    "ReplacingMergeTree", "ReplicatedReplacingMergeTree",
+    "CollapsingMergeTree", "ReplicatedCollapsingMergeTree",
+    "VersionedCollapsingMergeTree", "ReplicatedVersionedCollapsingMergeTree",
+    "GraphiteMergeTree", "ReplicatedGraphiteMergeTree",
+})
 
-    When ``select`` is provided and contains aggregate combinators
-    (``*State``, ``*Merge``), the engine must be in the appropriate sub-family.
+
+def _validate_mv_engine(
+    engine_name: str,
+    *,
+    has_aggregates: bool = False,
+    select_is_raw: bool = False,
+) -> None:
+    """Validate engine choice for a materialized view.
+
+    An MV's SELECT runs per INSERTED BLOCK, not over the full table.  A
+    non-collapsing engine therefore ACCUMULATES one partial-aggregate row per
+    insert forever, and reads return an arbitrary partial.  This is silent: no
+    error, wrong numbers.
+
+    Two verification paths, because a raw-SQL select is opaque:
+
+    *Structured select* (``select_is_raw=False``, ``has_aggregates`` set by the
+    caller after inspecting the ``ColumnElement`` list).  When the select
+    aggregates and the engine can't collapse rows, this raises ``ValueError``.
+
+    *Raw select* (``select_is_raw=True``).  The validator cannot inspect the
+    SQL, so it emits an advisory ``UserWarning`` instead of a hard error.  The
+    user owns collapse-correctness.
 
     Raises:
-        ValueError: if engine is not MergeTree-family for implicit-storage MVs.
+        ValueError: if engine is not MergeTree-family (implicit-storage MVs).
+        ValueError: if ``has_aggregates`` is True and engine is not in
+            ``_COLLAPSING_ENGINES``.
+        UserWarning: if ``select_is_raw`` and engine is not collapsing.
     """
-    allowed = (
-        "MergeTree", "ReplicatedMergeTree",
-        "SummingMergeTree", "ReplicatedSummingMergeTree",
-        "AggregatingMergeTree", "ReplicatedAggregatingMergeTree",
-        "ReplacingMergeTree", "ReplicatedReplacingMergeTree",
-        "CollapsingMergeTree", "ReplicatedCollapsingMergeTree",
-        "VersionedCollapsingMergeTree", "ReplicatedVersionedCollapsingMergeTree",
-        "GraphiteMergeTree", "ReplicatedGraphiteMergeTree",
-    )
-    if engine_name not in allowed:
+    if engine_name not in _MERGETREE_FAMILY:
         raise ValueError(
-            f"Invalid engine for implicit-storage materialized view: "
-            f"{engine_name!r}. Must be one of MergeTree family: {', '.join(allowed)}."
+            f"Invalid engine for materialized view: "
+            f"{engine_name!r}. Must be one of MergeTree family."
         )
-    # When aggregates are present, the implicit engine should support
-    # AggregateFunction columns.  A plain MergeTree cannot store them, but
-    # AggregatingMergeTree (and its variants) can.  This is advisory — the
-    # user may choose SummingMergeTree for pre-aggregated data.
-    if select is not None:
-        if "State(" in select or "Merge(" in select:
-            if engine_name in ("MergeTree", "ReplicatedMergeTree"):
-                import warnings
-                warnings.warn(
-                    f"Engine {engine_name!r} does not support AggregateFunction "
-                    f"columns produced by *State/*Merge combinators in SELECT. "
-                    f"Prefer AggregatingMergeTree or another aggregate-aware engine.",
-                    UserWarning,
-                    stacklevel=2,
-                )
+
+    if has_aggregates and engine_name not in _COLLAPSING_ENGINES:
+        raise ValueError(
+            f"Engine {engine_name!r} cannot collapse partial-aggregate rows. "
+            f"Aggregating SELECTs on a non-collapsing engine accumulate one "
+            f"partial row per insert block forever; reads silently return an "
+            f"arbitrary partial. "
+            f"Use aggregating_view() for AggregateFunction columns with -State "
+            f"combinators, or an explicit collapsing engine "
+            f"(summing_merge_tree(), aggregating_merge_tree(), etc.) if "
+            f"partial-sum merging on ORDER BY is what is wanted."
+        )
+
+    if select_is_raw and engine_name not in _COLLAPSING_ENGINES:
+        warnings.warn(
+            f"Engine {engine_name!r} is not in the collapsing family "
+            f"(SummingMergeTree, AggregatingMergeTree, etc.) and the SELECT "
+            f"was provided as raw SQL — the validator cannot verify "
+            f"collapse-safety. If the SELECT uses aggregate functions, this "
+            f"will silently accumulate partial rows per insert. "
+            f"Prefer structured select items (ColumnElement list) or a "
+            f"collapsing engine.",
+            UserWarning,
+            stacklevel=2,
+        )
 
 
 def get_all_ch_views(
@@ -320,6 +357,39 @@ def _make_target_columns(
     return columns
 
 
+def _has_user_columns(cls: type) -> bool:
+    """Check if a class declares user-level mapped columns or column-like attrs.
+
+    Inspects ``cls.__dict__`` for ``Column``/``MappedColumn`` instances and
+    ``cls.__annotations__`` for ``Mapped[...]`` type hints.  ``__tablename__``,
+    ``__abstract__``, ``Meta``, and dunder attrs are excluded.
+
+    Works on both SQLAlchemy-DeclarativeBase subclasses (which have
+    ``__table__``) and plain ``ChView`` subclasses (which don't — see Phase B),
+    because it checks ``__dict__`` rather than ``__table__.c``.
+    """
+    from sqlalchemy import Column as SAColumn
+    from sqlalchemy.orm import MappedColumn
+    from sqlalchemy.orm import Mapped as MappedDescriptor
+
+    # Check for Column or MappedColumn instances assigned in the class body
+    for val in cls.__dict__.values():
+        if isinstance(val, (SAColumn, MappedColumn)):
+            return True
+
+    # Check for Mapped[...] annotations
+    for attr_name, attr_type in cls.__annotations__.items():
+        if attr_name.startswith("_"):
+            continue
+        if attr_name in ("__tablename__", "__abstract__"):
+            continue
+        origin = getattr(attr_type, "__origin__", None)
+        if origin is MappedDescriptor:
+            return True
+
+    return False
+
+
 def _validate_view_class(model_class: type) -> None:
     """Validate that a ClickHouse view model class is properly configured.
 
@@ -357,6 +427,26 @@ def _validate_view_class(model_class: type) -> None:
         )
 
     if isinstance(ch, MaterializedViewSpec):
+        if ch.to is not None:
+            # Mode B — the class is the MV; no columns, no engine, no order_by
+            if ch.engine is not None:
+                raise TypeError(
+                    f"{model_class.__name__}: MaterializedView in Mode B "
+                    f"(to= given) must not declare engine — the engine belongs "
+                    f"to the target table, which this class does not own."
+                )
+            if ch.order_by is not None:
+                raise TypeError(
+                    f"{model_class.__name__}: MaterializedView in Mode B "
+                    f"(to= given) must not declare order_by — it belongs to "
+                    f"the target table."
+                )
+            if _has_user_columns(model_class):
+                raise TypeError(
+                    f"{model_class.__name__}: MaterializedView in Mode B "
+                    f"(to= given) must not declare columns — columns belong "
+                    f"to the target table."
+                )
         if ch.name is not None and ch.name != tablename:
             warnings.warn(
                 f"materialized_view(name=...) is deprecated when used inside a class body. "
@@ -367,6 +457,12 @@ def _validate_view_class(model_class: type) -> None:
             )
         ch.name = tablename
     elif isinstance(ch, AggregatingViewSpec):
+        if _has_user_columns(model_class):
+            raise TypeError(
+                f"{model_class.__name__}: AggregatingView columns are "
+                f"derived from group_by + aggregates, not declared. "
+                f"Remove column declarations."
+            )
         if ch.name != tablename:
             warnings.warn(
                 f"aggregating_view(name=...) is deprecated when used inside a class body. "
