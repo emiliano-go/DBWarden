@@ -412,24 +412,24 @@ def _validate_view_class(model_class: type) -> None:
         )
 
     if isinstance(ch, MaterializedViewSpec):
-        if ch.to_table is not None:
+        if ch.to is not None:
             # Mode B — the class is the MV; no columns, no engine, no order_by
             if ch.engine is not None:
                 raise TypeError(
                     f"{model_class.__name__}: MaterializedView in Mode B "
-                    f"(to_table= given) must not declare engine — the engine belongs "
+                    f"(to= given) must not declare engine — the engine belongs "
                     f"to the target table, which this class does not own."
                 )
             if ch.order_by is not None:
                 raise TypeError(
                     f"{model_class.__name__}: MaterializedView in Mode B "
-                    f"(to_table= given) must not declare order_by — it belongs to "
+                    f"(to= given) must not declare order_by — it belongs to "
                     f"the target table."
                 )
             if _has_user_columns(model_class):
                 raise TypeError(
                     f"{model_class.__name__}: MaterializedView in Mode B "
-                    f"(to_table= given) must not declare columns — columns belong "
+                    f"(to= given) must not declare columns — columns belong "
                     f"to the target table."
                 )
         if ch.name is not None and ch.name != tablename:

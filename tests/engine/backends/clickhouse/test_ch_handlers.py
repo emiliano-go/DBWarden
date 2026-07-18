@@ -341,26 +341,26 @@ class TestAggregatingView:
         assert "ch_agg_mv" in d
         mv = d["ch_agg_mv"]
         assert mv["ch_object_type"] == "materialized_view"
-        assert mv["ch_to_table"] == "events_daily_agg"
+        # In the class API, target is __tablename__ (here: name), not name + "_agg"
+        assert mv["ch_to_table"] == "events_daily"
         assert mv["ch_select_statement"] is not None
         assert "sumState(amount) AS amount_sum" in mv["ch_select_statement"]
 
-    def test_target_name_override(self):
+    def test_target_derived_from_name(self):
         from dbwarden.databases.clickhouse import AggregatingViewSpec
         av = aggregating_view(
-            name="ev",
             source="src",
             group_by=["id"],
             aggregates=[agg.count().as_("cnt")],
             order_by=["id"],
-            target_name="my_target",
+            name="my_ev",
         )
         assert isinstance(av, AggregatingViewSpec)
         d = av.to_dict()
         target = d["ch_agg_target"]["name"]
         mv = d["ch_agg_mv"]
-        assert target == "my_target"
-        assert mv["ch_to_table"] == "my_target"
+        assert target == "my_ev"
+        assert mv["ch_to_table"] == "my_ev"
 
 
 # ── data_op ───────────────────────────────────────────────────────────────────

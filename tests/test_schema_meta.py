@@ -435,7 +435,7 @@ class TestCHViewMeta:
             class Meta(CHViewMeta):
                 ch = materialized_view(
                     select="SELECT 1",
-                    to_table="some_target",
+                    to="some_target",
                 )
 
         assert ViewModel in ChView._ch_view_registry
@@ -466,9 +466,8 @@ class TestCHViewMeta:
 
             class Meta(CHViewMeta):
                 ch = materialized_view(
-                    name="ch_view_spec",
                     select="SELECT id FROM view_target",
-                    to_table="view_target",
+                    to="view_target",
                 )
 
         monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name",
@@ -487,9 +486,8 @@ class TestCHViewMeta:
 
             class Meta(CHViewMeta):
                 ch = materialized_view(
-                    name="ch_view_backend",
                     select="SELECT id FROM some_source",
-                    to_table="some_source",
+                    to="some_source",
                 )
 
         monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name",
@@ -499,8 +497,7 @@ class TestCHViewMeta:
         meta = read_meta(ViewModel)
         assert meta is not None
         assert isinstance(meta.backend_table, MaterializedViewSpec)
-        assert meta.backend_table.name == "ch_view_backend"
-        assert meta.backend_table.to_table == "some_source"
+        assert meta.backend_table.to == "some_source"
 
     def test_derive_agg_target_columns(self):
         from dbwarden.databases.clickhouse.agg import agg
@@ -617,8 +614,10 @@ class TestCHViewDiscovery:
             class Meta(CHViewMeta):
                 ch = materialized_view(
                     select="SELECT 1",
-                    to_table="test_get_all_target",
+                    to="test_get_all_target",
                 )
+
+        assert TestView in ChView._ch_view_registry
 
         views = get_all_ch_views()
         matching = [v for v in views if v["model_class"] is TestView]
@@ -658,7 +657,8 @@ class TestCHViewDiscovery:
         assert isinstance(spec, AggregatingViewSpec)
         target = _expand_agg_target(ViewModel, spec)
         assert target is not None
-        assert target.name == "test_agg_expand_agg"
+        # In the class API, target name is __tablename__ (here: name), not name + "_agg"
+        assert target.name == "test_agg_expand"
         assert target.object_type == "table"
         assert "AggregatingMergeTree" in str(target.clickhouse_options.get("ch_engine", ""))
 

@@ -6,7 +6,7 @@ class TestMaterializedView:
         result = materialized_view(
             name="test_mv",
             select="SELECT id, count() FROM source GROUP BY id",
-            to_table="target",
+            to="target",
         )
         assert isinstance(result, MaterializedViewSpec)
         d = result.to_dict()
@@ -18,7 +18,7 @@ class TestMaterializedView:
 
     def test_with_engine(self):
         result = materialized_view(
-            name="test_mv", select="SELECT 1", to_table="t",
+            name="test_mv", select="SELECT 1", to="t",
             engine="MergeTree",
         )
         d = result.to_dict()
@@ -26,7 +26,7 @@ class TestMaterializedView:
 
     def test_with_order_by(self):
         result = materialized_view(
-            name="test_mv", select="SELECT 1", to_table="t",
+            name="test_mv", select="SELECT 1", to="t",
             order_by="id",
         )
         d = result.to_dict()
@@ -34,7 +34,7 @@ class TestMaterializedView:
 
     def test_with_partition_by(self):
         result = materialized_view(
-            name="test_mv", select="SELECT 1", to_table="t",
+            name="test_mv", select="SELECT 1", to="t",
             partition_by="toYYYYMM(date)",
         )
         d = result.to_dict()
@@ -42,7 +42,7 @@ class TestMaterializedView:
 
     def test_with_populate(self):
         result = materialized_view(
-            name="test_mv", select="SELECT 1", to_table="t",
+            name="test_mv", select="SELECT 1", to="t",
             populate=True,
         )
         d = result.to_dict()
@@ -50,7 +50,7 @@ class TestMaterializedView:
 
     def test_populate_defaults_false(self):
         result = materialized_view(
-            name="test_mv", select="SELECT 1", to_table="t",
+            name="test_mv", select="SELECT 1", to="t",
         )
         d = result.to_dict()
         assert "ch_populate" not in d
@@ -59,7 +59,7 @@ class TestMaterializedView:
         result = materialized_view(
             name="test_mv",
             select="SELECT id, count() FROM src GROUP BY id",
-            to_table="dest",
+            to="dest",
             engine="MergeTree",
             order_by="id",
             partition_by="toYYYYMM(ts)",

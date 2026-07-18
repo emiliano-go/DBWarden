@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field as dc_field
 from typing import Any
 
@@ -14,12 +15,13 @@ class MaterializedViewSpec:
     :func:`render_expr`.
 
     Attributes:
-        name: View name.
+        name: View name (set by ``_validate_view_class`` from ``__tablename__``).
         select: The SELECT query.
-        to_table: Explicit target table, or None for implicit ``.inner.`` storage.
+        to: Explicit target table name.  ``None`` is allowed for the deprecated
+            module-level form only; the class API requires ``to``.
         refresh: Refresh schedule (e.g. ``"EVERY 1 HOUR"``).
         populate: If True, emit ``POPULATE`` for one-time backfill.
-        engine: Engine spec for implicit-storage MVs.
+        engine: Engine spec for implicit-storage MVs (module-level form only).
         order_by: ORDER BY for implicit-storage MVs.
         partition_by: Optional PARTITION BY.
         ttl: Optional TTL expression(s).
@@ -27,7 +29,7 @@ class MaterializedViewSpec:
     """
     name: str | None = None
     select: Any = None
-    to_table: str | None = None
+    to: str | None = None
     refresh: str | None = None
     populate: bool = False
     engine: Any = None
@@ -43,8 +45,8 @@ class MaterializedViewSpec:
             "ch_object_type": "materialized_view",
             "ch_select_statement": render_expr(self.select) if self.select is not None else None,
         }
-        if self.to_table is not None:
-            d["ch_to_table"] = self.to_table
+        if self.to is not None:
+            d["ch_to_table"] = self.to
         if self.refresh is not None:
             d["ch_refresh"] = self.refresh
         if self.populate:
@@ -104,7 +106,7 @@ def materialized_view(
     *,
     name: str | None = None,
     select: Any = None,
-    to_table: str | None = None,
+    to: str | None = None,
     refresh: str | None = None,
     populate: bool = False,
     engine: Any = None,
@@ -112,14 +114,23 @@ def materialized_view(
     partition_by: Any = None,
     ttl: Any = None,
     settings: dict[str, str] | None = None,
+    **deprecated: Any,
 ) -> MaterializedViewSpec:
     """Declare a ClickHouse materialized view.
 
-    Two storage shapes, which diff differently:
-      - ``to_table`` set:   MV writes into an explicit target table
-        (modern, preferred).
-      - ``to_table`` None:  MV owns implicit ``.inner.`` storage;
-        ``engine`` and ``order_by`` are required.
+    TWO MODES, because an MV sometimes creates a node and sometimes does not::
+
+    MODE A -- ``to`` omitted.  The class IS the target table.
+        Emits: CREATE TABLE <__tablename__> (declared columns) ENGINE = <engine> ...
+               CREATE MATERIALIZED VIEW <__tablename__>_mv TO <__tablename__> AS ...
+        Requires: engine, order_by, and column declarations on the class.
+
+    MODE B -- ``to`` given.  The class IS the MV; the target already exists.
+        Emits: CREATE MATERIALIZED VIEW <__tablename__> TO <to> AS ...
+        Forbids: engine, order_by, column declarations.
+
+    Implicit ``.inner.`` storage (``to=None`` without engine) is NOT supported
+    in the class API.  The module-level form (deprecated) still accepts it.
 
     Returns a ``MaterializedViewSpec``; call ``.to_dict()`` at the model boundary.
 
@@ -129,32 +140,42 @@ def materialized_view(
     :func:`render_expr`.
 
     Args:
-        name: View name.
+        name: Deprecated module-level form only.  In class body the view name
+            is ``__tablename__``.
         select: The SELECT.  A :class:`~sqlalchemy.sql.ColumnElement`,
             ``ch_raw()``, or plain string.
-        to_table: Explicit target table name, or None for implicit storage.
+        to: Target table name (Mode B).  Omit for Mode A.
         refresh: Refresh schedule for refreshable MVs, e.g. ``"EVERY 1 HOUR"``.
-            This IS converged schema state — changing it emits an ALTER.
-        populate: If True, emit ``POPULATE`` for a one-time backfill.  This is a
-            DATA-LIFECYCLE op, NOT converged: it routes to the one-time path and
-            is applied once, never re-emitted on subsequent diffs.
-        engine: Engine spec for implicit-storage MVs (required when to_table is
-            None).
-        order_by: ORDER BY for implicit-storage MVs.
+        populate: If True, emit ``POPULATE`` for one-time backfill.
+        engine: Mode A only.  MUST be a collapsing engine if ``select`` aggregates.
+        order_by: Mode A only.  ORDER BY for the target table.
         partition_by: Optional PARTITION BY.
         ttl: Optional TTL expression(s).
         settings: Optional engine SETTINGS.
 
     Raises:
-        ValueError: if ``to_table`` is None and ``engine`` is not provided.
-        ValueError: if ``populate`` and ``refresh`` are both set (incompatible).
+        ValueError: if ``to`` is None and ``engine`` is not provided.
+        ValueError: if aggregating select on non-collapsing engine.
+        ValueError: if ``populate`` and ``refresh`` are both set.
     """
-    if to_table is None and engine is None:
-        raise ValueError(
-            "materialized_view: engine is required when to_table is None "
-            "(implicit .inner. storage)"
+    # Backward compat for deprecated to_table kwarg
+    if "to_table" in deprecated:
+        warnings.warn(
+            "materialized_view(to_table=...) is deprecated. Use to= instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
-    if to_table is None and engine is not None:
+        to = deprecated.pop("to_table", to)
+    if deprecated:
+        raise TypeError(f"materialized_view() got unexpected keyword arguments: {list(deprecated)}")
+
+    if to is None and engine is None:
+        raise ValueError(
+            "materialized_view: engine is required when to is None "
+            "(implicit .inner. storage). "
+            "In class body, provide a target table with to=."
+        )
+    if to is None and engine is not None:
         from dbwarden.databases.clickhouse.views import _validate_mv_engine
         from dbwarden.databases.clickhouse.raw import ChRaw
         engine_name = engine.name if hasattr(engine, "name") else str(engine)
@@ -175,7 +196,7 @@ def materialized_view(
     return MaterializedViewSpec(
         name=name,
         select=select,
-        to_table=to_table,
+        to=to,
         refresh=refresh,
         populate=populate,
         engine=engine,
@@ -196,24 +217,26 @@ class AggregatingViewSpec:
 
     Expression fields (group_by, order_by, partition_by, ttl) accept
     :class:`~sqlalchemy.sql.ColumnElement`, :class:`ChRaw`, or plain ``str``.
+
+    The target name is ``__tablename__`` (set by ``_validate_view_class``).
+    The MV name is ``f"{__tablename__}_mv"``.
     """
-    name: str
-    source: Any
+    name: str | None = None
+    source: Any = None
     group_by: Any = None
     aggregates: Any = None
     order_by: Any = None
     partition_by: Any = None
     ttl: Any = None
     settings: dict[str, str] | None = None
-    target_name: str | None = None
 
     @property
     def mv_name(self) -> str:
-        return f"{self.name}_mv"
+        return f"{self.name}_mv" if self.name else ""
 
     @property
     def target_table_name(self) -> str:
-        return self.target_name or f"{self.name}_agg"
+        return self.name or ""
 
     @property
     def target_columns(self) -> list[str]:
@@ -274,7 +297,7 @@ class AggregatingViewSpec:
         mv_spec = MaterializedViewSpec(
             name=mv_name,
             select=select_sql,
-            to_table=target,
+            to=target,
         )
 
         return {
@@ -285,7 +308,6 @@ class AggregatingViewSpec:
 
 def aggregating_view(
     *,
-    name: str,
     source: Any,
     group_by: Any = None,
     aggregates: Any = None,
@@ -293,7 +315,8 @@ def aggregating_view(
     partition_by: Any = None,
     ttl: Any = None,
     settings: dict[str, str] | None = None,
-    target_name: str | None = None,
+    name: str | None = None,
+    **deprecated: Any,
 ) -> AggregatingViewSpec:
     """Declare an aggregate rollup as a coherent source->target->MV triad.
 
@@ -314,11 +337,26 @@ def aggregating_view(
     When a ``ColumnElement`` is provided, it is rendered to ClickHouse SQL via
     :func:`render_expr`.
 
+    **Class API (preferred):** use inside ``class Meta(CHViewMeta)``.  The
+    target name is ``__tablename__``; the MV is ``<__tablename__>_mv``.
+    ``name`` and ``source`` are not passed — ``source`` is the model class::
+
+        class EventDaily(AggregatingView):
+            __tablename__ = "event_daily"
+
+            class Meta(CHViewMeta):
+                ch = aggregating_view(
+                    source=Event,
+                    group_by=[func.toDate(Event.event_time).label("day")],
+                    aggregates=[agg.sum(Event.amount).as_("total")],
+                    order_by=["day"],
+                )
+
+    **Deprecated module-level form:** pass ``name`` to set the MV name
+    explicitly.  Emits ``DeprecationWarning``.
+
     Args:
-        name: Logical name; the MV is ``<name>_mv`` and the target defaults to
-            ``<name>_agg`` unless ``target_name`` is given.
-        source: The source table name (a model class or string).  The MV's
-            ``FROM`` clause references this.
+        source: The source model class (preferred) or table name string.
         group_by: ``GROUP BY`` keys — :class:`~sqlalchemy.sql.ColumnElement`,
             ``ch_raw()``, or strings.
         aggregates: The aggregate columns, as ``AggExpr`` (from ``agg.*``), each
@@ -327,33 +365,23 @@ def aggregating_view(
         partition_by: Optional ``PARTITION BY`` for the target.
         ttl: Optional TTL for the target.
         settings: Optional engine ``SETTINGS`` for the target.
-        target_name: Override the target table name (defaults to
-            ``<name>_agg``).
+        name: Deprecated.  MV and target names come from ``__tablename__`` in
+            the class API.  Only needed for the module-level form.
 
     Returns:
         An :class:`AggregatingViewSpec`; call ``.to_dict()`` at the model boundary.
-
-    Example::
-
-        from dbwarden.databases.clickhouse import (
-            AggregatingViewSpec, aggregating_view, agg,
-        )
-        import sqlalchemy as sa
-        from sqlalchemy import column, func
-
-        events_daily = aggregating_view(
-            name="events_daily",
-            source="events",
-            group_by=[column("user_id"), func.toDate(column("event_time")).label("day")],
-            aggregates=[
-                agg.sum(column("amount"), "Float64").as_("amount_sum"),
-                agg.count().as_("event_count"),
-            ],
-            order_by=[column("user_id"), "day"],
-            partition_by=func.toYYYYMM(column("day")),
-        )
     """
-    from dbwarden.databases.clickhouse.compiler import column_name_from_expr
+    # Backward compat for deprecated target_name kwarg
+    if "target_name" in deprecated:
+        warnings.warn(
+            "aggregating_view(target_name=...) is deprecated. "
+            "The target name is always __tablename__ in the class API.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        deprecated.pop("target_name", None)
+    if deprecated:
+        raise TypeError(f"aggregating_view() got unexpected keyword arguments: {list(deprecated)}")
 
     group_by = group_by or []
     aggregates = aggregates or []
@@ -374,18 +402,31 @@ def aggregating_view(
         partition_by=partition_by,
         ttl=ttl,
         settings=settings,
-        target_name=target_name,
     )
 
 
 def _resolve_source(source: Any) -> str:
-    """Get the table name from a source reference (model class or string)."""
+    """Get the table name from a source reference.
+
+    ``source`` should be a model class with ``__tablename__``.  Strings are
+    accepted with a deprecation warning — they defeat rename safety and the
+    widening that makes the typed API correct.
+    """
     if isinstance(source, str):
+        warnings.warn(
+            "_resolve_source: source as a string is deprecated. "
+            "Pass the model class directly for rename safety and type inference.",
+            DeprecationWarning,
+            stacklevel=3,
+        )
         return source
     tablename = getattr(source, "__tablename__", None)
     if tablename:
         return tablename
-    return str(source)
+    raise TypeError(
+        f"_resolve_source: source must be a model class with __tablename__, "
+        f"got {type(source).__name__}"
+    )
 
 
 

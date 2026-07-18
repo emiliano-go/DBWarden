@@ -277,7 +277,7 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
             meta.backend_table = MaterializedViewSpec(
                 name=table_attrs.get("ch_name"),
                 select=table_attrs.get("ch_select_statement"),
-                to_table=table_attrs.get("ch_to_table"),
+                to=table_attrs.get("ch_to_table"),
                 engine=table_attrs.get("ch_engine"),
                 order_by=table_attrs.get("ch_order_by"),
                 partition_by=table_attrs.get("ch_partition_by"),

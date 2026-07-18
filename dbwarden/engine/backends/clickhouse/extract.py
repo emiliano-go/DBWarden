@@ -110,7 +110,9 @@ def _ch_options_from_meta(model_class: type) -> dict:
     options["ch_object_type"] = ch_object_type if ch_object_type is not None else "table"
     if raw.select_statement is not None:
         options["ch_select_statement"] = raw.select_statement
-    if raw.to_table is not None:
+    if getattr(raw, "to", None) is not None:
+        options["ch_to_table"] = raw.to
+    elif getattr(raw, "to_table", None) is not None:
         options["ch_to_table"] = raw.to_table
     if raw.projections is not None:
         options["ch_projections"] = [
