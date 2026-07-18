@@ -427,32 +427,31 @@ class TestCHViewMeta:
         assert hasattr(CHViewMeta, "ch")
         assert hasattr(CHViewMeta, "comment")
 
-    def test_ch_view_mixin_provides_meta(self):
-        class ViewModel(Base, ChView):
-            __tablename__ = "ch_view_model"
+    def test_ch_view_registry(self):
+        """ChView subclasses with Meta.ch are registered at import time."""
+        class ViewModel(ChView):
+            __tablename__ = "ch_registry_test"
 
-            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+            class Meta(CHViewMeta):
+                ch = materialized_view(
+                    select="SELECT 1",
+                    to_table="some_target",
+                )
 
-        assert hasattr(ViewModel, "Meta")
-        assert issubclass(ViewModel.Meta, CHViewMeta)
+        assert ViewModel in ChView._ch_view_registry
 
-    def test_materialized_view_mixin_provides_meta(self):
-        class ViewModel(Base, MaterializedView):
-            __tablename__ = "ch_mv_model"
+    def test_ch_view_registry_skips_abstract(self):
+        """Abstract ChView subclasses (MaterializedView, AggregatingView) are not registered."""
+        assert MaterializedView not in ChView._ch_view_registry
+        assert AggregatingView not in ChView._ch_view_registry
 
-            id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    def test_ch_view_registry_skips_no_meta(self):
+        """ChView subclass without Meta is silently skipped (not an error)."""
+        class NoMetaView(ChView):
+            __tablename__ = "no_meta_view"
 
-        assert hasattr(ViewModel, "Meta")
-        assert issubclass(ViewModel.Meta, CHViewMeta)
-
-    def test_aggregating_view_mixin_provides_meta(self):
-        class ViewModel(Base, AggregatingView):
-            __tablename__ = "ch_agg_view_model"
-
-            id: Mapped[int] = mapped_column(Integer, primary_key=True)
-
-        assert hasattr(ViewModel, "Meta")
-        assert issubclass(ViewModel.Meta, CHViewMeta)
+        assert NoMetaView in ChView._ch_view_registry
+        # get_all_ch_views will skip it because Meta.ch is absent
 
     def test_view_meta_with_materialized_view_spec(self, monkeypatch):
         class ViewTarget(Base):
@@ -609,14 +608,22 @@ class TestCHViewValidation:
 
 
 class TestCHViewDiscovery:
-    def test_get_all_ch_views_empty(self, monkeypatch):
-        """No model paths → returns empty."""
-        monkeypatch.setattr(
-            "dbwarden.engine.model_discovery.path_discovery.auto_discover_model_paths",
-            lambda: [],
-        )
+    def test_get_all_ch_views(self):
+        """Returns registered ChView subclasses."""
+        # Add a test view to the registry
+        class TestView(ChView):
+            __tablename__ = "test_get_all_view"
+
+            class Meta(CHViewMeta):
+                ch = materialized_view(
+                    select="SELECT 1",
+                    to_table="test_get_all_target",
+                )
+
         views = get_all_ch_views()
-        assert views == []
+        matching = [v for v in views if v["model_class"] is TestView]
+        assert len(matching) == 1
+        assert matching[0]["view_type"] == "materialized_view"
 
     def test_expand_agg_target(self):
         from sqlalchemy import String

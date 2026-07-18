@@ -10,54 +10,68 @@ from dbwarden.databases.clickhouse import AggregatingViewSpec, MaterializedViewS
 
 
 class ChView:
-    """Mixin base for ClickHouse view model classes.
+    """Base for ClickHouse view declarations. NOT a SQLAlchemy mapped class.
 
-    Optionally inherit from this mixin alongside a declarative base to
-    auto-detect the backend and skip writing ``class Meta(CHViewMeta)``
-    explicitly::
+    Subclasses are collected into ``_ch_view_registry`` at class-creation time
+    and discovered alongside SQLAlchemy models by ``get_all_model_tables()``.
 
-        from sqlalchemy.orm import declarative_base
+    Required in every non-abstract subclass:
+        ``__tablename__`` -- see the per-subclass meaning in MaterializedView
+            and AggregatingView; it is NOT uniformly "the MV".
+        ``Meta.ch`` -- a MaterializedViewSpec or AggregatingViewSpec.
+
+    Example::
+
         from dbwarden.databases.clickhouse import (
-            ChView, materialized_view,
+            AggregatingView, CHViewMeta, aggregating_view, agg,
         )
 
-        Base = declarative_base()
-
-        class DailyMetrics(Base, ChView):
-            __tablename__ = "daily_metrics"
-            day = Column(Date, primary_key=True)
-            total = Column(Float64)
+        class EventDaily(AggregatingView):
+            __tablename__ = "event_daily"
 
             class Meta(CHViewMeta):
-                ch = materialized_view(
-                    select=func.sum(Events.amount).label("total"),
-                    to_table="daily_target",
+                ch = aggregating_view(
+                    source=Event,
+                    group_by=[func.toDate(Event.event_time).label("day")],
+                    aggregates=[agg.sum(Event.amount).as_("total")],
+                    order_by=["day"],
                 )
     """
-    class Meta(CHViewMeta):
-        pass
+
+    __tablename__: str
+    _ch_view_registry: list[type[ChView]] = []
+
+    def __init_subclass__(cls, **kw: Any) -> None:
+        super().__init_subclass__(**kw)
+        if getattr(cls, "__abstract__", False):
+            return
+        _validate_view_class(cls)
+        ChView._ch_view_registry.append(cls)
 
 
 class MaterializedView(ChView):
-    """Mixin base for ClickHouse materialized view model classes.
+    """A ClickHouse materialized view. Two modes -- see materialized_view().
 
-    Use the same as :class:`ChView`.  The marker class improves readability
-    and may be used by downstream tooling::
-
-        class DailyMetrics(Base, MaterializedView):
-            ...
+    Mode A (to= omitted):  the class IS the target table; the MV is generated
+        with the derived name f"{__tablename__}_mv". Columns are declared on
+        the class. Engine is required.
+    Mode B (to= given):    the class IS the MV itself (an edge with no new
+        node); __tablename__ is the MV's own name. No columns, no engine.
     """
+    __abstract__ = True
 
 
 class AggregatingView(ChView):
-    """Mixin base for ClickHouse aggregating view model classes.
+    """An aggregate rollup: AggregatingMergeTree target + the MV that fills it.
 
-    Use the same as :class:`ChView`.  The marker class improves readability
-    and may be used by downstream tooling::
+    The class IS the target table. __tablename__ is the target's name; the MV
+    is generated as f"{__tablename__}_mv".
 
-        class DailyMetrics(Base, AggregatingView):
-            ...
+    Columns are NOT declared -- they are DERIVED from group_by + aggregates.
+    Declaring them would be two shapes for one fact and would reintroduce
+    exactly the drift the derived correspondence exists to prevent.
     """
+    __abstract__ = True
 
 
 def derive_agg_target_columns(agg_result: AggregatingViewSpec | dict) -> list[str]:
@@ -164,71 +178,42 @@ def get_all_ch_views(
     model_paths: list[str] | None = None,
     db_name: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Scan all model classes and return ClickHouse view specs.
+    """Return registered ``ChView`` subclasses from the class registry.
+
+    Populated by ``ChView.__init_subclass__`` at import time.  Because
+    ``discover_models_in_directory`` already imports every model module,
+    importing is sufficient — no new scanning mechanism, which was the
+    strongest argument for the class form.
+
+    The ``model_paths`` and ``db_name`` parameters are accepted for backward
+    compatibility but ignored — discovery is purely registry-based.
 
     Returns a list of dicts, each with:
-      - ``model_class``: the SQLAlchemy model class
-      - ``spec``: the view spec (``MaterializedViewSpec``, or a dict from
-        :func:`aggregating_view`)
+      - ``model_class``: the ``ChView`` subclass
+      - ``spec``: the view spec (``MaterializedViewSpec`` or
+        ``AggregatingViewSpec``)
       - ``view_type``: ``"materialized_view"`` or ``"aggregating_view"``
-
-    Views from the module-level API (loose ``ch_*`` attrs) are NOT included;
-    only class-based API views using ``CHViewMeta`` + ``materialized_view()``
-    or ``aggregating_view()`` are returned.
-
-    Args:
-        model_paths: Paths to model files or directories.
-        db_name: Database name override.
-
-    Returns:
-        List of view spec dicts.
     """
-    from dbwarden.engine.model_discovery.path_discovery import (
-        auto_discover_model_paths,
-        _collect_model_files,
-        load_model_from_path,
-    )
-
-    if model_paths is None:
-        model_paths = auto_discover_model_paths()
-
-    model_files = _collect_model_files(model_paths)
     results: list[dict[str, Any]] = []
-
-    for model_file in model_files:
-        module = load_model_from_path(model_file)
-        if module is None:
+    for cls in ChView._ch_view_registry:
+        meta_cls = cls.__dict__.get("Meta")
+        if meta_cls is None:
             continue
-        for attr in module.__dict__.values():
-            if not isinstance(attr, type):
-                continue
-            if getattr(attr, "__module__", None) != getattr(module, "__name__", None):
-                continue
-            tablename = getattr(attr, "__tablename__", None)
-            table_obj = getattr(attr, "__table__", None)
-            if tablename is None or table_obj is None:
-                continue
-            meta = attr.__dict__.get("Meta") if hasattr(attr, "Meta") else None
-            if meta is None or not isinstance(meta, type):
-                continue
-            if not issubclass(meta, CHViewMeta):
-                continue
-            ch_spec = getattr(meta, "ch", None)
-            if ch_spec is None:
-                continue
-            if isinstance(ch_spec, MaterializedViewSpec):
-                results.append({
-                    "model_class": attr,
-                    "spec": ch_spec,
-                    "view_type": "materialized_view",
-                })
-            elif isinstance(ch_spec, AggregatingViewSpec):
-                results.append({
-                    "model_class": attr,
-                    "spec": ch_spec,
-                    "view_type": "aggregating_view",
-                })
-
+        ch_spec = getattr(meta_cls, "ch", None)
+        if ch_spec is None:
+            continue
+        if isinstance(ch_spec, MaterializedViewSpec):
+            results.append({
+                "model_class": cls,
+                "spec": ch_spec,
+                "view_type": "materialized_view",
+            })
+        elif isinstance(ch_spec, AggregatingViewSpec):
+            results.append({
+                "model_class": cls,
+                "spec": ch_spec,
+                "view_type": "aggregating_view",
+            })
     return results
 
 
@@ -427,24 +412,24 @@ def _validate_view_class(model_class: type) -> None:
         )
 
     if isinstance(ch, MaterializedViewSpec):
-        if ch.to is not None:
+        if ch.to_table is not None:
             # Mode B — the class is the MV; no columns, no engine, no order_by
             if ch.engine is not None:
                 raise TypeError(
                     f"{model_class.__name__}: MaterializedView in Mode B "
-                    f"(to= given) must not declare engine — the engine belongs "
+                    f"(to_table= given) must not declare engine — the engine belongs "
                     f"to the target table, which this class does not own."
                 )
             if ch.order_by is not None:
                 raise TypeError(
                     f"{model_class.__name__}: MaterializedView in Mode B "
-                    f"(to= given) must not declare order_by — it belongs to "
+                    f"(to_table= given) must not declare order_by — it belongs to "
                     f"the target table."
                 )
             if _has_user_columns(model_class):
                 raise TypeError(
                     f"{model_class.__name__}: MaterializedView in Mode B "
-                    f"(to= given) must not declare columns — columns belong "
+                    f"(to_table= given) must not declare columns — columns belong "
                     f"to the target table."
                 )
         if ch.name is not None and ch.name != tablename:
