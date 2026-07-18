@@ -580,7 +580,6 @@ class TestCHViewMeta:
 class TestCHViewValidation:
     def test_validate_mv_engine_merge_tree(self):
         from dbwarden.databases.clickhouse.views import _validate_mv_engine
-        # Should not raise for MergeTree family
         _validate_mv_engine("MergeTree")
         _validate_mv_engine("ReplicatedMergeTree")
         _validate_mv_engine("SummingMergeTree")
@@ -598,10 +597,100 @@ class TestCHViewValidation:
         with pytest.raises(ValueError, match="Invalid engine"):
             _validate_mv_engine("Distributed")
 
+    def test_validate_mv_engine_aggregates_collapsing(self):
+        from dbwarden.databases.clickhouse.views import _validate_mv_engine
+        _validate_mv_engine("SummingMergeTree", has_aggregates=True)
+        _validate_mv_engine("AggregatingMergeTree", has_aggregates=True)
+
+    def test_validate_mv_engine_aggregates_non_collapsing(self):
+        from dbwarden.databases.clickhouse.views import _validate_mv_engine
+        import pytest
+        with pytest.raises(ValueError, match="cannot collapse"):
+            _validate_mv_engine("MergeTree", has_aggregates=True)
+
+    def test_validate_mv_engine_raw_select_warns(self):
+        from dbwarden.databases.clickhouse.views import _validate_mv_engine
+        import warnings
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            _validate_mv_engine("MergeTree", select_is_raw=True)
+        assert any("collapse" in str(msg.message).lower() for msg in w)
+
     def test_materialized_view_optional_name(self):
         from dbwarden.databases.clickhouse import MaterializedViewSpec
         spec = MaterializedViewSpec(select="SELECT 1")
         assert spec.name is None
+
+    def test_materialized_view_mode_b_engine_forbidden(self):
+        from dbwarden.databases.clickhouse import (
+            ChView, MaterializedView, materialized_view,
+        )
+        from dbwarden.schema.table_meta import CHViewMeta
+        import pytest
+        with pytest.raises(TypeError, match="must not declare engine"):
+            class BadMV(ChView):
+                __tablename__ = "bad_mv_b_engine"
+                class Meta(CHViewMeta):
+                    ch = materialized_view(select="SELECT 1", to="target", engine="MergeTree")
+
+    def test_materialized_view_mode_b_order_by_forbidden(self):
+        from dbwarden.databases.clickhouse import (
+            ChView, materialized_view,
+        )
+        from dbwarden.schema.table_meta import CHViewMeta
+        import pytest
+        with pytest.raises(TypeError, match="must not declare order_by"):
+            class BadMV(ChView):
+                __tablename__ = "bad_mv_b_order"
+                class Meta(CHViewMeta):
+                    ch = materialized_view(select="SELECT 1", to="target", order_by=["id"])
+
+    def test_materialized_view_mode_b_columns_forbidden(self):
+        from sqlalchemy import Integer
+        from sqlalchemy.orm import Mapped, mapped_column
+        from dbwarden.databases.clickhouse import (
+            ChView, materialized_view,
+        )
+        from dbwarden.schema.table_meta import CHViewMeta
+        import pytest
+        with pytest.raises(TypeError, match="must not declare columns"):
+            class BadMV(ChView):
+                __tablename__ = "bad_mv_b_cols"
+                id: Mapped[int] = mapped_column(Integer, primary_key=True)
+                class Meta(CHViewMeta):
+                    ch = materialized_view(select="SELECT 1", to="target")
+
+    def test_aggregating_view_columns_forbidden(self):
+        from sqlalchemy import Integer
+        from sqlalchemy.orm import Mapped, mapped_column
+        from dbwarden.databases.clickhouse import (
+            ChView, aggregating_view, agg,
+        )
+        from dbwarden.schema.table_meta import CHViewMeta
+        import pytest
+        with pytest.raises(TypeError, match="columns are derived"):
+            class BadAV(ChView):
+                __tablename__ = "bad_av_cols"
+                id: Mapped[int] = mapped_column(Integer, primary_key=True)
+                class Meta(CHViewMeta):
+                    ch = aggregating_view(
+                        source="src",
+                        group_by=["id"],
+                        aggregates=[agg.count().as_("cnt")],
+                        order_by=["id"],
+                    )
+
+    def test_validate_view_class_sets_name_from_tablename(self):
+        from dbwarden.databases.clickhouse import (
+            ChView, materialized_view,
+        )
+        from dbwarden.schema.table_meta import CHViewMeta
+        class GoodMV(ChView):
+            __tablename__ = "my_view"
+            class Meta(CHViewMeta):
+                ch = materialized_view(select="SELECT 1", to="target")
+        spec = GoodMV.Meta.ch
+        assert spec.name == "my_view"
 
 
 class TestCHViewDiscovery:

@@ -86,7 +86,7 @@ class CHViewMeta(TableMeta):
         class Meta(CHViewMeta):
             ch = materialized_view(
                 select=func.sum(Events.amount).label("total"),
-                to_table="daily_target",
+                to="daily_target",
             )
     """
     comment: str | None = None
