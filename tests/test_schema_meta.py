@@ -8,9 +8,9 @@ import dbwarden.engine.model_discovery as model_discovery
 from dbwarden.engine.model_discovery import extract_table_from_model
 from dbwarden.exceptions import DBWardenConfigError
 from dbwarden.databases.clickhouse import (
-    CHColumnMeta, CHTableMeta, ChView, MaterializedView,
-    AggregatingView, materialized_view, MaterializedViewSpec,
-    aggregating_view, derive_agg_target_columns,
+    AggregatingViewSpec, CHColumnMeta, CHTableMeta, ChView,
+    MaterializedView, AggregatingView, materialized_view,
+    MaterializedViewSpec, aggregating_view, derive_agg_target_columns,
     get_all_ch_views, ch_view_tables_from_models,
 )
 from dbwarden.schema.table_meta import CHViewMeta
@@ -575,9 +575,11 @@ class TestCHViewMeta:
         apply_meta(ViewModel)
         meta = read_meta(ViewModel)
         assert meta is not None
-        assert isinstance(meta.backend_table, dict)
-        assert "ch_agg_target" in meta.backend_table
-        assert "ch_agg_mv" in meta.backend_table
+        from dbwarden.databases.clickhouse import AggregatingViewSpec
+        assert isinstance(meta.backend_table, AggregatingViewSpec)
+        agg_dict = meta.backend_table.to_dict()
+        assert "ch_agg_target" in agg_dict
+        assert "ch_agg_mv" in agg_dict
 
 
 class TestCHViewValidation:
@@ -647,7 +649,7 @@ class TestCHViewDiscovery:
         apply_meta(ViewModel)
 
         spec = ViewModel.Meta.ch
-        assert isinstance(spec, dict)
+        assert isinstance(spec, AggregatingViewSpec)
         target = _expand_agg_target(ViewModel, spec)
         assert target is not None
         assert target.name == "test_agg_expand_agg"

@@ -53,7 +53,7 @@ class EventDaily(Base):
             to_table="event_daily_dest",
         )
 
-# 3. Aggregating view — single declaration generates target + MV
+# 3. Aggregating view: single declaration generates target + MV
 class EventAggregated(Base):
     __tablename__ = "event_aggregated"
 
@@ -132,9 +132,9 @@ The canonicalizer has **zero version branching**: a single code path covers 24.3
 | Clustering | ON CLUSTER via ClusterMode.ON_CLUSTER | Done |
 | | ClusterMode.REPLICATED (emit-side: omit ON CLUSTER) | Done |
 | Class-based views | `ChView`, `MaterializedView`, `AggregatingView` mixin bases | Done |
-| | `CHViewMeta` — Meta class for view models | Done |
-| | `get_all_ch_views()` — view discovery | Done |
-| | `MaterializedViewSpec` — typed spec with expression compilation | Done |
+| | `CHViewMeta`: Meta class for view models | Done |
+| | `get_all_ch_views()`: view discovery | Done |
+| | `MaterializedViewSpec`: typed spec with expression compilation | Done |
 | Safety | Classify options, column, and object changes | Done |
 | | --force gating for destructive changes | Done |
 | | Recreate pipeline (DETACH → CREATE → INSERT → ATTACH) | Done |

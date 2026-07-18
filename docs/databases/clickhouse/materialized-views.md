@@ -51,7 +51,7 @@ CREATE MATERIALIZED VIEW event_counts TO events_dest
 AS SELECT sum(amount) AS total FROM events GROUP BY event_date
 ```
 
-Implicit `.inner` storage — engine and order_by are required:
+Implicit `.inner` storage: engine and order_by are required:
 
 ```python
 class EventCountInner(Base):

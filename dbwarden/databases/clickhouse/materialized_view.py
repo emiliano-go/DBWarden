@@ -132,7 +132,7 @@ def materialized_view(
     if to_table is None and engine is not None:
         from dbwarden.databases.clickhouse.views import _validate_mv_engine
         engine_name = engine.name if hasattr(engine, "name") else str(engine)
-        _validate_mv_engine(engine_name)
+        _validate_mv_engine(engine_name, select=select)
     if populate and refresh:
         raise ValueError(
             "materialized_view: populate and refresh are mutually exclusive"
@@ -152,6 +152,103 @@ def materialized_view(
     )
 
 
+@dataclass
+class AggregatingViewSpec:
+    """Typed spec for a ClickHouse aggregating view (source -> target -> MV triad).
+
+    Returned by :func:`aggregating_view`.  Call ``.to_dict()`` at the model
+    serialization boundary to produce the dict format consumed by the
+    discovery and expansion pipeline.
+
+    Expression fields (group_by, order_by, partition_by, ttl) accept
+    :class:`~sqlalchemy.sql.ColumnElement`, :class:`ChRaw`, or plain ``str``.
+    """
+    name: str
+    source: Any
+    group_by: Any = None
+    aggregates: Any = None
+    order_by: Any = None
+    partition_by: Any = None
+    ttl: Any = None
+    settings: dict[str, str] | None = None
+    target_name: str | None = None
+
+    @property
+    def mv_name(self) -> str:
+        return f"{self.name}_mv"
+
+    @property
+    def target_table_name(self) -> str:
+        return self.target_name or f"{self.name}_agg"
+
+    @property
+    def target_columns(self) -> list[str]:
+        from dbwarden.databases.clickhouse.compiler import column_name_from_expr
+        cols: list[str] = []
+        for g in (self.group_by or []):
+            cols.append(column_name_from_expr(g))
+        for a in (self.aggregates or []):
+            cols.append(a.alias)
+        return cols
+
+    def to_dict(self) -> dict[str, Any]:
+        from dbwarden.databases.clickhouse.compiler import (
+            render_expr,
+            render_expr_list,
+            column_name_from_expr,
+        )
+
+        group_by = self.group_by or []
+        aggregates = self.aggregates or []
+        order_by = self.order_by or []
+        target = self.target_table_name
+        mv_name = self.mv_name
+        source_name = _resolve_source(self.source)
+
+        group_parts = [render_expr(g) for g in group_by]
+        select_items = list(group_parts) + [
+            a.state_combinator() for a in aggregates
+        ]
+
+        select_sql = (
+            "SELECT\n    " + ",\n    ".join(select_items) +
+            "\nFROM " + source_name +
+            "\nGROUP BY " + ", ".join(
+                column_name_from_expr(g) for g in group_by
+            )
+        )
+
+        target_columns = list(self.target_columns)
+
+        target_opts: dict[str, Any] = {
+            "name": target,
+            "columns": target_columns,
+            "aggregates": aggregates,
+            "order_by": render_expr_list(order_by if isinstance(order_by, list) else [order_by]),
+        }
+        if self.partition_by is not None:
+            target_opts["partition_by"] = render_expr(self.partition_by)
+        if self.ttl is not None:
+            target_opts["ttl"] = (
+                render_expr_list(self.ttl)
+                if isinstance(self.ttl, list)
+                else [render_expr(self.ttl)]
+            )
+        if self.settings is not None:
+            target_opts["settings"] = dict(self.settings)
+
+        mv_spec = MaterializedViewSpec(
+            name=mv_name,
+            select=select_sql,
+            to_table=target,
+        )
+
+        return {
+            "ch_agg_target": target_opts,
+            "ch_agg_mv": mv_spec.to_dict(),
+        }
+
+
 def aggregating_view(
     *,
     name: str,
@@ -163,7 +260,7 @@ def aggregating_view(
     ttl: Any = None,
     settings: dict[str, str] | None = None,
     target_name: str | None = None,
-) -> dict[str, Any]:
+) -> AggregatingViewSpec:
     """Declare an aggregate rollup as a coherent source->target->MV triad.
 
     Generates THREE DDL objects from one declaration:
@@ -200,49 +297,32 @@ def aggregating_view(
             ``<name>_agg``).
 
     Returns:
-        A dict with keys ``"ch_agg_target"`` (the target table spec) and
-        ``"ch_agg_mv"`` (the MV spec).  The model-discovery layer expands these
-        into two tracked schema objects.
+        An :class:`AggregatingViewSpec`; call ``.to_dict()`` at the model boundary.
 
     Example::
 
         from dbwarden.databases.clickhouse import (
-            CHTableMeta, aggregating_view, agg, merge_tree, ch_raw,
+            AggregatingViewSpec, aggregating_view, agg,
         )
         import sqlalchemy as sa
-
-        class Events(Base):
-            __tablename__ = "events"
-
-            class Meta(CHTableMeta):
-                ch_engine = merge_tree()
-                ch_order_by = [Events.user_id, Events.event_time]
-
-            user_id:    Mapped[int] = mapped_column(BigInteger)
-            event_time: Mapped[datetime] = mapped_column(DateTime)
-            amount:     Mapped[float] = mapped_column(Float)
+        from sqlalchemy import column, func
 
         events_daily = aggregating_view(
             name="events_daily",
             source="events",
-            group_by=[Events.user_id, func.toDate(Events.event_time).label("day")],
+            group_by=[column("user_id"), func.toDate(column("event_time")).label("day")],
             aggregates=[
-                agg.sum(Events.amount, "Float64").as_("amount_sum"),
+                agg.sum(column("amount"), "Float64").as_("amount_sum"),
                 agg.count().as_("event_count"),
             ],
-            order_by=[Events.user_id, "day"],
+            order_by=[column("user_id"), "day"],
             partition_by=func.toYYYYMM(column("day")),
         )
     """
-    from dbwarden.databases.clickhouse.compiler import (
-        render_expr,
-        render_expr_list,
-        column_name_from_expr,
-    )
+    from dbwarden.databases.clickhouse.compiler import column_name_from_expr
 
     group_by = group_by or []
     aggregates = aggregates or []
-    order_by = order_by or []
 
     if not aggregates:
         raise ValueError("aggregating_view: at least one aggregate is required")
@@ -250,48 +330,18 @@ def aggregating_view(
         raise ValueError(
             "aggregating_view: every aggregate must have .as_(alias) set"
         )
-    mv_name = f"{name}_mv"
-    target = target_name or f"{name}_agg"
-    source_name = _resolve_source(source)
 
-    # Build the column list for the AggregatingMergeTree target
-    target_columns = [column_name_from_expr(g) for g in group_by]
-    for a in aggregates:
-        target_columns.append(a.alias)
-
-    # Build the SELECT for the MV
-    group_parts = [render_expr(g) for g in group_by]
-    select_items = list(group_parts) + [
-        a.state_combinator() for a in aggregates
-    ]
-
-    select_sql = (
-        "SELECT\n    " + ",\n    ".join(select_items) +
-        "\nFROM " + source_name +
-        "\nGROUP BY " + ", ".join(
-            column_name_from_expr(g) for g in group_by
-        )
+    return AggregatingViewSpec(
+        name=name,
+        source=source,
+        group_by=group_by,
+        aggregates=aggregates,
+        order_by=order_by,
+        partition_by=partition_by,
+        ttl=ttl,
+        settings=settings,
+        target_name=target_name,
     )
-
-    mv_spec = materialized_view(
-        name=mv_name,
-        select=select_sql,
-        to_table=target,
-        engine=None,
-        order_by=None,
-    )
-    return {
-        "ch_agg_target": {
-            "name": target,
-            "columns": target_columns,
-            "aggregates": aggregates,
-            "order_by": render_expr_list(order_by if isinstance(order_by, list) else [order_by]),
-            "partition_by": render_expr(partition_by) if partition_by is not None else None,
-            "ttl": render_expr_list(ttl if isinstance(ttl, list) else [ttl]) if ttl is not None else None,
-            "settings": settings,
-        },
-        "ch_agg_mv": mv_spec.to_dict(),
-    }
 
 
 def _resolve_source(source: Any) -> str:

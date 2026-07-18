@@ -32,7 +32,7 @@ This generates **three** DDL objects from one declaration:
 
 1. An `AggregatingMergeTree` target table (`events_hourly_agg`) whose columns are `hour DateTime` and `amount_sum AggregateFunction(sum, Float64)`
 2. A materialized view (`events_hourly_mv`) whose SELECT uses `sumState(amount) AS amount_sum`, `TO events_hourly_agg`
-3. The source table (`events`) — referenced, not created (must already exist)
+3. The source table (`events`): referenced, not created (must already exist)
 
 Query the target table:
 

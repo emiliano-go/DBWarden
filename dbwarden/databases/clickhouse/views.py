@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import warnings
 from typing import Any
 
 from dbwarden.exceptions import DBWardenConfigError
 from dbwarden.schema.table_meta import CHViewMeta
 from dbwarden.engine.core.models import ModelColumn, ModelTable
+from dbwarden.databases.clickhouse import AggregatingViewSpec, MaterializedViewSpec
 
 
 class ChView:
@@ -58,31 +60,37 @@ class AggregatingView(ChView):
     """
 
 
-def derive_agg_target_columns(agg_result: dict) -> list[str]:
+def derive_agg_target_columns(agg_result: AggregatingViewSpec | dict) -> list[str]:
     """Extract target table column names from an :func:`aggregating_view` result.
 
     The target columns are: group-by keys (by name) followed by aggregate
     aliases, in the same order as produced by :func:`aggregating_view`.
 
     Args:
-        agg_result: The dict returned by :func:`aggregating_view`.
+        agg_result: The :class:`AggregatingViewSpec` or dict returned by
+            :func:`aggregating_view`.
 
     Returns:
         List of column names for the ``AggregatingMergeTree`` target table.
     """
+    if isinstance(agg_result, AggregatingViewSpec):
+        return list(agg_result.target_columns)
     target_info = agg_result.get("ch_agg_target", {})
     return list(target_info.get("columns", []))
 
 
-def _validate_mv_engine(engine_name: str) -> None:
+def _validate_mv_engine(engine_name: str, select: str | None = None) -> None:
     """Validate that an engine is in the MergeTree family for implicit-storage MVs.
 
     Implicit-storage materialized views (``to_table=None``) must use a
     MergeTree-family engine because ClickHouse requires it for the
     ``.inner.`` table that backs the view.
 
+    When ``select`` is provided and contains aggregate combinators
+    (``*State``, ``*Merge``), the engine must be in the appropriate sub-family.
+
     Raises:
-        ValueError: if engine is not MergeTree-family.
+        ValueError: if engine is not MergeTree-family for implicit-storage MVs.
     """
     allowed = (
         "MergeTree", "ReplicatedMergeTree",
@@ -98,6 +106,21 @@ def _validate_mv_engine(engine_name: str) -> None:
             f"Invalid engine for implicit-storage materialized view: "
             f"{engine_name!r}. Must be one of MergeTree family: {', '.join(allowed)}."
         )
+    # When aggregates are present, the implicit engine should support
+    # AggregateFunction columns.  A plain MergeTree cannot store them, but
+    # AggregatingMergeTree (and its variants) can.  This is advisory — the
+    # user may choose SummingMergeTree for pre-aggregated data.
+    if select is not None:
+        if "State(" in select or "Merge(" in select:
+            if engine_name in ("MergeTree", "ReplicatedMergeTree"):
+                import warnings
+                warnings.warn(
+                    f"Engine {engine_name!r} does not support AggregateFunction "
+                    f"columns produced by *State/*Merge combinators in SELECT. "
+                    f"Prefer AggregatingMergeTree or another aggregate-aware engine.",
+                    UserWarning,
+                    stacklevel=2,
+                )
 
 
 def get_all_ch_views(
@@ -156,14 +179,13 @@ def get_all_ch_views(
             ch_spec = getattr(meta, "ch", None)
             if ch_spec is None:
                 continue
-            from dbwarden.databases.clickhouse import MaterializedViewSpec
             if isinstance(ch_spec, MaterializedViewSpec):
                 results.append({
                     "model_class": attr,
                     "spec": ch_spec,
                     "view_type": "materialized_view",
                 })
-            elif isinstance(ch_spec, dict) and "ch_agg_target" in ch_spec:
+            elif isinstance(ch_spec, AggregatingViewSpec):
                 results.append({
                     "model_class": attr,
                     "spec": ch_spec,
@@ -208,14 +230,18 @@ def ch_view_tables_from_models(
 
 def _expand_agg_target(
     model_class: type,
-    agg_spec: dict[str, Any],
+    agg_spec: AggregatingViewSpec | dict[str, Any],
 ) -> ModelTable | None:
     """Create a synthetic ModelTable for the aggregating view target table.
 
     The target is an ``AggregatingMergeTree`` table whose columns are derived
     from the model class columns (group-by keys + aggregate columns).
     """
-    target_info = agg_spec.get("ch_agg_target", {})
+    if isinstance(agg_spec, AggregatingViewSpec):
+        agg_dict = agg_spec.to_dict()
+        target_info = agg_dict["ch_agg_target"]
+    else:
+        target_info = agg_spec.get("ch_agg_target", {})
     target_name = target_info.get("name")
     if not target_name:
         return None
@@ -299,8 +325,8 @@ def _validate_view_class(model_class: type) -> None:
 
     Checks:
       - ``class Meta`` inherits from :class:`CHViewMeta`.
-      - ``Meta.ch`` is set to a :class:`MaterializedViewSpec` or a dict
-        (from :func:`aggregating_view`).
+      - ``Meta.ch`` is set to a :class:`MaterializedViewSpec` or
+        :class:`AggregatingViewSpec`.
       - The model has at least one primary key column.
 
     Called during model discovery; raises :class:`DBWardenConfigError` on
@@ -318,3 +344,35 @@ def _validate_view_class(model_class: type) -> None:
             f"{model_class.__name__}: CHViewMeta requires a 'ch' attribute "
             f"set to a materialized_view() or aggregating_view() spec."
         )
+    if not isinstance(ch, (MaterializedViewSpec, AggregatingViewSpec)):
+        raise DBWardenConfigError(
+            f"{model_class.__name__}: 'ch' attribute must be a "
+            f"MaterializedViewSpec or AggregatingViewSpec, got {type(ch).__name__}."
+        )
+
+    tablename = getattr(model_class, "__tablename__", None)
+    if tablename is None:
+        raise DBWardenConfigError(
+            f"{model_class.__name__}: CHViewMeta model must have __tablename__ set."
+        )
+
+    if isinstance(ch, MaterializedViewSpec):
+        if ch.name is not None and ch.name != tablename:
+            warnings.warn(
+                f"materialized_view(name=...) is deprecated when used inside a class body. "
+                f"The view name is derived from __tablename__ ('{tablename}'). "
+                f"Passed name '{ch.name}' will be ignored.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        ch.name = tablename
+    elif isinstance(ch, AggregatingViewSpec):
+        if ch.name != tablename:
+            warnings.warn(
+                f"aggregating_view(name=...) is deprecated when used inside a class body. "
+                f"The view name is derived from __tablename__ ('{tablename}'). "
+                f"Passed name '{ch.name}' will be ignored.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        ch.name = tablename

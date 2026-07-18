@@ -55,6 +55,7 @@ from dbwarden.databases.clickhouse.cluster import ClusterMode
 from dbwarden.databases.clickhouse.data_op import DataOp, data_op
 from dbwarden.databases.clickhouse.dictionary import DictSpec, dictionary
 from dbwarden.databases.clickhouse.materialized_view import (
+    AggregatingViewSpec,
     aggregating_view,
     materialized_view,
     MaterializedViewSpec,
@@ -182,6 +183,7 @@ def ch_table(
 
 
 __all__ = [
+    "AggregatingViewSpec",
     "CHColumnMeta",
     "CHTableMeta",
     "ChView",
