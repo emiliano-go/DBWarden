@@ -18,7 +18,6 @@ class EventsHourly(Base):
 
     class Meta(CHViewMeta):
         ch = aggregating_view(
-            name="events_hourly",
             source="events",
             group_by=[func.toStartOfHour(Events.event_time)],
             aggregates=[
@@ -30,14 +29,14 @@ class EventsHourly(Base):
 
 This generates **three** DDL objects from one declaration:
 
-1. An `AggregatingMergeTree` target table (`events_hourly_agg`) whose columns are `hour DateTime` and `amount_sum AggregateFunction(sum, Float64)`
-2. A materialized view (`events_hourly_mv`) whose SELECT uses `sumState(amount) AS amount_sum`, `TO events_hourly_agg`
+1. An `AggregatingMergeTree` target table (`events_hourly`) whose columns are `hour DateTime` and `amount_sum AggregateFunction(sum, Float64)`
+2. A materialized view (`events_hourly_mv`) whose SELECT uses `sumState(amount) AS amount_sum`, `TO events_hourly`
 3. The source table (`events`): referenced, not created (must already exist)
 
 Query the target table:
 
 ```sql
-SELECT hour, sumMerge(amount_sum) AS total FROM events_hourly_agg GROUP BY hour
+SELECT hour, sumMerge(amount_sum) AS total FROM events_hourly GROUP BY hour
 ```
 
 ## Additional model examples
@@ -56,7 +55,6 @@ class EventStats(Base):
 
     class Meta(CHViewMeta):
         ch = aggregating_view(
-            name="event_stats",
             source="events",
             group_by=[func.toDate(Events.event_time)],
             aggregates=[
@@ -93,7 +91,6 @@ class ShardStats(Base):
 
     class Meta(CHViewMeta):
         ch = aggregating_view(
-            name="shard_stats",
             source="raw",
             group_by=[func.toDate(Raw.ts)],
             aggregates=[
@@ -111,7 +108,7 @@ class GlobalStats(Base):
     class Meta(CHViewMeta):
         ch = materialized_view(
             select="SELECT date, sumMerge(state) AS total FROM shard_stats GROUP BY date",
-            to_table="global_stats_agg",
+            to="global_stats_agg",
         )
 ```
 
@@ -146,7 +143,6 @@ Extract the target table column names (group-by keys + aggregate aliases) from a
 from dbwarden.databases.clickhouse import derive_agg_target_columns
 
 result = aggregating_view(
-    name="events_hourly",
     source="events",
     group_by=[func.toStartOfHour(Events.event_time)],
     aggregates=[agg.sum(Events.amount, "Float64").as_("amount_sum")],

@@ -422,13 +422,13 @@ class EventRollup(Base):
                 "SELECT toDate(event_time) AS event_date, count() AS total "
                 "FROM events GROUP BY event_date"
             ),
-            to_table="mv_target",
+            to="mv_target",
         )
 ```
 
 Two storage modes:
 
-| Shape | `to_table` | `engine` / `order_by` |
+| Shape | `to` | `engine` / `order_by` |
 |-------|-----------|----------------------|
 | Explicit target | Set | Not needed (target owns storage) |
 | Implicit `.inner` | `None` | Required on `materialized_view()` |

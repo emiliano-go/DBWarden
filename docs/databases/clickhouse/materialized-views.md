@@ -17,13 +17,13 @@ class EventCount(Base):
     class Meta(CHViewMeta):
         ch = materialized_view(
             select=func.sum(Event.amount).label("total"),
-            to_table="events_dest",
+            to="events_dest",
         )
 ```
 
 Two storage shapes, which diff differently:
 
-| Shape | `to_table` | `engine` / `order_by` | DDL |
+| Shape | `to` | `engine` / `order_by` | DDL |
 |-------|-----------|----------------------|-----|
 | **Explicit target** | Set | Not needed (target owns storage) | `CREATE MATERIALIZED VIEW ... TO target AS SELECT ...` |
 | **Implicit `.inner`** | `None` | Required | `CREATE MATERIALIZED VIEW ... ENGINE = MergeTree() ORDER BY ... AS SELECT ...` |
@@ -40,7 +40,7 @@ class EventCount(Base):
     class Meta(CHViewMeta):
         ch = materialized_view(
             select=func.sum(Event.amount).label("total"),
-            to_table="events_dest",
+            to="events_dest",
         )
 ```
 
@@ -90,7 +90,7 @@ class DailyRollup(Base):
     class Meta(CHViewMeta):
         ch = materialized_view(
             select=func.sum(Event.amount).label("total"),
-            to_table="rollup_dest",
+            to="rollup_dest",
             refresh="EVERY 3600 SECONDS",
         )
 ```
@@ -123,7 +123,7 @@ class HourlyRollup(Base):
     class Meta(CHViewMeta):
         ch = materialized_view(
             select=func.sum(Event.amount).label("total"),
-            to_table="hourly_rollup_dest",
+            to="hourly_rollup_dest",
             refresh="EVERY 300 SECONDS",
         )
 ```
@@ -148,7 +148,7 @@ class ClusterMV(Base):
     class Meta(CHViewMeta):
         ch = materialized_view(
             select="SELECT hostName() AS node, count(*) AS cnt FROM events",
-            to_table="cluster_mv_dest",
+            to="cluster_mv_dest",
         )
 ```
 
@@ -163,7 +163,7 @@ class RawToHourly(Base):
     class Meta(CHViewMeta):
         ch = materialized_view(
             select=func.sum(Raw.value).label("total"),
-            to_table="hourly_dest",
+            to="hourly_dest",
         )
 
 # Second MV: hourly -> daily
@@ -174,7 +174,7 @@ class HourlyToDaily(Base):
     class Meta(CHViewMeta):
         ch = materialized_view(
             select=func.sum(HourlyDest.total).label("total"),
-            to_table="daily_dest",
+            to="daily_dest",
         )
 ```
 

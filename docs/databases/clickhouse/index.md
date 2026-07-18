@@ -50,7 +50,7 @@ class EventDaily(Base):
         ch = materialized_view(
             select="SELECT event_date AS date, sum(amount) AS total, "
                    "count(*) AS cnt FROM events GROUP BY event_date",
-            to_table="event_daily_dest",
+            to="event_daily_dest",
         )
 
 # 3. Aggregating view: single declaration generates target + MV
@@ -62,7 +62,6 @@ class EventAggregated(Base):
 
     class Meta(CHViewMeta):
         ch = aggregating_view(
-            name="event_aggregated",
             source="event_daily_dest",
             group_by=[column("date")],
             aggregates=[
@@ -79,10 +78,10 @@ dbwarden make-migrations -d analytics
 dbwarden migrate -d analytics
 ```
 
-This produces: `events` (source MergeTree), `event_daily_dest` (target MergeTree), `event_daily` (MV TO target), `event_aggregated_agg` (AggregatingMergeTree target), and `event_aggregated_mv` (MV TO target). Query the final table:
+This produces: `events` (source MergeTree), `event_daily_dest` (target MergeTree), `event_daily` (MV TO target), `event_aggregated` (AggregatingMergeTree target), and `event_aggregated_mv` (MV TO target). Query the final table:
 
 ```sql
-SELECT date, sumMerge(state) FROM event_aggregated_agg GROUP BY date
+SELECT date, sumMerge(state) FROM event_aggregated GROUP BY date
 ```
 
 ## Version support
@@ -265,7 +264,7 @@ class ParsedEvents(Base):
                     JSONExtractDateTime(payload, 'ts') AS ts
                 FROM kafka_events
             """,
-            to_table="parsed_events_dest",
+            to="parsed_events_dest",
         )
 ```
 
