@@ -38,7 +38,7 @@ class Event(Base):
             partition_by=func.toYYYYMM(column("event_date")),
         )
 
-# 2. Materialized view
+# 2. Materialized view — Mode A (class IS the target, MV is auto-generated)
 class EventDaily(Base):
     __tablename__ = "event_daily"
 
@@ -50,10 +50,11 @@ class EventDaily(Base):
         ch = materialized_view(
             select="SELECT event_date AS date, sum(amount) AS total, "
                    "count(*) AS cnt FROM events GROUP BY event_date",
-            to="event_daily_dest",
+            engine=merge_tree(),
+            order_by=["date"],
         )
 
-# 3. Aggregating view: single declaration generates target + MV
+# 3. Aggregating view — sources from EventDaily model
 class EventAggregated(Base):
     __tablename__ = "event_aggregated"
 
@@ -62,12 +63,12 @@ class EventAggregated(Base):
 
     class Meta(CHViewMeta):
         ch = aggregating_view(
-            source="event_daily_dest",
-            group_by=[column("date")],
+            source=EventDaily,
+            group_by=[EventDaily.date],
             aggregates=[
-                agg.sum(column("total"), "Float64").as_("state"),
+                agg.sum(EventDaily.total, "Float64").as_("state"),
             ],
-            order_by=[column("date")],
+            order_by=[EventDaily.date],
         )
 ```
 
@@ -78,7 +79,7 @@ dbwarden make-migrations -d analytics
 dbwarden migrate -d analytics
 ```
 
-This produces: `events` (source MergeTree), `event_daily_dest` (target MergeTree), `event_daily` (MV TO target), `event_aggregated` (AggregatingMergeTree target), and `event_aggregated_mv` (MV TO target). Query the final table:
+This produces: `events` (source MergeTree), `event_daily` (target MergeTree), `event_daily_mv` (MV TO event_daily), `event_aggregated` (AggregatingMergeTree target), and `event_aggregated_mv` (MV TO event_aggregated). Query the final table:
 
 ```sql
 SELECT date, sumMerge(state) FROM event_aggregated GROUP BY date
@@ -326,7 +327,7 @@ class S3Logs(Base):
 # Point dbwarden at an existing ClickHouse instance
 $ dbwarden generate-models -d analytics --url clickhouse://user:pass@host:9000/analytics
 
-# Models are written to models/analytics/*.py with ch_table() / ch_view()
+# Models are written to models/analytics/*.py with ch_table() / materialized_view()
 # declarations that match the live schema exactly
 # (verified: 39 audit cases, zero drift)
 ```
