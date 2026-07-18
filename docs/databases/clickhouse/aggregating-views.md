@@ -1,31 +1,44 @@
 # Aggregating views
 
-Use `ch_agg_state`, `ch_agg_merge`, and the `agg()` namespace to declare AggregatingMergeTree-targeted views with the correct `-State` / `-Merge` correspondence.
+Use `aggregating_view()` to declare a complete source → target → MV triad in a single declaration. The function derives both the target column types (AggregateFunction) and the MV `-State` combinators from the same list of `AggExpr`, guaranteeing consistency.
 
 ## Declaration
 
 ```python
-from dbwarden.databases.clickhouse import ch, agg
+from sqlalchemy import func, Date, Float64, column
+from dbwarden.databases.clickhouse import (
+    CHViewMeta, aggregating_view, agg, merge_tree,
+)
 
 class EventsHourly(Base):
     __tablename__ = "events_hourly"
-    hour: Mapped[datetime] = mapped_column()
-    state: Mapped[tuple] = mapped_column()
 
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=aggregating_merge_tree(),
-            order_by="hour",
-            ch_select="""
-                SELECT toStartOfHour(event_time) AS hour,
-                       agg.sumState(payload_size) AS state
-                FROM events
-                GROUP BY hour
-            """,
+    hour: Mapped[datetime] = mapped_column(primary_key=True)
+    amount_sum: Mapped[float] = mapped_column()
+
+    class Meta(CHViewMeta):
+        ch = aggregating_view(
+            name="events_hourly",
+            source="events",
+            group_by=[func.toStartOfHour(Events.event_time)],
+            aggregates=[
+                agg.sum(Events.amount, "Float64").as_("amount_sum"),
+            ],
+            order_by=[column("hour")],
         )
 ```
 
-The `agg` namespace (`agg.sumState`, `agg.countState`, `agg.uniqState`, `agg.anyState`, `agg.anyHeavyState`, `agg.minState`, `agg.maxState`, `agg.avgState`, `agg.groupArrayState`, `agg.groupArrayInsertAtState`, `agg.groupUniqArrayState`, `agg.topKState`, `agg.quantileState`, `agg.quantilesState`, `agg.quantileDeterministicState`, `agg.quantileTimingState`, `agg.quantileTDigestState`, `agg.quantileBFloat16State`, `agg.quantileBFloat16WeightedState`, `agg.medianState`, `agg.covarSampState`, `agg.covarPopState`, `agg.corrState`) provides typed state-returning aggregate wrappers.
+This generates **three** DDL objects from one declaration:
+
+1. An `AggregatingMergeTree` target table (`events_hourly_agg`) whose columns are `hour DateTime` and `amount_sum AggregateFunction(sum, Float64)`
+2. A materialized view (`events_hourly_mv`) whose SELECT uses `sumState(amount) AS amount_sum`, `TO events_hourly_agg`
+3. The source table (`events`) — referenced, not created (must already exist)
+
+Query the target table:
+
+```sql
+SELECT hour, sumMerge(amount_sum) AS total FROM events_hourly_agg GROUP BY hour
+```
 
 ## Additional model examples
 
@@ -35,25 +48,24 @@ The `agg` namespace (`agg.sumState`, `agg.countState`, `agg.uniqState`, `agg.any
 class EventStats(Base):
     __tablename__ = "event_stats"
 
-    date: Mapped[date] = mapped_column()
+    date: Mapped[date] = mapped_column(primary_key=True)
     sum_state: Mapped[tuple] = mapped_column()
     uniq_state: Mapped[tuple] = mapped_column()
     topk_state: Mapped[tuple] = mapped_column()
     quantile_state: Mapped[tuple] = mapped_column()
 
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=aggregating_merge_tree(),
-            order_by="date",
-            ch_select="""
-                SELECT toDate(event_time) AS date,
-                       agg.sumState(amount) AS sum_state,
-                       agg.uniqState(user_id) AS uniq_state,
-                       agg.topKState(10)(page) AS topk_state,
-                       agg.quantileState(0.95)(latency_ms) AS quantile_state
-                FROM events
-                GROUP BY date
-            """,
+    class Meta(CHViewMeta):
+        ch = aggregating_view(
+            name="event_stats",
+            source="events",
+            group_by=[func.toDate(Events.event_time)],
+            aggregates=[
+                agg.sum(Events.amount, "Float64").as_("sum_state"),
+                agg.uniq(Events.user_id, "UInt64").as_("uniq_state"),
+                agg.topK(10, Events.page, "String").as_("topk_state"),
+                agg.quantile(0.95, Events.latency_ms, "Float64").as_("quantile_state"),
+            ],
+            order_by=[column("date")],
         )
 ```
 
@@ -76,90 +88,79 @@ GROUP BY date
 # Stage 1: per-shard aggregation
 class ShardStats(Base):
     __tablename__ = "shard_stats"
-    date: Mapped[date] = mapped_column()
+    date: Mapped[date] = mapped_column(primary_key=True)
     state: Mapped[tuple] = mapped_column()
 
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=aggregating_merge_tree(),
-            order_by="date",
-            ch_select="SELECT toDate(ts) AS date, agg.sumState(val) AS state FROM raw GROUP BY date",
+    class Meta(CHViewMeta):
+        ch = aggregating_view(
+            name="shard_stats",
+            source="raw",
+            group_by=[func.toDate(Raw.ts)],
+            aggregates=[
+                agg.sum(Raw.val, "Float64").as_("state"),
+            ],
+            order_by=[column("date")],
         )
 
 # Stage 2: final merge across shards
 class GlobalStats(Base):
     __tablename__ = "global_stats"
-    date: Mapped[date] = mapped_column()
+    date: Mapped[date] = mapped_column(primary_key=True)
     total: Mapped[float] = mapped_column()
 
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=merge_tree(),
-            order_by="date",
-            ch_select="SELECT date, sumMerge(state) AS total FROM shard_stats GROUP BY date",
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select="SELECT date, sumMerge(state) AS total FROM shard_stats GROUP BY date",
+            to_table="global_stats_agg",
         )
-```
-
-### With explicit column types
-
-```python
-class SessionMetrics(Base):
-    __tablename__ = "session_metrics"
-    date: Mapped[date] = mapped_column()
-    duration_state: Mapped[tuple] = mapped_column()
-    page_state: Mapped[tuple] = mapped_column()
-
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=aggregating_merge_tree(),
-            order_by="date",
-            ch_select="""
-                SELECT session_date AS date,
-                       agg.avgState(duration_seconds) AS duration_state,
-                       agg.groupArrayState(page_url) AS page_state
-                FROM sessions
-                GROUP BY date
-            """,
-        )
-```
-
-Query:
-
-```sql
-SELECT
-    date,
-    avgMerge(duration_state) AS avg_duration,
-    groupArrayMerge(page_state) AS pages
-FROM session_metrics
-GROUP BY date
 ```
 
 ## The `-State` / `-Merge` correspondence
 
-Every `agg.*State(col)` call maps to `aggFunctionState, aggFunction)` type. The SELECT in the MV uses `-State`, the SELECT in the final query uses `-Merge`:
+Every `agg.*(col)` aggregate maps to `AggregateFunction(func, type)`. The MV uses `-State` (auto-generated by `aggregating_view()`), the final query uses `-Merge`:
 
-| State function | Merge function | Type |
-|---------------|----------------|------|
-| `agg.sumState(x)` | `sumMerge(state)` | `AggregateFunction(sum, T)` |
-| `agg.countState(x)` | `countMerge(state)` | `AggregateFunction(count, T)` |
-| `agg.uniqState(x)` | `uniqMerge(state)` | `AggregateFunction(uniq, T)` |
-| `agg.avgState(x)` | `avgMerge(state)` | `AggregateFunction(avg, T)` |
-| `agg.minState(x)` | `minMerge(state)` | `AggregateFunction(min, T)` |
-| `agg.maxState(x)` | `maxMerge(state)` | `AggregateFunction(max, T)` |
-| `agg.quantileState(x)` | `quantileMerge(state)` | `AggregateFunction(quantile, T)` |
-| `agg.topKState(x)` | `topKMerge(state)` | `AggregateFunction(topK, T)` |
+| `agg` call | State combinator | Merge function | Type |
+|-----------|-----------------|----------------|------|
+| `agg.sum(x, "Float64")` | `sumState(x)` | `sumMerge(state)` | `AggregateFunction(sum, Float64)` |
+| `agg.count().as_("c")` | `count()` | `countMerge(c)` | `AggregateFunction(count)` |
+| `agg.uniq(x, "UInt64")` | `uniqState(x)` | `uniqMerge(state)` | `AggregateFunction(uniq, UInt64)` |
+| `agg.avg(x, "Float64")` | `avgState(x)` | `avgMerge(state)` | `AggregateFunction(avg, Float64)` |
+| `agg.min(x, "Int64")` | `minState(x)` | `minMerge(state)` | `AggregateFunction(min, Int64)` |
+| `agg.max(x, "Int64")` | `maxState(x)` | `maxMerge(state)` | `AggregateFunction(max, Int64)` |
+| `agg.quantile(p, x, "T")` | `quantileState(p)(x)` | `quantileMerge(p)(state)` | `AggregateFunction(quantile, T)` |
+| `agg.topK(n, x, "T")` | `topKState(n)(x)` | `topKMerge(n)(state)` | `AggregateFunction(topK, T)` |
 
 A downstream query reads from the aggregating table using `-Merge`:
 
 ```sql
-SELECT hour, sumMerge(state) FROM events_hourly GROUP BY hour
+SELECT hour, sumMerge(amount_sum) FROM events_hourly_agg GROUP BY hour
+```
+
+## Utility functions
+
+### `derive_agg_target_columns()`
+
+Extract the target table column names (group-by keys + aggregate aliases) from an `aggregating_view()` result:
+
+```python
+from dbwarden.databases.clickhouse import derive_agg_target_columns
+
+result = aggregating_view(
+    name="events_hourly",
+    source="events",
+    group_by=[func.toStartOfHour(Events.event_time)],
+    aggregates=[agg.sum(Events.amount, "Float64").as_("amount_sum")],
+    order_by=[column("hour")],
+)
+target_cols = derive_agg_target_columns(result)
+# ["toStartOfHour(event_time)", "amount_sum"]
 ```
 
 ## What changes are allowed
 
 | Change | Safety |
 |--------|--------|
-| Add/drop aggregating table | WARN |
+| Add/drop aggregating target | WARN |
 | Change aggregate function | CRITICAL: incompatible state |
 | Change source column type | CRITICAL: AggregateFunction signature locked |
 | Change ORDER BY | Append-only |

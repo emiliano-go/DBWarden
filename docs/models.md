@@ -405,25 +405,36 @@ class Meta(CHTableMeta):
 
 ### Materialized Views
 
-Materialized views use `ch_select_statement` and optionally `ch_to_table`:
+Use `materialized_view()` builder with `CHViewMeta`:
 
 ```python
+from dbwarden.databases.clickhouse import CHViewMeta, materialized_view
+
 class EventRollup(Base):
     __tablename__ = "event_rollup_mv"
 
     event_date: Mapped[date] = mapped_column(Date)
     total: Mapped[int] = mapped_column(Int64)
 
-    class Meta(CHTableMeta):
-        ch_object_type = "materialized_view"
-        ch_select_statement = (
-            "SELECT toDate(event_time) AS event_date, count() AS total "
-            "FROM events GROUP BY event_date"
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select=(
+                "SELECT toDate(event_time) AS event_date, count() AS total "
+                "FROM events GROUP BY event_date"
+            ),
+            to_table="mv_target",
         )
-        ch_to_table = "mv_target"
 ```
 
-When `ch_to_table` is set, the `ENGINE` clause is omitted (ClickHouse rejects `ENGINE` with `TO`).
+Two storage modes:
+
+| Shape | `to_table` | `engine` / `order_by` |
+|-------|-----------|----------------------|
+| Explicit target | Set | Not needed (target owns storage) |
+| Implicit `.inner` | `None` | Required on `materialized_view()` |
+
+Expression fields (select, order_by, partition_by, ttl) accept
+SQLAlchemy `ColumnElement`, `ChRaw`, or plain `str`.
 
 ### Dictionaries
 

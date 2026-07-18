@@ -10,13 +10,14 @@ DBWarden treats ClickHouse as a first-class backend. Every natively supported fe
 
 ## Quick-start
 
-Set up a table, a materialized view, and an aggregated table in three models:
+Set up a table, a materialized view, and an aggregated table:
 
 ```python
+from sqlalchemy import func, Date, Float64, column
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden.databases.clickhouse import (
-    CHTableMeta, CHColumnMeta, ch_table, ch,
-    merge_tree, aggregating_merge_tree, agg,
+    CHTableMeta, CHViewMeta, ch_table, ch,
+    merge_tree, materialized_view, aggregating_view, agg,
 )
 
 class Base(DeclarativeBase):
@@ -34,10 +35,10 @@ class Event(Base):
         ch = ch_table(
             engine=merge_tree(),
             order_by=["event_date", "id"],
-            partition_by="toYYYYMM(event_date)",
+            partition_by=func.toYYYYMM(column("event_date")),
         )
 
-# 2. Materialized view (rolls up by day)
+# 2. Materialized view
 class EventDaily(Base):
     __tablename__ = "event_daily"
 
@@ -45,36 +46,29 @@ class EventDaily(Base):
     total: Mapped[float] = mapped_column()
     cnt: Mapped[int] = mapped_column()
 
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=merge_tree(),
-            order_by="date",
-            ch_select="""
-                SELECT event_date AS date,
-                       sum(amount) AS total,
-                       count(*) AS cnt
-                FROM events
-                GROUP BY event_date
-            """,
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select="SELECT event_date AS date, sum(amount) AS total, "
+                   "count(*) AS cnt FROM events GROUP BY event_date",
+            to_table="event_daily_dest",
         )
 
-# 3. AggregatingMergeTree table
+# 3. Aggregating view — single declaration generates target + MV
 class EventAggregated(Base):
     __tablename__ = "event_aggregated"
 
     date: Mapped[date] = mapped_column(primary_key=True)
     state: Mapped[tuple] = mapped_column()
 
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=aggregating_merge_tree(),
-            order_by="date",
-            ch_select="""
-                SELECT date AS date,
-                       agg.sumState(amount) AS state
-                FROM event_daily
-                GROUP BY date
-            """,
+    class Meta(CHViewMeta):
+        ch = aggregating_view(
+            name="event_aggregated",
+            source="event_daily_dest",
+            group_by=[column("date")],
+            aggregates=[
+                agg.sum(column("total"), "Float64").as_("state"),
+            ],
+            order_by=[column("date")],
         )
 ```
 
@@ -85,18 +79,18 @@ dbwarden make-migrations -d analytics
 dbwarden migrate -d analytics
 ```
 
-This produces three tables: `events` (source), `event_daily` (MV with implicit `.inner`), and `event_aggregated` (AggregatingMergeTree). Query the final table:
+This produces: `events` (source MergeTree), `event_daily_dest` (target MergeTree), `event_daily` (MV TO target), `event_aggregated_agg` (AggregatingMergeTree target), and `event_aggregated_mv` (MV TO target). Query the final table:
 
 ```sql
-SELECT date, sumMerge(state) FROM event_aggregated GROUP BY date
+SELECT date, sumMerge(state) FROM event_aggregated_agg GROUP BY date
 ```
 
 ## Version support
 
 | Version | Status | Evidence |
 |---------|--------|----------|
-| 24.3 | Verified | 31 audit cases, zero drift |
-| 26.6 (latest) | Verified | Same 31 cases, zero drift |
+| 24.3 | Verified | 39 audit cases, zero drift |
+| 26.6 (latest) | Verified | Same 39 cases, zero drift |
 
 The canonicalizer has **zero version branching**: a single code path covers 24.3–26.6. This is measured fact from the multi-version audit harness, not an assumption.
 
@@ -115,22 +109,32 @@ The canonicalizer has **zero version branching**: a single code path covers 24.3
 | | LowCardinality, Nullable wrappers | Done |
 | | Type normalization | Done |
 | | REMOVE clauses (CODEC, TTL, DEFAULT, MATERIALIZED, ALIAS, COMMENT) | Done |
+| Compiled expressions | `render_expr()` accepts SQLAlchemy `ColumnElement`/`ChRaw`/`str` | Done |
+| | Expression fields in all specs accept `ColumnElement` | Done |
 | Table features | ORDER BY, PRIMARY KEY, PARTITION BY, SAMPLE BY | Done |
 | | TTL (table + column) | Done |
 | | Settings | Done |
 | | Comments (table + column) | Done |
 | | Projections, skip indexes | Done |
-| Materialized views | TO target, implicit `.inner`, refreshable | Done |
+| Materialized views | Class-based API (`materialized_view()` + `CHViewMeta`) | Done |
+| | TO target, implicit `.inner`, refreshable | Done |
 | | MODIFY QUERY vs recreate | Done |
 | | POPULATE (data-op) | Done |
 | Dictionaries | CREATE DICTIONARY via ch_dict_* | Done |
-| Aggregating views | agg() namespace, -State/-Merge correspondence | Done |
+| Aggregating views | Class-based API (`aggregating_view()` + `CHViewMeta`) | Done |
+| | `agg()` namespace, `-State`/`-Merge` correspondence | Done |
+| | Auto-expansion: single declaration → target + MV | Done |
+| | `derive_agg_target_columns()` utility | Done |
 | RBAC | Roles, users, settings profiles, quotas, row policies, grants | Done |
 | | `storage != 'users.xml'` filter | Done |
 | | Drop gating (`--clickhouse-allow-drop-rbac`) | Done |
 | Named collections | Key-set diffed, values declare-only | Done |
 | Clustering | ON CLUSTER via ClusterMode.ON_CLUSTER | Done |
 | | ClusterMode.REPLICATED (emit-side: omit ON CLUSTER) | Done |
+| Class-based views | `ChView`, `MaterializedView`, `AggregatingView` mixin bases | Done |
+| | `CHViewMeta` — Meta class for view models | Done |
+| | `get_all_ch_views()` — view discovery | Done |
+| | `MaterializedViewSpec` — typed spec with expression compilation | Done |
 | Safety | Classify options, column, and object changes | Done |
 | | --force gating for destructive changes | Done |
 | | Recreate pipeline (DETACH → CREATE → INSERT → ATTACH) | Done |
@@ -252,18 +256,16 @@ class ParsedEvents(Base):
     value: Mapped[float] = mapped_column()
     ts: Mapped[datetime] = mapped_column()
 
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=merge_tree(),
-            order_by=["ts", "event_type"],
-            ch_to_table="parsed_events_dest",
-            ch_select="""
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select="""
                 SELECT
                     JSONExtractString(payload, 'type') AS event_type,
                     JSONExtractFloat(payload, 'value') AS value,
                     JSONExtractDateTime(payload, 'ts') AS ts
                 FROM kafka_events
             """,
+            to_table="parsed_events_dest",
         )
 ```
 
@@ -325,8 +327,9 @@ class S3Logs(Base):
 # Point dbwarden at an existing ClickHouse instance
 $ dbwarden generate-models -d analytics --url clickhouse://user:pass@host:9000/analytics
 
-# Models are written to models/analytics/*.py with ch_table() declarations
-# that match the live schema exactly (verified: 31 audit cases, zero drift)
+# Models are written to models/analytics/*.py with ch_table() / ch_view()
+# declarations that match the live schema exactly
+# (verified: 39 audit cases, zero drift)
 ```
 
 ### Diff and preview a migration

@@ -2,44 +2,81 @@
 
 ## Plain MVs
 
+Use `materialized_view()` in `class Meta` with `CHViewMeta`:
+
 ```python
-from sqlalchemy import Column, Integer, String, Text
-from dbwarden.databases.clickhouse import ch
+from sqlalchemy import func, Column, Date, Float64
+from dbwarden.databases.clickhouse import CHViewMeta, materialized_view, merge_tree
 
 class EventCount(Base):
     __tablename__ = "event_counts"
 
-    date: Mapped[date] = mapped_column()
+    date: Mapped[date] = mapped_column(primary_key=True)
     count: Mapped[int] = mapped_column()
 
-    class Meta(CHTableMeta):
-        # If you set ch_to_table, the MV writes to an explicit table.
-        # If you omit it, ClickHouse creates an implicit .inner table.
-        ch = ch_table(
-            engine=merge_tree(),
-            order_by=["date"],
-            ch_to_table="events_dest",
-            ch_select="SELECT event_date AS date, count(*) AS count FROM events GROUP BY event_date",
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select=func.sum(Event.amount).label("total"),
+            to_table="events_dest",
         )
 ```
 
-Generated DDL with explicit target:
+Two storage shapes, which diff differently:
+
+| Shape | `to_table` | `engine` / `order_by` | DDL |
+|-------|-----------|----------------------|-----|
+| **Explicit target** | Set | Not needed (target owns storage) | `CREATE MATERIALIZED VIEW ... TO target AS SELECT ...` |
+| **Implicit `.inner`** | `None` | Required | `CREATE MATERIALIZED VIEW ... ENGINE = MergeTree() ORDER BY ... AS SELECT ...` |
+
+Explicit target (preferred):
+
+```python
+class EventCount(Base):
+    __tablename__ = "event_counts"
+
+    date: Mapped[date] = mapped_column(primary_key=True)
+    count: Mapped[int] = mapped_column()
+
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select=func.sum(Event.amount).label("total"),
+            to_table="events_dest",
+        )
+```
+
+Generated DDL:
 
 ```sql
 CREATE MATERIALIZED VIEW event_counts TO events_dest
-AS SELECT event_date AS date, count(*) AS count FROM events
-GROUP BY event_date
+AS SELECT sum(amount) AS total FROM events GROUP BY event_date
 ```
 
-Generated DDL with implicit `.inner` (no `ch_to_table`):
+Implicit `.inner` storage — engine and order_by are required:
+
+```python
+class EventCountInner(Base):
+    __tablename__ = "event_counts_inner"
+
+    date: Mapped[date] = mapped_column(primary_key=True)
+    count: Mapped[int] = mapped_column()
+
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select=func.sum(Event.amount).label("total"),
+            engine=merge_tree(),
+            order_by=["date"],
+        )
+```
+
+Generated DDL:
 
 ```sql
-CREATE MATERIALIZED VIEW event_counts
-AS SELECT event_date AS date, count(*) AS count FROM events
-GROUP BY event_date
+CREATE MATERIALIZED VIEW event_counts_inner
+ENGINE = MergeTree() ORDER BY date
+AS SELECT sum(amount) AS total FROM events GROUP BY event_date
 ```
 
-The `.inner` table is created automatically by ClickHouse and reverse-engineered as a separate model. You can customize its engine via `ch_inner_engine`.
+The `.inner` table is created automatically by ClickHouse and reverse-engineered as a separate model.
 
 ## Refreshable MVs (24.3+)
 
@@ -47,16 +84,14 @@ The `.inner` table is created automatically by ClickHouse and reverse-engineered
 class DailyRollup(Base):
     __tablename__ = "daily_rollup"
 
-    date: Mapped[date] = mapped_column()
+    date: Mapped[date] = mapped_column(primary_key=True)
     total: Mapped[int] = mapped_column()
 
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=merge_tree(),
-            order_by="date",
-            ch_to_table="rollup_dest",
-            ch_select="SELECT event_date, sum(amount) FROM raw GROUP BY event_date",
-            ch_refresh_interval=3600,  # seconds
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select=func.sum(Event.amount).label("total"),
+            to_table="rollup_dest",
+            refresh="EVERY 3600 SECONDS",
         )
 ```
 
@@ -65,8 +100,7 @@ Generated DDL:
 ```sql
 CREATE MATERIALIZED VIEW daily_rollup TO rollup_dest
 REFRESH EVERY 3600 SECONDS
-AS SELECT event_date, sum(amount) FROM raw
-GROUP BY event_date
+AS SELECT sum(amount) AS total FROM events GROUP BY event_date
 ```
 
 Refreshable MVs (introduced in CH 24.3) replace LIVE VIEW and support:
@@ -83,21 +117,14 @@ Refreshable MVs (introduced in CH 24.3) replace LIVE VIEW and support:
 class HourlyRollup(Base):
     __tablename__ = "hourly_rollup"
 
-    hour: Mapped[datetime] = mapped_column()
+    hour: Mapped[datetime] = mapped_column(primary_key=True)
     total_events: Mapped[int] = mapped_column()
 
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=merge_tree(),
-            order_by="hour",
-            ch_to_table="hourly_rollup_dest",
-            ch_select="""
-                SELECT toStartOfHour(event_time) AS hour,
-                       count(*) AS total_events
-                FROM raw_events
-                GROUP BY hour
-            """,
-            ch_refresh_interval=300,  # every 5 minutes
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select=func.sum(Event.amount).label("total"),
+            to_table="hourly_rollup_dest",
+            refresh="EVERY 300 SECONDS",
         )
 ```
 
@@ -106,8 +133,7 @@ Generated DDL:
 ```sql
 CREATE MATERIALIZED VIEW hourly_rollup TO hourly_rollup_dest
 REFRESH EVERY 300 SECONDS
-AS SELECT toStartOfHour(event_time) AS hour, count(*) AS total_events
-FROM raw_events GROUP BY hour
+AS SELECT sum(amount) AS total FROM events GROUP BY event_date
 ```
 
 ### MV on clustered setup
@@ -116,16 +142,13 @@ FROM raw_events GROUP BY hour
 class ClusterMV(Base):
     __tablename__ = "cluster_mv"
 
-    node: Mapped[str] = mapped_column()
+    node: Mapped[str] = mapped_column(primary_key=True)
     cnt: Mapped[int] = mapped_column()
 
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=merge_tree(),
-            order_by="node",
-            ch_to_table="cluster_mv_dest",
-            ch_select="SELECT hostName() AS node, count(*) AS cnt FROM events",
-            cluster_mode=ClusterMode.ON_CLUSTER,
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select="SELECT hostName() AS node, count(*) AS cnt FROM events",
+            to_table="cluster_mv_dest",
         )
 ```
 
@@ -135,25 +158,23 @@ class ClusterMV(Base):
 # First MV: raw -> hourly
 class RawToHourly(Base):
     __tablename__ = "raw_to_hourly"
-    hour: Mapped[datetime] = mapped_column()
+    hour: Mapped[datetime] = mapped_column(primary_key=True)
     total: Mapped[float] = mapped_column()
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=merge_tree(), order_by="hour",
-            ch_to_table="hourly_dest",
-            ch_select="SELECT toStartOfHour(ts) AS hour, sum(val) AS total FROM raw GROUP BY hour",
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select=func.sum(Raw.value).label("total"),
+            to_table="hourly_dest",
         )
 
 # Second MV: hourly -> daily
 class HourlyToDaily(Base):
     __tablename__ = "hourly_to_daily"
-    date: Mapped[date] = mapped_column()
+    date: Mapped[date] = mapped_column(primary_key=True)
     total: Mapped[float] = mapped_column()
-    class Meta(CHTableMeta):
-        ch = ch_table(
-            engine=merge_tree(), order_by="date",
-            ch_to_table="daily_dest",
-            ch_select="SELECT toDate(hour) AS date, sum(total) AS total FROM hourly_dest GROUP BY date",
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select=func.sum(HourlyDest.total).label("total"),
+            to_table="daily_dest",
         )
 ```
 
@@ -165,14 +186,14 @@ When an MV has no `TO target`, ClickHouse creates a hidden table named `.inner.<
 class EventMV(Base):
     __tablename__ = "event_mv"
 
-    date: Mapped[date] = mapped_column()
+    date: Mapped[date] = mapped_column(primary_key=True)
     total: Mapped[int] = mapped_column()
 
-    class Meta(CHTableMeta):
-        ch = ch_table(
+    class Meta(CHViewMeta):
+        ch = materialized_view(
+            select=func.sum(Event.amount).label("total"),
             engine=merge_tree(),
-            order_by="date",
-            ch_select="SELECT event_date AS date, count(*) AS total FROM events GROUP BY event_date",
+            order_by=["date"],
         )
 ```
 
@@ -197,7 +218,7 @@ POPULATE
 AS SELECT ...
 ```
 
-dbwarden treats `POPULATE` as a [data operation](data-operations.md), not a DDL property. It is part of `ch_data_ops`, not `ch_table()`:
+dbwarden treats `POPULATE` as a [data operation](data-operations.md), not a DDL property. It is part of `ch_data_ops`, not `materialized_view()`:
 
 ```python
 from dbwarden.databases.clickhouse import data_ops
