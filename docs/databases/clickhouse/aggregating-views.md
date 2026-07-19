@@ -1,166 +1,153 @@
-# Aggregating views
+# Aggregating views (`AggregatingMergeTree`)
 
-Use `aggregating_view()` to declare a complete source → target → MV triad in a single declaration. The function derives both the target column types (AggregateFunction) and the MV `-State` combinators from the same list of `AggExpr`, guaranteeing consistency.
+## Overview
 
-## Declaration
+An aggregating view is a coherent triad:
+
+1. An **AggregatingMergeTree target table** whose columns have
+   `AggregateFunction(...)` types derived from aggregate expressions.
+2. A **materialized view** that uses `<func>State(...)` combinators in its
+   SELECT, `TO` the target.
+3. The **source table** (referenced, not created — it must already exist).
+
+Because the target column types and the MV combinators both derive from the
+same single list of `AggExpr`, they are guaranteed consistent — the
+correspondence that is manual and drift-prone in the string-SELECT form is
+here derived and safe.
+
+## Declaring aggregating views
+
+Use `AggregatingView` as the base class, `aggregating_view()` in `Meta`:
 
 ```python
-from sqlalchemy import func, Date, Float64, column
-from dbwarden.databases.clickhouse import (
-    CHViewMeta, aggregating_view, agg, merge_tree,
-)
+from sqlalchemy import func
+from dbwarden.databases.clickhouse import AggregatingView, CHViewMeta, aggregating_view, agg
 
-class EventsHourly(Base):
+class EventsHourly(AggregatingView):
     __tablename__ = "events_hourly"
 
-    hour: Mapped[datetime] = mapped_column(primary_key=True)
-    amount_sum: Mapped[float] = mapped_column()
-
     class Meta(CHViewMeta):
         ch = aggregating_view(
-            source="events",
-            group_by=[func.toStartOfHour(Events.event_time)],
+            source=Event,
+            group_by=[func.toStartOfHour(Event.event_time).label("hour")],
             aggregates=[
-                agg.sum(Events.amount, "Float64").as_("amount_sum"),
+                agg.sum(Event.amount).as_("total_amount"),
+                agg.count().as_("event_count"),
             ],
-            order_by=[column("hour")],
+            order_by=["hour"],
+            partition_by="toYYYYMM(hour)",
         )
 ```
 
-This generates **three** DDL objects from one declaration:
+This generates:
 
-1. An `AggregatingMergeTree` target table (`events_hourly`) whose columns are `hour DateTime` and `amount_sum AggregateFunction(sum, Float64)`
-2. A materialized view (`events_hourly_mv`) whose SELECT uses `sumState(amount) AS amount_sum`, `TO events_hourly`
-3. The source table (`events`): referenced, not created (must already exist)
+1. The target table `events_hourly` with `AggregatingMergeTree` engine and
+   columns `hour DateTime`, `total_amount AggregateFunction(sum, Float64)`,
+   `event_count AggregateFunction(count)`.
+2. A materialized view `events_hourly_mv TO events_hourly` whose SELECT uses
+   `sumState`, `countState` — automatically derived from the `AggExpr` list.
+3. The MV reads FROM `Event`.
 
-Query the target table:
+### The source parameter
 
-```sql
-SELECT hour, sumMerge(amount_sum) AS total FROM events_hourly GROUP BY hour
-```
+`source` may be:
 
-## Additional model examples
+- A model class (preferred) — its `__tablename__` is resolved at spec
+  construction time.
+- A string class name (forward reference) — resolved at discovery time when
+  all models are loaded.
+- A bare table name string — used as-is.
 
-### Multiple aggregate states in one MV
+When you pass a model class, rename safety is automatic: if the source table
+is renamed, regeneration picks up the new name.
+
+### Aggregate expressions
+
+Every aggregate must have an alias (`.as_(name)`):
 
 ```python
-class EventStats(Base):
+aggregates=[
+    agg.count().as_("event_count"),
+    agg.sum("amount", "Float64").as_("total_amount"),
+    agg.uniq("user_id").as_("unique_users"),
+]
+```
+
+Supported aggregate functions include `sum`, `count`, `min`, `max`, `avg`,
+`uniq`, `groupArray`, `groupUniqArray`, and `quantile`.
+
+## Configuring the target table
+
+The `AggregatingViewSpec` is a frozen dataclass. Configure it via
+`aggregating_view()` keyword arguments:
+
+| Parameter | Description |
+|-----------|-------------|
+| `source` | Source model class or table name |
+| `group_by` | GROUP BY keys — ColumnElement or string |
+| `aggregates` | AggExpr list (each with `.as_()`) |
+| `order_by` | ORDER BY for the target |
+| `partition_by` | Optional PARTITION BY |
+| `ttl` | Optional TTL expression(s) |
+| `settings` | Optional engine SETTINGS |
+
+## Full example
+
+```python
+from sqlalchemy import func, String
+from dbwarden.databases.clickhouse import (
+    AggregatingView, CHViewMeta, aggregating_view, agg,
+)
+
+class EventStats(AggregatingView):
     __tablename__ = "event_stats"
 
-    date: Mapped[date] = mapped_column(primary_key=True)
-    sum_state: Mapped[tuple] = mapped_column()
-    uniq_state: Mapped[tuple] = mapped_column()
-    topk_state: Mapped[tuple] = mapped_column()
-    quantile_state: Mapped[tuple] = mapped_column()
-
     class Meta(CHViewMeta):
         ch = aggregating_view(
-            source="events",
-            group_by=[func.toDate(Events.event_time)],
-            aggregates=[
-                agg.sum(Events.amount, "Float64").as_("sum_state"),
-                agg.uniq(Events.user_id, "UInt64").as_("uniq_state"),
-                agg.topK(10, Events.page, "String").as_("topk_state"),
-                agg.quantile(0.95, Events.latency_ms, "Float64").as_("quantile_state"),
+            source=PageView,
+            group_by=[
+                PageView.url.label("url"),
+                func.toDate(PageView.viewed_at).label("day"),
             ],
-            order_by=[column("date")],
+            aggregates=[
+                agg.count().as_("views"),
+                agg.uniq(PageView.session_id).as_("unique_sessions"),
+                agg.sum(PageView.duration).as_("total_duration"),
+            ],
+            order_by=["url", "day"],
+            partition_by="toYYYYMM(day)",
+            ttl="day + INTERVAL 90 DAY DELETE",
         )
 ```
 
-Query the result:
+## Populating an aggregating view
+
+Use the `populate()` helper from `data_ops` to generate an `INSERT ... SELECT`
+DataOp that backfills the target table:
+
+```python
+from dbwarden.databases.clickhouse import data_ops, AggregatingView
+
+pop = data_ops.populate(EventStats.Meta.ch)
+```
+
+This produces a `DataOp` whose forward SQL is equivalent to:
 
 ```sql
+INSERT INTO event_stats
 SELECT
-    date,
-    sumMerge(sum_state) AS total_revenue,
-    uniqMerge(uniq_state) AS unique_users,
-    topKMerge(10)(topk_state) AS top_pages,
-    quantileMerge(0.95)(quantile_state) AS p95_latency
-FROM event_stats
-GROUP BY date
+    url,
+    toDate(viewed_at) AS day,
+    countState() AS views,
+    uniqState(session_id) AS unique_sessions,
+    sumState(duration) AS total_duration
+FROM page_view
+GROUP BY url, toDate(viewed_at)
 ```
 
-### Two-stage aggregation over ReplicatedMergeTree
+## Discoverability
 
-```python
-# Stage 1: per-shard aggregation
-class ShardStats(Base):
-    __tablename__ = "shard_stats"
-    date: Mapped[date] = mapped_column(primary_key=True)
-    state: Mapped[tuple] = mapped_column()
-
-    class Meta(CHViewMeta):
-        ch = aggregating_view(
-            source="raw",
-            group_by=[func.toDate(Raw.ts)],
-            aggregates=[
-                agg.sum(Raw.val, "Float64").as_("state"),
-            ],
-            order_by=[column("date")],
-        )
-
-# Stage 2: final merge across shards
-class GlobalStats(Base):
-    __tablename__ = "global_stats"
-    date: Mapped[date] = mapped_column(primary_key=True)
-    total: Mapped[float] = mapped_column()
-
-    class Meta(CHViewMeta):
-        ch = materialized_view(
-            select="SELECT date, sumMerge(state) AS total FROM shard_stats GROUP BY date",
-            to="global_stats_agg",
-        )
-```
-
-## The `-State` / `-Merge` correspondence
-
-Every `agg.*(col)` aggregate maps to `AggregateFunction(func, type)`. The MV uses `-State` (auto-generated by `aggregating_view()`), the final query uses `-Merge`:
-
-| `agg` call | State combinator | Merge function | Type |
-|-----------|-----------------|----------------|------|
-| `agg.sum(x, "Float64")` | `sumState(x)` | `sumMerge(state)` | `AggregateFunction(sum, Float64)` |
-| `agg.count().as_("c")` | `count()` | `countMerge(c)` | `AggregateFunction(count)` |
-| `agg.uniq(x, "UInt64")` | `uniqState(x)` | `uniqMerge(state)` | `AggregateFunction(uniq, UInt64)` |
-| `agg.avg(x, "Float64")` | `avgState(x)` | `avgMerge(state)` | `AggregateFunction(avg, Float64)` |
-| `agg.min(x, "Int64")` | `minState(x)` | `minMerge(state)` | `AggregateFunction(min, Int64)` |
-| `agg.max(x, "Int64")` | `maxState(x)` | `maxMerge(state)` | `AggregateFunction(max, Int64)` |
-| `agg.quantile(p, x, "T")` | `quantileState(p)(x)` | `quantileMerge(p)(state)` | `AggregateFunction(quantile, T)` |
-| `agg.topK(n, x, "T")` | `topKState(n)(x)` | `topKMerge(n)(state)` | `AggregateFunction(topK, T)` |
-
-A downstream query reads from the aggregating table using `-Merge`:
-
-```sql
-SELECT hour, sumMerge(amount_sum) FROM events_hourly_agg GROUP BY hour
-```
-
-## Utility functions
-
-### `derive_agg_target_columns()`
-
-Extract the target table column names (group-by keys + aggregate aliases) from an `aggregating_view()` result:
-
-```python
-from dbwarden.databases.clickhouse import derive_agg_target_columns
-
-result = aggregating_view(
-    source="events",
-    group_by=[func.toStartOfHour(Events.event_time)],
-    aggregates=[agg.sum(Events.amount, "Float64").as_("amount_sum")],
-    order_by=[column("hour")],
-)
-target_cols = derive_agg_target_columns(result)
-# ["toStartOfHour(event_time)", "amount_sum"]
-```
-
-## What changes are allowed
-
-| Change | Safety |
-|--------|--------|
-| Add/drop aggregating target | WARN |
-| Change aggregate function | CRITICAL: incompatible state |
-| Change source column type | CRITICAL: AggregateFunction signature locked |
-| Change ORDER BY | Append-only |
-
-## Rollback behavior
-
-Changing an aggregate function changes the type of the state column. Since `AggregateFunction(sum, Float64)` vs `AggregateFunction(avg, Float64)` are different types, the change requires a full recreate. See [Immutability](immutability.md) for the type-lock explanation.
+`AggregatingView` subclasses are automatically registered in
+`ChView._ch_view_registry` and discovered by `ch_view_tables_from_models()`.
+They contribute both the aggregating target model and the materialized view to
+the model list.

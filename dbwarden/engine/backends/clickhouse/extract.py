@@ -65,6 +65,7 @@ def _ch_options_from_meta(model_class: type) -> dict:
     if isinstance(raw, MaterializedViewSpec):
         mvd = raw.to_dict()
         options.update(mvd)
+        options["ch_object_type"] = "materialized_view"
         if raw.engine is not None:
             options["ch_engine_raw"] = raw.engine
             engine_name = raw.engine.name if hasattr(raw.engine, "name") else str(raw.engine)
@@ -81,6 +82,7 @@ def _ch_options_from_meta(model_class: type) -> dict:
     if isinstance(raw, AggregatingViewSpec):
         agg_dict = raw.to_dict()
         options.update(agg_dict["ch_agg_mv"])
+        options["ch_object_type"] = "materialized_view"
         _validate_ch_options(options)
         return options
 

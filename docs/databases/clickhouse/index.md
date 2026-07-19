@@ -13,11 +13,12 @@ DBWarden treats ClickHouse as a first-class backend. Every natively supported fe
 Set up a table, a materialized view, and an aggregated table:
 
 ```python
-from sqlalchemy import func, Date, Float64, column
+from sqlalchemy import func, Date, Float64
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden.databases.clickhouse import (
-    CHTableMeta, CHViewMeta, ch_table, ch,
-    merge_tree, materialized_view, aggregating_view, agg,
+    CHTableMeta, CHViewMeta, ch_table,
+    merge_tree, materialized_view, kafka_engine, aggregating_view, agg,
+    MaterializedView,
 )
 
 class Base(DeclarativeBase):
@@ -35,11 +36,11 @@ class Event(Base):
         ch = ch_table(
             engine=merge_tree(),
             order_by=["event_date", "id"],
-            partition_by=func.toYYYYMM(column("event_date")),
+            partition_by=func.toYYYYMM(Event.event_date),
         )
 
 # 2. Materialized view — Mode A (class IS the target, MV is auto-generated)
-class EventDaily(Base):
+class EventDaily(MaterializedView):
     __tablename__ = "event_daily"
 
     date: Mapped[date] = mapped_column(primary_key=True)
@@ -55,11 +56,8 @@ class EventDaily(Base):
         )
 
 # 3. Aggregating view — sources from EventDaily model
-class EventAggregated(Base):
+class EventAggregated(AggregatingView):
     __tablename__ = "event_aggregated"
-
-    date: Mapped[date] = mapped_column(primary_key=True)
-    state: Mapped[tuple] = mapped_column()
 
     class Meta(CHViewMeta):
         ch = aggregating_view(
@@ -249,12 +247,8 @@ class KafkaEvents(Base):
             ),
         )
 
-class ParsedEvents(Base):
+class ParsedEvents(MaterializedView):
     __tablename__ = "parsed_events"
-
-    event_type: Mapped[str] = mapped_column()
-    value: Mapped[float] = mapped_column()
-    ts: Mapped[datetime] = mapped_column()
 
     class Meta(CHViewMeta):
         ch = materialized_view(

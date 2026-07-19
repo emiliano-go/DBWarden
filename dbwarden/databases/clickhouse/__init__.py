@@ -53,6 +53,9 @@ from dbwarden.databases.clickhouse.projection import projection
 from dbwarden.databases.clickhouse.agg import AggExpr, ChAggStateType, agg, ch_agg_state
 from dbwarden.databases.clickhouse.cluster import ClusterMode
 from dbwarden.databases.clickhouse.data_op import DataOp, data_op
+from dbwarden.databases.clickhouse import data_ops as _data_ops_module
+data_ops = _data_ops_module
+from dbwarden.databases.clickhouse.data_ops import populate as data_ops_populate
 from dbwarden.databases.clickhouse.dictionary import DictSpec, dictionary
 from dbwarden.databases.clickhouse.materialized_view import (
     AggregatingViewSpec,
@@ -70,7 +73,7 @@ from dbwarden.databases.clickhouse.views import (
     _validate_view_class, derive_agg_target_columns,
     get_all_ch_views, ch_view_tables_from_models,
 )
-from dbwarden.schema.table_meta import CHColumnMeta, CHTableMeta
+from dbwarden.schema.table_meta import CHColumnMeta, CHTableMeta, CHViewMeta
 
 
 @dataclass
@@ -186,6 +189,7 @@ __all__ = [
     "AggregatingViewSpec",
     "CHColumnMeta",
     "CHTableMeta",
+    "CHViewMeta",
     "ChView",
     "MaterializedView",
     "AggregatingView",

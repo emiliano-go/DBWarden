@@ -1,4 +1,6 @@
 from dbwarden.databases.clickhouse.materialized_view import MaterializedViewSpec, materialized_view
+from dbwarden.databases.clickhouse.data_op import DataOp, data_op
+from dbwarden.databases.clickhouse.data_ops import populate as data_ops_populate
 
 
 class TestMaterializedView:
@@ -10,7 +12,7 @@ class TestMaterializedView:
         )
         assert isinstance(result, MaterializedViewSpec)
         d = result.to_dict()
-        assert d["ch_object_type"] == "materialized_view"
+        assert "ch_object_type" not in d
         assert "SELECT id" in d["ch_select_statement"]
         assert d["ch_to_table"] == "target"
         assert "ch_engine" not in d
@@ -72,3 +74,22 @@ class TestMaterializedView:
         assert d["ch_order_by"] == "id"
         assert d["ch_partition_by"] == "toYYYYMM(ts)"
         assert d["ch_populate"] is True
+
+
+def test_data_ops_populate_equivalence():
+    """populate() produces the same DataOp as a hand-written data_op()."""
+    spec = materialized_view(
+        name="test_mv",
+        select="SELECT id, count() FROM src GROUP BY id",
+        to="dest",
+    )
+    auto = data_ops_populate(spec)
+    manual = data_op(
+        name="populate_dest",
+        forward="INSERT INTO dest\nSELECT id, count() FROM src GROUP BY id",
+        requires_confirmation=True,
+    )
+    assert auto.name == manual.name
+    assert auto.forward == manual.forward
+    assert auto.rollback == manual.rollback
+    assert auto.requires_confirmation == manual.requires_confirmation

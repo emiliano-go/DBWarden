@@ -719,6 +719,47 @@ class TestCHViewValidation:
             f"FAIL: no ModelTable (found {[t.name for t in tables]})"
         )
 
+    def test_materialized_view_mode_a_columns(self):
+        """Mode A: ch_view_tables_from_models() produces correct columns.
+
+        Verifies that columns declared via mapped_column() on a
+        MaterializedView subclass (without Base) are read correctly
+        from MappedColumn descriptors in cls.__dict__.
+        """
+        from sqlalchemy import Date as sa_Date, Float as sa_Float, Integer, func
+        from sqlalchemy.orm import Mapped, mapped_column
+        from dbwarden.databases.clickhouse import (
+            MaterializedView, materialized_view,
+            summing_merge_tree, ch_view_tables_from_models,
+        )
+        from dbwarden.schema.table_meta import CHViewMeta
+
+        class _ModeAProbe(MaterializedView):
+            __tablename__ = "_mode_a_probe"
+            date: Mapped[str] = mapped_column(sa_Date, primary_key=True)
+            total: Mapped[float] = mapped_column(sa_Float)
+            cnt: Mapped[int] = mapped_column(Integer)
+            class Meta(CHViewMeta):
+                ch = materialized_view(
+                    select=[func.now().label("date"), func.now().label("total")],
+                    engine=summing_merge_tree(),
+                    order_by=["date"],
+                )
+
+        tables = ch_view_tables_from_models()
+        probe = next((t for t in tables if t.name == "_mode_a_probe"), None)
+        assert probe is not None, "FAIL: no ModelTable produced"
+
+        col_names = {c.name for c in probe.columns}
+        assert col_names == {"date", "total", "cnt"}, (
+            f"FAIL: expected {{'date','total','cnt'}}, got {col_names}"
+        )
+
+        col_map = {c.name: c for c in probe.columns}
+        assert col_map["date"].primary_key is True
+        assert col_map["date"].nullable is False
+        assert col_map["total"].nullable is True
+
 
 class TestCHViewDiscovery:
     def test_get_all_ch_views(self):

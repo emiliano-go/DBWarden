@@ -340,7 +340,7 @@ class TestAggregatingView:
         assert "ch_agg_target" in d
         assert "ch_agg_mv" in d
         mv = d["ch_agg_mv"]
-        assert mv["ch_object_type"] == "materialized_view"
+        assert "ch_object_type" not in mv
         # In the class API, target is __tablename__ (here: name), not name + "_agg"
         assert mv["ch_to_table"] == "events_daily"
         assert mv["ch_select_statement"] is not None

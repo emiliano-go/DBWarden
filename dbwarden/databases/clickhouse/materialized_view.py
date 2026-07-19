@@ -42,7 +42,6 @@ class MaterializedViewSpec:
         from dbwarden.databases.clickhouse.compiler import render_expr, render_expr_list
 
         d: dict[str, Any] = {
-            "ch_object_type": "materialized_view",
             "ch_select_statement": (
                 ", ".join(render_expr(item) for item in self.select)
                 if isinstance(self.select, (list, tuple))
@@ -211,9 +210,9 @@ def materialized_view(
     )
 
 
-@dataclass
+@dataclass(frozen=True)
 class AggregatingViewSpec:
-    """Typed spec for a ClickHouse aggregating view (source -> target -> MV triad).
+    """An aggregate rollup: AggregatingMergeTree target + the MV that fills it.
 
     Returned by :func:`aggregating_view`.  Call ``.to_dict()`` at the model
     serialization boundary to produce the dict format consumed by the
@@ -222,33 +221,38 @@ class AggregatingViewSpec:
     Expression fields (group_by, order_by, partition_by, ttl) accept
     :class:`~sqlalchemy.sql.ColumnElement`, :class:`ChRaw`, or plain ``str``.
 
-    The target name is ``__tablename__`` (set by ``_validate_view_class``).
-    The MV name is ``f"{__tablename__}_mv"``.
+    ``target_name`` is ``__tablename__`` (set by ``_validate_view_class``).
+    ``mv_name`` is ``f"{target_name}_mv"``.
+
+    The object KIND is this class. Nothing stringly-typed carries it.
+    ``get_all_ch_views`` and ``_validate_view_class`` dispatch on
+    ``isinstance(spec, AggregatingViewSpec)``, not on a field value or dict key.
     """
-    name: str | None = None
-    source: Any = None
-    group_by: Any = None
-    aggregates: Any = None
-    order_by: Any = None
-    partition_by: Any = None
-    ttl: Any = None
+    source: Any = ""
+    group_by: tuple[Any, ...] = ()
+    aggregates: tuple[Any, ...] = ()
+    order_by: tuple[Any, ...] = ()
+    partition_by: Any | None = None
+    ttl: tuple[Any, ...] | None = None
     settings: dict[str, str] | None = None
+    target_name: str | None = None
 
     @property
     def mv_name(self) -> str:
-        return f"{self.name}_mv" if self.name else ""
-
-    @property
-    def target_table_name(self) -> str:
-        return self.name or ""
+        """The generated MV name. Derived, never stored."""
+        if self.target_name is None:
+            raise ValueError(
+                "target_name unset; spec not yet bound to a class"
+            )
+        return f"{self.target_name}_mv"
 
     @property
     def target_columns(self) -> list[str]:
         from dbwarden.databases.clickhouse.compiler import column_name_from_expr
         cols: list[str] = []
-        for g in (self.group_by or []):
+        for g in self.group_by:
             cols.append(column_name_from_expr(g))
-        for a in (self.aggregates or []):
+        for a in self.aggregates:
             cols.append(a.alias)
         return cols
 
@@ -259,11 +263,11 @@ class AggregatingViewSpec:
             column_name_from_expr,
         )
 
-        group_by = self.group_by or []
-        aggregates = self.aggregates or []
-        order_by = self.order_by or []
-        target = self.target_table_name
-        mv_name = self.mv_name
+        group_by = list(self.group_by)
+        aggregates = list(self.aggregates)
+        order_by = list(self.order_by)
+        target = self.target_name or ""
+        mv_name = self.mv_name if self.target_name else ""
         source_name = _resolve_source(self.source)
 
         group_parts = [render_expr(g) for g in group_by]
@@ -291,15 +295,14 @@ class AggregatingViewSpec:
             target_opts["partition_by"] = render_expr(self.partition_by)
         if self.ttl is not None:
             target_opts["ttl"] = (
-                render_expr_list(self.ttl)
-                if isinstance(self.ttl, list)
+                render_expr_list(list(self.ttl))
+                if isinstance(self.ttl, (list, tuple))
                 else [render_expr(self.ttl)]
             )
         if self.settings is not None:
             target_opts["settings"] = dict(self.settings)
 
         mv_spec = MaterializedViewSpec(
-            name=mv_name,
             select=select_sql,
             to=target,
         )
@@ -356,9 +359,6 @@ def aggregating_view(
                     order_by=["day"],
                 )
 
-    **Deprecated module-level form:** pass ``name`` to set the MV name
-    explicitly.  Emits ``DeprecationWarning``.
-
     Args:
         source: The source model class (preferred) or table name string.
         group_by: ``GROUP BY`` keys — :class:`~sqlalchemy.sql.ColumnElement`,
@@ -369,7 +369,7 @@ def aggregating_view(
         partition_by: Optional ``PARTITION BY`` for the target.
         ttl: Optional TTL for the target.
         settings: Optional engine ``SETTINGS`` for the target.
-        name: Deprecated.  MV and target names come from ``__tablename__`` in
+        name: Deprecated.  Target name comes from ``__tablename__`` in
             the class API.  Only needed for the module-level form.
 
     Returns:
@@ -398,31 +398,41 @@ def aggregating_view(
         )
 
     return AggregatingViewSpec(
-        name=name,
         source=source,
-        group_by=group_by,
-        aggregates=aggregates,
-        order_by=order_by,
+        group_by=tuple(group_by),
+        aggregates=tuple(aggregates),
+        order_by=tuple(order_by) if order_by else (),
         partition_by=partition_by,
-        ttl=ttl,
+        ttl=tuple(ttl) if ttl else None,
         settings=settings,
+        target_name=name,
     )
 
 
 def _resolve_source(source: Any) -> str:
     """Get the table name from a source reference.
 
-    ``source`` should be a model class with ``__tablename__``.  Strings are
-    accepted with a deprecation warning — they defeat rename safety and the
-    widening that makes the typed API correct.
+    ``source`` may be:
+    * A model class with ``__tablename__`` — returns the tablename directly.
+    * A string class name (forward reference) — scans loaded modules for a
+      class with that name and returns its ``__tablename__``.
+    * A bare table name string — returned as-is.
+
+    Resolution happens lazily at ``to_dict()`` time, by which point all
+    model classes should be loaded.
     """
     if isinstance(source, str):
-        warnings.warn(
-            "_resolve_source: source as a string is deprecated. "
-            "Pass the model class directly for rename safety and type inference.",
-            DeprecationWarning,
-            stacklevel=3,
-        )
+        # Try to resolve as a class name first (forward reference)
+        import sys
+        for mod_name, mod in sys.modules.items():
+            if mod is None:
+                continue
+            cls = getattr(mod, source, None)
+            if cls is not None and isinstance(cls, type):
+                tablename = getattr(cls, "__tablename__", None)
+                if tablename:
+                    return tablename
+        # No class found — treat as bare table name
         return source
     tablename = getattr(source, "__tablename__", None)
     if tablename:

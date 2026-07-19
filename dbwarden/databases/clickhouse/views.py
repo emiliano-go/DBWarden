@@ -421,6 +421,9 @@ def _validate_view_class(model_class: type) -> None:
       - ``class Meta`` inherits from :class:`CHViewMeta`.
       - ``Meta.ch`` is set to a :class:`MaterializedViewSpec` or
         :class:`AggregatingViewSpec`.
+      - The spec type matches the view base class (MaterializedView →
+        MaterializedViewSpec, AggregatingView → AggregatingViewSpec).
+      - Mode A MaterializedView (to=None) has an engine.
       - The model has at least one primary key column.
 
     Called during model discovery; raises :class:`DBWardenConfigError` on
@@ -450,7 +453,38 @@ def _validate_view_class(model_class: type) -> None:
             f"{model_class.__name__}: CHViewMeta model must have __tablename__ set."
         )
 
+    # Spec↔class mismatch: forbid MaterializedView + AggregatingViewSpec etc.
+    if issubclass(model_class, MaterializedView) and isinstance(ch, AggregatingViewSpec):
+        raise TypeError(
+            f"{model_class.__name__}: MaterializedView subclass must use "
+            f"materialized_view(), not aggregating_view()."
+        )
+    if issubclass(model_class, AggregatingView) and isinstance(ch, MaterializedViewSpec):
+        raise TypeError(
+            f"{model_class.__name__}: AggregatingView subclass must use "
+            f"aggregating_view(), not materialized_view()."
+        )
+
+    # Forbid SQLAlchemy declarative base inheritance.
+    # ChView subclasses are deliberately NOT SQLAlchemy models —
+    # introducing __table__ creates a dual citizen that can be queried
+    # via session AND lives in the view registry, which is the exact
+    # footgun the non-SA separation was designed to prevent.
+    if hasattr(model_class, "__table__"):
+        raise TypeError(
+            f"{model_class.__name__}: ChView subclasses must NOT inherit "
+            f"a SQLAlchemy declarative Base. "
+            f"Columns are declared via mapped_column() on the class body, "
+            f"but the class is NOT a SQLAlchemy model."
+        )
+
     if isinstance(ch, MaterializedViewSpec):
+        # Mode A guard: to=None requires engine
+        if ch.to is None and ch.engine is None:
+            raise TypeError(
+                f"{model_class.__name__}: MaterializedView in Mode A (to= omitted) "
+                f"requires engine — the class IS the target table."
+            )
         if ch.to is not None:
             # Mode B — the class is the MV; no columns, no engine, no order_by
             if ch.engine is not None:
@@ -487,12 +521,14 @@ def _validate_view_class(model_class: type) -> None:
                 f"derived from group_by + aggregates, not declared. "
                 f"Remove column declarations."
             )
-        if ch.name != tablename:
+        if ch.target_name is not None and ch.target_name != tablename:
             warnings.warn(
-                f"aggregating_view(name=...) is deprecated when used inside a class body. "
-                f"The view name is derived from __tablename__ ('{tablename}'). "
-                f"Passed name '{ch.name}' will be ignored.",
+                f"aggregating_view(target_name=...) is deprecated when used inside a class body. "
+                f"The target name is derived from __tablename__ ('{tablename}'). "
+                f"Passed name '{ch.target_name}' will be ignored.",
                 DeprecationWarning,
                 stacklevel=2,
             )
-        ch.name = tablename
+        # Frozen dataclass: replace with target_name set
+        from dataclasses import replace as _replace_spec
+        meta.ch = _replace_spec(ch, target_name=tablename)
