@@ -1,16 +1,16 @@
 # Materialized views
 
-## Plain MVs — two shapes
+## Plain MVs: two shapes
 
-### Mode A — Class IS the target table (preferred)
+### Mode A: Class IS the target table (preferred)
 
 The view class IS the target table; `__tablename__` is the table name.
 The MV is auto-generated as `f"{__tablename__}_mv"`.  Columns, engine, and
 `order_by` are required.
 
 Columns are declared via `mapped_column` on the class.  Although no
-SQLAlchemy `Base` is needed — the class is NOT a SQLAlchemy model, and
-`session.query(ClassName)` will *not* work — the column descriptors are
+SQLAlchemy `Base` is needed; the class is NOT a SQLAlchemy model, and
+`session.query(ClassName)` will *not* work; the column descriptors are
 read from `cls.__dict__` by the discovery pipeline.
 
 ```python
@@ -42,10 +42,10 @@ CREATE MATERIALIZED VIEW event_counts_mv TO event_counts
 AS SELECT sum(amount) AS total FROM events
 ```
 
-### Mode B — Explicit `to=` target
+### Mode B: Explicit `to=` target
 
 The class IS the MV; it writes to a pre-existing target table.  No columns,
-no engine, no `order_by` — the target owns its own storage.
+no engine, no `order_by`; the target owns its own storage.
 
 ```python
 from sqlalchemy import func
@@ -161,7 +161,7 @@ When an MV has no `TO target` (deprecated module-level form only), ClickHouse
 creates a hidden table named ``.inner.<view_name>`` with the MV's result
 schema.  dbwarden reverse-engineers this table during ``generate-models``.
 
-The class API **does not support** implicit ``.inner.`` storage — every
+The class API **does not support** implicit ``.inner.`` storage; every
 MV must either be the target (Mode A) or name a target (Mode B).  The
 ``.inner.`` form appears only when reverse-engineering legacy MVs that were
 created outside dbwarden.

@@ -39,7 +39,7 @@ class Event(Base):
             partition_by=func.toYYYYMM(Event.event_date),
         )
 
-# 2. Materialized view — Mode A (class IS the target, MV is auto-generated)
+# 2. Materialized view: Mode A (class IS the target, MV is auto-generated)
 class EventDaily(MaterializedView):
     __tablename__ = "event_daily"
 
@@ -55,7 +55,7 @@ class EventDaily(MaterializedView):
             order_by=["date"],
         )
 
-# 3. Aggregating view — sources from EventDaily model
+# 3. Aggregating view: sources from EventDaily model
 class EventAggregated(AggregatingView):
     __tablename__ = "event_aggregated"
 

@@ -49,7 +49,7 @@ Each section in the cookbook explains what these commands do, what SQL they prod
 
 ## Database-Specific Examples
 
-The core examples use SQLite for zero-dependency setup. For production, DBWarden fully supports PostgreSQL, MySQL, and ClickHouse &mdash; each with its own deep-dive guide and dedicated example patterns.
+The core examples use SQLite for zero-dependency setup. For production, DBWarden fully supports PostgreSQL, MySQL, and ClickHouse; each with its own deep-dive guide and dedicated example patterns.
 
 ### PostgreSQL
 

@@ -8,10 +8,10 @@ An aggregating view is a coherent triad:
    `AggregateFunction(...)` types derived from aggregate expressions.
 2. A **materialized view** that uses `<func>State(...)` combinators in its
    SELECT, `TO` the target.
-3. The **source table** (referenced, not created — it must already exist).
+3. The **source table** (referenced, not created; it must already exist).
 
 Because the target column types and the MV combinators both derive from the
-same single list of `AggExpr`, they are guaranteed consistent — the
+same single list of `AggExpr`, they are guaranteed consistent; the
 correspondence that is manual and drift-prone in the string-SELECT form is
 here derived and safe.
 
@@ -45,18 +45,18 @@ This generates:
    columns `hour DateTime`, `total_amount AggregateFunction(sum, Float64)`,
    `event_count AggregateFunction(count)`.
 2. A materialized view `events_hourly_mv TO events_hourly` whose SELECT uses
-   `sumState`, `countState` — automatically derived from the `AggExpr` list.
+   `sumState`, `countState`; automatically derived from the `AggExpr` list.
 3. The MV reads FROM `Event`.
 
 ### The source parameter
 
 `source` may be:
 
-- A model class (preferred) — its `__tablename__` is resolved at spec
+- A model class (preferred); its `__tablename__` is resolved at spec
   construction time.
-- A string class name (forward reference) — resolved at discovery time when
+- A string class name (forward reference); resolved at discovery time when
   all models are loaded.
-- A bare table name string — used as-is.
+- A bare table name string; used as-is.
 
 When you pass a model class, rename safety is automatic: if the source table
 is renamed, regeneration picks up the new name.
@@ -84,7 +84,7 @@ The `AggregatingViewSpec` is a frozen dataclass. Configure it via
 | Parameter | Description |
 |-----------|-------------|
 | `source` | Source model class or table name |
-| `group_by` | GROUP BY keys — ColumnElement or string |
+| `group_by` | GROUP BY keys: ColumnElement or string |
 | `aggregates` | AggExpr list (each with `.as_()`) |
 | `order_by` | ORDER BY for the target |
 | `partition_by` | Optional PARTITION BY |

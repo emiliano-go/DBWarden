@@ -56,18 +56,18 @@ link = "https://pypi.org/project/dbwarden/"
 name = "DBWarden on PyPI"
 
 [[project.nav]]
-"Overview" = "index.md"
-
-[[project.nav]]
-"Features" = "features.md"
+Overview = [
+  {Overview = "index.md"},
+  {Features = "features.md"},
+]
 
 [[project.nav]]
 "Get Started" = [
-  {"Setup" = "getting-started/setup.md"},
-  {"Modeling" = "getting-started/modeling.md"},
+  {Setup = "getting-started/setup.md"},
+  {Modeling = "getting-started/modeling.md"},
   {"Your First Migration" = "getting-started/first-migration.md"},
   {"Developing Locally" = "getting-started/developing-locally.md"},
-  {"Workflows" = "getting-started/workflows.md"},
+  {Workflows = "getting-started/workflows.md"},
 ]
 
 [[project.nav]]
@@ -83,11 +83,11 @@ name = "DBWarden on PyPI"
   {"8. Multi-Database" = "cookbook/08-multi-database.md"},
   {"9. FastAPI Integration" = "cookbook/09-fastapi-integration.md"},
   {"10. Auto Schemas" = "cookbook/10-auto-schemas.md"},
-  {"11. Observability" = "cookbook/11-observability.md"}
+  {"11. Observability" = "cookbook/11-observability.md"},
 ]
 
 [[project.nav]]
-"Configuration" = [
+"Configuration & Concepts" = [
   {Overview = "configuration/index.md"},
   {"Quick Start" = "configuration/quick-start.md"},
   {Concepts = "configuration/concepts.md"},
@@ -97,17 +97,13 @@ name = "DBWarden on PyPI"
   {"Dev Mode" = "configuration/dev-mode.md"},
   {"Credentials and Secrets" = "configuration/credentials.md"},
   {"Production Patterns" = "configuration/production-patterns.md"},
-  {Troubleshooting = "configuration/troubleshooting.md"}
-]
-
-[[project.nav]]
-"Core Concepts" = [
+  {Troubleshooting = "configuration/troubleshooting.md"},
   {"Migration Files" = "migration-files.md"},
   {"SQLAlchemy Models" = "models.md"},
   {Seeds = "seeds.md"},
   {"SQL Translation" = "sql-translation.md"},
   {Observability = "observability.md"},
-  {Architecture = "architecture-deep-dive.md"}
+  {Architecture = "architecture-deep-dive.md"},
 ]
 
 [[project.nav]]
@@ -117,59 +113,59 @@ Databases = [
   {"Common SQL Databases" = "databases/sql-databases.md"},
   {PostgreSQL = "databases/postgresql/index.md"},
   {MySQL = "databases/mysql.md"},
-  {ClickHouse = "databases/clickhouse/index.md"}
+  {ClickHouse = "databases/clickhouse/index.md"},
 ]
 
 [[project.nav]]
-"FastAPI Integration" = [
-  {Overview = "fastapi/index.md"},
-  {Concepts = "fastapi/concepts.md"},
-  {"Tutorial" = [{"First Steps" = "fastapi/tutorial/first-steps.md"}, {"Session Dependency" = "fastapi/tutorial/session-dependency.md"}, {"Startup Checks" = "fastapi/tutorial/startup-checks.md"}, {"Health Endpoints" = "fastapi/tutorial/health-endpoints.md"}, {"Complete Application" = "fastapi/tutorial/complete-application.md"}]},
-  {"Advanced" = [{"Engine Lifecycle" = "fastapi/advanced/engine-lifecycle.md"}, {"Transaction Management" = "fastapi/advanced/transaction-management.md"}, {Testing = "fastapi/advanced/testing.md"}, {"Multi-Database" = "fastapi/advanced/multi-database.md"}, {"Production Patterns" = "fastapi/advanced/production-patterns.md"}]},
-  {Reference = "fastapi/reference.md"}
+Extensions = [
+  {Overview = "extensions/index.md"},
+  {"FastAPI Integration" = [
+    {Overview = "fastapi/index.md"},
+    {Concepts = "fastapi/concepts.md"},
+    {"Tutorial" = [{"First Steps" = "fastapi/tutorial/first-steps.md"}, {"Session Dependency" = "fastapi/tutorial/session-dependency.md"}, {"Startup Checks" = "fastapi/tutorial/startup-checks.md"}, {"Health Endpoints" = "fastapi/tutorial/health-endpoints.md"}, {"Complete Application" = "fastapi/tutorial/complete-application.md"}]},
+    {"Advanced" = [{"Engine Lifecycle" = "fastapi/advanced/engine-lifecycle.md"}, {"Transaction Management" = "fastapi/advanced/transaction-management.md"}, {Testing = "fastapi/advanced/testing.md"}, {"Multi-Database" = "fastapi/advanced/multi-database.md"}, {"Production Patterns" = "fastapi/advanced/production-patterns.md"}]},
+    {Reference = "fastapi/reference.md"},
+  ]},
+  {Sandbox = "extensions/sandbox.md"},
 ]
 
 [[project.nav]]
-"CLI Reference" = [
+Reference = [
   {Overview = "cli-reference.md"},
-  {init = "commands/init.md"},
-  {"make-migrations" = "commands/make-migrations.md"},
-  {migrate = "commands/migrate.md"},
-  {downgrade = "commands/downgrade.md"},
-  {rollback = "commands/rollback.md"},
-  {"make-rollback" = "commands/make-rollback.md"},
-  {"generate-models" = "commands/generate-models.md"},
-  {snapshot = "commands/snapshot.md"},
-  {"schema-snapshots" = "commands/schema-snapshots.md"},
-  {status = "commands/status.md"},
-  {check = "commands/check.md"},
-  {"check-db" = "commands/check-db.md"},
-  {diff = "commands/diff.md"},
-  {history = "commands/history.md"},
-  {new = "commands/new.md"},
-  {lock = "commands/lock.md"},
-  {seed = "commands/seed.md"},
-  {settings = "commands/settings.md"},
-  {database = "commands/database.md"},
-  {version = "commands/version.md"}
+  {"Commands" = [
+    {init = "commands/init.md"},
+    {"make-migrations" = "commands/make-migrations.md"},
+    {migrate = "commands/migrate.md"},
+    {downgrade = "commands/downgrade.md"},
+    {rollback = "commands/rollback.md"},
+    {"make-rollback" = "commands/make-rollback.md"},
+    {"generate-models" = "commands/generate-models.md"},
+    {snapshot = "commands/snapshot.md"},
+    {"schema-snapshots" = "commands/schema-snapshots.md"},
+    {status = "commands/status.md"},
+    {check = "commands/check.md"},
+    {"check-db" = "commands/check-db.md"},
+    {diff = "commands/diff.md"},
+    {history = "commands/history.md"},
+    {new = "commands/new.md"},
+    {lock = "commands/lock.md"},
+    {seed = "commands/seed.md"},
+    {settings = "commands/settings.md"},
+    {database = "commands/database.md"},
+    {version = "commands/version.md"},
+  ]},
+  {"Advanced Topics" = [
+    {"Migration Locking" = "advanced/migration-locking.md"},
+    {"Checksum Integrity" = "advanced/checksum-integrity.md"},
+    {"Safe Deployment" = "advanced/safe-deployment.md"},
+    {"CI/CD Patterns" = "advanced/ci-cd-patterns.md"},
+  ]},
+  {"API Reference" = [
+    {"Configuration API" = "reference/configuration-api.md"},
+    {"Migrate from TOML" = "reference/migrate-from-toml.md"},
+  ]},
+  {Glossary = "glossary.md"},
 ]
-
-[[project.nav]]
-Advanced = [
-  {"Migration Locking" = "advanced/migration-locking.md"},
-  {"Checksum Integrity" = "advanced/checksum-integrity.md"},
-  {"Safe Deployment" = "advanced/safe-deployment.md"},
-  {"CI/CD Patterns" = "advanced/ci-cd-patterns.md"}
-]
-
-[[project.nav]]
-"Reference" = [
-  {"Configuration API" = "reference/configuration-api.md"},
-  {"Migrate from TOML" = "reference/migrate-from-toml.md"}
-]
-
-[[project.nav]]
-"Glossary" = "glossary.md"
 
 [project.markdown_extensions]
 "seoslug.contrib.zensical" = {
