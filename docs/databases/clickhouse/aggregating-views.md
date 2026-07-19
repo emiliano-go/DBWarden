@@ -74,7 +74,8 @@ aggregates=[
 ```
 
 Supported aggregate functions include `sum`, `count`, `min`, `max`, `avg`,
-`uniq`, `groupArray`, `groupUniqArray`, and `quantile`.
+`uniq`, `uniq_exact`, `any`, `any_last`, `groupArray`, `groupUniqArray`,
+`quantile`, and the `raw` escape hatch for combinators not enumerated above.
 
 ## Configuring the target table
 

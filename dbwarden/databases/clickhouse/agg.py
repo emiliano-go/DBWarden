@@ -85,6 +85,22 @@ class _AggNamespace:
         """``uniqExact``. → ``AggregateFunction(uniqExact, type)``."""
         return AggExpr("uniqExact", arg, (type_,))
 
+    def uniq(self, arg: Any, type_: str) -> AggExpr:
+        """``uniq``. → ``AggregateFunction(uniq, type)``."""
+        return AggExpr("uniq", arg, (type_,))
+
+    def groupArray(self, arg: Any, type_: str) -> AggExpr:  # noqa: N802
+        """``groupArray``. → ``AggregateFunction(groupArray, type)``."""
+        return AggExpr("groupArray", arg, (type_,))
+
+    def groupUniqArray(self, arg: Any, type_: str) -> AggExpr:  # noqa: N802
+        """``groupUniqArray``. → ``AggregateFunction(groupUniqArray, type)``."""
+        return AggExpr("groupUniqArray", arg, (type_,))
+
+    def quantile(self, arg: Any, type_: str) -> AggExpr:
+        """``quantile``. → ``AggregateFunction(quantile, type)``."""
+        return AggExpr("quantile", arg, (type_,))
+
     def any(self, arg: Any, type_: str) -> AggExpr:
         """``any``. → ``AggregateFunction(any, type)``."""
         return AggExpr("any", arg, (type_,))

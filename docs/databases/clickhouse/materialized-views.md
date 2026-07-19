@@ -6,7 +6,8 @@
 
 The view class IS the target table; `__tablename__` is the table name.
 The MV is auto-generated as `f"{__tablename__}_mv"`.  Columns, engine, and
-`order_by` are required.
+`order_by` are required for Mode A (engine is enforced; columns and
+`order_by` are strongly recommended but not strictly validated).
 
 Columns are declared via `mapped_column` on the class.  Although no
 SQLAlchemy `Base` is needed; the class is NOT a SQLAlchemy model, and
@@ -14,6 +15,7 @@ SQLAlchemy `Base` is needed; the class is NOT a SQLAlchemy model, and
 read from `cls.__dict__` by the discovery pipeline.
 
 ```python
+from datetime import date
 from sqlalchemy import func
 from sqlalchemy.orm import Mapped, mapped_column
 from dbwarden.databases.clickhouse import MaterializedView, CHViewMeta, materialized_view, merge_tree
@@ -91,10 +93,18 @@ AS SELECT sum(amount) AS total FROM events
 ```
 
 Refreshable MVs (introduced in CH 24.3) replace LIVE VIEW and support:
+
 - Periodic refresh (`EVERY n SECONDS`)
-- Refresh dependencies (`DEPENDS ON`)
-- Refresh on cluster (`ON CLUSTER`)
+- Refresh dependencies (`DEPENDS ON`) embedded in the `refresh=` string
 - Empty vs populating initial state
+
+These options are combined in a single `refresh` string:
+
+```python
+refresh="EVERY 3600 SECONDS DEPENDS ON my_other_mv"
+```
+
+Refresh on cluster is configured at the deployment level via `--cluster-mode`.
 
 ## Additional model examples
 
@@ -108,7 +118,7 @@ class HourlyRollupMV(MaterializedView):
         ch = materialized_view(
             select=func.sum(Event.amount).label("total"),
             to="hourly_rollup_dest",
-            refresh="EVERY 300 SECONDS",
+            refresh="EVERY 300 SECONDS DEPENDS ON daily_rollup_mv",
         )
 ```
 
@@ -116,7 +126,7 @@ Generated DDL:
 
 ```sql
 CREATE MATERIALIZED VIEW hourly_rollup_mv TO hourly_rollup_dest
-REFRESH EVERY 300 SECONDS
+REFRESH EVERY 300 SECONDS DEPENDS ON daily_rollup_mv
 AS SELECT sum(amount) AS total FROM events
 ```
 

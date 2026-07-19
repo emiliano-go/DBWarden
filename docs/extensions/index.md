@@ -11,14 +11,14 @@ DBWarden ships with a set of optional extensions that integrate with common Pyth
 
 | Extension | Install | Purpose |
 |-----------|---------|---------|
-| [FastAPI](fastapi/index.md) | `uv add "dbwarden[fastapi]"` | Async database sessions, health endpoints, migration lifecycle hooks |
+| [FastAPI](../fastapi/index.md) | `uv add "dbwarden[fastapi]"` | Async database sessions, health endpoints, migration lifecycle hooks |
 | [Sandbox](sandbox.md) | built-in | Temporary database validation and config file security isolation |
 
 ## FastAPI Integration
 
 First-class FastAPI integration for database sessions, health checks, and migration management. One configuration source for both migrations and runtime, with no more split configs.
 
-See the [FastAPI Integration](fastapi/index.md) guide for setup, tutorials, and reference.
+See the [FastAPI Integration](../fastapi/index.md) guide for setup, tutorials, and reference.
 
 ## Sandbox
 

@@ -34,7 +34,7 @@ sandbox-check:
   if: github.event_name == 'pull_request'
   steps:
     - uses: actions/checkout@v4
-    - run: uv add -e ".[migrations,testcontainers]"
+    - run: uv add "dbwarden[sandbox]"
     - name: Apply migrations to sandbox
       run: dbwarden migrate --sandbox --database primary
 ```
@@ -51,7 +51,7 @@ dbwarden migrate --sandbox --database primary
 ### Behavior
 
 - Sandbox migrations follow the same migration ordering and dependency resolution as real migrations.
-- Schema snapshots are not written during sandbox runs.
+- Schema snapshots and model state are not written during sandbox runs, preventing the temporary database schema from overwriting the production snapshot.
 - The sandbox backend defaults to SQLite when the `[sandbox]` extra is not installed.
 - With `uv add "dbwarden[sandbox]"`, the sandbox can spin up Docker containers matching your production database type.
 

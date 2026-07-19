@@ -13,12 +13,13 @@ DBWarden treats ClickHouse as a first-class backend. Every natively supported fe
 Set up a table, a materialized view, and an aggregated table:
 
 ```python
-from sqlalchemy import func, Date, Float64
+from datetime import date
+from sqlalchemy import func, Date
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from dbwarden.databases.clickhouse import (
-    CHTableMeta, CHViewMeta, ch_table,
-    merge_tree, materialized_view, kafka_engine, aggregating_view, agg,
-    MaterializedView,
+    CHTableMeta, CHViewMeta, ch_table, ch,
+    merge_tree, materialized_view, kafka, aggregating_view, agg,
+    AggregatingView, MaterializedView,
 )
 
 class Base(DeclarativeBase):
@@ -205,6 +206,13 @@ class PageView(Base):
 ### Table with codecs and column TTL
 
 ```python
+from datetime import datetime
+from sqlalchemy.orm import Mapped, mapped_column
+from dbwarden.databases.clickhouse import (
+    CHColumnMeta, CHTableMeta, ch_table, ch,
+    merge_tree,
+)
+
 class SensorReading(Base):
     __tablename__ = "sensor_readings"
 
@@ -239,7 +247,7 @@ class KafkaEvents(Base):
 
     class Meta(CHTableMeta):
         ch = ch_table(
-            engine=kafka_engine(
+            engine=kafka(
                 named_collection="kafka_prod",
                 topic="raw_events",
                 format="JSONEachRow",
@@ -270,18 +278,18 @@ database_config(
     name="analytics",
     url="clickhouse://localhost:9000",
     ch_named_collections=[
-        named_collection("ldap_auth", keys={"ldap_server": "ldap.example.com"}),
+        named_collection("ldap_auth", ldap_server="ldap.example.com"),
     ],
-    ch_roles=[ch_role_spec("analyst"), ch_role_spec("engineer")],
+    ch_roles=[ChRoleSpec("analyst"), ChRoleSpec("engineer")],
     ch_users=[
-        ch_user_spec(
+        ChUserSpec(
             name="bob",
             named_collection="ldap_auth",
             default_role="analyst",
         ),
     ],
     ch_grants=[
-        ch_grant_spec(privileges=["SELECT"], on="analytics.*", to="analyst"),
+        ChGrantSpec(privileges=["SELECT"], on="analytics.*", to="analyst"),
     ],
 )
 ```
@@ -289,6 +297,12 @@ database_config(
 ### S3-backed table with projection
 
 ```python
+from datetime import datetime
+from sqlalchemy.orm import Mapped, mapped_column
+from dbwarden.databases.clickhouse import (
+    CHTableMeta, ch_table, s3, projection,
+)
+
 class S3Logs(Base):
     __tablename__ = "s3_logs"
 
@@ -298,16 +312,15 @@ class S3Logs(Base):
 
     class Meta(CHTableMeta):
         ch = ch_table(
-            engine=s3_engine(
+            engine=s3(
                 named_collection="s3_logs",
-                pattern="logs/*.parquet",
+                path="logs/*.parquet",
                 format="Parquet",
             ),
             projections=[
-                ch_projection(
+                projection(
                     name="by_level",
-                    select=["level", "count()"],
-                    group_by=["level"],
+                    query="SELECT level, count() GROUP BY level",
                 ),
             ],
         )
@@ -399,7 +412,10 @@ $ dbwarden migrate -d analytics --clickhouse-allow-drop-rbac
 from dbwarden.databases.clickhouse import data_op
 
 # After adding a projection to a table with existing data:
-data_op("ALTER TABLE events MATERIALIZE PROJECTION daily_agg")
+data_op(
+    name="materialize_daily_agg",
+    forward="ALTER TABLE events MATERIALIZE PROJECTION daily_agg",
+)
 ```
 
 ## Verification workflow

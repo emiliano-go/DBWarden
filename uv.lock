@@ -423,7 +423,7 @@ requires-dist = [
     { name = "schemap", specifier = ">=0.5.2" },
     { name = "seoslug", specifier = ">=2.0.1" },
     { name = "seoslug", marker = "extra == 'dev'" },
-    { name = "sqlalchemy", specifier = ">=2.0.10" },
+    { name = "sqlalchemy", specifier = ">=2.0.10,<2.1" },
     { name = "testcontainers", marker = "extra == 'sandbox'", specifier = ">=4.0.0" },
     { name = "typer", specifier = ">=0.12.3" },
     { name = "zensical", specifier = ">=0.0.44" },
