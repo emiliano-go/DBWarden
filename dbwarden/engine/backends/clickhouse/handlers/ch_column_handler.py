@@ -38,8 +38,7 @@ class ChColumnHandler(ObjectHandler):
             cols: dict[str, Any] = {}
             for col in table.columns:
                 ch_meta = getattr(col, "ch_meta", None) or {}
-                if ch_meta:
-                    cols[col.name] = ch_meta
+                cols[col.name] = ch_meta
             if cols:
                 result[table.name] = cols
         return result
@@ -48,7 +47,22 @@ class ChColumnHandler(ObjectHandler):
         return {}
 
     def canonicalize(self, spec: dict[str, Any]) -> dict[str, Any]:
-        return spec
+        if not spec:
+            return {}
+        result: dict[str, Any] = {}
+        for tname, tdata in spec.items():
+            if not tdata:
+                continue
+            cols: dict[str, Any] = {}
+            for cname, ch_meta in tdata.items():
+                if not ch_meta:
+                    continue
+                cleaned = {k: v for k, v in ch_meta.items() if v is not None and v is not False}
+                if cleaned:
+                    cols[cname] = cleaned
+            if cols:
+                result[tname] = cols
+        return result
 
     def diff(
         self,
@@ -156,6 +170,16 @@ class ChColumnHandler(ObjectHandler):
                 rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} ALIAS {from_ch['ch_alias']}")
             else:
                 rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} REMOVE ALIAS")
+
+        if to_ch.get("ch_ephemeral") != from_ch.get("ch_ephemeral"):
+            if to_ch.get("ch_ephemeral"):
+                up_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} EPHEMERAL {to_ch['ch_ephemeral']}")
+            else:
+                up_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} REMOVE EPHEMERAL")
+            if from_ch.get("ch_ephemeral"):
+                rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} EPHEMERAL {from_ch['ch_ephemeral']}")
+            else:
+                rb_parts.append(f"ALTER TABLE {table} MODIFY COLUMN {column} {base_type} REMOVE EPHEMERAL")
 
         _ch_type_changed = to_ch.get("ch_type") and to_ch.get("ch_type") != from_ch.get("ch_type")
         if not _ch_type_changed:

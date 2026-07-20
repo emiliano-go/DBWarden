@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 
@@ -11,6 +10,7 @@ from dbwarden.engine.model_discovery import (
     filter_model_tables_by_name,
     validate_model_tables_exist,
 )
+from dbwarden.engine.core.model_state import model_state_json_dumps
 from dbwarden.engine.offline import model_state_to_dict
 
 
@@ -54,7 +54,7 @@ def export_models_cmd(
     file_state = dict(state)
     if output is None:
         file_state["database"] = db_name
-    payload = json.dumps(file_state, indent=2, default=str) + "\n"
+    payload = model_state_json_dumps(file_state)
 
     from dbwarden.commands.make_migrations import get_model_state_path
 

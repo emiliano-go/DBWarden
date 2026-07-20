@@ -227,6 +227,10 @@ def _run_offline_migrations(
         upgrade_sql, rollback_sql, changes, database,
     )
 
+    upgrade_sql, rollback_sql, changes = _prepend_ch_preamble(
+        upgrade_sql, rollback_sql, changes, database,
+    )
+
     if not upgrade_sql.strip():
         console.print("No offline schema changes detected between model state and current models.", style="cyan")
         return
@@ -284,9 +288,10 @@ def _run_offline_migrations(
     console.print(f"Created migration plan: {plan_path}", style="green")
     console.print(f"Tables included: {', '.join(sorted(set(c.table for c in changes if hasattr(c, 'table') and c.table)))}", style="cyan")
 
+    from dbwarden.engine.core.model_state import model_state_json_dumps
     file_state = dict(current_state)
     file_state["database"] = db_name or "default"
-    state_payload = json.dumps(file_state, indent=2, default=str) + "\n"
+    state_payload = model_state_json_dumps(file_state)
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(state_payload)
     if legacy_state_path != state_path:
@@ -431,6 +436,65 @@ def _prepend_pg_preamble(
                 changes.insert(0, Change(operation="create_extension", table=ext))
     except Exception:
         logger.exception("Failed to prepend PostgreSQL preamble; preamble objects omitted")
+
+    return upgrade_sql, rollback_sql, changes
+
+
+def _prepend_ch_preamble(
+    upgrade_sql: str,
+    rollback_sql: str,
+    changes: list[Change],
+    database: str | None,
+) -> tuple[str, str, list[Change]]:
+    """Prepend ClickHouse preamble SQL (named collections, RBAC) to upgrade/rollback SQL."""
+    try:
+        mc = get_multi_db_config()
+        db_name = database or mc.default
+        config = get_database(db_name)
+        if config.database_type != "clickhouse":
+            return upgrade_sql, rollback_sql, changes
+
+        if config.ch_named_collections or config.ch_roles or config.ch_users or config.ch_quotas or config.ch_row_policies or config.ch_settings_profiles or config.ch_grants:
+            from dbwarden.engine.core.registry import RegistryDriver
+            from dbwarden.engine.backends.clickhouse.handlers import (
+                ChGrantHandler,
+                ChNamedCollectionHandler,
+                ChQuotaHandler,
+                ChRoleHandler,
+                ChRowPolicyHandler,
+                ChSettingsProfileHandler,
+                ChUserHandler,
+            )
+            _reg = RegistryDriver()
+            _reg.register(ChNamedCollectionHandler())
+            _reg.register(ChSettingsProfileHandler())
+            _reg.register(ChRoleHandler())
+            _reg.register(ChUserHandler())
+            _reg.register(ChQuotaHandler())
+            _reg.register(ChRowPolicyHandler())
+            _reg.register(ChGrantHandler())
+            _up_ops, _rb_ops = _reg.run({"named_collections": {}, "settings_profiles": {}, "roles": {}, "users": {}, "quotas": {}, "row_policies": {}, "grants": {}}, [], config)
+            if _up_ops:
+                _stmts = _reg.emit_all(_up_ops, db_name=db_name)
+                _ch_up = "\n".join(s.upgrade_sql for s in _stmts)
+                _ch_rb = "\n".join(s.rollback_sql for s in reversed(_stmts))
+                if _ch_up.strip():
+                    if upgrade_sql.strip():
+                        upgrade_sql = _ch_up + "\n\n" + upgrade_sql
+                    else:
+                        upgrade_sql = _ch_up
+                if _ch_rb.strip():
+                    if rollback_sql.strip():
+                        rollback_sql = _ch_rb + "\n\n" + rollback_sql
+                    else:
+                        rollback_sql = _ch_rb
+                for op in reversed(_up_ops):
+                    changes.insert(0, Change(
+                        operation=op.object_type,
+                        table=op.upgrade_attrs.get("name", ""),
+                    ))
+    except Exception:
+        logger.exception("Failed to prepend ClickHouse preamble; preamble objects omitted")
 
     return upgrade_sql, rollback_sql, changes
 
@@ -687,6 +751,10 @@ def generate_migration_sql(
             )
 
     upgrade_sql, rollback_sql, changes = _prepend_pg_preamble(
+        upgrade_sql, rollback_sql, changes, database,
+    )
+
+    upgrade_sql, rollback_sql, changes = _prepend_ch_preamble(
         upgrade_sql, rollback_sql, changes, database,
     )
 

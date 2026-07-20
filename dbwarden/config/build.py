@@ -168,6 +168,13 @@ def _finalize_entries(
             pg_extended_statistics=entry.pg_extended_statistics or [],
             pg_event_triggers=entry.pg_event_triggers or [],
             pg_migration_lock_timeout=entry.pg_migration_lock_timeout,
+            ch_named_collections=entry.ch_named_collections or [],
+            ch_roles=entry.ch_roles or [],
+            ch_users=entry.ch_users or [],
+            ch_row_policies=entry.ch_row_policies or [],
+            ch_quotas=entry.ch_quotas or [],
+            ch_settings_profiles=entry.ch_settings_profiles or [],
+            ch_grants=entry.ch_grants or [],
         )
 
     for i, left in enumerate(entries):
@@ -271,6 +278,7 @@ def get_database(name: str | None = None) -> DatabaseConfig:
     return replace(
         selected,
         sqlalchemy_url_sync=selected.dev_database_url,
+        sqlalchemy_url_async=selected.dev_database_url,
         database_type=dev_database_type,
     )
 

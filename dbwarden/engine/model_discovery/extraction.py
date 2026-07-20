@@ -429,6 +429,7 @@ def extract_column_info(
                 "ch_default_expression": "ch_default_expression",
                 "ch_materialized": "ch_materialized",
                 "ch_alias": "ch_alias",
+                "ch_ephemeral": "ch_ephemeral",
                 "ch_ttl": "ch_ttl",
                 "ch_low_cardinality": "ch_low_cardinality",
                 "ch_nullable": "ch_nullable",

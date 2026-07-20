@@ -387,8 +387,9 @@ class TestSQLGeneration:
             False,
             False,
             False,
-            "FALSE",
             None,
+            None,
+            ch_meta={"ch_default_expression": "FALSE"},
         )
 
         sql = model_discovery.generate_add_column_sql("commits", column, db_name="primary")
@@ -504,6 +505,107 @@ class TestSQLGeneration:
         assert "data String" in sql
         assert "CODEC(ZSTD(3))" in sql
         assert "ENGINE = MergeTree()" in sql
+
+    def test_generate_clickhouse_create_table_sql_with_default_expression(self, monkeypatch):
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("event_time", "DateTime", False, False, False, None, None,
+                        ch_meta={"ch_default_expression": "now()"}),
+        ]
+
+        table = ModelTable(name="events", columns=columns)
+        sql = generate_create_table_sql(table)
+
+        assert "event_time DateTime DEFAULT now()" in sql
+
+    def test_generate_clickhouse_create_table_sql_with_materialized(self, monkeypatch):
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("full_name", "String", False, False, False, None, None,
+                        ch_meta={"ch_materialized": "concat(first, ' ', last)"}),
+        ]
+
+        table = ModelTable(name="users", columns=columns)
+        sql = generate_create_table_sql(table)
+
+        assert "full_name String MATERIALIZED concat(first, ' ', last)" in sql
+
+    def test_generate_clickhouse_create_table_sql_with_alias(self, monkeypatch):
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("area", "Float64", False, False, False, None, None,
+                        ch_meta={"ch_alias": "width * height"}),
+        ]
+
+        table = ModelTable(name="metrics", columns=columns)
+        sql = generate_create_table_sql(table)
+
+        assert "area Float64 ALIAS width * height" in sql
+
+    def test_generate_clickhouse_create_table_sql_with_ephemeral(self, monkeypatch):
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("computed", "Int32", False, False, False, None, None,
+                        ch_meta={"ch_ephemeral": "4 + 5"}),
+        ]
+
+        table = ModelTable(name="test_table", columns=columns)
+        sql = generate_create_table_sql(table)
+
+        assert "computed Int32 EPHEMERAL 4 + 5" in sql
+
+    def test_generate_clickhouse_create_table_sql_with_column_ttl(self, monkeypatch):
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("payload", "String", False, False, False, None, None,
+                        ch_meta={"ch_ttl": "created_at + INTERVAL 30 DAY"}),
+        ]
+
+        table = ModelTable(name="events", columns=columns)
+        sql = generate_create_table_sql(table)
+
+        assert "payload String TTL created_at + INTERVAL 30 DAY" in sql
+
+    def test_generate_clickhouse_create_table_sql_with_default_and_codec(self, monkeypatch):
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        columns = [
+            ModelColumn("event_time", "DateTime", False, False, False, None, None,
+                        codec="ZSTD(3)",
+                        ch_meta={"ch_default_expression": "now()", "ch_ttl": "event_time + INTERVAL 90 DAY"}),
+        ]
+
+        table = ModelTable(name="events", columns=columns)
+        sql = generate_create_table_sql(table)
+
+        assert "event_time DateTime DEFAULT now()" in sql
+        assert "CODEC(ZSTD(3))" in sql
+        assert "TTL event_time + INTERVAL 90 DAY" in sql
+
+    def test_generate_clickhouse_add_column_sql_with_default_expression(self, monkeypatch):
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        column = ModelColumn("status", "String", False, False, False, None, None,
+                             ch_meta={"ch_default_expression": "'active'"})
+
+        sql = model_discovery.generate_add_column_sql("users", column, db_name="primary")
+
+        assert "DEFAULT 'active'" in sql
+
+    def test_generate_clickhouse_add_column_sql_with_materialized(self, monkeypatch):
+        monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")
+
+        column = ModelColumn("full_name", "String", False, False, False, None, None,
+                             ch_meta={"ch_materialized": "concat(first, ' ', last)"})
+
+        sql = model_discovery.generate_add_column_sql("users", column, db_name="primary")
+
+        assert "MATERIALIZED concat(first, ' ', last)" in sql
 
     def test_generate_clickhouse_create_table_sql_with_projection(self, monkeypatch):
         monkeypatch.setattr(model_discovery.type_mapping, "_get_backend_name", lambda db_name=None: "clickhouse")

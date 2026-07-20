@@ -424,6 +424,7 @@ class TestCHSafetyClassifiers:
         assert classify_ch_column_change("ch_default_expression") == "WARN"
         assert classify_ch_column_change("ch_materialized") == "WARN"
         assert classify_ch_column_change("ch_alias") == "WARN"
+        assert classify_ch_column_change("ch_ephemeral") == "WARN"
         assert classify_ch_column_change("ch_ttl") == "WARN"
 
     def test_classify_ch_column_change_info(self):

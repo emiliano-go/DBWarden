@@ -59,7 +59,8 @@ def _write_model_state(
         state_path.parent.mkdir(parents=True, exist_ok=True)
         file_state = dict(state)
         file_state["database"] = db_name or "default"
-        payload = json.dumps(file_state, indent=2, default=str) + "\n"
+        from dbwarden.engine.core.model_state import model_state_json_dumps
+        payload = model_state_json_dumps(file_state)
         if legacy_path != state_path:
             legacy_path.parent.mkdir(parents=True, exist_ok=True)
             legacy_path.write_text(payload)

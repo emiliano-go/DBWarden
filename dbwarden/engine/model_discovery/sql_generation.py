@@ -55,7 +55,7 @@ def generate_add_column_sql(
     )
 
     nullable_sql = "" if column.nullable or is_serial or backend == "clickhouse" else "NOT NULL"
-    default_sql = f" DEFAULT {column.default}" if column.default else ""
+    default_sql = f" DEFAULT {column.default}" if column.default and backend != "clickhouse" else ""
     fk_sql = ""
     if column.foreign_key and backend != "postgresql":
         fk_sql = f" REFERENCES {column.foreign_key}"
@@ -77,9 +77,22 @@ def generate_add_column_sql(
     if default_sql:
         sql += default_sql
     if backend == "clickhouse":
-        ch_codec = column.codec or column.ch_meta.get("ch_codec")
+        ch_meta = column.ch_meta
+        for key, keyword in (
+            ("ch_default_expression", "DEFAULT"),
+            ("ch_materialized", "MATERIALIZED"),
+            ("ch_alias", "ALIAS"),
+            ("ch_ephemeral", "EPHEMERAL"),
+        ):
+            val = ch_meta.get(key)
+            if val:
+                sql += f" {keyword} {val}"
+        ch_codec = column.codec or ch_meta.get("ch_codec")
         if ch_codec:
             sql += f" CODEC({ch_codec})"
+        ch_ttl = ch_meta.get("ch_ttl")
+        if ch_ttl:
+            sql += f" TTL {ch_ttl}"
         if column.comment:
             sql += f" COMMENT '{column.comment.replace(chr(39), chr(39) + chr(39))}'"
     if backend in ("mysql", "mariadb"):
@@ -120,10 +133,18 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             col_def += " PRIMARY KEY"
         elif col.unique:
             col_def += " UNIQUE"
-        if col.default and not is_serial:
+        if backend != "clickhouse" and col.default and not is_serial:
             col_def += f" DEFAULT {col.default}"
-        if backend == "clickhouse" and col.comment:
-            col_def += f" COMMENT '{col.comment.replace(chr(39), chr(39) + chr(39))}'"
+        if backend == "clickhouse":
+            for key, keyword in (
+                ("ch_default_expression", "DEFAULT"),
+                ("ch_materialized", "MATERIALIZED"),
+                ("ch_alias", "ALIAS"),
+                ("ch_ephemeral", "EPHEMERAL"),
+            ):
+                val = col.ch_meta.get(key)
+                if val:
+                    col_def += f" {keyword} {val}"
         if backend in ("mysql", "mariadb"):
             col_def = _append_mysql_column_attrs(col_def, col.my_meta)
         if col.foreign_key and backend != "postgresql":
@@ -132,10 +153,14 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
                 col_def += f" ON DELETE {col.fk_on_delete}"
             if col.fk_on_update and col.fk_on_update != "NO ACTION":
                 col_def += f" ON UPDATE {col.fk_on_update}"
-        if backend == "clickhouse" and col.codec:
-            col_def += f" CODEC({col.codec})"
-        if backend == "clickhouse" and col.comment:
-            col_def += f" COMMENT '{col.comment.replace(chr(39), chr(39) + chr(39))}'"
+        if backend == "clickhouse":
+            if col.codec:
+                col_def += f" CODEC({col.codec})"
+            ch_ttl = col.ch_meta.get("ch_ttl")
+            if ch_ttl:
+                col_def += f" TTL {ch_ttl}"
+            if col.comment:
+                col_def += f" COMMENT '{col.comment.replace(chr(39), chr(39) + chr(39))}'"
         column_defs.append(col_def)
 
     if backend == "clickhouse":

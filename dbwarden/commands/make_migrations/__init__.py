@@ -15,6 +15,7 @@ from dbwarden.engine.discovery import (
     validate_model_tables_exist,
 )
 from dbwarden.engine.migration_name import Change
+from dbwarden.engine.core.model_state import model_state_json_dumps
 from dbwarden.engine.offline import model_state_to_dict
 from dbwarden.engine.version import (
     get_migrations_directory,
@@ -318,7 +319,7 @@ def make_migrations_cmd(
     console.print(f"Tables included: {', '.join(t.name for t in tables)}", style="cyan")
 
     state = model_state_to_dict(tables, dbwarden_version=__version__)
-    state_payload = json.dumps(state, indent=2, default=str) + "\n"
+    state_payload = model_state_json_dumps(state)
     state_path = get_model_state_path(db_name)
     legacy_path = get_model_state_path(db_name, legacy=True)
     if legacy_path != state_path:

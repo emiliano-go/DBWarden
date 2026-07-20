@@ -476,9 +476,10 @@ def _run_offline_migrations(
     console.print(f"Created migration plan: {plan_path}", style="green")
     console.print(f"Tables included: {', '.join(sorted(set(c.table for c in changes if hasattr(c, 'table') and c.table)))}", style="cyan")
 
+    from dbwarden.engine.core.model_state import model_state_json_dumps
     file_state = dict(current_state)
     file_state["database"] = db_name or "default"
-    state_payload = json.dumps(file_state, indent=2, default=str) + "\n"
+    state_payload = model_state_json_dumps(file_state)
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(state_payload)
     if legacy_state_path != state_path:
@@ -764,8 +765,9 @@ def make_migrations_cmd(
     console.print(f"Created migration plan: {plan_filepath}", style="green")
     console.print(f"Tables included: {', '.join(t.name for t in tables)}", style="cyan")
 
+    from dbwarden.engine.core.model_state import model_state_json_dumps
     state = model_state_to_dict(tables, dbwarden_version=__version__)
-    state_payload = json.dumps(state, indent=2, default=str) + "\n"
+    state_payload = model_state_json_dumps(state)
     state_path = get_model_state_path(db_name)
     legacy_path = get_model_state_path(db_name, legacy=True)
     if legacy_path != state_path:

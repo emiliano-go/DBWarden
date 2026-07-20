@@ -9,6 +9,7 @@ _CH_COLUMN_KEYS: frozenset[str] = frozenset({
     "ch_default_expression",
     "ch_materialized",
     "ch_alias",
+    "ch_ephemeral",
     "ch_ttl",
     "ch_low_cardinality",
     "ch_nullable",

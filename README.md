@@ -279,6 +279,9 @@ dbwarden make-migrations "add bio column" --offline
 
 The model state file is updated in place after each migration.
 
+> **⚠️ WARNING: NEVER DELETE THE MODEL STATE FILE**
+> This file (`.dbwarden/model_state.*.json`) is the source of truth for your database schema. You may **delete migration files** safely, but **NEVER delete the model state file**. If accidentally deleted, restore it from git immediately or re-generate with `dbwarden export-models`. Deleting it causes dbwarden to lose track of your schema state, which can lead to data loss or incorrect migrations.
+
 ---
 
 ## Reverse-engineer models

@@ -1138,6 +1138,27 @@ class TestChFieldSpec:
         assert "ch_low_cardinality" not in info
         assert "ch_nullable" not in info
 
+    def test_type_override(self):
+        spec = ch.field(type="UInt16")
+        assert spec.type == "UInt16"
+        info = spec.to_col_info()
+        assert info["ch_type"] == "UInt16"
+
+    def test_to_col_info_omits_type_when_unset(self):
+        spec = ch.field(codec="ZSTD(3)")
+        info = spec.to_col_info()
+        assert "ch_type" not in info
+
+    def test_type_override_writes_column_info(self):
+        from dbwarden.schema._meta_reader import _write_column_info
+        from sqlalchemy import Column, Integer, MetaData, Table
+
+        spec = ch.field(type="UInt16")
+        attrs = {"ch": spec}
+        table = Table("t", MetaData(), Column("year", Integer))
+        _write_column_info(table.c.year, attrs)
+        assert table.c.year.info.get("ch_type") == "UInt16"
+
 
 class TestChEngineFactories:
     def test_merge_tree(self):

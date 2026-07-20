@@ -15,7 +15,7 @@ class Safety(str, Enum):
 
 
 CH_COLUMN_CRITICAL = frozenset({"ch_type", "ch_low_cardinality", "ch_nullable"})
-CH_COLUMN_WARN = frozenset({"ch_codec", "ch_default_expression", "ch_materialized", "ch_alias", "ch_ttl"})
+CH_COLUMN_WARN = frozenset({"ch_codec", "ch_default_expression", "ch_materialized", "ch_alias", "ch_ephemeral", "ch_ttl"})
 
 
 def classify_ch_column_change(key: str, *, change: dict | None = None) -> Safety:

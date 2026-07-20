@@ -118,6 +118,7 @@ class Meta(CHTableMeta):
 | `default_expression` | `str` | `DEFAULT now()` | `MODIFY COLUMN c REMOVE DEFAULT` |
 | `materialized` | `str` | `MATERIALIZED expr` | `MODIFY COLUMN c REMOVE MATERIALIZED` |
 | `alias` | `str` | `ALIAS expr` | `MODIFY COLUMN c REMOVE ALIAS` |
+| `ephemeral` | `str` | `EPHEMERAL expr` | `MODIFY COLUMN c REMOVE EPHEMERAL` |
 | `ttl` | `str` | `TTL expr` | `MODIFY COLUMN c REMOVE TTL` |
 | `low_cardinality` | `bool` | `LowCardinality(String)` | Wrapped into type |
 | `nullable` | `bool` | `Nullable(String)` | Wrapped into type |

@@ -94,6 +94,7 @@ def _render_ch_meta(columns: list[dict], options: dict, object_type: str) -> lis
         "ch_default_expression": "default_expression",
         "ch_materialized": "materialized",
         "ch_alias": "alias",
+        "ch_ephemeral": "ephemeral",
         "ch_ttl": "ttl",
         "ch_low_cardinality": "low_cardinality",
         "ch_nullable": "nullable",

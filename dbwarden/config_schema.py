@@ -15,7 +15,7 @@ VALID_DATABASE_TYPES = frozenset(
 )
 
 DATABASE_NAME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9_]*$")
-MODEL_PATH_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_/]*$")
+MODEL_PATH_RE = re.compile(r"^[a-zA-Z_./][a-zA-Z0-9_./-]*$")
 IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 MAX_PATH_LENGTH = 200
 MAX_PATH_COUNT = 10
@@ -139,6 +139,9 @@ def structure_database_entry(kwargs: dict) -> DatabaseEntry:
         raise ConfigurationError(
             "At least one of database_url_sync or database_url_async must be provided."
         )
+    model_paths = kwargs.get("model_paths")
+    if model_paths is not None:
+        _validate_model_paths_for_list(model_paths)
     model_tables = kwargs.get("model_tables")
     if model_tables is not None:
         if not isinstance(model_tables, list):

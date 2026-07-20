@@ -52,6 +52,13 @@ class DatabaseConfig:
     pg_extended_statistics: list[dict] = field(default_factory=list)
     pg_event_triggers: list[dict] = field(default_factory=list)
     pg_migration_lock_timeout: int | None = None
+    ch_named_collections: list[dict] = field(default_factory=list)
+    ch_roles: list[dict] = field(default_factory=list)
+    ch_users: list[dict] = field(default_factory=list)
+    ch_row_policies: list[dict] = field(default_factory=list)
+    ch_quotas: list[dict] = field(default_factory=list)
+    ch_settings_profiles: list[dict] = field(default_factory=list)
+    ch_grants: list[dict] = field(default_factory=list)
 
     @property
     def sqlalchemy_url(self) -> str:

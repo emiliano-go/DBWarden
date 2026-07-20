@@ -17,11 +17,11 @@ class TestExportModels:
     @patch("dbwarden.commands.export_models.get_database")
     @patch("dbwarden.commands.export_models.get_all_model_tables")
     @patch("dbwarden.commands.export_models.model_state_to_dict")
-    @patch("dbwarden.commands.export_models.json.dumps")
+    @patch("dbwarden.commands.export_models.model_state_json_dumps")
     def test_export_models_with_model_paths(
-        self, mock_json_dumps, mock_state_to_dict, mock_get_tables, mock_get_db
+        self, mock_dumps, mock_state_to_dict, mock_get_tables, mock_get_db
     ):
-        mock_json_dumps.return_value = '{"models": []}'
+        mock_dumps.return_value = '{"models": []}'
         mock_state_to_dict.return_value = {"models": []}
         mock_get_tables.return_value = []
         mock_get_db.return_value = _mock_config_with_model_paths(["myapp.models"])
@@ -38,11 +38,11 @@ class TestExportModels:
     @patch("dbwarden.commands.make_migrations.auto_discover_model_paths")
     @patch("dbwarden.commands.export_models.get_all_model_tables")
     @patch("dbwarden.commands.export_models.model_state_to_dict")
-    @patch("dbwarden.commands.export_models.json.dumps")
+    @patch("dbwarden.commands.export_models.model_state_json_dumps")
     def test_export_models_auto_discover(
-        self, mock_json_dumps, mock_state_to_dict, mock_get_tables, mock_auto_discover, mock_get_db
+        self, mock_dumps, mock_state_to_dict, mock_get_tables, mock_auto_discover, mock_get_db
     ):
-        mock_json_dumps.return_value = '{"models": []}'
+        mock_dumps.return_value = '{"models": []}'
         mock_state_to_dict.return_value = {"models": []}
         mock_get_tables.return_value = []
         mock_auto_discover.return_value = ["auto.models"]
@@ -70,11 +70,11 @@ class TestExportModels:
     @patch("dbwarden.commands.export_models.get_database")
     @patch("dbwarden.commands.export_models.get_all_model_tables")
     @patch("dbwarden.commands.export_models.model_state_to_dict")
-    @patch("dbwarden.commands.export_models.json.dumps")
+    @patch("dbwarden.commands.export_models.model_state_json_dumps")
     def test_export_models_output_path_created(
-        self, mock_json_dumps, mock_state_to_dict, mock_get_tables, mock_get_db
+        self, mock_dumps, mock_state_to_dict, mock_get_tables, mock_get_db
     ):
-        mock_json_dumps.return_value = '{"models": []}'
+        mock_dumps.return_value = '{"models": []}'
         mock_state_to_dict.return_value = {"models": []}
         mock_get_tables.return_value = []
         mock_get_db.return_value = _mock_config_with_model_paths(["myapp.models"])

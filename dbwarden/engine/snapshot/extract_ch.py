@@ -160,7 +160,7 @@ def _extract_clickhouse_schema_snapshot(connection: Any, db_name: str) -> dict[s
     column_rows = connection.execute(
         text(
             "SELECT table, name, type, default_kind, default_expression, compression_codec AS codec_expression, "
-            "NULL AS ttl_expression, comment, is_in_primary_key, is_in_sorting_key, is_in_partition_key "
+            "ttl_expression, comment, is_in_primary_key, is_in_sorting_key, is_in_partition_key "
             "FROM system.columns WHERE database = currentDatabase()"
         )
     ).fetchall()
@@ -275,9 +275,10 @@ def _extract_clickhouse_schema_snapshot(connection: Any, db_name: str) -> dict[s
                 "ch_codec": _pick_clickhouse_codec(col.get("codec_expression")),
                 "ch_default_expression": default_expression if default_kind == "DEFAULT" else None,
                 "ch_materialized": default_expression if default_kind == "MATERIALIZED" else None,
-                "ch_alias": default_expression if default_kind == "ALIAS" else None,
-                "ch_ttl": col.get("ttl_expression"),
-                "ch_low_cardinality": ch_low_cardinality,
+            "ch_alias": default_expression if default_kind == "ALIAS" else None,
+            "ch_ephemeral": default_expression if default_kind == "EPHEMERAL" else None,
+            "ch_ttl": col.get("ttl_expression"),
+            "ch_low_cardinality": ch_low_cardinality,
                 "ch_nullable": ch_nullable,
                 "ch_type": raw_type,
             }

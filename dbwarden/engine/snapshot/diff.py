@@ -2,6 +2,23 @@ from __future__ import annotations
 
 from typing import Any
 
+from dbwarden.engine.model_discovery.type_mapping import _get_backend_name
+
+
+def _is_clickhouse(db_name: str | None) -> bool:
+    return _get_backend_name(db_name) == "clickhouse"
+
+
+def _suppress_ch_column_ops(ops: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Remove alter_column_* ops that overlap with ChColumnHandler for CH."""
+    suppress = frozenset({
+        "alter_column_type",
+        "alter_column_nullable",
+        "alter_column_default",
+        "alter_column_comment",
+    })
+    return [op for op in ops if op["type"] not in suppress]
+
 
 def diff_models_against_snapshot(
     model_tables: list[Any],
@@ -12,6 +29,8 @@ def diff_models_against_snapshot(
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     upgrade_ops: list[dict[str, Any]] = []
     rollback_ops: list[dict[str, Any]] = []
+
+    is_ch = _is_clickhouse(db_name or database)
 
     snapshot_tables = snapshot.get("tables", {})
     model_by_name = {t.name: t for t in model_tables}
@@ -50,6 +69,9 @@ def diff_models_against_snapshot(
     _col_driver = RegistryDriver()
     _col_driver.register(_col_handler)
     _col_up, _col_rb = _col_driver.run(snapshot, model_tables, None)
+    if is_ch:
+        _col_up = _suppress_ch_column_ops(_col_up)
+        _col_rb = _suppress_ch_column_ops(_col_rb)
     for op in _col_up:
         upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
     for op in _col_rb:

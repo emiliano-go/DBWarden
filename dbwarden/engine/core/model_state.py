@@ -1,10 +1,28 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from dbwarden.engine.core.models import IndexInfo, ModelColumn, ModelTable
 
 STATE_FORMAT_VERSION = 2
+
+MODEL_STATE_WARNING = (
+    "WARNING: NEVER DELETE THIS FILE. "
+    "This file is the source of truth for your database schema. "
+    "You may DELETE migration files safely, but NEVER delete this model state file. "
+    "If accidentally deleted, restore from git immediately or re-generate with: "
+    "dbwarden export-models. "
+    "Deleting this file causes dbwarden to lose track of your schema state, "
+    "which can lead to data loss or incorrect migrations."
+)
+
+
+def model_state_json_dumps(state: dict, **extra: Any) -> str:
+    data: dict[str, Any] = {"_warning": MODEL_STATE_WARNING}
+    data.update(state)
+    data.update(extra)
+    return json.dumps(data, indent=2, default=str) + "\n"
 
 
 def model_state_to_dict(tables: list[ModelTable], dbwarden_version: str = "") -> dict:
