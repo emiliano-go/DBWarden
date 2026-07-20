@@ -1,3 +1,85 @@
+---
+seo:
+  title: Dictionaries - DBWarden Documentation
+  canonical: https://dbwarden.emiliano-go.com/databases/clickhouse/dictionaries
+  robots: index,follow
+  og:
+    type: website
+    title: Dictionaries - DBWarden Documentation
+    description: Declaration
+    url: https://dbwarden.emiliano-go.com/databases/clickhouse/dictionaries
+    image: https://dbwarden.emiliano-go.com/assets/images/og-image.png
+    image:width: 1376
+    image:height: 768
+    image:alt: DBWarden documentation
+    site_name: DBWarden Documentation
+    locale: en_US
+  twitter:
+    card: summary_large_image
+    title: Dictionaries - DBWarden Documentation
+    description: Declaration
+    image: https://dbwarden.emiliano-go.com/assets/images/og-image.png
+    image:alt: DBWarden documentation
+    site: '@emiliano_go_'
+  description: Declaration
+  schema_jsonld:
+  - '@context': https://schema.org
+    '@type': WebPage
+    name: Dictionaries - DBWarden Documentation
+    url: https://dbwarden.emiliano-go.com/databases/clickhouse/dictionaries
+    description: Declaration
+    image: https://dbwarden.emiliano-go.com/assets/images/og-image.png
+    publisher:
+      '@type': Organization
+      name: Emiliano Gandini Outeda
+      logo: https://dbwarden.emiliano-go.com/assets/images/og-image.png
+  - '@context': https://schema.org
+    '@type': BreadcrumbList
+    itemListElement:
+    - '@type': ListItem
+      position: 1
+      name: Databases
+      item: https://dbwarden.emiliano-go.com/databases
+    - '@type': ListItem
+      position: 2
+      name: ClickHouse
+      item: https://dbwarden.emiliano-go.com/databases/clickhouse
+    - '@type': ListItem
+      position: 3
+      name: Dictionaries
+      item: https://dbwarden.emiliano-go.com/databases/clickhouse/dictionaries
+seo_html: "<title>Dictionaries - DBWarden Documentation</title>\n<meta name=\"description\"\
+  \ content=\"Declaration\">\n<link rel=\"canonical\" href=\"https://dbwarden.emiliano-go.com/databases/clickhouse/dictionaries\"\
+  >\n<meta name=\"robots\" content=\"index,follow\">\n<meta property=\"og:type\" content=\"\
+  website\">\n<meta property=\"og:title\" content=\"Dictionaries - DBWarden Documentation\"\
+  >\n<meta property=\"og:description\" content=\"Declaration\">\n<meta property=\"\
+  og:url\" content=\"https://dbwarden.emiliano-go.com/databases/clickhouse/dictionaries\"\
+  >\n<meta property=\"og:image\" content=\"https://dbwarden.emiliano-go.com/assets/images/og-image.png\"\
+  >\n<meta property=\"og:image:width\" content=\"1376\">\n<meta property=\"og:image:height\"\
+  \ content=\"768\">\n<meta property=\"og:image:alt\" content=\"DBWarden documentation\"\
+  >\n<meta property=\"og:site_name\" content=\"DBWarden Documentation\">\n<meta property=\"\
+  og:locale\" content=\"en_US\">\n<meta name=\"twitter:card\" content=\"summary_large_image\"\
+  >\n<meta name=\"twitter:title\" content=\"Dictionaries - DBWarden Documentation\"\
+  >\n<meta name=\"twitter:description\" content=\"Declaration\">\n<meta name=\"twitter:image\"\
+  \ content=\"https://dbwarden.emiliano-go.com/assets/images/og-image.png\">\n<meta\
+  \ name=\"twitter:image:alt\" content=\"DBWarden documentation\">\n<meta name=\"\
+  twitter:site\" content=\"@emiliano_go_\">\n<script type=\"application/ld+json\"\
+  >\n[\n  {\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\"\
+  ,\n    \"name\": \"Dictionaries - DBWarden Documentation\",\n    \"url\": \"https://dbwarden.emiliano-go.com/databases/clickhouse/dictionaries\"\
+  ,\n    \"description\": \"Declaration\",\n    \"image\": \"https://dbwarden.emiliano-go.com/assets/images/og-image.png\"\
+  ,\n    \"publisher\": {\n      \"@type\": \"Organization\",\n      \"name\": \"\
+  Emiliano Gandini Outeda\",\n      \"logo\": \"https://dbwarden.emiliano-go.com/assets/images/og-image.png\"\
+  \n    }\n  },\n  {\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"\
+  BreadcrumbList\",\n    \"itemListElement\": [\n      {\n        \"@type\": \"ListItem\"\
+  ,\n        \"position\": 1,\n        \"name\": \"Databases\",\n        \"item\"\
+  : \"https://dbwarden.emiliano-go.com/databases\"\n      },\n      {\n        \"\
+  @type\": \"ListItem\",\n        \"position\": 2,\n        \"name\": \"ClickHouse\"\
+  ,\n        \"item\": \"https://dbwarden.emiliano-go.com/databases/clickhouse\"\n\
+  \      },\n      {\n        \"@type\": \"ListItem\",\n        \"position\": 3,\n\
+  \        \"name\": \"Dictionaries\",\n        \"item\": \"https://dbwarden.emiliano-go.com/databases/clickhouse/dictionaries\"\
+  \n      }\n    ]\n  }\n]\n</script>\n"
+---
+
 # Dictionaries
 
 ## Declaration

@@ -17,3 +17,20 @@
 <link rel="alternate" type="text/plain" title="LLMs TXT" href="/llms.txt">
 <link rel="alternate" type="text/plain" title="LLMs Full" href="/llms-full.txt">
 {% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(function() {
+  var drawer = document.getElementById('__drawer');
+  if (drawer) {
+    document.addEventListener('click', function(e) {
+      var link = e.target.closest('.md-sidebar--primary .md-nav__link');
+      if (link && drawer.checked) {
+        drawer.checked = false;
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}
