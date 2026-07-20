@@ -172,31 +172,41 @@ def _finalize_entries(
 
     for i, left in enumerate(entries):
         for right in entries[i + 1 :]:
-            if left.overlap_models or right.overlap_models:
-                continue
             overlap = _entry_model_paths(left).intersection(_entry_model_paths(right))
-            if overlap:
-                overlap_path = sorted(overlap)[0]
+            if not overlap:
+                continue
+            if not left.overlap_models:
                 raise ConfigurationError(
                     "model_paths overlap detected: "
-                    f"path '{overlap_path}' from '{right.database_name}' is also defined in '{left.database_name}'; "
+                    f"path '{sorted(overlap)[0]}' from '{right.database_name}' is also defined in '{left.database_name}'; "
+                    "set overlap_models=True to allow"
+                )
+            if not right.overlap_models:
+                raise ConfigurationError(
+                    "model_paths overlap detected: "
+                    f"path '{sorted(overlap)[0]}' from '{left.database_name}' is also defined in '{right.database_name}'; "
                     "set overlap_models=True to allow"
                 )
 
     for i, left in enumerate(entries):
         for right in entries[i + 1 :]:
-            if left.overlap_models or right.overlap_models:
-                continue
             left_tables = set(left.model_tables or [])
             right_tables = set(right.model_tables or [])
             if not left_tables or not right_tables:
                 continue
             overlap = left_tables.intersection(right_tables)
-            if overlap:
-                overlap_name = sorted(overlap)[0]
+            if not overlap:
+                continue
+            if not left.overlap_models:
                 raise ConfigurationError(
                     "model_tables overlap detected: "
-                    f"table '{overlap_name}' in '{left.database_name}' is also in '{right.database_name}'; "
+                    f"table '{sorted(overlap)[0]}' in '{left.database_name}' is also in '{right.database_name}'; "
+                    "set overlap_models=True to allow"
+                )
+            if not right.overlap_models:
+                raise ConfigurationError(
+                    "model_tables overlap detected: "
+                    f"table '{sorted(overlap)[0]}' in '{right.database_name}' is also in '{left.database_name}'; "
                     "set overlap_models=True to allow"
                 )
 

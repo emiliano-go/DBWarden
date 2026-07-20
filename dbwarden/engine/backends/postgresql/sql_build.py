@@ -3,6 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from dbwarden.engine.core.statement_order import MigrationStatement, StatementOrder
+from dbwarden.logging import get_logger
+
+logger = get_logger()
 
 
 def _build_pg_meta_sql(
@@ -151,5 +154,5 @@ def _prepend_pg_preamble(
                     if _name:
                         changes.insert(0, Change(type="add", object_type="preamble", name=_name))
     except Exception:
-        pass
+        logger.exception("Failed to prepend PostgreSQL preamble; preamble objects omitted")
     return upgrade_sql, rollback_sql, changes

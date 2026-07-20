@@ -648,6 +648,7 @@ class TestModelTablesConfig:
                 database_name="db1", database_type="sqlite",
                 database_url_sync="sqlite:///./db1.db", default=True,
                 model_paths=["models"], model_tables=["users", "posts"],
+                overlap_models=True,
             ),
             DatabaseEntry(
                 database_name="db2", database_type="sqlite",
@@ -659,6 +660,44 @@ class TestModelTablesConfig:
         result = _finalize_entries(entries, Path.cwd())
         assert "db1" in result.databases
         assert "db2" in result.databases
+
+    def test_model_tables_overlap_detected_when_only_one_side_opts_in(self):
+        """A non-opting entry's overlap must still be flagged even if the peer opted in."""
+        from pathlib import Path
+        entries = [
+            DatabaseEntry(
+                database_name="db1", database_type="sqlite",
+                database_url_sync="sqlite:///./db1.db", default=True,
+                model_paths=["models"], model_tables=["users", "posts"],
+            ),
+            DatabaseEntry(
+                database_name="db2", database_type="sqlite",
+                database_url_sync="sqlite:///./db2.db",
+                model_paths=["other_models"], model_tables=["posts", "comments"],
+                overlap_models=True,
+            ),
+        ]
+        with pytest.raises(ConfigurationError, match="model_tables overlap"):
+            _finalize_entries(entries, Path.cwd())
+
+    def test_model_paths_overlap_detected_when_only_one_side_opts_in(self):
+        """A non-opting entry's model_paths overlap must still be flagged."""
+        from pathlib import Path
+        entries = [
+            DatabaseEntry(
+                database_name="db1", database_type="sqlite",
+                database_url_sync="sqlite:///./db1.db", default=True,
+                model_paths=["shared_models"],
+            ),
+            DatabaseEntry(
+                database_name="db2", database_type="sqlite",
+                database_url_sync="sqlite:///./db2.db",
+                model_paths=["shared_models"],
+                overlap_models=True,
+            ),
+        ]
+        with pytest.raises(ConfigurationError, match="model_paths overlap"):
+            _finalize_entries(entries, Path.cwd())
 
     def test_model_tables_overlap_skipped_when_one_side_none(self):
         from pathlib import Path

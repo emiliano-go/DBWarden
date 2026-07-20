@@ -313,6 +313,8 @@ def get_settings_source_file() -> Path:
 
 def _import_source(source: _ResolvedSource) -> Path:
     if source.kind == "module":
+        if source.value in sys.modules:
+            del sys.modules[source.value]
         importlib.import_module(source.value)
         return Path.cwd().resolve()
 

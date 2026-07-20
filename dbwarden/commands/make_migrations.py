@@ -37,6 +37,8 @@ from dbwarden.engine.offline import model_state_to_dict
 from dbwarden.logging import get_logger
 from dbwarden.output import console
 
+logger = get_logger()
+
 
 @dataclass
 class RenameIntent:
@@ -1158,7 +1160,7 @@ def _prepend_pg_preamble(
             for ext in config.pg_extensions:
                 changes.insert(0, Change(operation="create_extension", table=ext))
     except Exception:
-        pass
+        logger.exception("Failed to prepend PostgreSQL preamble; preamble objects omitted")
 
     return upgrade_sql, rollback_sql, changes
 

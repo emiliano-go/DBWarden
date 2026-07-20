@@ -256,6 +256,7 @@ def _build_dbwarden_meta(table_attrs: dict[str, Any]) -> DBWardenMeta:
             unlogged=table_attrs.get("pg_unlogged", False),
             inherits=list(pg_inherits) if pg_inherits else None,
             schema=table_attrs.get("pg_schema") or None,
+            partition=table_attrs.get("pg_partition"),
         )
     elif isinstance(table_attrs.get("ch"), ChTableSpec):
         ts: ChTableSpec = table_attrs["ch"]
