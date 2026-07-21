@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+from dbwarden.engine.snapshot import IRREVERSIBLE_ANNOTATION
 from dbwarden.output import console
 
 
@@ -82,6 +83,14 @@ def make_rollback_cmd(migration_file: str) -> None:
         s.strip() for s in upgrade_section.split(";") if s.strip() and not s.strip().startswith("--")
     ]
     rollback_statements = [_reverse_sql(s) for s in statements]
+    has_placeholder = any(stmt.lstrip().startswith("-- No automatic rollback generated") for stmt in rollback_statements)
+    if has_placeholder and IRREVERSIBLE_ANNOTATION not in content:
+        console.print(
+            "Automatic rollback would contain placeholder SQL. Add "
+            f"'-- {IRREVERSIBLE_ANNOTATION}' only if this migration is intentionally irreversible.",
+            style="red",
+        )
+        return
 
     out_path = path.with_suffix(".rollback.sql")
     out_path.write_text(
