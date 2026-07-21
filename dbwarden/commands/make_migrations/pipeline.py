@@ -221,6 +221,7 @@ def _run_offline_migrations(
 
     upgrade_sql, rollback_sql, changes = snapshot_diff_to_sql(
         upgrade_ops, rollback_ops, database=database, db_name=db_name,
+        enforce_rollback_contract=True,
     )
 
     upgrade_sql, rollback_sql, changes = _prepend_pg_preamble(
@@ -523,6 +524,7 @@ def generate_migration_sql(
 
     try:
         from dbwarden.engine.snapshot import (
+            RollbackContractError,
             find_latest_snapshot,
             extract_full_schema_snapshot,
             diff_models_against_snapshot,
@@ -583,7 +585,10 @@ def generate_migration_sql(
                 safe_type_change=safe_type_change,
                 concurrent=concurrent,
                 postgres_auto_using=postgres_auto_using,
+                enforce_rollback_contract=True,
             )
+        except RollbackContractError:
+            raise
         except Exception:
             snapshot = None
 

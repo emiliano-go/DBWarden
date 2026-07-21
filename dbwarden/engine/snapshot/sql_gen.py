@@ -1,11 +1,79 @@
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from dbwarden.engine.core.models import ModelTable
 from dbwarden.engine.core.statement_order import _assemble_migration, MigrationStatement
 
 from .sql_builders import _build_clickhouse_recreate_table_sql
+
+
+IRREVERSIBLE_ANNOTATION = "dbwarden: irreversible"
+
+
+class RollbackContractError(ValueError):
+    """Raised when generated rollback SQL violates the rollback contract."""
+
+
+_IRREVERSIBLE_ROLLBACK_OPS: frozenset[str] = frozenset({
+    "alter_enum_add_value",
+    "refresh_matview",
+    "alter_pg_partition",
+    "apply_data_op",
+    "recreate_ch_table",
+})
+
+
+def _rollback_kind_from_sql(rollback_sql: str) -> str | None:
+    sql = rollback_sql.strip().lower()
+    if not sql.startswith("--"):
+        return None
+    if "irreversible" in sql:
+        return "irreversible"
+    if sql.startswith("-- no-op") or "nothing to roll back" in sql:
+        return "no-op"
+    placeholder_markers = (
+        "cannot ",
+        "manual",
+        "no rollback",
+        "revert",
+        "inverse requires manual migration",
+        "not yet implemented",
+    )
+    if any(marker in sql for marker in placeholder_markers):
+        return "placeholder"
+    return None
+
+
+def _enforce_rollback_contract(
+    stmt: MigrationStatement,
+    op_type: str,
+    target: str,
+    rollback_kind: str,
+    *,
+    enforce_rollback_contract: bool,
+    acknowledge_irreversible: bool = False,
+) -> None:
+    if not enforce_rollback_contract:
+        return
+    if rollback_kind == "placeholder":
+        if acknowledge_irreversible:
+            return
+        raise RollbackContractError(
+            f"Placeholder rollback for {op_type} on {target} is not allowed. "
+            f"Provide executable rollback SQL or add '-- {IRREVERSIBLE_ANNOTATION}' "
+            "and mark the migration irreversible."
+        )
+    if rollback_kind == "irreversible" and op_type not in _IRREVERSIBLE_ROLLBACK_OPS and not acknowledge_irreversible:
+        raise RollbackContractError(
+            f"Irreversible rollback for {op_type} on {target} is not in the known irreversible set. "
+            f"Add '-- {IRREVERSIBLE_ANNOTATION}' only after accepting that this migration cannot roll back automatically."
+        )
+    if rollback_kind == "real" and stmt.rollback_sql.strip().startswith("--"):
+        raise RollbackContractError(
+            f"Rollback for {op_type} on {target} is classified real but emits a SQL comment."
+        )
 
 
 def snapshot_diff_to_sql(
@@ -16,6 +84,8 @@ def snapshot_diff_to_sql(
     safe_type_change: bool = False,
     concurrent: bool = True,
     postgres_auto_using: bool = False,
+    enforce_rollback_contract: bool = False,
+    acknowledge_irreversible: bool = False,
 ) -> tuple[str, str, list[Any]]:
     from dbwarden.engine.discovery import (
         generate_add_column_sql,
@@ -62,37 +132,69 @@ def snapshot_diff_to_sql(
         TriggerHandler,
         ViewHandler,
     )
-    from dbwarden.engine.backends.clickhouse.handlers import ChColumnHandler, ChTableHandler
+    from dbwarden.engine.backends.clickhouse.handlers import (
+        ChAggTargetHandler,
+        ChColumnHandler,
+        ChCommentHandler,
+        ChDataOpHandler,
+        ChDictionaryHandler,
+        ChGrantHandler,
+        ChMaterializedViewHandler,
+        ChNamedCollectionHandler,
+        ChProjectionHandler,
+        ChQuotaHandler,
+        ChRoleHandler,
+        ChRowPolicyHandler,
+        ChSettingsProfileHandler,
+        ChSkipIndexHandler,
+        ChTableHandler,
+        ChUserHandler,
+    )
     from dbwarden.engine.backends.mysql.handlers import MyTableHandler
     from dbwarden.engine.core.protocol import Op
+    from dbwarden.logging import Verbosity, get_logger
 
     _emit_dispatch: dict[str, Any] = {}
     for _h in (
         ChTableHandler(),
+        ChAggTargetHandler(),
         ColumnHandler(),
         ChColumnHandler(),
+        ChCommentHandler(),
         CompositeTypeHandler(),
         ConstraintHandler(),
+        ChDataOpHandler(),
         DefaultPrivilegesHandler(),
+        ChDictionaryHandler(),
         DomainHandler(),
         EnumHandler(),
         EventTriggerHandler(),
         ExtendedStatisticsHandler(),
         FunctionHandler(),
+        ChGrantHandler(),
         GrantsHandler(),
         IndexHandler(),
+        ChMaterializedViewHandler(),
         MyTableHandler(),
+        ChNamedCollectionHandler(),
         PartitionHandler(),
         PgTableHandler(),
         PoliciesHandler(),
+        ChProjectionHandler(),
+        ChQuotaHandler(),
         RenameTableHandler(),
+        ChRoleHandler(),
+        ChRowPolicyHandler(),
         RoleHandler(),
         SchemaHandler(),
         SequenceHandler(),
+        ChSettingsProfileHandler(),
+        ChSkipIndexHandler(),
         StatisticsHandler(),
         StorageParamsHandler(),
         TableHandler(),
         TriggerHandler(),
+        ChUserHandler(),
         ViewHandler(),
     ):
         for _ot in getattr(_h, "op_types", (_h.object_type,)):
@@ -128,6 +230,34 @@ def snapshot_diff_to_sql(
         "drop_foreign_key": "table",
         "alter_ch_options": "table",
         "recreate_ch_table": "table",
+        "alter_ch_projection": "table",
+        "alter_ch_skip_index": "table",
+        "alter_ch_comment": "table",
+        "modify_mv_query": "mv_name",
+        "modify_mv_refresh": "mv_name",
+        "alter_ch_dict": "name",
+        "create_ch_agg_target": "name",
+        "drop_ch_agg_target": "name",
+        "apply_data_op": "name",
+        "create_ch_named_collection": "name",
+        "drop_ch_named_collection": "name",
+        "alter_ch_named_collection": "name",
+        "create_ch_settings_profile": "name",
+        "drop_ch_settings_profile": "name",
+        "alter_ch_settings_profile": "name",
+        "create_ch_role": "name",
+        "drop_ch_role": "name",
+        "alter_ch_role": "name",
+        "create_ch_user": "name",
+        "drop_ch_user": "name",
+        "alter_ch_user": "name",
+        "create_ch_quota": "name",
+        "drop_ch_quota": "name",
+        "alter_ch_quota": "name",
+        "create_ch_row_policy": "name",
+        "drop_ch_row_policy": "name",
+        "alter_ch_row_policy": "name",
+        "alter_ch_grant": "name",
         "add_column": "table",
         "drop_column": "table",
         "rename_column": "table",
@@ -172,6 +302,28 @@ def snapshot_diff_to_sql(
 
     statements: list[MigrationStatement] = []
     changes: list[Any] = []
+    logger = get_logger(debug_enabled=logging.getLogger("dbwarden").isEnabledFor(logging.DEBUG))
+
+    def _warn_about_rollback(stmt: MigrationStatement, op_type: str, target: str) -> str:
+        inferred = _rollback_kind_from_sql(stmt.rollback_sql)
+        rollback_kind = stmt.rollback_kind
+        if rollback_kind == "real" and inferred:
+            rollback_kind = inferred
+        if rollback_kind == "placeholder" and op_type in _IRREVERSIBLE_ROLLBACK_OPS:
+            rollback_kind = "irreversible"
+        if rollback_kind == "irreversible":
+            reason = stmt.rollback_reason or "rollback SQL is irreversible or not executable"
+            logger.warning(
+                f"Irreversible rollback for {op_type} on {target}: {reason}"
+            )
+        elif rollback_kind in ("conditional", "placeholder") and logger.verbosity >= Verbosity.VERBOSE:
+            reason = stmt.rollback_reason or (
+                "rollback is conditional" if rollback_kind == "conditional" else "rollback SQL is a placeholder or manual instruction"
+            )
+            logger.warning(
+                f"{rollback_kind.title()} rollback for {op_type} on {target}: {reason}"
+            )
+        return rollback_kind
 
     if not concurrent:
         for op in upgrade_ops:
@@ -185,7 +337,11 @@ def snapshot_diff_to_sql(
         _handler = _emit_dispatch.get(op["type"])
         if _handler is not None:
             _ot = op["type"]
-            _attrs: dict[str, Any] = {k: v for k, v in op.items() if k != "type"}
+            _attrs: dict[str, Any] = {
+                k: v for k, v in op.items()
+                if k not in ("type", "__rollback_attrs", "__irreversible")
+            }
+            _rollback_attrs: dict[str, Any] = dict(op.get("__rollback_attrs") or {})
             if _ot in ("create_domain", "drop_domain"):
                 _info: dict[str, Any] = {"type": op.get("domain_type", "text")}
                 for _k in ("schema", "default", "not_null", "check"):
@@ -198,10 +354,30 @@ def snapshot_diff_to_sql(
                     if op.get(_k) is not None:
                         _info[_k] = op[_k]
                 _attrs = {"seq_name": op.get("name") or op.get("seq_name", ""), "seq_info": _info}
-            _op_obj = Op(object_type=_ot, upgrade_attrs=_attrs)
-            statements.extend(_handler.emit(_op_obj, db_name=db_name))
+            _op_obj = Op(
+                object_type=_ot,
+                upgrade_attrs=_attrs,
+                rollback_attrs=_rollback_attrs,
+                irreversible=bool(op.get("__irreversible", False)),
+            )
             _table_key = _CHANGE_TABLE_KEY.get(_ot, "table")
             _table = op.get(_table_key) or op.get("name") or op.get("table", "")
+            emitted = _handler.emit(_op_obj, db_name=db_name)
+            if op.get("__irreversible"):
+                for stmt in emitted:
+                    stmt.rollback_kind = "irreversible"
+                    stmt.rollback_reason = stmt.rollback_reason or op.get("rollback_reason")
+            for stmt in emitted:
+                rollback_kind = _warn_about_rollback(stmt, _ot, str(_table))
+                _enforce_rollback_contract(
+                    stmt,
+                    _ot,
+                    str(_table),
+                    rollback_kind,
+                    enforce_rollback_contract=enforce_rollback_contract,
+                    acknowledge_irreversible=acknowledge_irreversible,
+                )
+            statements.extend(emitted)
             _change: dict[str, Any] = {"operation": _ot, "table": _table}
             _target_key = _CHANGE_TARGET_KEY.get(_ot)
             if _target_key and op.get(_target_key) is not None:

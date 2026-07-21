@@ -88,7 +88,7 @@ from .sql_builders import (
     _build_safe_type_change_sql,
     _join_creation_sql,
 )
-from .sql_gen import _find_model_table, snapshot_diff_to_sql
+from .sql_gen import IRREVERSIBLE_ANNOTATION, RollbackContractError, _find_model_table, snapshot_diff_to_sql
 from .type_normalize import (
     _SNAP_TO_MODEL_KEY,
     _model_type_str,
