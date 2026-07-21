@@ -133,6 +133,27 @@ After each migration is applied, DBWarden writes a **schema snapshot** to `.dbwa
 
 See [Schema Snapshots](schema-snapshots.md) for details.
 
+## Rollback contract
+
+`make-migrations` enforces rollback correctness for generated migrations. Each emitted rollback statement is classified before the file is accepted:
+
+| Kind | Behavior |
+|------|----------|
+| `real` | Generated normally. |
+| `conditional` | Generated only when prior state exists and the operation is statically proven safe. Verbose mode prints a warning. |
+| `irreversible` | Generated only for known irreversible operations or explicit acknowledgement. Normal mode prints a warning. |
+| `placeholder` | Refused by default. |
+
+A rollback SQL comment is not treated as a successful rollback. If rollback cannot be generated safely, DBWarden fails generation instead of writing a migration that appears reversible.
+
+Explicit irreversible declaration for committed migrations:
+
+```sql
+-- dbwarden: irreversible
+```
+
+See [Rollback Coverage](../correctness/rollback-coverage-matrix.md) for PostgreSQL and ClickHouse operation coverage.
+
 ## Rename Detection
 
 When a column is dropped from the snapshot and a new column of the same type is added to the model, DBWarden auto-detects it as a potential **rename** and emits `ALTER TABLE ... RENAME COLUMN` instead of `DROP` + `ADD`.
@@ -233,7 +254,7 @@ ALTER TABLE users ALTER COLUMN bio TYPE TEXT
 
 -- rollback
 
--- ALTER TABLE users ALTER COLUMN bio TYPE <original_type>
+ALTER TABLE users ALTER COLUMN bio TYPE VARCHAR
 ```
 
 ### Nullability change
@@ -282,7 +303,7 @@ For databases that don't support in-place `ALTER COLUMN TYPE` (or when you want 
 
 ## ClickHouse Engine Recreate
 
-When a ClickHouse table's engine changes (e.g., `MergeTree` → `ReplicatedMergeTree`), it cannot be altered in-place. DBWarden supports two strategies depending on the table type.
+When a ClickHouse table's engine changes, for example `MergeTree` to `ReplicatedMergeTree`, it cannot be altered in-place. DBWarden supports two strategies depending on the table type.
 
 ### Table strategy (CREATE + INSERT + RENAME)
 
@@ -328,6 +349,16 @@ Engine recreation is **blocked** for tables that are themselves materialized vie
 Projections (`ch_projections`) are automatically preserved through the table rebuild and do not block it.
 
 ### Safety
+
+Rollback for ClickHouse table recreation is deliberately conservative:
+
+| Transition class | Rollback behavior |
+|------------------|-------------------|
+| Row-preserving engines | Reverse recreate rollback is generated as conditional. |
+| Lossy engines | Rollback is irreversible because row-level detail can be lost. |
+| Unknown engines | Rollback is irreversible because DBWarden cannot prove safety. |
+
+Lossy engines include `ReplacingMergeTree`, `SummingMergeTree`, `AggregatingMergeTree`, `CollapsingMergeTree`, `VersionedCollapsingMergeTree`, and replicated variants.
 
 | Object type | Safety | Notes |
 |------------|--------|-------|

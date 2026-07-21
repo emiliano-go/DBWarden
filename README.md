@@ -41,7 +41,7 @@ There are no migration scripts to write or maintain. There is no migration runti
 
 - Migrations generated from your models, not written by hand
 - Plain SQL output: reviewable, committable, executable anywhere
-- Built-in rollback in every migration file
+- Strict rollback contract with placeholder rollback refused by default
 - Pre-deploy impact analysis: know what breaks before it ships
 - Offline migration generation for CI pipelines without a live database
 - Schema snapshots for deterministic diffs and rename detection
@@ -214,7 +214,7 @@ dbwarden status
 
 **Plain SQL output**: Generated migrations are `.sql` files. No migration runtime, no generated Python. Review them, commit them, execute them directly against any environment.
 
-**Rollback included**: Every migration carries both upgrade and rollback SQL in the same file. Rollback SQL is generated automatically: you do not write it.
+**Rollback contract**: Generated migrations carry both upgrade and rollback sections. DBWarden emits executable rollback when it is safe, refuses placeholder rollback by default, and requires an explicit irreversible declaration when rollback cannot be produced.
 
 **Schema snapshots**: After every migration, a checksummed JSON snapshot is written to `.dbwarden/schemas/`. Snapshots power rename detection, offline diffing, and column-level comparisons without querying the live database.
 

@@ -120,6 +120,27 @@ Each migration file must define both:
 
 If rollback is weak or incomplete, production recovery is weak or incomplete.
 
+## Rollback contract
+
+Generated rollback is part of the migration contract. DBWarden classifies rollback before a migration is accepted:
+
+| Kind | Meaning | Generation behavior |
+|------|---------|---------------------|
+| `real` | Executable rollback SQL restores the prior schema state for the operation. | Allowed. |
+| `conditional` | Executable rollback SQL is allowed only when prior state is captured and DBWarden can prove the inverse is structurally safe. | Allowed with verbose warning. |
+| `irreversible` | Rollback is genuinely unsafe or impossible, such as lossy ClickHouse engine changes or PostgreSQL enum value additions. | Allowed only for known irreversible operations or explicit acknowledgement. |
+| `placeholder` | Rollback is only a comment or manual instruction. | Refused by default. |
+
+Placeholder rollback is not a working rollback. If DBWarden cannot emit executable rollback SQL, generation fails unless the migration is intentionally declared irreversible.
+
+Explicit irreversible declaration:
+
+```sql
+-- dbwarden: irreversible
+```
+
+Use this only when the team accepts that the migration cannot be rolled back automatically. See [Rollback Coverage](correctness/rollback-coverage-matrix.md) for the backend operation matrix.
+
 ## Migration classes
 
 DBWarden supports three execution classes:
@@ -234,6 +255,7 @@ Seed marker:
 - One logical change per migration file
 - Keep DDL explicit; avoid hidden application-side schema effects
 - Keep rollback idempotent when possible (`IF EXISTS`, safe predicates)
+- Do not commit placeholder rollback. Use executable rollback SQL or an explicit irreversible declaration.
 - For data migrations, use bounded, reversible operations
 - Prefer small migrations over large monolithic SQL scripts
 

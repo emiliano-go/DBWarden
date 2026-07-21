@@ -177,7 +177,7 @@ primary = database_config(
 )
 ```
 
-At the model level, set `pg_schema` on `PGTableMeta` or `PGViewMeta` to scope a specific table or view to a schema. This takes precedence over the config-level `search_path`. See [PostgreSQL Deep Dive](postgresql.md) for full details.
+At the model level, set `pg_schema` on `PGTableMeta` or `PGViewMeta` to scope a specific table or view to a schema. This takes precedence over the config-level `search_path`. See [PostgreSQL Deep Dive](postgresql/index.md) for full details.
 
 ## Development Database Strategy
 
@@ -218,16 +218,16 @@ Each backend has deep-dive documentation:
 
 | Backend | Guide |
 |---------|-------|
-| PostgreSQL | [PostgreSQL Deep Dive](postgresql.md) |
+| PostgreSQL | [PostgreSQL Deep Dive](postgresql/index.md) |
 | MySQL / MariaDB | [MySQL Deep Dive](mysql.md) |
 | SQLite | [SQL Databases](sql-databases.md) |
-| ClickHouse | [ClickHouse Deep Dive](clickhouse.md) |
+| ClickHouse | [ClickHouse Deep Dive](clickhouse/index.md) |
 
 ### PostgreSQL
 
 PostgreSQL is a **first-class backend** with full round-trip support. All metadata: identity columns, collation, storage, compression, generated columns, fillfactor, tablespace, inheritance, exclude constraints, deferrable FKs, and advanced index options, is captured by the snapshot, diffed correctly, and emitted as valid DDL.
 
-See [PostgreSQL Deep Dive](postgresql.md) for the complete reference.
+See [PostgreSQL Deep Dive](postgresql/index.md) for the complete reference.
 
 ### MySQL
 
@@ -263,10 +263,10 @@ See [MySQL Deep Dive](mysql.md) for MariaDB-specific notes.
 ClickHouse has full round-trip support: `generate-models` reads schema from a live ClickHouse server, and `make-migrations` / `migrate` auto-generates DDL for table operations.
 
 - HTTP-based wire protocol; DBWarden uses ClickHouse client, not SQLAlchemy session
-- DDL operations now mostly auto-generated: table rename, column type change, nullable/LowCardinality changes, projections. FK, standard indexes, and safe type change still emit comment placeholders.
+- DDL operations are mostly auto-generated: table rename, column type change, nullable and LowCardinality changes, projections, RBAC objects, and engine recreation. Placeholder rollback is refused by the strict rollback contract unless the migration is explicitly irreversible.
 - Full engine metadata support via `class Meta(CHTableMeta)` with `ChEngineSpec`, `ProjectionSpec`, `CHColumnMeta`
 - Supports materialized views, projections, dictionaries, replicated engines
-- See [ClickHouse Deep Dive](clickhouse.md) for full details
+- See [ClickHouse Deep Dive](clickhouse/index.md) for full details
 
 ## Recommended Verification Workflow
 
