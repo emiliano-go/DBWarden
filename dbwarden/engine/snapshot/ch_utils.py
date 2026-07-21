@@ -78,6 +78,76 @@ def _check_ch_engine_recreate_allowed(snap_spec: dict, model_spec: dict, table_n
         )
 
 
+_LOSSY_CH_ENGINE_FAMILIES: frozenset[str] = frozenset({
+    "aggregatingmergetree",
+    "collapsingmergetree",
+    "replacingmergetree",
+    "summingmergetree",
+    "versionedcollapsingmergetree",
+})
+
+_ROW_PRESERVING_CH_ENGINE_FAMILIES: frozenset[str] = frozenset({
+    "log",
+    "memory",
+    "mergetree",
+    "replicatedmergetree",
+    "stripelog",
+    "tinylog",
+})
+
+
+def _clickhouse_engine_family(engine: Any) -> str | None:
+    serialized = _serialize_clickhouse_engine(engine)
+    if serialized is None:
+        return None
+    if isinstance(serialized, (tuple, list)):
+        if not serialized:
+            return None
+        name = str(serialized[0])
+    else:
+        name = str(serialized)
+    name = name.strip()
+    if not name:
+        return None
+    return name.split("(", 1)[0].strip().lower()
+
+
+def classify_clickhouse_recreate_rollback(from_engine: Any, to_engine: Any) -> tuple[str, str]:
+    """Classify whether a ClickHouse recreate transition has safe rollback.
+
+    Rollback is considered safe only when both engines are known row-preserving.
+    Lossy or unknown families are irreversible by policy.
+    """
+    from_family = _clickhouse_engine_family(from_engine)
+    to_family = _clickhouse_engine_family(to_engine)
+
+    def _is_lossy(family: str | None) -> bool:
+        if family in _LOSSY_CH_ENGINE_FAMILIES:
+            return True
+        if family and family.startswith("replicated"):
+            unreplicated = family.removeprefix("replicated")
+            return unreplicated in _LOSSY_CH_ENGINE_FAMILIES
+        return False
+
+    if _is_lossy(from_family) or _is_lossy(to_family):
+        return (
+            "irreversible",
+            f"ClickHouse engine transition {from_family or 'unknown'} -> {to_family or 'unknown'} may collapse, deduplicate, aggregate, or otherwise lose row-level detail.",
+        )
+    if (
+        from_family in _ROW_PRESERVING_CH_ENGINE_FAMILIES
+        and to_family in _ROW_PRESERVING_CH_ENGINE_FAMILIES
+    ):
+        return (
+            "conditional",
+            f"ClickHouse engine transition {from_family} -> {to_family} is known row-preserving; rollback still depends on successful recreate round-trip.",
+        )
+    return (
+        "irreversible",
+        f"ClickHouse engine transition {from_family or 'unknown'} -> {to_family or 'unknown'} is not statically proven row-preserving.",
+    )
+
+
 def _diff_ch_column_extras(
     snap_ch_col: dict,
     model_ch_col: dict,

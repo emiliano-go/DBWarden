@@ -273,6 +273,8 @@ def _build_clickhouse_recreate_table_sql(
     failed_name = f"{table_name}{op.get('failed_suffix', '__dbw_failed')}"
     drop_old_after_swap = bool(op.get("drop_old_after_swap", False))
     dependent_mvs: list[str] = op.get("dependent_mvs", [])
+    rollback_kind = op.get("rollback_kind", "conditional")
+    rollback_reason = op.get("rollback_reason")
 
     copy_columns = [col.name for col in to_table.columns if any(src.name == col.name for src in from_table.columns)]
     copy_cols_sql = ", ".join(copy_columns)
@@ -339,11 +341,19 @@ def _build_clickhouse_recreate_table_sql(
         )
     rollback_parts.append(f"-- Preserved forward table as {preserved_name}. Drop it after validation:\n-- DROP TABLE {preserved_name};")
 
+    if rollback_kind == "irreversible":
+        reason = rollback_reason or "ClickHouse recreate rollback was not proven row-preserving."
+        rollback_sql = f"-- Irreversible ClickHouse recreate for {table_name}: {reason}"
+    else:
+        rollback_sql = "\n".join(rollback_parts)
+
     return [
         MigrationStatement(
             order=StatementOrder.ALTER_TABLE_OPTIONS,
             upgrade_sql="\n".join(upgrade_parts),
-            rollback_sql="\n".join(rollback_parts),
+            rollback_sql=rollback_sql,
+            rollback_kind=rollback_kind,
+            rollback_reason=rollback_reason,
         )
     ]
 

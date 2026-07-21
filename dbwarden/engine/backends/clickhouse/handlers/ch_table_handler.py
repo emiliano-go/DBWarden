@@ -129,8 +129,13 @@ class ChTableHandler(ObjectHandler):
             has_recreate_keys = any(k in _RECREATE_REQUIRED_CH_KEYS for k in ch_changes)
             if has_recreate_keys and self.clickhouse_engine_recreate and snapshot_table is not None and model_table is not None:
                 from dbwarden.engine.offline import _table_to_state_entry
+                from dbwarden.engine.snapshot.ch_utils import classify_clickhouse_recreate_rollback
 
                 reason = ",".join(k for k in ch_changes if k in _RECREATE_REQUIRED_CH_KEYS)
+                rollback_kind, rollback_reason = classify_clickhouse_recreate_rollback(
+                    snap_opts.get("ch_engine"),
+                    model_opts.get("ch_engine"),
+                )
                 from_dict = {
                     "name": tname,
                     **snapshot_table,
@@ -152,6 +157,8 @@ class ChTableHandler(ObjectHandler):
                         "drop_old_after_swap": False,
                         "preserve_old_suffix": "__dbw_old",
                         "failed_suffix": "__dbw_failed",
+                        "rollback_kind": rollback_kind,
+                        "rollback_reason": rollback_reason,
                     },
                     rollback_attrs={
                         "table": tname,
@@ -161,7 +168,10 @@ class ChTableHandler(ObjectHandler):
                         "drop_old_after_swap": False,
                         "preserve_old_suffix": "__dbw_failed",
                         "failed_suffix": "__dbw_old",
+                        "rollback_kind": rollback_kind,
+                        "rollback_reason": rollback_reason,
                     },
+                    irreversible=rollback_kind == "irreversible",
                 ))
                 rollback_ops.append(Op(
                     object_type="recreate_ch_table",
@@ -173,6 +183,8 @@ class ChTableHandler(ObjectHandler):
                         "drop_old_after_swap": False,
                         "preserve_old_suffix": "__dbw_failed",
                         "failed_suffix": "__dbw_old",
+                        "rollback_kind": rollback_kind,
+                        "rollback_reason": rollback_reason,
                     },
                     rollback_attrs={
                         "table": tname,
@@ -182,7 +194,10 @@ class ChTableHandler(ObjectHandler):
                         "drop_old_after_swap": False,
                         "preserve_old_suffix": "__dbw_old",
                         "failed_suffix": "__dbw_failed",
+                        "rollback_kind": rollback_kind,
+                        "rollback_reason": rollback_reason,
                     },
+                    irreversible=rollback_kind == "irreversible",
                 ))
                 continue
 
@@ -228,31 +243,34 @@ class ChTableHandler(ObjectHandler):
 
         if op.object_type == "alter_ch_options":
             changes_map = op.upgrade_attrs.get("changes", {})
+            rollback_changes_map = (op.rollback_attrs or {}).get("changes")
+            if rollback_changes_map is None:
+                rollback_changes_map = {
+                    key: {"from": change.get("to"), "to": change.get("from")}
+                    for key, change in changes_map.items()
+                }
             up_stmts: list[ClusterableStatement | str] = []
             rb_stmts: list[ClusterableStatement | str] = []
             table = op.upgrade_attrs["table"]
             prefix = f"ALTER TABLE {table}"
-            for key, change in changes_map.items():
-                to_val = change.get("to")
-                from_val = change.get("from")
+
+            def _append_change_stmts(
+                target: list[ClusterableStatement | str],
+                key: str,
+                to_val: Any,
+                from_val: Any,
+            ) -> None:
                 if key == "ch_settings" and isinstance(to_val, dict):
                     for setting_key, setting_value in to_val.items():
                         suffix = f"MODIFY SETTING {setting_key} = {setting_value}"
-                        up_stmts.append(ClusterableStatement(prefix, suffix))
-                    if isinstance(from_val, dict):
-                        for setting_key, setting_value in from_val.items():
-                            suffix = f"MODIFY SETTING {setting_key} = {setting_value}"
-                            rb_stmts.append(ClusterableStatement(prefix, suffix))
+                        target.append(ClusterableStatement(prefix, suffix))
                 elif key == "ch_ttl" and to_val:
                     ttl_sql = ", ".join(to_val) if isinstance(to_val, list) else str(to_val)
-                    up_stmts.append(ClusterableStatement(prefix, f"MODIFY TTL {ttl_sql}"))
-                    if from_val:
-                        prev_ttl = ", ".join(from_val) if isinstance(from_val, list) else str(from_val)
-                        rb_stmts.append(ClusterableStatement(prefix, f"MODIFY TTL {prev_ttl}"))
+                    target.append(ClusterableStatement(prefix, f"MODIFY TTL {ttl_sql}"))
+                elif key == "ch_ttl" and from_val:
+                    target.append(ClusterableStatement(prefix, "REMOVE TTL"))
                 elif key == "ch_order_by" and to_val:
-                    up_stmts.append(ClusterableStatement(prefix, f"MODIFY ORDER BY {_format_clickhouse_expression(to_val)}"))
-                    if from_val:
-                        rb_stmts.append(ClusterableStatement(prefix, f"MODIFY ORDER BY {_format_clickhouse_expression(from_val)}"))
+                    target.append(ClusterableStatement(prefix, f"MODIFY ORDER BY {_format_clickhouse_expression(to_val)}"))
                 elif key in _RECREATE_REQUIRED_CH_KEYS:
                     if key == "ch_engine":
                         note = (
@@ -268,8 +286,12 @@ class ChTableHandler(ObjectHandler):
                             f"Re-run with --clickhouse-engine-recreate to "
                             f"auto-generate recreation SQL."
                         )
-                    up_stmts.append(note)
-                    rb_stmts.append(note)
+                    target.append(note)
+
+            for key, change in changes_map.items():
+                _append_change_stmts(up_stmts, key, change.get("to"), change.get("from"))
+            for key, change in rollback_changes_map.items():
+                _append_change_stmts(rb_stmts, key, change.get("to"), change.get("from"))
 
             if up_stmts or rb_stmts:
                 up_rendered = "\n".join(
