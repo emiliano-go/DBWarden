@@ -36,7 +36,7 @@ git add .dbwarden/model_state.json
 git commit -m "Update DBWarden model state"
 ```
 
-The model state file is important. It is the offline source of truth for the last accepted schema state.
+The model state file records the schema that DBWarden expects the database to be in after the last migration. It is the baseline for offline diffing and can be regenerated at any time from a live database.
 
 ## Offline Migration Generation
 
@@ -69,6 +69,8 @@ dbwarden make-migrations "add profile fields" --offline --database primary
 ```
 
 If the state file is missing, DBWarden tells you to run `export-models` first. If the state file is invalid, DBWarden refuses to use it.
+
+> **If accidentally deleted:** restore it from git (`git checkout .dbwarden/model_state.json`) or regenerate it by running `dbwarden export-models --database <db>` against a live database. Offline commands will work again immediately.
 
 ## Integrity Check
 

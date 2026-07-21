@@ -26,8 +26,24 @@ def _strip_autocommit_marker(statement: str) -> str:
 
 
 def _execute_autocommit(sql_text: str, db_name: str | None = None) -> None:
-    """Execute a single SQL statement with autocommit (outside any transaction)."""
+    """Execute a single SQL statement with autocommit (outside any transaction).
+
+    Respects the sandbox override: if a sandbox URL is active, the statement
+    is executed against the sandbox instead of the real database.
+    """
     from sqlalchemy import create_engine
+    from dbwarden.database.connection import _sandbox_url_var
+
+    sandbox_url = _sandbox_url_var.get()
+    if sandbox_url is not None:
+        engine = create_engine(sandbox_url, isolation_level="AUTOCOMMIT")
+        with engine.connect() as conn:
+            try:
+                conn.execute(text(sql_text))
+            except Exception:
+                pass
+        return
+
     from dbwarden.config import get_database
 
     config = get_database(db_name)

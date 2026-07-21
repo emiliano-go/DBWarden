@@ -175,3 +175,82 @@ def test_get_seed_query_method_missing_from_backend_returns_empty(monkeypatch):
     monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "sqlite")
     sql = queries.get_seed_query(QueryMethod.OPTIMIZE_SEEDS_TABLE)
     assert sql == ""
+
+
+class TestModelStateQueries:
+    def test_sqlite_create_model_state_table(self, monkeypatch):
+        monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "sqlite")
+        sql = queries.get_query(QueryMethod.CREATE_MODEL_STATE_TABLE)
+        assert "CREATE TABLE" in sql
+        assert "_dbwarden_model_state" in sql
+        assert "model_state TEXT" in sql
+        assert "CHECK (id = 1)" in sql
+
+    def test_sqlite_upsert_model_state(self, monkeypatch):
+        monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "sqlite")
+        sql = queries.get_query(QueryMethod.UPSERT_MODEL_STATE)
+        assert "INSERT OR REPLACE" in sql
+        assert ":state" in sql
+        assert ":fmt" in sql
+
+    def test_sqlite_get_model_state(self, monkeypatch):
+        monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "sqlite")
+        sql = queries.get_query(QueryMethod.GET_MODEL_STATE)
+        assert "SELECT model_state" in sql
+        assert "WHERE id = 1" in sql
+
+    def test_postgres_create_model_state_table(self, monkeypatch):
+        monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "postgresql")
+        class FakeConfig:
+            postgres_schema = None
+        monkeypatch.setattr(queries, "get_database", lambda db_name=None: FakeConfig())
+        sql = queries.get_query(QueryMethod.CREATE_MODEL_STATE_TABLE)
+        assert "public._dbwarden_model_state" in sql
+        assert "JSONB" in sql
+
+    def test_postgres_upsert_model_state(self, monkeypatch):
+        monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "postgresql")
+        class FakeConfig:
+            postgres_schema = None
+        monkeypatch.setattr(queries, "get_database", lambda db_name=None: FakeConfig())
+        sql = queries.get_query(QueryMethod.UPSERT_MODEL_STATE)
+        assert "ON CONFLICT" in sql
+        assert ":state::jsonb" in sql
+
+    def test_postgres_get_model_state(self, monkeypatch):
+        monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "postgresql")
+        class FakeConfig:
+            postgres_schema = None
+        monkeypatch.setattr(queries, "get_database", lambda db_name=None: FakeConfig())
+        sql = queries.get_query(QueryMethod.GET_MODEL_STATE)
+        assert "FROM public._dbwarden_model_state" in sql
+
+    def test_mysql_create_model_state_table(self, monkeypatch):
+        monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "mysql")
+        sql = queries.get_query(QueryMethod.CREATE_MODEL_STATE_TABLE)
+        assert "model_state JSON" in sql
+        assert "INT PRIMARY KEY" in sql
+
+    def test_mysql_upsert_model_state(self, monkeypatch):
+        monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "mysql")
+        sql = queries.get_query(QueryMethod.UPSERT_MODEL_STATE)
+        assert "ON DUPLICATE KEY" in sql
+
+    def test_clickhouse_create_model_state_table(self, monkeypatch):
+        monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "clickhouse")
+        sql = queries.get_query(QueryMethod.CREATE_MODEL_STATE_TABLE)
+        assert "ReplacingMergeTree" in sql
+        assert "model_state String" in sql
+        assert "ORDER BY id" in sql
+
+    def test_clickhouse_upsert_model_state(self, monkeypatch):
+        monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "clickhouse")
+        sql = queries.get_query(QueryMethod.UPSERT_MODEL_STATE)
+        assert "INSERT INTO" in sql
+        assert ":state" in sql
+
+    def test_clickhouse_get_model_state(self, monkeypatch):
+        monkeypatch.setattr(queries, "_get_backend_name", lambda db_name=None: "clickhouse")
+        sql = queries.get_query(QueryMethod.GET_MODEL_STATE)
+        assert "SELECT model_state" in sql
+        assert "WHERE id = 1" in sql

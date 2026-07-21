@@ -10,6 +10,7 @@ from dbwarden.commands.init import init_cmd
 from dbwarden.commands.make_migrations import make_migrations_cmd, new_migration_cmd
 from dbwarden.commands.make_rollback import make_rollback_cmd
 from dbwarden.commands.migrate import migrate_cmd
+from dbwarden.commands.recover_model_state import recover_model_state_cmd
 from dbwarden.commands.rollback import rollback_cmd
 from dbwarden.commands.snapshot import snapshot_cmd
 from dbwarden.commands.export_seeds import export_seeds_cmd
@@ -252,6 +253,13 @@ def handle_export_models(
 ) -> None:
     """Handle export-models command."""
     export_models_cmd(output=output, database=database)
+
+
+def handle_recover_model_state(
+    database: str | None = None,
+) -> None:
+    """Handle recover-model-state command."""
+    recover_model_state_cmd(database=database)
 
 
 def handle_seed_create(

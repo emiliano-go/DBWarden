@@ -33,6 +33,9 @@ class QueryMethod(Enum):
     OPTIMIZE_MIGRATIONS_TABLE = "optimize_migrations_table"
     OPTIMIZE_LOCK_TABLE = "optimize_lock_table"
     OPTIMIZE_SEEDS_TABLE = "optimize_seeds_table"
+    CREATE_MODEL_STATE_TABLE = "create_model_state_table"
+    UPSERT_MODEL_STATE = "upsert_model_state"
+    GET_MODEL_STATE = "get_model_state"
 
 
 SQLITE_QUERIES = {
@@ -149,6 +152,21 @@ SQLITE_QUERIES = {
     """,
     QueryMethod.GET_LATEST_VERSIONS_FROM: """
         SELECT version FROM {migration_table} WHERE version > :starting_version AND version IS NOT NULL ORDER BY applied_at ASC
+    """,
+    QueryMethod.CREATE_MODEL_STATE_TABLE: """
+        CREATE TABLE IF NOT EXISTS _dbwarden_model_state (
+            id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+            model_state TEXT,
+            format_version INTEGER,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    QueryMethod.UPSERT_MODEL_STATE: """
+        INSERT OR REPLACE INTO _dbwarden_model_state (id, model_state, format_version, updated_at)
+        VALUES (1, :state, :fmt, CURRENT_TIMESTAMP)
+    """,
+    QueryMethod.GET_MODEL_STATE: """
+        SELECT model_state, format_version, updated_at FROM _dbwarden_model_state WHERE id = 1
     """,
 }
 
@@ -295,6 +313,23 @@ POSTGRES_QUERIES = {
     QueryMethod.GET_LATEST_VERSIONS_FROM: """
         SELECT version FROM {schema}.{migration_table} WHERE version > :starting_version AND version IS NOT NULL ORDER BY applied_at ASC
     """,
+    QueryMethod.CREATE_MODEL_STATE_TABLE: """
+        CREATE TABLE IF NOT EXISTS {schema}._dbwarden_model_state (
+            id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+            model_state JSONB,
+            format_version INTEGER,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    QueryMethod.UPSERT_MODEL_STATE: """
+        INSERT INTO {schema}._dbwarden_model_state (id, model_state, format_version, updated_at)
+        VALUES (1, :state::jsonb, :fmt, CURRENT_TIMESTAMP)
+        ON CONFLICT (id)
+        DO UPDATE SET model_state = EXCLUDED.model_state, format_version = EXCLUDED.format_version, updated_at = CURRENT_TIMESTAMP
+    """,
+    QueryMethod.GET_MODEL_STATE: """
+        SELECT model_state, format_version, updated_at FROM {schema}._dbwarden_model_state WHERE id = 1
+    """,
 }
 
 
@@ -396,6 +431,25 @@ MYSQL_QUERIES = {
     QueryMethod.GET_DISTINCT_CHECKSUMS: SQLITE_QUERIES[QueryMethod.GET_DISTINCT_CHECKSUMS],
     QueryMethod.GET_LATEST_VERSIONS_LIMIT: SQLITE_QUERIES[QueryMethod.GET_LATEST_VERSIONS_LIMIT],
     QueryMethod.GET_LATEST_VERSIONS_FROM: SQLITE_QUERIES[QueryMethod.GET_LATEST_VERSIONS_FROM],
+    QueryMethod.CREATE_MODEL_STATE_TABLE: """
+        CREATE TABLE IF NOT EXISTS _dbwarden_model_state (
+            id INT PRIMARY KEY DEFAULT 1,
+            model_state JSON,
+            format_version INT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """,
+    QueryMethod.UPSERT_MODEL_STATE: """
+        INSERT INTO _dbwarden_model_state (id, model_state, format_version, updated_at)
+        VALUES (1, :state, :fmt, CURRENT_TIMESTAMP)
+        ON DUPLICATE KEY UPDATE
+            model_state = VALUES(model_state),
+            format_version = VALUES(format_version),
+            updated_at = CURRENT_TIMESTAMP
+    """,
+    QueryMethod.GET_MODEL_STATE: """
+        SELECT model_state, format_version, updated_at FROM _dbwarden_model_state WHERE id = 1
+    """,
 }
 
 
@@ -535,5 +589,21 @@ CLICKHOUSE_QUERIES = {
     """,
     QueryMethod.GET_LATEST_VERSIONS_FROM: """
         SELECT version FROM {migration_table} WHERE version > :starting_version AND version IS NOT NULL ORDER BY applied_at ASC
+    """,
+    QueryMethod.CREATE_MODEL_STATE_TABLE: """
+        CREATE TABLE IF NOT EXISTS _dbwarden_model_state (
+            id Int32,
+            model_state String,
+            format_version Int32,
+            updated_at DateTime DEFAULT now()
+        ) ENGINE = ReplacingMergeTree()
+        ORDER BY id
+    """,
+    QueryMethod.UPSERT_MODEL_STATE: """
+        INSERT INTO _dbwarden_model_state (id, model_state, format_version, updated_at)
+        VALUES (1, :state, :fmt, now())
+    """,
+    QueryMethod.GET_MODEL_STATE: """
+        SELECT model_state, format_version, updated_at FROM _dbwarden_model_state WHERE id = 1
     """,
 }

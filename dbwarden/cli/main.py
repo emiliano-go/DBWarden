@@ -19,6 +19,7 @@ from dbwarden.commands import (
     handle_make_rollback,
     handle_migrate,
     handle_new,
+    handle_recover_model_state,
     handle_rollback,
     handle_seed_apply,
     handle_seed_create,
@@ -149,6 +150,17 @@ def export_models(
     """Export current model definitions to a JSON state file for offline diffs."""
     validate_directory()
     handle_export_models(output=output, database=database)
+
+
+@app.command()
+def recover_model_state(
+    database: str | None = typer.Option(
+        None, "--database", "-d", help="Target database name"
+    ),
+):
+    """Recover a deleted model state file by replaying migrations in a sandbox."""
+    validate_directory()
+    handle_recover_model_state(database=database)
 
 
 @app.command()

@@ -579,6 +579,36 @@ def _write_model_state(
         logger = get_logger(db_name=db_name)
         logger.warning(f"Failed to write model state", exc_info=True)
 
+    _upsert_model_state_in_db(state, db_name)
+
+
+def _upsert_model_state_in_db(state: dict, db_name: str | None = None) -> None:
+    """Store the model state dict in the _dbwarden_model_state table.
+
+    This enables online commands to read model state from the database
+    instead of (or as a fallback to) the file. Wrapped in try/except
+    for backward compatibility with existing installations.
+    """
+    import json
+
+    from dbwarden.database.connection import get_db_connection
+    from dbwarden.database.queries import QueryMethod, get_query
+    from dbwarden.engine.core.model_state import STATE_FORMAT_VERSION
+
+    try:
+        with get_db_connection(db_name) as connection:
+            connection.execute(
+                text(get_query(QueryMethod.CREATE_MODEL_STATE_TABLE, db_name)),
+            )
+            model_state_json = json.dumps(state, default=str)
+            connection.execute(
+                text(get_query(QueryMethod.UPSERT_MODEL_STATE, db_name)),
+                parameters={"state": model_state_json, "fmt": STATE_FORMAT_VERSION},
+            )
+    except Exception:
+        logger = get_logger(db_name=db_name)
+        logger.debug("Could not upsert model state in database", exc_info=True)
+
 
 def _get_filepaths_by_version(
     count: int | None = None,

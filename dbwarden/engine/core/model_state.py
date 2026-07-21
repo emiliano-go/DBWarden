@@ -8,13 +8,12 @@ from dbwarden.engine.core.models import IndexInfo, ModelColumn, ModelTable
 STATE_FORMAT_VERSION = 2
 
 MODEL_STATE_WARNING = (
-    "WARNING: NEVER DELETE THIS FILE. "
-    "This file is the source of truth for your database schema. "
-    "You may DELETE migration files safely, but NEVER delete this model state file. "
-    "If accidentally deleted, restore from git immediately or re-generate with: "
-    "dbwarden export-models. "
-    "Deleting this file causes dbwarden to lose track of your schema state, "
-    "which can lead to data loss or incorrect migrations."
+    "This file records the schema that DBWarden expects the database to be in "
+    "after the last migration. It is auto-generated and version-controlled. "
+    "If accidentally deleted, restore from git (git checkout .dbwarden/model_state.*.json) "
+    "or regenerate by running: dbwarden export-models. "
+    "Without it, offline commands like make-migrations --offline will not work, "
+    "but online operations are unaffected."
 )
 
 

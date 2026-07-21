@@ -161,8 +161,7 @@ $ dbwarden export-models --database primary --output .dbwarden/model_state.json
 
 Exports current model definitions to a JSON state file for offline migration diffs.
 
-> **⚠️ WARNING: NEVER DELETE THE MODEL STATE FILE**
-> This file is the source of truth for your database schema. You may **delete migration files** safely, but **NEVER delete the model state file**. If accidentally deleted, restore from git or re-generate with `dbwarden export-models`.
+> **Important:** The model state file is used for offline migration generation. It is auto-generated and committed to version control. If accidentally deleted, restore it from git or regenerate it by running `dbwarden export-models --database <db>` against a live database. Without it, offline commands like `make-migrations --offline` will not work, but online operations are unaffected.
 
 Options: `--output`/`-o` (default `.dbwarden/model_state.json`), `--database`/`-d`
 
