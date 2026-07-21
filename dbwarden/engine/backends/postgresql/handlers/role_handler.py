@@ -7,6 +7,65 @@ from dbwarden.engine.core.protocol import ObjectHandler, Op, RunPhase
 from dbwarden.engine.snapshot import MigrationStatement, StatementOrder
 
 
+def _build_create_role_sql(name: str, info: dict[str, Any]) -> str:
+    parts = [f"CREATE ROLE {name}"]
+    if info.get("superuser"):
+        parts.append("SUPERUSER")
+    if info.get("login"):
+        parts.append("LOGIN")
+    if info.get("inherit", True) is False:
+        parts.append("NOINHERIT")
+    if info.get("createrole"):
+        parts.append("CREATEROLE")
+    if info.get("createdb"):
+        parts.append("CREATEDB")
+    if "connlimit" in info and info.get("connlimit") is not None:
+        parts.append(f"CONNECTION LIMIT {info['connlimit']}")
+    if info.get("valid_until"):
+        parts.append(f"VALID UNTIL '{info['valid_until']}'")
+    if not any((
+        info.get("superuser"),
+        info.get("login"),
+        info.get("createrole"),
+        info.get("createdb"),
+        info.get("connlimit"),
+        info.get("valid_until"),
+    )):
+        parts.append("LOGIN")
+    return " ".join(parts) + ";"
+
+
+def _build_alter_role_sql(name: str, info: dict[str, Any]) -> str:
+    parts = [f"ALTER ROLE {name}"]
+    if info.get("superuser"):
+        parts.append("SUPERUSER")
+    elif "superuser" in info:
+        parts.append("NOSUPERUSER")
+    if info.get("login"):
+        parts.append("LOGIN")
+    elif "login" in info:
+        parts.append("NOLOGIN")
+    if info.get("inherit"):
+        parts.append("INHERIT")
+    elif "inherit" in info:
+        parts.append("NOINHERIT")
+    if info.get("createrole"):
+        parts.append("CREATEROLE")
+    elif "createrole" in info:
+        parts.append("NOCREATEROLE")
+    if info.get("createdb"):
+        parts.append("CREATEDB")
+    elif "createdb" in info:
+        parts.append("NOCREATEDB")
+    if "connlimit" in info and info.get("connlimit") is not None:
+        parts.append(f"CONNECTION LIMIT {info['connlimit']}")
+    if info.get("valid_until"):
+        parts.append(f"VALID UNTIL '{info['valid_until']}'")
+    if len(parts) == 1:
+        return f"-- No role attributes to alter for {name};"
+    return " ".join(parts) + ";"
+
+
 class RoleHandler(ObjectHandler):
     object_type: str = "role"
     op_types: tuple[str, ...] = (
@@ -109,27 +168,7 @@ class RoleHandler(ObjectHandler):
 
         if op.object_type == "create_role":
             info = op.upgrade_attrs.get("role_info", {})
-            parts = [f"CREATE ROLE {name}"]
-            if isinstance(info, dict):
-                if info.get("superuser"):
-                    parts.append("SUPERUSER")
-                if info.get("login"):
-                    parts.append("LOGIN")
-                if info.get("inherit", True) == False:
-                    parts.append("NOINHERIT")
-                if info.get("createrole"):
-                    parts.append("CREATEROLE")
-                if info.get("createdb"):
-                    parts.append("CREATEDB")
-                if info.get("connlimit"):
-                    parts.append(f"CONNECTION LIMIT {info['connlimit']}")
-                if info.get("valid_until"):
-                    parts.append(f"VALID UNTIL '{info['valid_until']}'")
-                if not any((info.get("superuser"), info.get("login"),
-                            info.get("createrole"), info.get("createdb"),
-                            info.get("connlimit"), info.get("valid_until"))):
-                    parts.append("LOGIN")
-            up = " ".join(parts) + ";"
+            up = _build_create_role_sql(name, info if isinstance(info, dict) else {})
             rb = f"DROP ROLE IF EXISTS {name};"
             stmts.append(MigrationStatement(
                 order=StatementOrder.CREATE_EXTENSION,
@@ -139,7 +178,11 @@ class RoleHandler(ObjectHandler):
 
         elif op.object_type == "drop_role":
             up = f"DROP ROLE IF EXISTS {name};"
-            rb = f"-- Revert: CREATE ROLE {name};"
+            role_info = op.rollback_attrs.get("role_info")
+            if isinstance(role_info, dict):
+                rb = _build_create_role_sql(name, role_info)
+            else:
+                rb = f"-- Revert: CREATE ROLE {name};"
             stmts.append(MigrationStatement(
                 order=StatementOrder.CREATE_EXTENSION,
                 upgrade_sql=up,
@@ -148,30 +191,12 @@ class RoleHandler(ObjectHandler):
 
         elif op.object_type == "alter_role":
             info = op.upgrade_attrs.get("role_info", {})
-            parts = [f"ALTER ROLE {name}"]
-            if isinstance(info, dict):
-                if info.get("superuser"):
-                    parts.append("SUPERUSER")
-                elif "superuser" in info:
-                    parts.append("NOSUPERUSER")
-                if info.get("login"):
-                    parts.append("LOGIN")
-                elif "login" in info:
-                    parts.append("NOLOGIN")
-                if info.get("createrole"):
-                    parts.append("CREATEROLE")
-                elif "createrole" in info:
-                    parts.append("NOCREATEROLE")
-                if info.get("createdb"):
-                    parts.append("CREATEDB")
-                elif "createdb" in info:
-                    parts.append("NOCREATEDB")
-                if info.get("connlimit"):
-                    parts.append(f"CONNECTION LIMIT {info['connlimit']}")
-                if info.get("valid_until"):
-                    parts.append(f"VALID UNTIL '{info['valid_until']}'")
-            up = " ".join(parts) + ";"
-            rb = f"-- Revert ALTER ROLE {name};"
+            up = _build_alter_role_sql(name, info if isinstance(info, dict) else {})
+            rollback_info = op.rollback_attrs.get("role_info")
+            if isinstance(rollback_info, dict):
+                rb = _build_alter_role_sql(name, rollback_info)
+            else:
+                rb = f"-- Revert ALTER ROLE {name};"
             stmts.append(MigrationStatement(
                 order=StatementOrder.CREATE_EXTENSION,
                 upgrade_sql=up,

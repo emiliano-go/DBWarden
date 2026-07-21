@@ -112,10 +112,13 @@ class StatisticsHandler(ObjectHandler):
 
         if statistics is not None:
             up = f"ALTER TABLE {qtable} ALTER COLUMN {column} SET STATISTICS {statistics};"
-            rb = f"-- Revert ALTER TABLE {qtable} ALTER COLUMN {column} SET STATISTICS;"
         else:
             up = f"ALTER TABLE {qtable} ALTER COLUMN {column} SET STATISTICS -1;"
-            rb = f"-- Revert ALTER TABLE {qtable} ALTER COLUMN {column} SET STATISTICS;"
+        rollback_statistics = op.rollback_attrs.get("statistics")
+        if rollback_statistics is not None:
+            rb = f"ALTER TABLE {qtable} ALTER COLUMN {column} SET STATISTICS {rollback_statistics};"
+        else:
+            rb = f"ALTER TABLE {qtable} ALTER COLUMN {column} SET STATISTICS -1;"
 
         stmts.append(MigrationStatement(
             order=StatementOrder.ALTER_TABLE_OPTIONS,

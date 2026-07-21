@@ -214,7 +214,12 @@ class PoliciesHandler(ObjectHandler):
         elif op.object_type == "drop_policy":
             name = op.upgrade_attrs["name"]
             up = f"DROP POLICY IF EXISTS {_quote_pg(name)} ON {qname};"
-            rb = f"-- Cannot auto-restore policy {name}; recreate from snapshot"
+            rb_attrs = op.rollback_attrs or {}
+            rb = (
+                _build_create_policy_sql(rb_attrs, qname)
+                if rb_attrs.get("name")
+                else f"-- Cannot auto-restore policy {name}; recreate from snapshot"
+            )
             stmts.append(MigrationStatement(
                 order=StatementOrder.ALTER_PG_POLICY,
                 upgrade_sql=up, rollback_sql=rb,
@@ -223,7 +228,12 @@ class PoliciesHandler(ObjectHandler):
         elif op.object_type == "alter_policy":
             up = _build_alter_policy_sql(op.upgrade_attrs, qname)
             name = op.upgrade_attrs["name"]
-            rb = f"-- Cannot auto-restore altered policy {name}; recreate from snapshot"
+            rb_attrs = op.rollback_attrs or {}
+            rb = (
+                _build_alter_policy_sql(rb_attrs, qname)
+                if rb_attrs.get("name")
+                else f"-- Cannot auto-restore altered policy {name}; recreate from snapshot"
+            )
             stmts.append(MigrationStatement(
                 order=StatementOrder.ALTER_PG_POLICY,
                 upgrade_sql=up, rollback_sql=rb,

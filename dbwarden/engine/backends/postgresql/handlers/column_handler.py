@@ -649,9 +649,20 @@ class ColumnHandler(ObjectHandler):
             col_type = op.upgrade_attrs.get("col_type")
             nullable = op.upgrade_attrs.get("nullable")
             my_meta = op.upgrade_attrs.get("my_meta", {})
-            def_up, def_rb = _build_alter_default_sql(
+            def_up, _ = _build_alter_default_sql(
                 table, column, default, backend,
                 col_type=col_type, nullable=nullable, my_meta=my_meta,
+            )
+            rollback_attrs = op.rollback_attrs or {}
+            rb_table = rollback_attrs.get("table", table)
+            rb_column = rollback_attrs.get("column", column)
+            rb_default = rollback_attrs.get("default")
+            rb_col_type = rollback_attrs.get("col_type", col_type)
+            rb_nullable = rollback_attrs.get("nullable", nullable)
+            rb_my_meta = rollback_attrs.get("my_meta", my_meta)
+            def_rb, _ = _build_alter_default_sql(
+                rb_table, rb_column, rb_default, backend,
+                col_type=rb_col_type, nullable=rb_nullable, my_meta=rb_my_meta,
             )
             stmts.append(MigrationStatement(
                 order=StatementOrder.ALTER_COLUMN_DEFAULT,
