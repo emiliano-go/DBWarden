@@ -119,7 +119,7 @@ A **round-trip** backend is one where DBWarden can both read schema (via `genera
 
 PostgreSQL is a **first-class backend** with full round-trip support. All metadata (identity columns, collation, storage, compression, generated columns, fillfactor, tablespace, inheritance, exclude constraints, deferrable foreign keys, and advanced index options) is captured by the snapshot, diffed correctly, and emitted as valid DDL.
 
-See [PostgreSQL Deep Dive](postgresql.md) for the complete list of supported features.
+See [PostgreSQL Deep Dive](postgresql/index.md) for the complete list of supported features.
 
 ### MySQL
 
@@ -131,7 +131,7 @@ See [MySQL Deep Dive](mysql.md) for the complete list of supported features.
 
 ClickHouse has full round-trip support: `generate-models` reads schema from a live ClickHouse server, and `make-migrations` / `migrate` auto-generates DDL for table operations.
 
-See [ClickHouse Deep Dive](clickhouse.md) for the complete list of supported features.
+See [ClickHouse Deep Dive](clickhouse/index.md) for the complete list of supported features.
 
 ### SQLite
 

@@ -388,7 +388,7 @@ class Event(Base):
 
 `CHTableMeta` inherits all common `TableMeta` attributes (`comment`, `indexes`, `checks`, `uniques`) and adds ClickHouse-specific ones (`ch_engine`, `ch_order_by`, `ch_primary_key`, `ch_partition_by`, `ch_sample_by`, `ch_ttl`, `ch_settings`, `ch_object_type`, `ch_select_statement`, `ch_to_table`, `ch_dictionary`, `ch_dict_layout`, `ch_dict_source`, `ch_dict_lifetime`, `ch_dict_primary_key`, `ch_projections`, `ch_zookeeper_path`, `ch_replica_name`).
 
-For the full list of supported attributes, see [ClickHouse Deep Dive](databases/clickhouse.md).
+For the full list of supported attributes, see [ClickHouse Deep Dive](databases/clickhouse/index.md).
 
 ### Column-Level Meta
 

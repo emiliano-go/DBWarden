@@ -172,7 +172,7 @@ The following metadata is reverse-engineered:
 - **Index options**: `USING`, `WHERE`, `INCLUDE`, `WITH`, `TABLESPACE`, `NULLS NOT DISTINCT`
 - **Table and column comments**
 
-For the complete feature reference, see [PostgreSQL Deep Dive](../databases/postgresql.md).
+For the complete feature reference, see [PostgreSQL Deep Dive](../databases/postgresql/index.md).
 
 ## ClickHouse First-Class Output
 
@@ -218,7 +218,7 @@ The following metadata is reverse-engineered:
 - **Skip indexes**: `ChIndexSpec` entries in `ch_indexes`
 - **Table and column comments**
 
-For the complete feature reference, see [ClickHouse Deep Dive](../databases/clickhouse.md).
+For the complete feature reference, see [ClickHouse Deep Dive](../databases/clickhouse/index.md).
 
 ## Use cases
 

@@ -133,7 +133,7 @@ $ dbwarden make-migrations
 - [Config Keys](config-keys.md) : All 12 `pg_*` configuration keys
 - [Declaring Metadata](declaring-metadata.md) : Table-level, column-level, JSONB, FK options
 - [Tables & Columns](tables-and-columns.md) : Column handler, type changes, auto-increment lifecycle
-- [Registry Architecture](../../architecture-deep-dive.md#postgresql-registry-pipeline) : Handler map, phases, online and offline diff flow
+- [Registry Architecture](../../architecture-deep-dive.md#postgresql-handler-pipeline) : Handler map, phases, online and offline diff flow
 - [Constraints](constraints.md) : FK (MATCH FULL, CASCADE), unique, check, exclude
 - [Indexes](indexes.md) : B-tree, partial, expression indexes, operator classes, NULLS NOT DISTINCT
 - [Types](types.md) : Enums, domains, composite types

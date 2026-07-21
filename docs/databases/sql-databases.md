@@ -102,7 +102,7 @@ DBWarden supports PostgreSQL, MySQL, MariaDB, and SQLite. While all four share s
 
 **PostgreSQL**: DDL is transactional. If a migration file contains multiple statements and one fails, all prior DDL in that file is rolled back. This makes PostgreSQL the safest backend for automated migration runs.
 
-PostgreSQL is also a **first-class backend** with full support for identity columns, collation, storage, compression, generated columns, table fillfactor, tablespace, inheritance, EXCLUDE constraints, deferrable FK options, and advanced index parameters. See [PostgreSQL Deep Dive](postgresql.md) for complete details.
+PostgreSQL is also a **first-class backend** with full support for identity columns, collation, storage, compression, generated columns, table fillfactor, tablespace, inheritance, EXCLUDE constraints, deferrable FK options, and advanced index parameters. See [PostgreSQL Deep Dive](postgresql/index.md) for complete details.
 
 **MySQL / MariaDB**: DDL statements auto-commit immediately. If a 5-statement migration fails on the 4th statement, the first 3 are already committed and cannot be rolled back. Manual inspection and recovery may be needed. Always test MySQL/MariaDB migrations in a staging environment first.
 
@@ -173,7 +173,7 @@ All four backends support `ALTER TABLE t ALTER COLUMN c SET DEFAULT value` and `
 | SQLite | Not supported (comment) | Not supported (comment) | Recreate table |
 | ClickHouse | Not supported (error) | Not supported (error) | `ForeignKey()` raises `DBWardenConfigError` |
 
-**PostgreSQL FK options**: `ON DELETE`, `ON UPDATE`, and `DEFERRABLE INITIALLY DEFERRED` are fully supported. See [PostgreSQL Deep Dive](postgresql.md).
+**PostgreSQL FK options**: `ON DELETE`, `ON UPDATE`, and `DEFERRABLE INITIALLY DEFERRED` are fully supported. See [PostgreSQL Deep Dive](postgresql/index.md).
 
 **Validation**: Before emitting `ADD FOREIGN KEY`, DBWarden verifies that the referenced table and columns exist in the snapshot. If they don't, the FK is silently skipped to avoid generating broken SQL. This can happen when the referenced table is added in the same migration batch. If an FK is unexpectedly missing from generated SQL, check whether the referenced table exists in the snapshot.
 
@@ -187,7 +187,7 @@ All four backends support `ALTER TABLE t ALTER COLUMN c SET DEFAULT value` and `
 | MySQL / MariaDB | `CREATE [UNIQUE] INDEX` | `DROP INDEX` | Standard |
 | SQLite | `CREATE [UNIQUE] INDEX` | `DROP INDEX` | Standard |
 
-**PostgreSQL advanced parameters**: all are supported in `_build_index_sql`. See [PostgreSQL Deep Dive](postgresql.md) for full coverage.
+**PostgreSQL advanced parameters**: all are supported in `_build_index_sql`. See [PostgreSQL Deep Dive](postgresql/index.md) for full coverage.
 
 **PostgreSQL `CONCURRENTLY`**: DBWarden defaults to `CREATE INDEX CONCURRENTLY` to avoid table locking. Pass `--no-concurrent` when the migration must run inside a transaction block (PostgreSQL requires `CONCURRENTLY` outside a transaction).
 
@@ -215,7 +215,7 @@ On SQLite, this strategy is not supported because SQLite cannot drop columns (be
 
 ## Table Rename
 
-All four SQL backends support `ALTER TABLE t RENAME TO newname`. The syntax is uniform. ClickHouse is the only supported backend that does not support table rename (see [ClickHouse](clickhouse.md)).
+All four SQL backends support `ALTER TABLE t RENAME TO newname`. The syntax is uniform. ClickHouse is the only supported backend that does not support table rename (see [ClickHouse](clickhouse/index.md)).
 
 ## DROP COLUMN Warning
 

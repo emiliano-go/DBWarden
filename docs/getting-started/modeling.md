@@ -173,7 +173,7 @@ class User(Base):
             pg = pg.field(storage="EXTENDED", compression="pglz")
 ```
 
-See the [reference](../models.md#postgresql-model-metadata) for the full list of `PGTableMeta` and `PGColumnMeta` attributes, or the [PostgreSQL Deep Dive](../databases/postgresql.md) for DDL behavior and snapshot format.
+See the [reference](../models.md#postgresql-model-metadata) for the full list of `PGTableMeta` and `PGColumnMeta` attributes, or the [PostgreSQL Deep Dive](../databases/postgresql/index.md) for DDL behavior and snapshot format.
 
 ### PostgreSQL Views and Schemas
 
@@ -217,7 +217,7 @@ class Meta(PGTableMeta):
 # DDL uses app.users instead of public.users
 ```
 
-At the config level, set `pg_schema` in `database_config(...)` to set the connection `search_path`. See [Schema Support](../databases/postgresql.md#schema-support) for details.
+At the config level, set `pg_schema` in `database_config(...)` to set the connection `search_path`. See [Schema Support](../databases/postgresql/schemas.md#config-level-schema) for details.
 
 
 ## Using `generate-models` as a Starting Point

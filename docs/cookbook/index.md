@@ -131,7 +131,7 @@ The core examples use SQLite for zero-dependency setup. For production, DBWarden
 
 PostgreSQL is a first-class backend with full round-trip support (read and write schema). The FastAPI integration example in [Section 9](09-fastapi-integration.md) uses PostgreSQL, and [Section 8](08-multi-database.md) shows PostgreSQL + ClickHouse together.
 
-For the complete reference on PostgreSQL-specific metadata (identity columns, collation, compression, generated columns, tablespace, inheritance, exclusion constraints, deferrable FKs, advanced index options), see the [PostgreSQL Deep Dive](../databases/postgresql.md).
+For the complete reference on PostgreSQL-specific metadata (identity columns, collation, compression, generated columns, tablespace, inheritance, exclusion constraints, deferrable FKs, advanced index options), see the [PostgreSQL Deep Dive](../databases/postgresql/index.md).
 
 ```python
 from dbwarden import database_config
@@ -167,6 +167,6 @@ legacy = database_config(
 
 ClickHouse is supported with partial round-trip (read schema and auto-generate most DDL). DBWarden uses the ClickHouse HTTP client directly for DDL execution and supports full engine metadata via `class Meta(CHTableMeta)` with `ChEngineSpec`, `ProjectionSpec`, and `CHColumnMeta`.
 
-See the [ClickHouse Deep Dive](../databases/clickhouse.md) for full details on materialized views, projections, dictionaries, replicated engines, and ClickHouse-specific metadata.
+See the [ClickHouse Deep Dive](../databases/clickhouse/index.md) for full details on materialized views, projections, dictionaries, replicated engines, and ClickHouse-specific metadata.
 
 ClickHouse is typically configured alongside a transactional database (see [Section 8](08-multi-database.md) for a PostgreSQL + ClickHouse example).

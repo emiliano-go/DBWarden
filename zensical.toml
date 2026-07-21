@@ -107,6 +107,19 @@ Overview = [
 ]
 
 [[project.nav]]
+Correctness = [
+  {Overview = "correctness/index.md"},
+  {"Convergence Gate" = "correctness/convergence-gate.md"},
+  {"Round Trip Verification" = "correctness/round-trip-verification.md"},
+  {"Deterministic Diff" = "correctness/deterministic-diff.md"},
+  {"Safety Classifier" = "correctness/safety-classifier.md"},
+  {"Offline Integrity" = "correctness/offline-integrity.md"},
+  {"SQL Generation" = "correctness/sql-generation.md"},
+  {"Rollback Generation" = "correctness/rollback-generation.md"},
+  {"Rollback Coverage Matrix" = "correctness/rollback-coverage-matrix.md"},
+]
+
+[[project.nav]]
 Databases = [
   {Overview = "databases/index.md"},
   {"Round Trip Support" = "databases/round-trip.md"},
