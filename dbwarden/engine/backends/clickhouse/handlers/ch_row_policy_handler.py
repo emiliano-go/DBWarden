@@ -6,6 +6,20 @@ from dbwarden.engine.core.protocol import ObjectHandler, Op, RunPhase
 from dbwarden.engine.snapshot import MigrationStatement, StatementOrder
 
 
+def _row_policy_sql(name: str, info: dict[str, Any]) -> str:
+    table = info.get("table", "")
+    using = info.get("using") or "1 = 1"
+    to_roles = info.get("to_roles") or ["ALL"]
+    permissive = info.get("permissive", True)
+    kind = "PERMISSIVE" if permissive else "RESTRICTIVE"
+    role_list = ", ".join(str(role) for role in to_roles)
+    return f"CREATE ROW POLICY IF NOT EXISTS {name} ON {table} FOR SELECT USING {using} AS {kind} TO {role_list};"
+
+
+def _drop_row_policy_sql(name: str, table: str) -> str:
+    return f"DROP ROW POLICY IF EXISTS {name} ON {table};"
+
+
 class ChRowPolicyHandler(ObjectHandler):
     object_type: str = "ch_row_policy"
     op_types: tuple[str, ...] = (
@@ -65,27 +79,53 @@ class ChRowPolicyHandler(ObjectHandler):
         name = op.upgrade_attrs["name"]
         if op.object_type == "create_ch_row_policy":
             table = op.upgrade_attrs.get("table", "")
-            using = op.upgrade_attrs.get("using", "1 = 1")
-            to_roles = op.upgrade_attrs.get("to_roles", ["ALL"])
-            permissive = op.upgrade_attrs.get("permissive", True)
-            kind = "PERMISSIVE" if permissive else "RESTRICTIVE"
-            role_list = ", ".join(to_roles)
             stmts.append(MigrationStatement(
                 order=self.statement_order,
-                upgrade_sql=f"CREATE ROW POLICY IF NOT EXISTS {name} ON {table} FOR SELECT USING {using} AS {kind} TO {role_list};",
-                rollback_sql=f"DROP ROW POLICY IF EXISTS {name} ON {table};",
+                upgrade_sql=_row_policy_sql(name, op.upgrade_attrs),
+                rollback_sql=_drop_row_policy_sql(name, table),
             ))
         elif op.object_type == "drop_ch_row_policy":
             table = op.upgrade_attrs.get("table", "")
+            rb_table = op.rollback_attrs.get("table")
+            if rb_table:
+                rollback_sql = _row_policy_sql(name, op.rollback_attrs)
+                rollback_kind = "real"
+                rollback_reason = None
+            else:
+                rollback_sql = f"-- Revert: CREATE ROW POLICY {name};"
+                rollback_kind = "placeholder"
+                rollback_reason = "previous row policy definition was not captured"
             stmts.append(MigrationStatement(
                 order=self.statement_order,
-                upgrade_sql=f"DROP ROW POLICY IF EXISTS {name} ON {table};",
-                rollback_sql=f"-- Revert: CREATE ROW POLICY {name};",
+                upgrade_sql=_drop_row_policy_sql(name, table),
+                rollback_sql=rollback_sql,
+                rollback_kind=rollback_kind,
+                rollback_reason=rollback_reason,
             ))
         elif op.object_type == "alter_ch_row_policy":
+            old_table = op.rollback_attrs.get("table")
+            new_table = op.upgrade_attrs.get("table")
+            if old_table and new_table:
+                upgrade_sql = "\n".join([
+                    _drop_row_policy_sql(name, old_table),
+                    _row_policy_sql(name, op.upgrade_attrs),
+                ])
+                rollback_sql = "\n".join([
+                    _drop_row_policy_sql(name, new_table),
+                    _row_policy_sql(name, op.rollback_attrs),
+                ])
+                rollback_kind = "real"
+                rollback_reason = None
+            else:
+                upgrade_sql = f"-- ALTER ROW POLICY {name};"
+                rollback_sql = f"-- Revert ALTER ROW POLICY {name};"
+                rollback_kind = "placeholder"
+                rollback_reason = "previous row policy definition was not captured"
             stmts.append(MigrationStatement(
                 order=self.statement_order,
-                upgrade_sql=f"-- ALTER ROW POLICY {name};",
-                rollback_sql=f"-- Revert ALTER ROW POLICY {name};",
+                upgrade_sql=upgrade_sql,
+                rollback_sql=rollback_sql,
+                rollback_kind=rollback_kind,
+                rollback_reason=rollback_reason,
             ))
         return stmts
