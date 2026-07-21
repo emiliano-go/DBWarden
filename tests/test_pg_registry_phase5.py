@@ -150,22 +150,26 @@ def _inline_policies_diff(
             snap_pol = snap_policies.get(name)
             model_pol = model_policies.get(name)
             if snap_pol and not model_pol:
-                upgrade_ops.append({"type": "drop_policy", "table": tname, "name": name, **snap_pol})
-                rollback_ops.append({"type": "add_policy", "table": tname, "name": name, **snap_pol})
+                snap_attrs = {"table": tname, "name": name, **snap_pol}
+                upgrade_ops.append({"type": "drop_policy", **snap_attrs, "__rollback_attrs": snap_attrs})
+                rollback_ops.append({"type": "add_policy", **snap_attrs, "__rollback_attrs": snap_attrs})
             elif model_pol and not snap_pol:
-                upgrade_ops.append({"type": "add_policy", "table": tname, "name": name, **model_pol})
-                rollback_ops.append({"type": "drop_policy", "table": tname, "name": name, **model_pol})
+                model_attrs = {"table": tname, "name": name, **model_pol}
+                upgrade_ops.append({"type": "add_policy", **model_attrs, "__rollback_attrs": model_attrs})
+                rollback_ops.append({"type": "drop_policy", **model_attrs, "__rollback_attrs": model_attrs})
             elif model_pol != snap_pol:
+                snap_attrs = {"table": tname, "name": name, **snap_pol}
+                model_attrs = {"table": tname, "name": name, **model_pol}
                 cmd_changed = model_pol.get("command") != snap_pol.get("command")
                 permissive_changed = model_pol.get("permissive") != snap_pol.get("permissive")
                 if cmd_changed or permissive_changed:
-                    upgrade_ops.append({"type": "add_policy", "table": tname, "name": name, **model_pol})
-                    upgrade_ops.append({"type": "drop_policy", "table": tname, "name": name, **snap_pol})
-                    rollback_ops.append({"type": "add_policy", "table": tname, "name": name, **snap_pol})
-                    rollback_ops.append({"type": "drop_policy", "table": tname, "name": name, **model_pol})
+                    upgrade_ops.append({"type": "add_policy", **model_attrs, "__rollback_attrs": model_attrs})
+                    upgrade_ops.append({"type": "drop_policy", **snap_attrs, "__rollback_attrs": snap_attrs})
+                    rollback_ops.append({"type": "add_policy", **snap_attrs, "__rollback_attrs": snap_attrs})
+                    rollback_ops.append({"type": "drop_policy", **model_attrs, "__rollback_attrs": model_attrs})
                 else:
-                    upgrade_ops.append({"type": "alter_policy", "table": tname, "name": name, **model_pol})
-                    rollback_ops.append({"type": "alter_policy", "table": tname, "name": name, **snap_pol})
+                    upgrade_ops.append({"type": "alter_policy", **model_attrs, "__rollback_attrs": snap_attrs})
+                    rollback_ops.append({"type": "alter_policy", **snap_attrs, "__rollback_attrs": model_attrs})
 
     return upgrade_ops, rollback_ops
 
@@ -205,15 +209,16 @@ def _inline_policies_emit(
         elif op["type"] == "drop_policy":
             name = op["name"]
             up = f"DROP POLICY IF EXISTS {_quote_pg(name)} ON {qname};"
-            rb = f"-- Cannot auto-restore policy {name}; recreate from snapshot"
+            rb_attrs = op.get("__rollback_attrs") or op
+            rb = _build_create_policy_sql(rb_attrs, qname)
             stmts.append(MigrationStatement(
                 order=StatementOrder.ALTER_PG_POLICY,
                 upgrade_sql=up, rollback_sql=rb,
             ))
         elif op["type"] == "alter_policy":
             up = _build_alter_policy_sql(op, qname)
-            name = op["name"]
-            rb = f"-- Cannot auto-restore altered policy {name}; recreate from snapshot"
+            rb_attrs = op.get("__rollback_attrs") or op
+            rb = _build_alter_policy_sql(rb_attrs, qname)
             stmts.append(MigrationStatement(
                 order=StatementOrder.ALTER_PG_POLICY,
                 upgrade_sql=up, rollback_sql=rb,
@@ -828,6 +833,21 @@ class TestPoliciesHandlerContract:
         assert len(drop_ops) == 1
         assert drop_ops[0].upgrade_attrs["name"] == "user_sel"
 
+    def test_drop_policy_rollback_recreates_prior_policy(self) -> None:
+        snap = self.HANDLER.canonicalize(self.HANDLER.extract(SNAPSHOT_POLICIES))
+        model = self.HANDLER.canonicalize(
+            self.HANDLER.model_spec_from_tables(MODEL_POLICIES_DROP_RLS_DROP_POLICY)
+        )
+        up, _ = self.HANDLER.diff(snap, model)
+        drop_op = next(op for op in up if op.object_type == "drop_policy")
+
+        stmt = self.HANDLER.emit(drop_op)[0]
+
+        assert "DROP POLICY IF EXISTS" in stmt.upgrade_sql
+        assert "CREATE POLICY" in stmt.rollback_sql
+        assert "user_sel" in stmt.rollback_sql
+        assert "Cannot auto-restore" not in stmt.rollback_sql
+
     def test_alter_policy_on_role_change(self) -> None:
         snap = self.HANDLER.canonicalize(self.HANDLER.extract(SNAPSHOT_POLICIES))
         model = self.HANDLER.canonicalize(
@@ -838,6 +858,22 @@ class TestPoliciesHandlerContract:
         assert len(alter_ops) == 1
         assert alter_ops[0].upgrade_attrs["name"] == "user_sel"
         assert alter_ops[0].upgrade_attrs["role"] == "app_user"
+
+    def test_alter_policy_rollback_uses_prior_policy(self) -> None:
+        snap = self.HANDLER.canonicalize(self.HANDLER.extract(SNAPSHOT_POLICIES))
+        model = self.HANDLER.canonicalize(
+            self.HANDLER.model_spec_from_tables(MODEL_POLICIES_ALTER_ROLE)
+        )
+        up, _ = self.HANDLER.diff(snap, model)
+        alter_op = next(op for op in up if op.object_type == "alter_policy")
+
+        stmt = self.HANDLER.emit(alter_op)[0]
+
+        assert "ALTER POLICY" in stmt.upgrade_sql
+        assert "ALTER POLICY" in stmt.rollback_sql
+        assert "TO app_user" in stmt.upgrade_sql
+        assert "TO PUBLIC" in stmt.rollback_sql
+        assert "Cannot auto-restore" not in stmt.rollback_sql
 
 
 # ===================================================================

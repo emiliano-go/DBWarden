@@ -128,6 +128,33 @@ def test_make_rollback_generates_file():
             os.chdir(old_cwd)
 
 
+def test_make_rollback_refuses_placeholder_without_irreversible_annotation(tmp_path):
+    from dbwarden.commands.make_rollback import make_rollback_cmd
+
+    migration_file = tmp_path / "V0001__unknown.sql"
+    migration_file.write_text("-- upgrade\n\nVACUUM;\n", encoding="utf-8")
+
+    make_rollback_cmd(str(migration_file))
+
+    assert not (tmp_path / "V0001__unknown.rollback.sql").exists()
+
+
+def test_make_rollback_allows_placeholder_with_irreversible_annotation(tmp_path):
+    from dbwarden.commands.make_rollback import make_rollback_cmd
+
+    migration_file = tmp_path / "V0001__unknown.sql"
+    migration_file.write_text(
+        "-- dbwarden: irreversible\n-- upgrade\n\nVACUUM;\n",
+        encoding="utf-8",
+    )
+
+    make_rollback_cmd(str(migration_file))
+
+    rollback_file = tmp_path / "V0001__unknown.rollback.sql"
+    assert rollback_file.exists()
+    assert "No automatic rollback generated" in rollback_file.read_text(encoding="utf-8")
+
+
 def test_make_rollback_no_upgrade_section():
     from dbwarden.commands.make_rollback import make_rollback_cmd
 

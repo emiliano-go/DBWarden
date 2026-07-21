@@ -650,6 +650,75 @@ class TestColumnLevelDiff:
 
 
 class TestColumnLevelSqlGeneration:
+    def test_alter_default_rollback_uses_serialized_prior_state(self, monkeypatch):
+        monkeypatch.setattr(
+            "dbwarden.engine.snapshot._get_backend",
+            lambda db_name=None: "postgresql",
+        )
+        ops = [
+            {
+                "type": "alter_column_default",
+                "table": "users",
+                "column": "active",
+                "default": "true",
+                "__rollback_attrs": {
+                    "table": "users",
+                    "column": "active",
+                    "default": "false",
+                },
+            },
+        ]
+
+        sql, rb_sql, _changes = snapshot_diff_to_sql(ops, [], db_name="test")
+
+        assert "SET DEFAULT 'true'" in sql
+        assert "SET DEFAULT 'false'" in rb_sql
+        assert "DROP DEFAULT" not in rb_sql
+
+    def test_diff_to_sql_preserves_prior_default_in_rollback_attrs(self, monkeypatch):
+        monkeypatch.setattr(
+            "dbwarden.engine.snapshot._get_backend",
+            lambda db_name=None: "postgresql",
+        )
+        snapshot = {
+            "tables": {
+                "users": {
+                    "columns": {
+                        "active": {
+                            "type": "BOOLEAN",
+                            "nullable": True,
+                            "primary_key": False,
+                            "default": "false",
+                        },
+                    },
+                    "primary_key": [],
+                    "comment": None,
+                },
+            },
+            "enums": {},
+            "indexes": {},
+            "constraints": {},
+        }
+        model_tables = [
+            ModelTable(
+                name="users",
+                columns=[
+                    ModelColumn("active", "BOOLEAN", True, False, False, "true", None),
+                ],
+            )
+        ]
+
+        upgrade_ops, rollback_ops = diff_models_against_snapshot(model_tables, snapshot, db_name="test")
+        default_op = next(op for op in upgrade_ops if op["type"] == "alter_column_default")
+
+        assert default_op["__rollback_attrs"]["default"] == "FALSE"
+
+        sql, rb_sql, _changes = snapshot_diff_to_sql(upgrade_ops, rollback_ops, db_name="test")
+
+        assert "SET DEFAULT TRUE" in sql
+        assert "SET DEFAULT FALSE" in rb_sql
+        assert "DROP DEFAULT" not in rb_sql
+
     def test_alter_type_generates_sql(self):
         ops = [
             {"type": "alter_column_type", "table": "users", "column": "name", "model_type": "TEXT"},
@@ -1556,6 +1625,3 @@ class TestIndexDiff:
         upgrade, _ = diff_models_against_snapshot(model_tables, snapshot)
         assert any(op["type"] == "drop_index" for op in upgrade)
         assert any(op["type"] == "add_index" for op in upgrade)
-
-
-

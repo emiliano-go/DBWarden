@@ -557,6 +557,21 @@ def test_offline_clickhouse_engine_recreate_sql_preserves_old_table():
     assert "RENAME TABLE events TO events__dbw_old, events__dbw_new TO events;" in up_sql
     assert "\nDROP TABLE events__dbw_old;" not in up_sql
     assert "Preserved previous table as events__dbw_old" in up_sql
+    assert "Irreversible ClickHouse recreate for events" in rb_sql
+    assert "lose row-level detail" in rb_sql
+
+
+def test_offline_row_preserving_clickhouse_recreate_has_real_rollback():
+    prev = model_state_to_dict([_make_table("events", ch_opts={"ch_engine": "MergeTree", "ch_order_by": ["id"]})])
+    curr = model_state_to_dict([_make_table("events", ch_opts={"ch_engine": "Log", "ch_order_by": ["id"]})])
+    up_ops, down_ops = diff_model_states(prev, curr)
+
+    recreate = next(op for op in up_ops if op["type"] == "recreate_ch_table")
+    assert recreate["rollback_kind"] == "conditional"
+
+    _up_sql, rb_sql, _changes = snapshot_diff_to_sql(up_ops, down_ops, db_name="primary")
+    assert "CREATE TABLE IF NOT EXISTS events__dbw_failed" in rb_sql
+    assert "Irreversible ClickHouse recreate" not in rb_sql
 
 
 def test_offline_clickhouse_engine_recreate_sql_drops_old_table():
@@ -1282,6 +1297,54 @@ def test_offline_multiple_indexes():
     columns = {tuple(op["columns"]) for op in add_idx}
     assert ("name",) in columns
     assert ("email",) in columns
+
+
+def test_offline_index_ops_preserve_rollback_attrs():
+    from dbwarden.engine.model_discovery import IndexInfo
+
+    prev_table = _make_table("users", columns=[_make_col("email", "varchar")])
+    prev_table.indexes = [IndexInfo(name="ix_email", columns=["email"], unique=True)]
+    prev = model_state_to_dict([prev_table])
+    curr = model_state_to_dict([_make_table("users", columns=[_make_col("email", "varchar")])])
+
+    up_ops, _down_ops = diff_model_states(prev, curr)
+
+    drop_index = next(op for op in up_ops if op["type"] == "drop_index")
+    assert drop_index["__rollback_attrs"]["columns"] == ["email"]
+    assert drop_index["__rollback_attrs"]["unique"] is True
+
+
+def test_offline_policy_ops_preserve_rollback_attrs():
+    old_policy = {
+        "name": "owners_only",
+        "role": "app_user",
+        "using": "owner_id = current_user_id()",
+    }
+    new_policy = {
+        "name": "owners_only",
+        "role": "admin_user",
+        "using": "owner_id = current_user_id()",
+    }
+    prev = model_state_to_dict([
+        ModelTable(
+            name="accounts",
+            columns=[_make_col("id")],
+            pg_policies=[old_policy],
+        )
+    ])
+    curr = model_state_to_dict([
+        ModelTable(
+            name="accounts",
+            columns=[_make_col("id")],
+            pg_policies=[new_policy],
+        )
+    ])
+
+    up_ops, _down_ops = diff_model_states(prev, curr)
+
+    alter_policy = next(op for op in up_ops if op["type"] == "alter_policy")
+    assert alter_policy["role"] == "admin_user"
+    assert alter_policy["__rollback_attrs"]["role"] == "app_user"
 
 
 def test_offline_none_comment_roundtrip():

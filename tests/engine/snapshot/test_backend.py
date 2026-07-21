@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from dbwarden.databases.clickhouse import data_op
 from dbwarden.engine.snapshot import (
     _apply_rename_intents,
     _assemble_migration,
@@ -28,15 +29,290 @@ from dbwarden.engine.snapshot import (
     snapshot_diff_to_sql,
     extract_full_schema_snapshot,
 )
+from dbwarden.engine.snapshot.sql_gen import RollbackContractError
+from dbwarden.engine.snapshot.sql_gen import _enforce_rollback_contract
 from dbwarden.engine.model_discovery import IndexInfo, ModelColumn, ModelTable
 from dbwarden.engine.migration_name import Change
 from dbwarden.engine.offline import diff_model_states, model_state_to_dict
-from dbwarden.engine.backends.postgresql.handlers import ConstraintHandler
+from dbwarden.engine.backends.postgresql.handlers import ConstraintHandler, RoleHandler, StatisticsHandler
 from dbwarden.engine.core.protocol import Op
+from dbwarden.logging import get_logger, reset_logger
 
 
 def _mc(name: str, typ: str, pk: bool = False, nullable: bool = True) -> ModelColumn:
     return ModelColumn(name, typ, nullable, pk, False, None, None)
+
+
+def test_irreversible_rollback_warns_in_normal_mode(capsys):
+    reset_logger()
+    get_logger(verbose=False)
+    try:
+        snapshot_diff_to_sql(
+            [
+                {
+                    "type": "alter_enum_add_value",
+                    "enum_name": "status",
+                    "value": "archived",
+                    "__irreversible": True,
+                }
+            ],
+            [],
+            db_name=None,
+        )
+
+        captured = capsys.readouterr()
+        assert "Irreversible rollback for alter_enum_add_value" in captured.out
+    finally:
+        reset_logger()
+
+    get_logger(verbose=True)
+    try:
+        snapshot_diff_to_sql(
+            [{"type": "drop_role", "role_name": "app_user"}],
+            [],
+            db_name=None,
+        )
+        captured = capsys.readouterr()
+        assert "Placeholder rollback for drop_role" in captured.out
+    finally:
+        reset_logger()
+
+
+def test_placeholder_rollback_warns_only_in_verbose_mode(capsys):
+    reset_logger()
+    get_logger(verbose=False)
+    try:
+        snapshot_diff_to_sql(
+            [{"type": "drop_role", "role_name": "app_user"}],
+            [],
+            db_name=None,
+        )
+        captured = capsys.readouterr()
+        assert "Placeholder rollback for drop_role" not in captured.out
+    finally:
+        reset_logger()
+
+
+def test_placeholder_rollback_fails_when_contract_is_enforced():
+    reset_logger()
+    try:
+        with pytest.raises(RollbackContractError, match="Placeholder rollback"):
+            snapshot_diff_to_sql(
+                [{"type": "drop_role", "role_name": "app_user"}],
+                [],
+                db_name=None,
+                enforce_rollback_contract=True,
+            )
+    finally:
+        reset_logger()
+
+
+def test_known_irreversible_rollback_passes_enforced_contract(capsys):
+    reset_logger()
+    get_logger(verbose=False)
+    try:
+        _up_sql, rb_sql, _changes = snapshot_diff_to_sql(
+            [
+                {
+                    "type": "alter_enum_add_value",
+                    "enum_name": "status",
+                    "value": "archived",
+                    "__irreversible": True,
+                }
+            ],
+            [],
+            db_name=None,
+            enforce_rollback_contract=True,
+        )
+
+        captured = capsys.readouterr()
+        assert "Irreversible rollback for alter_enum_add_value" in captured.out
+        assert "-- Revert: archived was added to enum status" in rb_sql
+    finally:
+        reset_logger()
+
+
+def test_irreversible_acknowledgement_allows_placeholder_rollback():
+    reset_logger()
+    try:
+        _up_sql, rb_sql, _changes = snapshot_diff_to_sql(
+            [{"type": "drop_role", "role_name": "app_user"}],
+            [],
+            db_name=None,
+            enforce_rollback_contract=True,
+            acknowledge_irreversible=True,
+        )
+
+        assert "-- Revert: CREATE ROLE app_user" in rb_sql
+    finally:
+        reset_logger()
+
+
+def test_unknown_irreversible_rollback_fails_closed_set_contract():
+    stmt = MigrationStatement(
+        order=StatementOrder.ALTER_TABLE_OPTIONS,
+        upgrade_sql="ALTER TABLE t MODIFY x;",
+        rollback_sql="-- irreversible custom rollback",
+        rollback_kind="irreversible",
+    )
+
+    with pytest.raises(RollbackContractError, match="not in the known irreversible set"):
+        _enforce_rollback_contract(
+            stmt,
+            "custom_op",
+            "t",
+            "irreversible",
+            enforce_rollback_contract=True,
+        )
+
+
+def test_real_rollback_cannot_emit_sql_comment():
+    stmt = MigrationStatement(
+        order=StatementOrder.ALTER_TABLE_OPTIONS,
+        upgrade_sql="ALTER TABLE t MODIFY x;",
+        rollback_sql="-- Revert manually",
+        rollback_kind="real",
+    )
+
+    with pytest.raises(RollbackContractError, match="classified real but emits a SQL comment"):
+        _enforce_rollback_contract(
+            stmt,
+            "alter_table",
+            "t",
+            "real",
+            enforce_rollback_contract=True,
+        )
+
+
+@pytest.mark.parametrize(
+    "op",
+    [
+        {"type": "refresh_matview", "table": "events_mv"},
+        {
+            "type": "apply_data_op",
+            "name": "backfill",
+            "data_op": data_op(
+                name="backfill",
+                forward="ALTER TABLE events DELETE WHERE id = 1",
+                rollback=None,
+            ),
+        },
+    ],
+)
+def test_known_irreversible_comment_rollbacks_pass_closed_set_contract(op):
+    _up_sql, rb_sql, _changes = snapshot_diff_to_sql(
+        [op],
+        [],
+        db_name=None,
+        enforce_rollback_contract=True,
+    )
+
+    assert rb_sql.strip().startswith("--")
+
+
+@pytest.mark.parametrize(
+    "op",
+    [
+        {"type": "drop_ch_named_collection", "name": "cfg"},
+        {"type": "drop_ch_settings_profile", "name": "readonly"},
+        {"type": "drop_ch_row_policy", "name": "tenant_policy", "table": "events"},
+        {"type": "drop_ch_user", "name": "svc"},
+        {"type": "drop_ch_role", "name": "reader"},
+        {"type": "drop_ch_quota", "name": "api_quota"},
+    ],
+)
+def test_promoted_ch_conditional_paths_fail_strict_contract_without_prior_state(op):
+    with pytest.raises(RollbackContractError, match="Placeholder rollback"):
+        snapshot_diff_to_sql(
+            [op],
+            [],
+            db_name="clickhouse",
+            enforce_rollback_contract=True,
+        )
+
+
+def test_pg_column_statistics_rollback_restores_prior_target():
+    handler = StatisticsHandler()
+    stmts = handler.emit(Op(
+        object_type="alter_column_statistics",
+        upgrade_attrs={"table": "events", "column": "payload", "statistics": 1000},
+        rollback_attrs={"table": "events", "column": "payload", "statistics": 100},
+    ))
+
+    assert stmts[0].upgrade_sql == "ALTER TABLE events ALTER COLUMN payload SET STATISTICS 1000;"
+    assert stmts[0].rollback_sql == "ALTER TABLE events ALTER COLUMN payload SET STATISTICS 100;"
+
+
+def test_pg_column_statistics_rollback_restores_default_target():
+    handler = StatisticsHandler()
+    stmts = handler.emit(Op(
+        object_type="alter_column_statistics",
+        upgrade_attrs={"table": "events", "column": "payload", "statistics": 1000},
+        rollback_attrs={"table": "events", "column": "payload", "statistics": None},
+    ))
+
+    assert stmts[0].rollback_sql == "ALTER TABLE events ALTER COLUMN payload SET STATISTICS -1;"
+
+
+def test_pg_role_alter_rollback_restores_prior_attrs():
+    handler = RoleHandler()
+    stmts = handler.emit(Op(
+        object_type="alter_role",
+        upgrade_attrs={
+            "role_name": "app_user",
+            "role_info": {"login": False, "createdb": True, "connlimit": 20},
+        },
+        rollback_attrs={
+            "role_name": "app_user",
+            "role_info": {"login": True, "createdb": False, "connlimit": 5},
+        },
+    ))
+
+    assert stmts[0].upgrade_sql == "ALTER ROLE app_user NOLOGIN CREATEDB CONNECTION LIMIT 20;"
+    assert stmts[0].rollback_sql == "ALTER ROLE app_user LOGIN NOCREATEDB CONNECTION LIMIT 5;"
+
+
+def test_pg_role_drop_rollback_recreates_prior_role():
+    handler = RoleHandler()
+    stmts = handler.emit(Op(
+        object_type="drop_role",
+        upgrade_attrs={"role_name": "app_user"},
+        rollback_attrs={
+            "role_name": "app_user",
+            "role_info": {"login": True, "inherit": False, "createrole": True},
+        },
+    ))
+
+    assert stmts[0].upgrade_sql == "DROP ROLE IF EXISTS app_user;"
+    assert stmts[0].rollback_sql == "CREATE ROLE app_user LOGIN NOINHERIT CREATEROLE;"
+
+
+def test_pg_role_and_statistics_pass_strict_contract_with_prior_state():
+    _up_sql, rb_sql, _changes = snapshot_diff_to_sql(
+        [
+            {
+                "type": "alter_column_statistics",
+                "table": "events",
+                "column": "payload",
+                "statistics": 1000,
+                "__rollback_attrs": {"table": "events", "column": "payload", "statistics": 100},
+            },
+            {
+                "type": "drop_role",
+                "role_name": "app_user",
+                "__rollback_attrs": {
+                    "role_name": "app_user",
+                    "role_info": {"login": True},
+                },
+            },
+        ],
+        [],
+        db_name=None,
+        enforce_rollback_contract=True,
+    )
+
+    assert "ALTER TABLE events ALTER COLUMN payload SET STATISTICS 100;" in rb_sql
+    assert "CREATE ROLE app_user LOGIN;" in rb_sql
 
 
 class TestStatementOrder:
@@ -391,7 +667,14 @@ class TestHandlerConvergence:
                 op for op in ops
                 if _backend_for_table(state, op.get("table", "")) == backend
             ]
-            return sorted(relevant, key=lambda op: json.dumps(op, sort_keys=True, default=str))
+            return sorted(
+                relevant,
+                key=lambda op: json.dumps(
+                    {k: v for k, v in op.items() if not k.startswith("__")},
+                    sort_keys=True,
+                    default=str,
+                ),
+            )
 
         def _render(ops: list[dict], rollback_ops: list[dict], state: dict, backend: str) -> tuple[str, str]:
             return snapshot_diff_to_sql(
@@ -522,6 +805,51 @@ class TestHandlerConvergence:
 
 
 class TestClickHouseDiff:
+    def test_snapshot_diff_to_sql_emits_clickhouse_projection_rollback(self):
+        ops = [{
+            "type": "alter_ch_projection",
+            "table": "events",
+            "add": [{"name": "by_id", "query": "(SELECT id ORDER BY id)"}],
+            "drop": [],
+            "replace": [],
+            "__rollback_attrs": {
+                "table": "events",
+                "add": [],
+                "drop": ["by_id"],
+                "replace": [],
+            },
+        }]
+
+        sql, rb_sql, _changes = snapshot_diff_to_sql(ops, [], db_name="clickhouse")
+
+        assert "ADD PROJECTION by_id" in sql
+        assert "DROP PROJECTION by_id" in rb_sql
+
+    def test_snapshot_diff_to_sql_emits_clickhouse_skip_index_rollback(self):
+        ops = [{
+            "type": "alter_ch_skip_index",
+            "table": "events",
+            "add": [{
+                "name": "ix_id",
+                "columns": ["id"],
+                "clickhouse_type": "minmax",
+                "clickhouse_granularity": 1,
+            }],
+            "drop": [],
+            "replace": [],
+            "__rollback_attrs": {
+                "table": "events",
+                "add": [],
+                "drop": ["ix_id"],
+                "replace": [],
+            },
+        }]
+
+        sql, rb_sql, _changes = snapshot_diff_to_sql(ops, [], db_name="clickhouse")
+
+        assert "ADD INDEX ix_id" in sql
+        assert "DROP INDEX ix_id" in rb_sql
+
     def test_diff_models_detects_clickhouse_option_change(self):
         model_tables = [
             ModelTable(
@@ -1916,4 +2244,3 @@ class TestPGGrantsOps:
         sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
         assert "GRANT SELECT, INSERT, UPDATE ON TABLE tasks TO editor;" in sql
         assert "REVOKE SELECT, INSERT, UPDATE ON TABLE tasks FROM editor;" in rb_sql
-

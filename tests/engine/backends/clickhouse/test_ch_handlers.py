@@ -12,11 +12,19 @@ from dbwarden.engine.backends.clickhouse.handlers import (
     ChDataOpHandler,
     ChDictionaryHandler,
     ChMaterializedViewHandler,
+    ChNamedCollectionHandler,
     ChProjectionHandler,
+    ChQuotaHandler,
+    ChRoleHandler,
+    ChRowPolicyHandler,
+    ChSettingsProfileHandler,
     ChSkipIndexHandler,
     ChTableHandler,
+    ChUserHandler,
 )
 from dbwarden.engine.backends.clickhouse.canonicalize import check_immutable
+from dbwarden.engine.snapshot import snapshot_diff_to_sql
+from dbwarden.engine.snapshot.ch_utils import classify_clickhouse_recreate_rollback
 from dbwarden.engine.core.models import ModelColumn, ModelTable
 from dbwarden.engine.core.protocol import Op
 from dbwarden.exceptions import ImmutableChangeError
@@ -32,6 +40,8 @@ class TestClusterableStatementFromSql:
         assert cs.prefix == "CREATE TABLE IF NOT EXISTS events"
         assert cs.suffix == " (id UInt64) ENGINE = MergeTree()"
 
+
+class TestClusterableStatementFromSqlMore:
     def test_create_table_on_cluster(self):
         cs = ClusterableStatement.from_sql(
             "CREATE TABLE IF NOT EXISTS events (id UInt64) ENGINE = MergeTree()"
@@ -123,6 +133,258 @@ class TestClusterableStatementFromSql:
         ctx = ClusterContext(ClusterMode.NONE, None)
         out = cs.render(ctx)
         assert "ON CLUSTER" not in out
+
+
+class TestClickHouseRecreateRollbackPolicy:
+    @pytest.mark.parametrize(
+        "to_engine",
+        [
+            "ReplacingMergeTree",
+            "SummingMergeTree",
+            "AggregatingMergeTree",
+            "CollapsingMergeTree",
+            "VersionedCollapsingMergeTree",
+        ],
+    )
+    def test_lossy_engine_transition_is_irreversible(self, to_engine):
+        kind, reason = classify_clickhouse_recreate_rollback("MergeTree", to_engine)
+
+        assert kind == "irreversible"
+        assert "lose row-level detail" in reason
+
+    def test_unknown_engine_transition_is_irreversible(self):
+        kind, reason = classify_clickhouse_recreate_rollback("MergeTree", "CustomTree")
+
+        assert kind == "irreversible"
+        assert "not statically proven" in reason
+
+    def test_row_preserving_engine_transition_is_conditional(self):
+        kind, reason = classify_clickhouse_recreate_rollback("MergeTree", "Log")
+
+        assert kind == "conditional"
+        assert "known row-preserving" in reason
+
+
+class TestChLowRiskRollback:
+    def test_drop_named_collection_rollback_recreates_prior_state(self):
+        handler = ChNamedCollectionHandler()
+        stmts = handler.emit(Op(
+            object_type="drop_ch_named_collection",
+            upgrade_attrs={"name": "s3_creds"},
+            rollback_attrs={
+                "name": "s3_creds",
+                "entries": {"access_key_id": "AKID"},
+                "overridable": {"access_key_id": False},
+            },
+        ))
+
+        assert stmts[0].upgrade_sql == "DROP NAMED COLLECTION s3_creds"
+        assert "CREATE NAMED COLLECTION s3_creds AS access_key_id = 'AKID', access_key_id NOT OVERRIDABLE" == stmts[0].rollback_sql
+
+    def test_alter_named_collection_rollback_recreates_prior_state(self):
+        handler = ChNamedCollectionHandler()
+        stmts = handler.emit(Op(
+            object_type="alter_ch_named_collection",
+            upgrade_attrs={"name": "cfg", "entries": {"k1": "v2"}, "overridable": None},
+            rollback_attrs={"name": "cfg", "entries": {"k1": "v1"}, "overridable": {"k1": False}},
+        ))
+
+        assert "DROP NAMED COLLECTION cfg" in stmts[0].upgrade_sql
+        assert "CREATE NAMED COLLECTION cfg AS k1 = 'v2'" in stmts[0].upgrade_sql
+        assert "CREATE NAMED COLLECTION cfg AS k1 = 'v1', k1 NOT OVERRIDABLE" in stmts[0].rollback_sql
+
+    def test_drop_settings_profile_rollback_recreates_prior_state(self):
+        handler = ChSettingsProfileHandler()
+        stmts = handler.emit(Op(
+            object_type="drop_ch_settings_profile",
+            upgrade_attrs={"name": "readonly"},
+            rollback_attrs={
+                "name": "readonly",
+                "settings": {"readonly": 1},
+                "to_roles": ["analyst"],
+            },
+        ))
+
+        assert stmts[0].upgrade_sql == "DROP SETTINGS PROFILE IF EXISTS readonly;"
+        assert stmts[0].rollback_sql == "CREATE SETTINGS PROFILE readonly SETTINGS readonly=1 TO analyst;"
+
+    def test_alter_settings_profile_rollback_restores_prior_state(self):
+        handler = ChSettingsProfileHandler()
+        stmts = handler.emit(Op(
+            object_type="alter_ch_settings_profile",
+            upgrade_attrs={"name": "readonly", "settings": {"readonly": 2}, "to_roles": ["admin"]},
+            rollback_attrs={"name": "readonly", "settings": {"readonly": 1}, "to_roles": ["analyst"]},
+        ))
+
+        assert stmts[0].upgrade_sql == "ALTER SETTINGS PROFILE readonly SETTINGS readonly=2 TO admin;"
+        assert stmts[0].rollback_sql == "ALTER SETTINGS PROFILE readonly SETTINGS readonly=1 TO analyst;"
+
+    def test_drop_row_policy_rollback_recreates_prior_state(self):
+        handler = ChRowPolicyHandler()
+        stmts = handler.emit(Op(
+            object_type="drop_ch_row_policy",
+            upgrade_attrs={"name": "tenant_policy", "table": "events"},
+            rollback_attrs={
+                "name": "tenant_policy",
+                "table": "events",
+                "using": "tenant_id = 1",
+                "to_roles": ["app"],
+                "permissive": False,
+            },
+        ))
+
+        assert stmts[0].upgrade_sql == "DROP ROW POLICY IF EXISTS tenant_policy ON events;"
+        assert stmts[0].rollback_sql == "CREATE ROW POLICY IF NOT EXISTS tenant_policy ON events FOR SELECT USING tenant_id = 1 AS RESTRICTIVE TO app;"
+
+    def test_alter_row_policy_rollback_restores_prior_state(self):
+        handler = ChRowPolicyHandler()
+        stmts = handler.emit(Op(
+            object_type="alter_ch_row_policy",
+            upgrade_attrs={"name": "tenant_policy", "table": "events", "using": "tenant_id = 2", "to_roles": ["admin"], "permissive": True},
+            rollback_attrs={"name": "tenant_policy", "table": "events", "using": "tenant_id = 1", "to_roles": ["app"], "permissive": False},
+        ))
+
+        assert "DROP ROW POLICY IF EXISTS tenant_policy ON events;" in stmts[0].upgrade_sql
+        assert "CREATE ROW POLICY IF NOT EXISTS tenant_policy ON events FOR SELECT USING tenant_id = 2 AS PERMISSIVE TO admin;" in stmts[0].upgrade_sql
+        assert "CREATE ROW POLICY IF NOT EXISTS tenant_policy ON events FOR SELECT USING tenant_id = 1 AS RESTRICTIVE TO app;" in stmts[0].rollback_sql
+
+    def test_low_risk_ch_paths_pass_strict_contract_with_prior_state(self):
+        _up_sql, rb_sql, _changes = snapshot_diff_to_sql(
+            [
+                {
+                    "type": "drop_ch_named_collection",
+                    "name": "cfg",
+                    "__rollback_attrs": {"name": "cfg", "entries": {"k1": "v1"}},
+                },
+                {
+                    "type": "drop_ch_settings_profile",
+                    "name": "readonly",
+                    "__rollback_attrs": {"name": "readonly", "settings": {"readonly": 1}, "to_roles": ["analyst"]},
+                },
+                {
+                    "type": "drop_ch_row_policy",
+                    "name": "tenant_policy",
+                    "table": "events",
+                    "__rollback_attrs": {"name": "tenant_policy", "table": "events", "using": "tenant_id = 1", "to_roles": ["app"]},
+                },
+            ],
+            [],
+            db_name="clickhouse",
+            enforce_rollback_contract=True,
+        )
+
+        assert "CREATE NAMED COLLECTION cfg AS k1 = 'v1'" in rb_sql
+        assert "CREATE SETTINGS PROFILE readonly SETTINGS readonly=1 TO analyst;" in rb_sql
+        assert "CREATE ROW POLICY IF NOT EXISTS tenant_policy ON events" in rb_sql
+
+
+class TestChDeepRbacRollback:
+    def test_drop_user_rollback_recreates_prior_state(self):
+        handler = ChUserHandler()
+        stmts = handler.emit(Op(
+            object_type="drop_ch_user",
+            upgrade_attrs={"name": "svc"},
+            rollback_attrs={
+                "name": "svc",
+                "auth": "no_password",
+                "host": "ANY",
+                "roles": ["reader"],
+                "default_roles": ["reader"],
+                "settings_profile": "readonly",
+            },
+        ))
+
+        assert stmts[0].upgrade_sql == "DROP USER IF EXISTS svc;"
+        assert stmts[0].rollback_sql == "CREATE USER IF NOT EXISTS svc IDENTIFIED WITH no_password HOST ANY TO reader DEFAULT ROLE reader SETTINGS PROFILE readonly;"
+
+    def test_alter_user_rollback_restores_prior_state(self):
+        handler = ChUserHandler()
+        stmts = handler.emit(Op(
+            object_type="alter_ch_user",
+            upgrade_attrs={"name": "svc", "auth": "no_password", "host": "LOCAL", "roles": ["admin"]},
+            rollback_attrs={"name": "svc", "auth": "no_password", "host": "ANY", "roles": ["reader"]},
+        ))
+
+        assert "DROP USER IF EXISTS svc;" in stmts[0].upgrade_sql
+        assert "CREATE USER IF NOT EXISTS svc IDENTIFIED WITH no_password HOST LOCAL TO admin;" in stmts[0].upgrade_sql
+        assert "CREATE USER IF NOT EXISTS svc IDENTIFIED WITH no_password HOST ANY TO reader;" in stmts[0].rollback_sql
+
+    def test_drop_role_rollback_recreates_prior_settings(self):
+        handler = ChRoleHandler()
+        stmts = handler.emit(Op(
+            object_type="drop_ch_role",
+            upgrade_attrs={"name": "reader"},
+            rollback_attrs={"name": "reader", "settings": {"readonly": 1}},
+        ))
+
+        assert stmts[0].upgrade_sql == "DROP ROLE IF EXISTS reader;"
+        assert stmts[0].rollback_sql == "CREATE ROLE IF NOT EXISTS reader SETTINGS readonly=1;"
+
+    def test_alter_role_rollback_restores_prior_settings(self):
+        handler = ChRoleHandler()
+        stmts = handler.emit(Op(
+            object_type="alter_ch_role",
+            upgrade_attrs={"name": "reader", "settings": {"readonly": 2}},
+            rollback_attrs={"name": "reader", "settings": {"readonly": 1}},
+        ))
+
+        assert "CREATE ROLE IF NOT EXISTS reader SETTINGS readonly=2;" in stmts[0].upgrade_sql
+        assert "CREATE ROLE IF NOT EXISTS reader SETTINGS readonly=1;" in stmts[0].rollback_sql
+
+    def test_drop_quota_rollback_recreates_prior_state(self):
+        handler = ChQuotaHandler()
+        stmts = handler.emit(Op(
+            object_type="drop_ch_quota",
+            upgrade_attrs={"name": "api_quota"},
+            rollback_attrs={
+                "name": "api_quota",
+                "interval": "1 HOUR",
+                "limits": {"queries": 1000},
+                "to_roles": ["reader"],
+            },
+        ))
+
+        assert stmts[0].upgrade_sql == "DROP QUOTA IF EXISTS api_quota;"
+        assert stmts[0].rollback_sql == "CREATE QUOTA IF NOT EXISTS api_quota FOR INTERVAL 1 HOUR queries = 1000 TO reader;"
+
+    def test_alter_quota_rollback_restores_prior_state(self):
+        handler = ChQuotaHandler()
+        stmts = handler.emit(Op(
+            object_type="alter_ch_quota",
+            upgrade_attrs={"name": "api_quota", "interval": "1 HOUR", "limits": {"queries": 2000}, "to_roles": ["admin"]},
+            rollback_attrs={"name": "api_quota", "interval": "1 HOUR", "limits": {"queries": 1000}, "to_roles": ["reader"]},
+        ))
+
+        assert "CREATE QUOTA IF NOT EXISTS api_quota FOR INTERVAL 1 HOUR queries = 2000 TO admin;" in stmts[0].upgrade_sql
+        assert "CREATE QUOTA IF NOT EXISTS api_quota FOR INTERVAL 1 HOUR queries = 1000 TO reader;" in stmts[0].rollback_sql
+
+    def test_deep_ch_rbac_paths_pass_strict_contract_with_prior_state(self):
+        _up_sql, rb_sql, _changes = snapshot_diff_to_sql(
+            [
+                {
+                    "type": "drop_ch_user",
+                    "name": "svc",
+                    "__rollback_attrs": {"name": "svc", "auth": "no_password", "host": "ANY", "roles": ["reader"]},
+                },
+                {
+                    "type": "drop_ch_role",
+                    "name": "reader",
+                    "__rollback_attrs": {"name": "reader", "settings": {"readonly": 1}},
+                },
+                {
+                    "type": "drop_ch_quota",
+                    "name": "api_quota",
+                    "__rollback_attrs": {"name": "api_quota", "interval": "1 HOUR", "limits": {"queries": 1000}, "to_roles": ["reader"]},
+                },
+            ],
+            [],
+            db_name="clickhouse",
+            enforce_rollback_contract=True,
+        )
+
+        assert "CREATE USER IF NOT EXISTS svc IDENTIFIED WITH no_password HOST ANY TO reader;" in rb_sql
+        assert "CREATE ROLE IF NOT EXISTS reader SETTINGS readonly=1;" in rb_sql
+        assert "CREATE QUOTA IF NOT EXISTS api_quota FOR INTERVAL 1 HOUR queries = 1000 TO reader;" in rb_sql
 
 
 # ── ChDictionaryHandler ───────────────────────────────────────────────────────
@@ -493,6 +755,32 @@ class TestChTableHandler:
         assert up[0].object_type == "alter_ch_options"
         changes = up[0].upgrade_attrs["changes"]
         assert "ch_engine" in changes
+
+    def test_alter_options_rollback_reads_rollback_attrs(self):
+        op = Op(
+            object_type="alter_ch_options",
+            upgrade_attrs={
+                "table": "events",
+                "changes": {
+                    "ch_ttl": {"from": ["ts + INTERVAL 1 DAY"], "to": ["ts + INTERVAL 7 DAY"]},
+                    "ch_settings": {"from": {"index_granularity": "8192"}, "to": {"index_granularity": "4096"}},
+                },
+            },
+            rollback_attrs={
+                "table": "events",
+                "changes": {
+                    "ch_ttl": {"from": ["ts + INTERVAL 7 DAY"], "to": ["ts + INTERVAL 1 DAY"]},
+                    "ch_settings": {"from": {"index_granularity": "4096"}, "to": {"index_granularity": "8192"}},
+                },
+            },
+        )
+
+        stmt = self.h.emit(op)[0]
+
+        assert "MODIFY TTL ts + INTERVAL 7 DAY" in stmt.upgrade_sql
+        assert "MODIFY SETTING index_granularity = 4096" in stmt.upgrade_sql
+        assert "MODIFY TTL ts + INTERVAL 1 DAY" in stmt.rollback_sql
+        assert "MODIFY SETTING index_granularity = 8192" in stmt.rollback_sql
 
     def test_engine_change_flag_on_creates_recreate(self):
         """Engine change with clickhouse_engine_recreate=True creates recreate op."""
