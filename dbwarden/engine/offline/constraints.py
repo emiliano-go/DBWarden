@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from dbwarden.engine.core.protocol import op_to_dict
+
 
 def _diff_constraints(
     prev_tables: dict[str, Any],
@@ -121,6 +123,6 @@ def _diff_enums(prev_enums: dict[str, list[str]], curr_enums: dict[str, list[str
     _model = _handler.canonicalize(curr_enums)
     _up, _rb = _handler.diff(_snap, _model)
     for op in _up:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+        upgrade_ops.append(op_to_dict(op))
     for op in _rb:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+        rollback_ops.append(op_to_dict(op))

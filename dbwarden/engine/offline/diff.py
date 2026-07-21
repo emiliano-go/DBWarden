@@ -11,6 +11,7 @@ from dbwarden.engine.core.model_state import (
     reconstruct_model_table,
 )
 from dbwarden.engine.core.models import IndexInfo
+from dbwarden.engine.core.protocol import op_to_dict
 from dbwarden.engine.snapshot import (
     _check_ch_engine_recreate_allowed,
     _diff_ch_column_extras,
@@ -266,6 +267,11 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
         curr_ch_spec = curr_spec if curr_spec.get("backend") == "clickhouse" else {}
         if prev_ch_spec.get("ch_engine") != curr_ch_spec.get("ch_engine") and prev_ch_spec.get("ch_engine") is not None and curr_ch_spec.get("ch_engine") is not None:
             _check_ch_engine_recreate_allowed(prev_ch_spec, curr_ch_spec, table_name)
+            from dbwarden.engine.snapshot.ch_utils import classify_clickhouse_recreate_rollback
+            rollback_kind, rollback_reason = classify_clickhouse_recreate_rollback(
+                prev_ch_spec.get("ch_engine"),
+                curr_ch_spec.get("ch_engine"),
+            )
             upgrade_ops.append({
                 "type": "recreate_ch_table",
                 "table": table_name,
@@ -275,6 +281,9 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
                 "drop_old_after_swap": False,
                 "preserve_old_suffix": "__dbw_old",
                 "failed_suffix": "__dbw_failed",
+                "rollback_kind": rollback_kind,
+                "rollback_reason": rollback_reason,
+                "__irreversible": rollback_kind == "irreversible",
             })
             rollback_ops.insert(0, {
                 "type": "recreate_ch_table",
@@ -285,6 +294,9 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
                 "drop_old_after_swap": False,
                 "preserve_old_suffix": "__dbw_failed",
                 "failed_suffix": "__dbw_old",
+                "rollback_kind": rollback_kind,
+                "rollback_reason": rollback_reason,
+                "__irreversible": rollback_kind == "irreversible",
             })
         else:
             ch_changes: dict[str, dict[str, Any]] = {}
@@ -388,9 +400,9 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
     })
     _idx_up, _idx_rb = _idx_handler.diff(_snap_idx_spec, _model_idx_spec)
     for _op in _idx_up:
-        upgrade_ops.append({"type": _op.object_type, **{k: v for k, v in _op.upgrade_attrs.items() if v is not None}})
+        upgrade_ops.append(op_to_dict(_op, skip_none=True))
     for _op in _idx_rb:
-        rollback_ops.insert(0, {"type": _op.object_type, **{k: v for k, v in _op.upgrade_attrs.items() if v is not None}})
+        rollback_ops.insert(0, op_to_dict(_op, skip_none=True))
 
     _diff_enums(prev_enums, curr_enums, upgrade_ops, rollback_ops)
 
@@ -407,9 +419,9 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
             _handler.canonicalize(_model_spec),
         )
         for op in _up:
-            upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
+            upgrade_ops.append(op_to_dict(op))
         for op in _rb:
-            rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+            rollback_ops.append(op_to_dict(op))
 
     common_tables = set(prev_tables.keys()) & set(curr_tables.keys())
     for op in upgrade_ops + rollback_ops:

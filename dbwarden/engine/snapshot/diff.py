@@ -9,7 +9,7 @@ def _is_clickhouse(db_name: str | None) -> bool:
     return _get_backend_name(db_name) == "clickhouse"
 
 
-def _suppress_ch_column_ops(ops: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _suppress_ch_column_ops(ops: list[Any]) -> list[Any]:
     """Remove alter_column_* ops that overlap with ChColumnHandler for CH."""
     suppress = frozenset({
         "alter_column_type",
@@ -17,7 +17,11 @@ def _suppress_ch_column_ops(ops: list[dict[str, Any]]) -> list[dict[str, Any]]:
         "alter_column_default",
         "alter_column_comment",
     })
-    return [op for op in ops if op["type"] not in suppress]
+    return [
+        op
+        for op in ops
+        if (op.object_type if hasattr(op, "object_type") else op.get("type")) not in suppress
+    ]
 
 
 def diff_models_against_snapshot(
@@ -49,8 +53,13 @@ def diff_models_against_snapshot(
         snap_columns = snap_table.get("columns", {})
         model_columns = {c.name: c for c in table.columns}
 
-    from dbwarden.engine.core.protocol import Op
+    from dbwarden.engine.core.protocol import op_to_dict
     from dbwarden.engine.core.registry import RegistryDriver
+
+    def _extend_ops(target: list[dict[str, Any]], ops: list[Any]) -> None:
+        for op in ops:
+            target.append(op_to_dict(op))
+
     from dbwarden.engine.backends.postgresql.handlers import ConstraintHandler
     _con_handler = ConstraintHandler()
     _con_handler._snapshot = snapshot
@@ -58,10 +67,8 @@ def diff_models_against_snapshot(
     _con_driver = RegistryDriver()
     _con_driver.register(_con_handler)
     _con_up, _con_rb = _con_driver.run(snapshot, model_tables, None)
-    for op in _con_up:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
-    for op in _con_rb:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    _extend_ops(upgrade_ops, _con_up)
+    _extend_ops(rollback_ops, _con_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import ColumnHandler
     _col_handler = ColumnHandler()
@@ -72,10 +79,8 @@ def diff_models_against_snapshot(
     if is_ch:
         _col_up = _suppress_ch_column_ops(_col_up)
         _col_rb = _suppress_ch_column_ops(_col_rb)
-    for op in _col_up:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
-    for op in _col_rb:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    _extend_ops(upgrade_ops, _col_up)
+    _extend_ops(rollback_ops, _col_rb)
 
     from dbwarden.engine.backends.clickhouse.handlers import (
         ChAggTargetHandler,
@@ -115,37 +120,29 @@ def diff_models_against_snapshot(
     _ch_driver.register(ChGrantHandler())
     _ch_driver.register(ChCommentHandler())
     _ch_up, _ch_rb = _ch_driver.run(snapshot, model_tables, None)
-    for op in _ch_up:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
-    for op in _ch_rb:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    _extend_ops(upgrade_ops, _ch_up)
+    _extend_ops(rollback_ops, _ch_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import PgTableHandler
     _pgt_driver = RegistryDriver()
     _pgt_driver.register(PgTableHandler())
     _pgt_up, _pgt_rb = _pgt_driver.run(snapshot, model_tables, None)
-    for op in _pgt_up:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
-    for op in _pgt_rb:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    _extend_ops(upgrade_ops, _pgt_up)
+    _extend_ops(rollback_ops, _pgt_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import IndexHandler
     _idx_driver = RegistryDriver()
     _idx_driver.register(IndexHandler())
     _idx_up, _idx_rb = _idx_driver.run(snapshot, model_tables, None)
-    for op in _idx_up:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
-    for op in _idx_rb:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    _extend_ops(upgrade_ops, _idx_up)
+    _extend_ops(rollback_ops, _idx_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import EnumHandler
     _enum_driver = RegistryDriver()
     _enum_driver.register(EnumHandler())
     _enum_up_ops, _enum_rb_ops = _enum_driver.run(snapshot, model_tables, None)
-    for op in _enum_up_ops:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
-    for op in _enum_rb_ops:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    _extend_ops(upgrade_ops, _enum_up_ops)
+    _extend_ops(rollback_ops, _enum_rb_ops)
 
     from dbwarden.engine.backends.postgresql.handlers import (
         CompositeTypeHandler,
@@ -171,10 +168,8 @@ def diff_models_against_snapshot(
     _pg_pre_driver.register(StatisticsHandler())
     _pg_pre_driver.register(TriggerHandler())
     _pg_pre_up, _pg_pre_rb = _pg_pre_driver.run(snapshot, model_tables, None)
-    for op in _pg_pre_up:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
-    for op in _pg_pre_rb:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    _extend_ops(upgrade_ops, _pg_pre_up)
+    _extend_ops(rollback_ops, _pg_pre_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import (
         GrantsHandler,
@@ -186,37 +181,29 @@ def diff_models_against_snapshot(
     _pg5_driver.register(PoliciesHandler())
     _pg5_driver.register(GrantsHandler())
     _pg5_up, _pg5_rb = _pg5_driver.run(snapshot, model_tables, None)
-    for op in _pg5_up:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
-    for op in _pg5_rb:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    _extend_ops(upgrade_ops, _pg5_up)
+    _extend_ops(rollback_ops, _pg5_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import ViewHandler
     _view_driver = RegistryDriver()
     _view_driver.register(ViewHandler())
     _view_up, _view_rb = _view_driver.run(snapshot, model_tables, None)
-    for op in _view_up:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
-    for op in _view_rb:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    _extend_ops(upgrade_ops, _view_up)
+    _extend_ops(rollback_ops, _view_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import TableHandler
     _table_driver = RegistryDriver()
     _table_driver.register(TableHandler())
     _table_up, _table_rb = _table_driver.run(snapshot, model_tables, None)
-    for op in _table_up:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
-    for op in _table_rb:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    _extend_ops(upgrade_ops, _table_up)
+    _extend_ops(rollback_ops, _table_rb)
 
     from dbwarden.engine.backends.mysql.handlers import MyTableHandler
     _my_driver = RegistryDriver()
     _my_driver.register(MyTableHandler())
     _my_up, _my_rb = _my_driver.run(snapshot, model_tables, None)
-    for op in _my_up:
-        upgrade_ops.append({"type": op.object_type, **op.upgrade_attrs})
-    for op in _my_rb:
-        rollback_ops.append({"type": op.object_type, **op.upgrade_attrs})
+    _extend_ops(upgrade_ops, _my_up)
+    _extend_ops(rollback_ops, _my_rb)
 
     for op in upgrade_ops + rollback_ops:
         if op.get("type") == "recreate_ch_table":

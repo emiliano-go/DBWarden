@@ -20,6 +20,20 @@ class Op:
     irreversible: bool = False
 
 
+def op_to_dict(op: Op, *, skip_none: bool = False) -> dict[str, Any]:
+    attrs = {
+        k: v
+        for k, v in op.upgrade_attrs.items()
+        if not skip_none or v is not None
+    }
+    data = {"type": op.object_type, **attrs}
+    if op.rollback_attrs:
+        data["__rollback_attrs"] = op.rollback_attrs
+    if op.irreversible:
+        data["__irreversible"] = True
+    return data
+
+
 class ObjectHandler(Protocol):
     object_type: str
     run_phase: RunPhase
