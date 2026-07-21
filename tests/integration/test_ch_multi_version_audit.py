@@ -407,7 +407,7 @@ def deep_diff(a: dict, b: dict, prefix: str = "") -> list[tuple[str, Any, Any]]:
 class TestChMultiVersionAudit:
 
     @pytest.fixture(scope="class")
-    def container(self, request):
+    def container(request):
         image, label = request.param
         import clickhouse_connect
         from testcontainers.clickhouse import ClickHouseContainer

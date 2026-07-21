@@ -160,10 +160,25 @@ def _extract_clickhouse_schema_snapshot(connection: Any, db_name: str) -> dict[s
     column_rows = connection.execute(
         text(
             "SELECT table, name, type, default_kind, default_expression, compression_codec AS codec_expression, "
-            "ttl_expression, comment, is_in_primary_key, is_in_sorting_key, is_in_partition_key "
+            "comment, is_in_primary_key, is_in_sorting_key, is_in_partition_key "
             "FROM system.columns WHERE database = currentDatabase()"
         )
     ).fetchall()
+
+    # ttl_expression was added to system.columns in CH 24.4
+    # Query it separately so older versions don't break
+    ttl_by_column: dict[tuple[str, str], str | None] = {}
+    try:
+        ttl_rows = connection.execute(
+            text(
+                "SELECT table, name, ttl_expression FROM system.columns "
+                "WHERE database = currentDatabase() AND ttl_expression != ''"
+            )
+        ).fetchall()
+        for row in ttl_rows:
+            ttl_by_column[(row.table, row.name)] = row.ttl_expression
+    except Exception:
+        pass
 
     index_rows = connection.execute(
         text(
@@ -180,7 +195,7 @@ def _extract_clickhouse_schema_snapshot(connection: Any, db_name: str) -> dict[s
             "default_kind": getattr(row, "default_kind", None),
             "default_expression": getattr(row, "default_expression", None),
             "codec_expression": getattr(row, "codec_expression", None),
-            "ttl_expression": getattr(row, "ttl_expression", None),
+            "ttl_expression": ttl_by_column.get((row.table, row.name)),
             "comment": getattr(row, "comment", None),
             "is_in_primary_key": bool(getattr(row, "is_in_primary_key", False)),
             "is_in_sorting_key": bool(getattr(row, "is_in_sorting_key", False)),

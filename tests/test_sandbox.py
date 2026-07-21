@@ -39,11 +39,18 @@ class TestCreateSandboxProvider:
         provider = create_sandbox_provider("sqlite")
         assert isinstance(provider, SQLiteSandboxProvider)
 
-    def test_unknown_type_raises_error(self):
-        with pytest.raises(ImportError, match="testcontainers"):
-            create_sandbox_provider("unknown")
+    def test_unknown_type_raises_value_error(self):
+        import dbwarden.engine.sandbox as sb
+        if sb._HAS_TESTCONTAINERS:
+            with pytest.raises(ValueError, match="Unsupported sandbox database type"):
+                create_sandbox_provider("unknown")
+        else:
+            with pytest.raises(ImportError, match="testcontainers"):
+                create_sandbox_provider("unknown")
 
-    def test_clickhouse_without_testcontainers_raises_error(self):
+    def test_clickhouse_without_testcontainers_raises_error(self, monkeypatch):
+        import dbwarden.engine.sandbox as sb
+        monkeypatch.setattr(sb, "_HAS_TESTCONTAINERS", False)
         with pytest.raises(ImportError, match="testcontainers"):
             create_sandbox_provider("clickhouse")
 
