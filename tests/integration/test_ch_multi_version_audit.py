@@ -376,7 +376,6 @@ def model_spec_for_table(table_name, **kw):
                 "comment": None,
                 "indexes": indexes,
                 "ch_options": ch_options,
-                "clickhouse_options": ch_options,
             }
         },
         "enums": {}, "indexes": {}, "constraints": {},
@@ -407,7 +406,7 @@ def deep_diff(a: dict, b: dict, prefix: str = "") -> list[tuple[str, Any, Any]]:
 class TestChMultiVersionAudit:
 
     @pytest.fixture(scope="class")
-    def container(request):
+    def container(self, request):
         image, label = request.param
         import clickhouse_connect
         from testcontainers.clickhouse import ClickHouseContainer

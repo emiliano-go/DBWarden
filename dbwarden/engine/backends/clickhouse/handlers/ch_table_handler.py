@@ -69,11 +69,7 @@ class ChTableHandler(ObjectHandler):
     def extract(self, snapshot: dict[str, Any]) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for tname, tdata in snapshot.get("tables", {}).items():
-            ch_opts = (
-                tdata.get("ch_options")
-                or tdata.get("clickhouse_options")
-                or {}
-            )
+            ch_opts = tdata.get("ch_options") or {}
             if ch_opts:
                 result[tname] = {
                     "ch_options": dict(ch_opts),

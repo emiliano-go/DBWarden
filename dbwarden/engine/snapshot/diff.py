@@ -224,7 +224,7 @@ def diff_models_against_snapshot(
             mvs = sorted(
                 mt.name for mt in model_tables
                 if mt.clickhouse_options.get("ch_to_table") == tname
-                and snapshot_tables.get(mt.name, {}).get("clickhouse_options", {}).get("ch_to_table") == tname
+                and snapshot_tables.get(mt.name, {}).get("ch_options", {}).get("ch_to_table") == tname
             )
             if mvs:
                 op["dependent_mvs"] = mvs

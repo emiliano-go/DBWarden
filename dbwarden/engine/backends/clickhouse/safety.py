@@ -84,7 +84,7 @@ def _normalize_option_value(value: Any) -> Any:
 
 def analyze_clickhouse_options(table_snapshot: dict[str, Any], model_table: ModelTable) -> list[SafetyIssue]:
     issues: list[SafetyIssue] = []
-    snapshot_options = table_snapshot.get("clickhouse_options", {})
+    snapshot_options = table_snapshot.get("ch_options", {})
     model_options = model_table.clickhouse_options
     if not snapshot_options and not model_options:
         return issues

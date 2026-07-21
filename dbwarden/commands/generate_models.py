@@ -431,7 +431,7 @@ def _render_mysql_meta(columns: list[dict], my_meta: dict | None = None) -> list
 def _generate_table_code(
     table_name: str,
     columns: list[dict],
-    clickhouse_options: dict | None = None,
+    ch_options: dict | None = None,
     object_type: str = "table",
     pg_meta: dict | None = None,
     my_meta: dict | None = None,
@@ -457,10 +457,10 @@ def _generate_table_code(
     if primary_key_cols:
         lines.append(f"    __mapper_args__ = {{'primary_key': {primary_key_cols!r}}}")
 
-    if clickhouse_options:
+    if ch_options:
         lines.append("")
         lines.append("    class Meta(CHTableMeta):")
-        lines.extend(_render_ch_meta(columns, clickhouse_options, object_type))
+        lines.extend(_render_ch_meta(columns, ch_options, object_type))
     if pg_meta or any(col.get("pg_meta") for col in columns):
         lines.append("")
         lines.extend(_render_postgresql_meta(columns, pg_meta))
@@ -651,13 +651,13 @@ def _write_models(
                 pg_dialect_imports |= _resolve_postgresql_imports(table["columns"])
             if table.get("dialect") in ("mysql", "mariadb"):
                 my_dialect_imports |= _resolve_mysql_imports(table["columns"])
-            if table.get("clickhouse_options"):
+            if table.get("ch_options"):
                 ch_meta_imports.update({"CHColumnMeta", "CHTableMeta", "ChEngineSpec", "ProjectionSpec"})
             all_classes.append(
                 _generate_table_code(
                     table["name"],
                     table["columns"],
-                    table.get("clickhouse_options"),
+                    table.get("ch_options"),
                     table.get("object_type", "table"),
                     table.get("pg_meta"),
                     table.get("my_meta"),
@@ -763,7 +763,7 @@ def _write_models(
                 imports = ("my, " + imports) if needs_my_base else "my"
             content_lines.append("from dbwarden.databases.mysql import " + imports + "\n")
             content_lines.append("\n")
-        if table.get("clickhouse_options"):
+        if table.get("ch_options"):
             ch_imports_set: set[str] = {"CHColumnMeta", "CHTableMeta", "ChEngineSpec", "ProjectionSpec"}
             needs_ch_spec = any(col.get("ch_meta") for col in table["columns"])
             if needs_ch_spec:
@@ -774,7 +774,7 @@ def _write_models(
             _generate_table_code(
                 table["name"],
                 table["columns"],
-                table.get("clickhouse_options"),
+                table.get("ch_options"),
                 table.get("object_type", "table"),
                 table.get("pg_meta"),
                 table.get("my_meta"),
@@ -1446,7 +1446,7 @@ def generate_models_cmd(
             tables_data.append({
                 "name": table_name,
                 "columns": columns_info,
-                "clickhouse_options": ch_options if ch_options else None,
+                "ch_options": ch_options if ch_options else None,
                 "object_type": ch_options.get("ch_object_type", "table") if ch_options else "table",
                 "dialect": actual_dialect,
                 "pg_meta": pg_meta,
@@ -1468,8 +1468,8 @@ def generate_models_cmd(
 
     if actual_dialect == "clickhouse":
         for t in tables_data:
-            if t.get("clickhouse_options"):
-                has_engine = bool(t["clickhouse_options"].get("ch_engine") or t["clickhouse_options"].get("ch_engine_raw"))
+            if t.get("ch_options"):
+                has_engine = bool(t["ch_options"].get("ch_engine") or t["ch_options"].get("ch_engine_raw"))
                 if not has_engine:
                     console.print(
                         f"  WARNING: ClickHouse engine metadata for '{t['name']}' may be incomplete.",

@@ -18,17 +18,17 @@ def extract_schema_snapshot(database: str | None = None) -> dict[str, dict[str, 
         snapshot: dict[str, dict[str, Any]] = {}
         for table_name, table in full.get("tables", {}).items():
             ch_opts = table.get("ch_options", {})
-            clickhouse_options: dict[str, Any] = {}
+            mapped_opts: dict[str, Any] = {}
             for ch_key, value in ch_opts.items():
                 ck = _CH_OPTION_KEY_MAP.get(ch_key, ch_key)
                 if value is not None:
-                    clickhouse_options[ck] = value
+                    mapped_opts[ck] = value
             snapshot[table_name] = {
                 "database_type": "clickhouse",
                 "object_type": table.get("object_type", "table"),
                 "comment": table.get("comment"),
                 "columns": table.get("columns", {}),
-                "clickhouse_options": clickhouse_options,
+                "ch_options": mapped_opts,
             }
         return snapshot
     if config.database_type == "postgresql":
@@ -40,7 +40,7 @@ def extract_schema_snapshot(database: str | None = None) -> dict[str, dict[str, 
                 "comment": table.get("comment"),
                 "columns": table.get("columns", {}),
                 "pg_table": table.get("pg_table", {}),
-                "clickhouse_options": {},
+                "ch_options": {},
             }
         return snapshot
     return _extract_generic_schema_snapshot(database)
@@ -64,6 +64,6 @@ def _extract_generic_schema_snapshot(database: str | None = None) -> dict[str, d
                     }
                     for col in columns
                 },
-                "clickhouse_options": {},
+                "ch_options": {},
             }
     return snapshot

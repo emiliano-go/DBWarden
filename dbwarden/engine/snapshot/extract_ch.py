@@ -314,7 +314,6 @@ def _extract_clickhouse_schema_snapshot(connection: Any, db_name: str) -> dict[s
             "comment": comment,
             "indexes": indexes_by_table.get(table_name, []),
             "ch_options": ch_options,
-            "clickhouse_options": ch_options,
         }
         tables[table_name] = table_entry
 

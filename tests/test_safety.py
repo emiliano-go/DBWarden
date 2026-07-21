@@ -108,7 +108,7 @@ def test_analyze_schema_add_projection_is_info():
         "posts": {
             "object_type": "table",
             "columns": {"author": {"type": "String", "nullable": False, "default": None}},
-            "clickhouse_options": {},
+            "ch_options": {},
         }
     }
 
@@ -134,7 +134,7 @@ def test_analyze_schema_ttl_change_is_warning():
         "events": {
             "object_type": "table",
             "columns": {"id": {"type": "UInt64", "nullable": False, "default": None}},
-            "clickhouse_options": {
+            "ch_options": {
                 "ch_ttl": ["event_time + INTERVAL 1 YEAR DELETE"],
             },
         }
@@ -162,7 +162,7 @@ def test_analyze_schema_ttl_change_is_warning():
         "events": {
             "object_type": "table",
             "columns": {"id": {"type": "UInt64", "nullable": False, "default": None}},
-            "clickhouse_options": {
+            "ch_options": {
                 "ch_ttl": "event_time + INTERVAL 90 DAY",
             },
         }
@@ -190,7 +190,7 @@ def test_check_cmd_requires_force_for_warning(monkeypatch):
                     "events": {
                         "object_type": "table",
                         "columns": {"id": {"type": "UInt64", "nullable": False, "default": None}},
-                        "clickhouse_options": {"ch_ttl": ["old_ttl"]},
+                        "ch_options": {"ch_ttl": ["old_ttl"]},
                     }
                 },
             )[0]
@@ -221,7 +221,7 @@ def test_check_cmd_allows_warning_with_force(monkeypatch):
                     "events": {
                         "object_type": "table",
                         "columns": {"id": {"type": "UInt64", "nullable": False, "default": None}},
-                        "clickhouse_options": {"ch_ttl": ["old_ttl"]},
+                        "ch_options": {"ch_ttl": ["old_ttl"]},
                     }
                 },
             )[0]
@@ -248,7 +248,7 @@ def test_analyze_schema_replicated_engine_change_is_warning():
         "events": {
             "object_type": "table",
             "columns": {"id": {"type": "UInt64", "nullable": False, "default": None}},
-            "clickhouse_options": {
+            "ch_options": {
                 "ch_zookeeper_path": "'/clickhouse/tables/old_path'",
                 "ch_replica_name": "'{replica}'",
             },
@@ -307,7 +307,7 @@ def test_analyze_schema_dictionary_source_change_is_warning():
         "country_codes": {
             "object_type": "dictionary",
             "columns": {"code": {"type": "String", "nullable": False, "default": None}},
-            "clickhouse_options": {
+            "ch_options": {
                 "ch_dict_source": "CLICKHOUSE(HOST 'old_host' TABLE 'countries')",
             },
         }
@@ -333,7 +333,7 @@ def test_ch_engine_change_raises_safety_issue():
     snapshot = {
         "events": {
             "columns": {"id": {"type": "UInt64", "nullable": False, "default": None, "ch_column": {"ch_type": "UInt64"}}},
-            "clickhouse_options": {"ch_engine": "MergeTree"},
+            "ch_options": {"ch_engine": "MergeTree"},
             "object_type": "table",
             "indexes": {},
         }
@@ -354,7 +354,7 @@ def test_ch_order_by_change_raises_safety_issue():
     snapshot = {
         "events": {
             "columns": {"id": {"type": "UInt64", "nullable": False, "default": None, "ch_column": {"ch_type": "UInt64"}}},
-            "clickhouse_options": {"ch_order_by": ["id"]},
+            "ch_options": {"ch_order_by": ["id"]},
             "object_type": "table",
             "indexes": {},
         }
@@ -375,7 +375,7 @@ def test_ch_ttl_change_raises_safety_warning():
     snapshot = {
         "events": {
             "columns": {"id": {"type": "UInt64", "nullable": False, "default": None, "ch_column": {"ch_type": "UInt64"}}},
-            "clickhouse_options": {"ch_ttl": ["created_at + INTERVAL 30 DAY"]},
+            "ch_options": {"ch_ttl": ["created_at + INTERVAL 30 DAY"]},
             "object_type": "table",
             "indexes": {},
         }
@@ -400,7 +400,7 @@ def test_ch_add_column_no_safety_issue():
     snapshot = {
         "events": {
             "columns": {"id": {"type": "UInt64", "nullable": False, "default": None, "ch_column": {"ch_type": "UInt64"}}},
-            "clickhouse_options": {"ch_engine": "MergeTree", "ch_order_by": ["id"]},
+            "ch_options": {"ch_engine": "MergeTree", "ch_order_by": ["id"]},
             "object_type": "table",
             "indexes": {},
         }

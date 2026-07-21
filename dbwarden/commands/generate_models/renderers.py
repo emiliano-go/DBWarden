@@ -53,7 +53,7 @@ def _format_column(col: dict) -> str:
 def _generate_table_code(
     table_name: str,
     columns: list[dict],
-    clickhouse_options: dict | None = None,
+    ch_options: dict | None = None,
     object_type: str = "table",
     pg_meta: dict | None = None,
     my_meta: dict | None = None,
@@ -79,10 +79,10 @@ def _generate_table_code(
     if primary_key_cols:
         lines.append(f"    __mapper_args__ = {{'primary_key': {primary_key_cols!r}}}")
 
-    if clickhouse_options:
+    if ch_options:
         lines.append("")
         lines.append("    class Meta(CHTableMeta):")
-        lines.extend(_render_ch_meta(columns, clickhouse_options, object_type))
+        lines.extend(_render_ch_meta(columns, ch_options, object_type))
     if pg_meta or any(col.get("pg_meta") for col in columns):
         lines.append("")
         lines.extend(_render_postgresql_meta(columns, pg_meta))

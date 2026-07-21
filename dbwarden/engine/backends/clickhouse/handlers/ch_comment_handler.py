@@ -16,7 +16,7 @@ class ChCommentHandler(ObjectHandler):
     def extract(self, snapshot: dict[str, Any]) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for tname, tdata in snapshot.get("tables", {}).items():
-            if not (tdata.get("clickhouse_options") or tdata.get("ch_options")):
+            if not tdata.get("ch_options"):
                 continue
             table_comment = tdata.get("comment") or None
             columns: dict[str, Any] = {}

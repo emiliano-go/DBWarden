@@ -341,7 +341,7 @@ def generate_models_cmd(
             tables_data.append({
                 "name": table_name,
                 "columns": columns_info,
-                "clickhouse_options": ch_options if ch_options else None,
+                "ch_options": ch_options if ch_options else None,
                 "object_type": ch_options.get("ch_object_type", "table") if ch_options else "table",
                 "dialect": actual_dialect,
                 "pg_meta": pg_meta,
@@ -363,8 +363,8 @@ def generate_models_cmd(
 
     if actual_dialect == "clickhouse":
         for t in tables_data:
-            if t.get("clickhouse_options"):
-                has_engine = bool(t["clickhouse_options"].get("ch_engine") or t["clickhouse_options"].get("ch_engine_raw"))
+            if t.get("ch_options"):
+                has_engine = bool(t["ch_options"].get("ch_engine") or t["ch_options"].get("ch_engine_raw"))
                 if not has_engine:
                     console.print(
                         f"  WARNING: ClickHouse engine metadata for '{t['name']}' may be incomplete.",

@@ -242,7 +242,7 @@ def test_write_models_postgresql_emits_dialect_imports_and_meta():
                         "pg_meta": {"pg_collation": "en_US.UTF-8"},
                     },
                 ],
-                "clickhouse_options": None,
+                "ch_options": None,
                 "object_type": "table",
                 "dialect": "postgresql",
                 "pg_meta": {"comment": "Users table"},
@@ -278,7 +278,7 @@ def test_write_models_mysql_emits_meta_imports():
                         "my_meta": {"my_unsigned": True},
                     },
                 ],
-                "clickhouse_options": None,
+                "ch_options": None,
                 "object_type": "table",
                 "dialect": "mysql",
                 "my_meta": {"my_engine": "InnoDB", "my_charset": "utf8mb4"},
@@ -307,7 +307,7 @@ def test_write_models_single_file():
                         {"name": "id", "type": "INTEGER", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None, "autoincrement": True},
                         {"name": "email", "type": "VARCHAR(255)", "nullable": True, "default": None, "primary_key": False, "unique": True, "foreign_key": None},
                     ],
-                    "clickhouse_options": None,
+                    "ch_options": None,
                     "object_type": "table",
                 }
             ]
@@ -336,7 +336,7 @@ def test_write_models_per_table():
                     "columns": [
                         {"name": "id", "type": "INTEGER", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None, "autoincrement": True},
                     ],
-                    "clickhouse_options": None,
+                    "ch_options": None,
                     "object_type": "table",
                 },
                 {
@@ -344,7 +344,7 @@ def test_write_models_per_table():
                     "columns": [
                         {"name": "id", "type": "INTEGER", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None, "autoincrement": True},
                     ],
-                    "clickhouse_options": None,
+                    "ch_options": None,
                     "object_type": "table",
                 },
             ]
@@ -481,7 +481,7 @@ class TestClickHouseGenerateModels:
             "events",
             columns,
             object_type="table",
-            clickhouse_options={
+            ch_options={
                 "ch_engine": "MergeTree",
                 "ch_order_by": ["id"],
             },
@@ -509,7 +509,7 @@ class TestClickHouseGenerateModels:
             "events",
             columns,
             object_type="table",
-            clickhouse_options={
+            ch_options={
                 "ch_engine": "MergeTree",
                 "ch_order_by": ["id"],
             },
@@ -551,7 +551,7 @@ class TestClickHouseGenerateModels:
                     "columns": [
                         {"name": "id", "type": "UInt64", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None, "autoincrement": False},
                     ],
-                    "clickhouse_options": {"ch_engine": "MergeTree", "ch_order_by": ["id"]},
+                    "ch_options": {"ch_engine": "MergeTree", "ch_order_by": ["id"]},
                     "object_type": "table",
                 }
             ]
@@ -572,7 +572,7 @@ class TestClickHouseGenerateModels:
                     "columns": [
                         {"name": "id", "type": "UInt64", "nullable": False, "default": None, "primary_key": True, "unique": False, "foreign_key": None, "autoincrement": False},
                     ],
-                    "clickhouse_options": {"ch_engine_raw": ChEngineSpec("MergeTree"), "ch_order_by": ["id"]},
+                    "ch_options": {"ch_engine_raw": ChEngineSpec("MergeTree"), "ch_order_by": ["id"]},
                     "object_type": "table",
                 }
             ]
@@ -590,7 +590,7 @@ class TestClickHouseGenerateModels:
             "mv_name",
             columns,
             object_type="materialized_view",
-            clickhouse_options={
+            ch_options={
                 "ch_object_type": "materialized_view",
                 "ch_select_statement": "SELECT group_col, count() AS total FROM source GROUP BY group_col",
                 "ch_engine": "SummingMergeTree",

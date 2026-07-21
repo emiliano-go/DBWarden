@@ -35,13 +35,13 @@ def _write_models(
                 pg_dialect_imports |= _resolve_postgresql_imports(table["columns"])
             if table.get("dialect") in ("mysql", "mariadb"):
                 my_dialect_imports |= _resolve_mysql_imports(table["columns"])
-            if table.get("clickhouse_options"):
+            if table.get("ch_options"):
                 ch_meta_imports.update({"CHColumnMeta", "CHTableMeta", "ChEngineSpec", "ProjectionSpec"})
             all_classes.append(
                 _generate_table_code(
                     table["name"],
                     table["columns"],
-                    table.get("clickhouse_options"),
+                    table.get("ch_options"),
                     table.get("object_type", "table"),
                     table.get("pg_meta"),
                     table.get("my_meta"),
@@ -160,7 +160,7 @@ def _write_models(
                 imports = ("my, " + imports) if needs_my_base else "my"
             content_lines.append("from dbwarden.databases.mysql import " + imports + "\n")
             content_lines.append("\n")
-        if table.get("clickhouse_options"):
+        if table.get("ch_options"):
             ch_imports_set: set[str] = {"CHColumnMeta", "CHTableMeta", "ChEngineSpec", "ProjectionSpec"}
             needs_ch_spec = any(col.get("ch_meta") for col in table["columns"])
             if needs_ch_spec:
@@ -171,7 +171,7 @@ def _write_models(
             _generate_table_code(
                 table["name"],
                 table["columns"],
-                table.get("clickhouse_options"),
+                table.get("ch_options"),
                 table.get("object_type", "table"),
                 table.get("pg_meta"),
                 table.get("my_meta"),

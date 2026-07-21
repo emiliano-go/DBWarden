@@ -378,7 +378,7 @@ class TestHandlerConvergence:
         curr_state = model_state_to_dict(curr_tables)
         snapshot = model_state_to_dict(prev_tables)
         for table in prev_tables:
-            snapshot["tables"][table.name]["clickhouse_options"] = dict(table.clickhouse_options)
+            snapshot["tables"][table.name]["ch_options"] = dict(table.clickhouse_options)
             snapshot["tables"][table.name]["pg_table"] = dict(table.pg_table)
             snapshot["tables"][table.name]["my_table"] = dict(table.my_table)
 
@@ -547,7 +547,7 @@ class TestClickHouseDiff:
                             "ch_column": {"ch_type": "UInt64"},
                         }
                     },
-                    "clickhouse_options": {
+                    "ch_options": {
                         "ch_engine": "ReplacingMergeTree",
                         "ch_order_by": ["id"],
                     },
@@ -588,7 +588,7 @@ class TestClickHouseDiff:
                             "ch_column": {"ch_type": "UInt64"},
                         }
                     },
-                    "clickhouse_options": {
+                    "ch_options": {
                         "ch_engine": "ReplacingMergeTree",
                         "ch_order_by": ["id"],
                         "ch_projections": [{"name": "by_id", "query": "SELECT id ORDER BY id"}],
@@ -628,7 +628,7 @@ class TestClickHouseDiff:
                             "ch_column": {"ch_type": "UInt64"},
                         }
                     },
-                    "clickhouse_options": {
+                    "ch_options": {
                         "ch_engine": "ReplicatedMergeTree",
                         "ch_order_by": ["id"],
                         "ch_select_statement": "SELECT id FROM source",
@@ -668,7 +668,7 @@ class TestClickHouseDiff:
                             "ch_column": {"ch_type": "UInt64"},
                         }
                     },
-                    "clickhouse_options": {
+                    "ch_options": {
                         "ch_engine": "ReplicatedMergeTree",
                         "ch_order_by": ["id"],
                         "ch_dictionary": True,
@@ -718,7 +718,7 @@ class TestClickHouseDiff:
                             "ch_column": {"ch_type": "UInt64"},
                         }
                     },
-                    "clickhouse_options": {
+                    "ch_options": {
                         "ch_engine": "ReplicatedMergeTree",
                         "ch_order_by": ["id"],
                     },
@@ -734,7 +734,7 @@ class TestClickHouseDiff:
                             "ch_column": {"ch_type": "UInt64"},
                         }
                     },
-                    "clickhouse_options": {
+                    "ch_options": {
                         "ch_engine": "MergeTree",
                         "ch_select_statement": "SELECT id FROM source",
                         "ch_to_table": "events",
