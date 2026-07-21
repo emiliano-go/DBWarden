@@ -91,6 +91,24 @@ class ChTableHandler(ObjectHandler):
         return {}
 
     def canonicalize(self, spec: dict[str, Any]) -> dict[str, Any]:
+        if not spec:
+            return {}
+        from dbwarden.engine.backends.clickhouse.canonicalize import canonicalize_primary_key
+
+        for entry in spec.values():
+            opts = dict(entry.get("ch_options") or {})
+            opts.pop("ch_engine_raw", None)
+            opts = {k: v for k, v in opts.items() if v is not None and v is not False and v != []}
+            engine = opts.get("ch_engine")
+            if isinstance(engine, (list, tuple)) and len(engine) == 1:
+                opts["ch_engine"] = engine[0]
+            opts = canonicalize_primary_key(opts)
+            for key in ("ch_order_by", "ch_primary_key"):
+                val = opts.get(key)
+                if isinstance(val, str) and val:
+                    opts[key] = [part.strip() for part in val.split(",") if part.strip()]
+            opts = {k: v for k, v in opts.items() if v is not None and v is not False and v != []}
+            entry["ch_options"] = opts
         return spec
 
     def diff(

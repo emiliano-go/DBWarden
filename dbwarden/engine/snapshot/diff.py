@@ -24,6 +24,29 @@ def _suppress_ch_column_ops(ops: list[Any]) -> list[Any]:
     ]
 
 
+_SYSTEM_TABLE_PREFIXES = ("_dbwarden_", "dbwarden_lock")
+
+
+def _is_system_table_name(name: str | None) -> bool:
+    return bool(name and name.startswith(_SYSTEM_TABLE_PREFIXES))
+
+
+def _filter_system_objects(snapshot: dict[str, Any]) -> dict[str, Any]:
+    filtered = dict(snapshot)
+    filtered["tables"] = {
+        name: spec
+        for name, spec in snapshot.get("tables", {}).items()
+        if not _is_system_table_name(name)
+    }
+    for key in ("indexes", "constraints"):
+        filtered[key] = {
+            name: spec
+            for name, spec in snapshot.get(key, {}).items()
+            if not _is_system_table_name(spec.get("table"))
+        }
+    return filtered
+
+
 def diff_models_against_snapshot(
     model_tables: list[Any],
     snapshot: dict[str, Any],
@@ -34,12 +57,16 @@ def diff_models_against_snapshot(
     upgrade_ops: list[dict[str, Any]] = []
     rollback_ops: list[dict[str, Any]] = []
 
-    is_ch = _is_clickhouse(db_name or database)
-
+    snapshot = _filter_system_objects(snapshot)
+    model_tables = [t for t in model_tables if not _is_system_table_name(t.name)]
     snapshot_tables = snapshot.get("tables", {})
     model_by_name = {t.name: t for t in model_tables}
-
-    _SYSTEM_TABLE_PREFIXES = ("_dbwarden_", "dbwarden_lock")
+    backend_is_ch = _is_clickhouse(db_name or database)
+    has_ch_tables = (
+        any(getattr(t, "clickhouse_options", None) for t in model_tables)
+        or any(spec.get("ch_options") for spec in snapshot_tables.values())
+    )
+    is_ch = backend_is_ch or has_ch_tables
 
     for table in model_tables:
         if table.name.startswith(_SYSTEM_TABLE_PREFIXES):
@@ -76,7 +103,7 @@ def diff_models_against_snapshot(
     _col_driver = RegistryDriver()
     _col_driver.register(_col_handler)
     _col_up, _col_rb = _col_driver.run(snapshot, model_tables, None)
-    if is_ch:
+    if backend_is_ch:
         _col_up = _suppress_ch_column_ops(_col_up)
         _col_rb = _suppress_ch_column_ops(_col_rb)
     _extend_ops(upgrade_ops, _col_up)
@@ -100,28 +127,29 @@ def diff_models_against_snapshot(
         ChTableHandler,
         ChUserHandler,
     )
-    _ch_handler = ChTableHandler()
-    _ch_handler.clickhouse_engine_recreate = clickhouse_engine_recreate
-    _ch_driver = RegistryDriver()
-    _ch_driver.register(_ch_handler)
-    _ch_driver.register(ChColumnHandler())
-    _ch_driver.register(ChMaterializedViewHandler())
-    _ch_driver.register(ChDictionaryHandler())
-    _ch_driver.register(ChProjectionHandler())
-    _ch_driver.register(ChSkipIndexHandler())
-    _ch_driver.register(ChAggTargetHandler())
-    _ch_driver.register(ChDataOpHandler())
-    _ch_driver.register(ChNamedCollectionHandler())
-    _ch_driver.register(ChSettingsProfileHandler())
-    _ch_driver.register(ChRoleHandler())
-    _ch_driver.register(ChUserHandler())
-    _ch_driver.register(ChQuotaHandler())
-    _ch_driver.register(ChRowPolicyHandler())
-    _ch_driver.register(ChGrantHandler())
-    _ch_driver.register(ChCommentHandler())
-    _ch_up, _ch_rb = _ch_driver.run(snapshot, model_tables, None)
-    _extend_ops(upgrade_ops, _ch_up)
-    _extend_ops(rollback_ops, _ch_rb)
+    if is_ch:
+        _ch_handler = ChTableHandler()
+        _ch_handler.clickhouse_engine_recreate = clickhouse_engine_recreate
+        _ch_driver = RegistryDriver()
+        _ch_driver.register(_ch_handler)
+        _ch_driver.register(ChColumnHandler())
+        _ch_driver.register(ChMaterializedViewHandler())
+        _ch_driver.register(ChDictionaryHandler())
+        _ch_driver.register(ChProjectionHandler())
+        _ch_driver.register(ChSkipIndexHandler())
+        _ch_driver.register(ChAggTargetHandler())
+        _ch_driver.register(ChDataOpHandler())
+        _ch_driver.register(ChNamedCollectionHandler())
+        _ch_driver.register(ChSettingsProfileHandler())
+        _ch_driver.register(ChRoleHandler())
+        _ch_driver.register(ChUserHandler())
+        _ch_driver.register(ChQuotaHandler())
+        _ch_driver.register(ChRowPolicyHandler())
+        _ch_driver.register(ChGrantHandler())
+        _ch_driver.register(ChCommentHandler())
+        _ch_up, _ch_rb = _ch_driver.run(snapshot, model_tables, None)
+        _extend_ops(upgrade_ops, _ch_up)
+        _extend_ops(rollback_ops, _ch_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import PgTableHandler
     _pgt_driver = RegistryDriver()
@@ -197,6 +225,40 @@ def diff_models_against_snapshot(
     _table_up, _table_rb = _table_driver.run(snapshot, model_tables, None)
     _extend_ops(upgrade_ops, _table_up)
     _extend_ops(rollback_ops, _table_rb)
+
+    create_tables = {op["table"] for op in upgrade_ops if op.get("type") == "create_table"}
+    if create_tables:
+        def _is_redundant_initial_table_op(op: dict[str, Any]) -> bool:
+            if op.get("type") in {"attach_partition", "detach_partition"}:
+                return op.get("partition_name") in create_tables
+            if op.get("table") not in create_tables:
+                return False
+            if op.get("type") in {
+                "add_column",
+                "drop_column",
+                "alter_column_type",
+                "alter_column_nullable",
+                "alter_column_default",
+                "alter_column_autoincrement",
+                "alter_column_comment",
+                "alter_table_comment",
+            }:
+                return True
+            if op.get("type") == "alter_pg_partition":
+                return True
+            if op.get("type") == "alter_pg_table" and op.get("key") in {
+                "pg_partition",
+                "pg_partition_of",
+                "pg_partition_bound",
+                "pg_inherits",
+                "pg_tablespace",
+                "pg_unlogged",
+            }:
+                return True
+            return False
+
+        upgrade_ops = [op for op in upgrade_ops if not _is_redundant_initial_table_op(op)]
+        rollback_ops = [op for op in rollback_ops if not _is_redundant_initial_table_op(op)]
 
     from dbwarden.engine.backends.mysql.handlers import MyTableHandler
     _my_driver = RegistryDriver()

@@ -284,6 +284,9 @@ def check_immutable(
     for key in _IMMUTABLE_KEYS:
         snap_val = snap_opts.get(key)
         model_val = model_opts.get(key)
+        if key == "ch_primary_key":
+            snap_val = _normalize_order_by(snap_val)
+            model_val = _normalize_order_by(model_val)
         if snap_val is not None and model_val is not None and snap_val != model_val:
             msg = _IMMUTABLE_MESSAGES.get(
                 key,

@@ -58,6 +58,9 @@ class ChColumnHandler(ObjectHandler):
                 if not ch_meta:
                     continue
                 cleaned = {k: v for k, v in ch_meta.items() if v is not None and v is not False}
+                codec = cleaned.get("ch_codec")
+                if isinstance(codec, str) and codec.upper().startswith("CODEC(") and codec.endswith(")"):
+                    cleaned["ch_codec"] = codec[6:-1]
                 if cleaned:
                     cols[cname] = cleaned
             if cols:

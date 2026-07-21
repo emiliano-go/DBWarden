@@ -53,6 +53,8 @@ class ChGrantHandler(ObjectHandler):
                     up.append(Op("grant_ch_privilege", {"key": key, **info}, {"key": key, **si}))
                     rb.insert(0, Op("grant_ch_privilege", {"key": key, **si}, {"key": key, **info}))
         for key in snap:
+            if not model:
+                continue
             if key not in model:
                 si = snap[key]
                 rb.insert(0, Op("grant_ch_privilege", {"key": key, **si}, {}))

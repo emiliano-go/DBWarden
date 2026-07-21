@@ -676,7 +676,9 @@ def generate_migration_sql(
                 qschema = table.schema
             qname = _qualified_name(qtable, qschema)
             for idx in table.indexes:
-                idx_cols = ", ".join(idx.columns)
+                idx_cols = idx.expression or ", ".join(idx.columns)
+                if not idx_cols:
+                    continue
                 if backend == "clickhouse":
                     ch_type = idx.clickhouse_type or "minmax"
                     ch_granularity = idx.clickhouse_granularity or 1
