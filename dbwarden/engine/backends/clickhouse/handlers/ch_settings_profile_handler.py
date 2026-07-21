@@ -6,6 +6,25 @@ from dbwarden.engine.core.protocol import ObjectHandler, Op, RunPhase
 from dbwarden.engine.snapshot import MigrationStatement, StatementOrder
 
 
+def _settings_profile_suffix(settings: dict[str, Any], to_roles: list[Any]) -> str:
+    parts: list[str] = []
+    if settings:
+        parts.append("SETTINGS " + ", ".join(f"{k}={v}" for k, v in settings.items()))
+    if to_roles:
+        parts.append("TO " + ", ".join(str(role) for role in to_roles))
+    return " ".join(parts)
+
+
+def _create_settings_profile_sql(name: str, settings: dict[str, Any], to_roles: list[Any]) -> str:
+    suffix = _settings_profile_suffix(settings, to_roles)
+    return f"CREATE SETTINGS PROFILE {name}{(' ' + suffix) if suffix else ''};"
+
+
+def _alter_settings_profile_sql(name: str, settings: dict[str, Any], to_roles: list[Any]) -> str:
+    suffix = _settings_profile_suffix(settings, to_roles)
+    return f"ALTER SETTINGS PROFILE {name}{(' ' + suffix) if suffix else ''};"
+
+
 class ChSettingsProfileHandler(ObjectHandler):
     object_type: str = "ch_settings_profile"
     op_types: tuple[str, ...] = (
@@ -65,28 +84,48 @@ class ChSettingsProfileHandler(ObjectHandler):
         name = op.upgrade_attrs["name"]
         if op.object_type == "create_ch_settings_profile":
             settings = op.upgrade_attrs.get("settings", {})
-            setting_clauses = ", ".join(f"{k}={v}" for k, v in settings.items())
             to_roles = op.upgrade_attrs.get("to_roles", [])
-            roles_clause = f" TO {', '.join(to_roles)}" if to_roles else ""
             stmts.append(MigrationStatement(
                 order=self.statement_order,
-                upgrade_sql=f"CREATE SETTINGS PROFILE {name} SETTINGS {setting_clauses}{roles_clause};",
+                upgrade_sql=_create_settings_profile_sql(name, settings, to_roles),
                 rollback_sql=f"DROP SETTINGS PROFILE IF EXISTS {name};",
             ))
         elif op.object_type == "drop_ch_settings_profile":
+            rb_settings = op.rollback_attrs.get("settings")
+            rb_roles = op.rollback_attrs.get("to_roles", [])
+            if isinstance(rb_settings, dict):
+                rollback_sql = _create_settings_profile_sql(name, rb_settings, rb_roles)
+                rollback_kind = "real"
+                rollback_reason = None
+            else:
+                rollback_sql = f"-- Revert: CREATE SETTINGS PROFILE {name};"
+                rollback_kind = "placeholder"
+                rollback_reason = "previous settings profile definition was not captured"
             stmts.append(MigrationStatement(
                 order=self.statement_order,
                 upgrade_sql=f"DROP SETTINGS PROFILE IF EXISTS {name};",
-                rollback_sql=f"-- Revert: CREATE SETTINGS PROFILE {name};",
+                rollback_sql=rollback_sql,
+                rollback_kind=rollback_kind,
+                rollback_reason=rollback_reason,
             ))
         elif op.object_type == "alter_ch_settings_profile":
             settings = op.upgrade_attrs.get("settings", {})
-            setting_clauses = ", ".join(f"{k}={v}" for k, v in settings.items())
             to_roles = op.upgrade_attrs.get("to_roles", [])
-            roles_clause = f" TO {', '.join(to_roles)}" if to_roles else ""
+            rb_settings = op.rollback_attrs.get("settings")
+            rb_roles = op.rollback_attrs.get("to_roles", [])
+            if isinstance(rb_settings, dict):
+                rollback_sql = _alter_settings_profile_sql(name, rb_settings, rb_roles)
+                rollback_kind = "real"
+                rollback_reason = None
+            else:
+                rollback_sql = f"-- Revert ALTER SETTINGS PROFILE {name};"
+                rollback_kind = "placeholder"
+                rollback_reason = "previous settings profile definition was not captured"
             stmts.append(MigrationStatement(
                 order=self.statement_order,
-                upgrade_sql=f"ALTER SETTINGS PROFILE {name} SETTINGS {setting_clauses}{roles_clause};",
-                rollback_sql=f"-- Revert ALTER SETTINGS PROFILE {name};",
+                upgrade_sql=_alter_settings_profile_sql(name, settings, to_roles),
+                rollback_sql=rollback_sql,
+                rollback_kind=rollback_kind,
+                rollback_reason=rollback_reason,
             ))
         return stmts

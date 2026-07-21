@@ -10,6 +10,30 @@ from dbwarden.engine.snapshot import MigrationStatement, StatementOrder
 _SECRET_KEYS: frozenset[str] = frozenset()
 
 
+def _named_collection_parts(entries: dict[str, Any], overridable: Any = None) -> list[str]:
+    parts = [f"{k} = '{v}'" for k, v in entries.items()]
+    if isinstance(overridable, dict):
+        for k, v in overridable.items():
+            if v is False:
+                parts.append(f"{k} NOT OVERRIDABLE")
+    return parts or ["_ = ''"]
+
+
+def _create_named_collection_stmt(name: str, entries: dict[str, Any], overridable: Any = None):
+    from dbwarden.engine.backends.clickhouse.cluster import ClusterableStatement
+
+    return ClusterableStatement(
+        prefix=f"CREATE NAMED COLLECTION {name}",
+        suffix=f"AS {', '.join(_named_collection_parts(entries, overridable))}",
+    )
+
+
+def _drop_named_collection_stmt(name: str):
+    from dbwarden.engine.backends.clickhouse.cluster import ClusterableStatement
+
+    return ClusterableStatement(prefix=f"DROP NAMED COLLECTION {name}", suffix="")
+
+
 class ChNamedCollectionHandler(ObjectHandler):
     object_type: str = "ch_named_collection"
     op_types: tuple[str, ...] = (
@@ -138,54 +162,46 @@ class ChNamedCollectionHandler(ObjectHandler):
         if op.object_type == "create_ch_named_collection":
             entries = op.upgrade_attrs.get("entries", {})
             overridable = op.upgrade_attrs.get("overridable")
-            parts = [f"{k} = '{v}'" for k, v in entries.items()]
-            if overridable:
-                for k, v in overridable.items():
-                    if v is False:
-                        parts.append(f"{k} NOT OVERRIDABLE")
-            up = ClusterableStatement(
-                prefix=f"CREATE NAMED COLLECTION {name}",
-                suffix=f"AS {', '.join(parts)}" if parts else f"AS _ = ''",
-            )
-            rb = ClusterableStatement(
-                prefix=f"DROP NAMED COLLECTION {name}",
-                suffix="",
-            )
+            up = _create_named_collection_stmt(name, entries, overridable)
+            rb = _drop_named_collection_stmt(name)
             stmts.append(up.to_migration(self.statement_order, self._cluster_ctx, rollback=rb))
 
         elif op.object_type == "drop_ch_named_collection":
-            up = ClusterableStatement(
-                prefix=f"DROP NAMED COLLECTION {name}",
-                suffix="",
-            )
-            stmts.append(up.to_migration(self.statement_order, self._cluster_ctx))
+            up = _drop_named_collection_stmt(name)
+            rb_entries = op.rollback_attrs.get("entries")
+            if isinstance(rb_entries, dict):
+                rb = _create_named_collection_stmt(
+                    name,
+                    rb_entries,
+                    op.rollback_attrs.get("overridable"),
+                )
+                stmts.append(up.to_migration(self.statement_order, self._cluster_ctx, rollback=rb))
+            else:
+                stmts.append(MigrationStatement(
+                    order=self.statement_order,
+                    upgrade_sql=up.render(self._cluster_ctx),
+                    rollback_sql=f"-- Revert: CREATE NAMED COLLECTION {name};",
+                    rollback_kind="placeholder",
+                    rollback_reason="previous named collection entries were not captured",
+                ))
 
         elif op.object_type == "alter_ch_named_collection":
             entries = op.upgrade_attrs.get("entries", {})
             overridable = op.upgrade_attrs.get("overridable")
             snap_entries = op.rollback_attrs.get("entries", {})
             snap_overridable = op.rollback_attrs.get("overridable")
-
-            set_parts = [f"SET {k} = '{v}'" for k, v in entries.items() if k not in snap_entries or snap_entries[k] != v]
-            delete_keys = [k for k in snap_entries if k not in entries]
-            if delete_keys:
-                set_parts.append(f"DELETE {', '.join(delete_keys)}")
-            rb_set_parts = [f"SET {k} = '{v}'" for k, v in snap_entries.items() if k not in entries or entries[k] != v]
-            rb_delete_keys = [k for k in entries if k not in snap_entries]
-            if rb_delete_keys:
-                rb_set_parts.append(f"DELETE {', '.join(rb_delete_keys)}")
-
-            up_suffix = "; ".join(set_parts) if set_parts else "-- no-op"
-            rb_suffix = "; ".join(rb_set_parts) if rb_set_parts else "-- no-op"
-
-            up = ClusterableStatement(
-                prefix=f"ALTER NAMED COLLECTION {name}",
-                suffix=up_suffix,
-            )
-            rb = ClusterableStatement(
-                prefix=f"ALTER NAMED COLLECTION {name}",
-                suffix=rb_suffix,
-            )
-            stmts.append(up.to_migration(self.statement_order, self._cluster_ctx, rollback=rb))
+            up_sql = "\n".join([
+                _drop_named_collection_stmt(name).render(self._cluster_ctx) + ";",
+                _create_named_collection_stmt(name, entries, overridable).render(self._cluster_ctx) + ";",
+            ])
+            rb_sql = "\n".join([
+                _drop_named_collection_stmt(name).render(self._cluster_ctx) + ";",
+                _create_named_collection_stmt(name, snap_entries, snap_overridable).render(self._cluster_ctx) + ";",
+            ])
+            stmts.append(MigrationStatement(
+                order=self.statement_order,
+                upgrade_sql=up_sql,
+                rollback_sql=rb_sql,
+            ))
 
         return stmts
