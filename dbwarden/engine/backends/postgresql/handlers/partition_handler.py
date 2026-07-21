@@ -46,6 +46,13 @@ class PartitionHandler(ObjectHandler):
                 if children:
                     entry["pg_partitions"] = list(children)
                 result[table.name] = entry
+        for table in model_tables:
+            pg_table = table.pg_table or {}
+            parent = pg_table.get("pg_partition_of")
+            bound = pg_table.get("pg_partition_bound")
+            if parent and bound:
+                parent_entry = result.setdefault(parent, {})
+                parent_entry.setdefault("pg_partitions", []).append({"name": table.name, "bound": bound})
         return result
 
     def model_spec_from_config(self, config: Any) -> dict[str, Any]:

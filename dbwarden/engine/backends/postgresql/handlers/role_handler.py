@@ -144,20 +144,6 @@ class RoleHandler(ObjectHandler):
                         rollback_attrs={"role_name": name, "role_info": info},
                     ))
 
-        for name in snap:
-            if name not in model:
-                snap_info = snap[name]
-                rollback_ops.insert(0, Op(
-                    object_type="create_role",
-                    upgrade_attrs={"role_name": name, "role_info": snap_info},
-                    rollback_attrs={"role_name": name},
-                ))
-                upgrade_ops.append(Op(
-                    object_type="drop_role",
-                    upgrade_attrs={"role_name": name},
-                    rollback_attrs={"role_name": name, "role_info": snap_info},
-                ))
-
         return upgrade_ops, rollback_ops
 
     def emit(

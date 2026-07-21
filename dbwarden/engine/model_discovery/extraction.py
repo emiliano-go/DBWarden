@@ -112,6 +112,8 @@ def extract_table_from_model(
                     "referred_columns": [ref_col],
                     "on_delete": fk.ondelete or "NO ACTION",
                     "on_update": fk.onupdate or "NO ACTION",
+                    "deferrable": bool(fk.deferrable),
+                    "initially_deferred": str(fk.initially or "").upper() == "DEFERRED",
                     "match": fk.match,
                 })
         if debug_timing:

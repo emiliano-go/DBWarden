@@ -378,7 +378,20 @@ def extract_full_schema_snapshot(
                         {"t": _regclass_name},
                     ).fetchall()
                     parents = [r[1] for r in rows]
-                    if len(parents) == 1:
+                    part_child = _conn.execute(
+                        text(
+                            "SELECT parent.relname AS parent_name, pg_get_expr(child.relpartbound, child.oid) AS bound "
+                            "FROM pg_inherits i "
+                            "JOIN pg_class child ON child.oid = i.inhrelid "
+                            "JOIN pg_class parent ON parent.oid = i.inhparent "
+                            "WHERE child.oid = CAST(:t AS regclass) AND child.relpartbound IS NOT NULL"
+                        ),
+                        {"t": _regclass_name},
+                    ).fetchone()
+                    if part_child:
+                        pg_table["pg_partition_of"] = part_child.parent_name
+                        pg_table["pg_partition_bound"] = part_child.bound
+                    elif len(parents) == 1:
                         pg_table["pg_inherits"] = parents[0]
                     elif parents:
                         pg_table["pg_inherits"] = parents
@@ -689,9 +702,30 @@ def extract_full_schema_snapshot(
 
         tables[table_name] = table_entry
 
+        constraint_index_names: set[str] = set()
+        if database_type == "postgresql":
+            try:
+                _pg_c = engine.connect() if own_engine and engine is not None else connection
+                rows = _pg_c.execute(
+                    text(
+                        "SELECT ci.relname "
+                        "FROM pg_constraint c "
+                        "JOIN pg_class ci ON ci.oid = c.conindid "
+                        "WHERE c.conrelid = CAST(:t AS regclass) "
+                        "AND c.contype IN ('p', 'u', 'x') "
+                        "AND c.conindid <> 0"
+                    ),
+                    {"t": table_name},
+                ).fetchall()
+                constraint_index_names = {r[0] for r in rows}
+            except Exception:
+                pass
+
         for idx in inspector.get_indexes(table_name, **inspect_kw):
             idx_name = idx.get("name", "")
             if not idx_name:
+                continue
+            if idx_name in constraint_index_names:
                 continue
             if idx.get("unique") and set(idx.get("column_names", [])) == pk_columns:
                 continue
@@ -1163,6 +1197,12 @@ def extract_full_schema_snapshot(
                             JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
                             WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
                               AND p.prokind IN ('f', 'p', 'w')
+                              AND NOT EXISTS (
+                                  SELECT 1
+                                  FROM pg_catalog.pg_depend d
+                                  JOIN pg_catalog.pg_extension e ON e.oid = d.refobjid
+                                  WHERE d.objid = p.oid AND d.deptype = 'e'
+                              )
                             ORDER BY p.proname"""),
                 ).fetchall()
                 for r in func_rows:

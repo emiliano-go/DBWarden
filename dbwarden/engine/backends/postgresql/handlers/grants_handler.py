@@ -115,7 +115,7 @@ class GrantsHandler(ObjectHandler):
         qname = (
             _qualified_name(op.upgrade_attrs["table"], op.upgrade_attrs.get("schema"))
             if object_type == "TABLE"
-            else _qualified_name(op.upgrade_attrs["table"])
+            else _qualified_name(op.upgrade_attrs["table"], None)
         )
 
         if op.object_type in ("add_grant", "add_schema_grant"):

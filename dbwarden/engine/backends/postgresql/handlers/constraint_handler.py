@@ -77,10 +77,35 @@ class ConstraintHandler(ObjectHandler):
         if not spec:
             return {}
         for entry in spec.values():
+            for key in ("uniques", "checks"):
+                normalized: dict[str, Any] = {}
+                for _name, item in entry.get(key, {}).items():
+                    if not isinstance(item, dict):
+                        continue
+                    clean = {
+                        k: v for k, v in item.items()
+                        if k not in {"type", "table", "validated", "deferrable", "initially_deferred", "columns"}
+                        or (k == "columns" and key == "uniques")
+                        or (k in {"deferrable", "initially_deferred"} and v)
+                    }
+                    name = clean.get("name") or str(_name).split(".")[-1]
+                    normalized[name] = clean
+                entry[key] = normalized
             for fk in entry.get("fks", []):
                 m = fk.get("match")
                 if m is None or m == "SIMPLE":
                     fk.pop("match", None)
+                fk.pop("type", None)
+                fk.pop("table", None)
+                fk.pop("name", None)
+                fk.pop("validated", None)
+                if not fk.get("deferrable"):
+                    fk.pop("deferrable", None)
+                fk.pop("initially_deferred", None)
+                if "referenced_table" in fk and "referred_table" not in fk:
+                    fk["referred_table"] = fk.pop("referenced_table")
+                if "referenced_columns" in fk and "referred_columns" not in fk:
+                    fk["referred_columns"] = fk.pop("referenced_columns")
         return spec
 
     _snapshot: dict[str, Any] | None = None
@@ -225,22 +250,25 @@ class ConstraintHandler(ObjectHandler):
             model_fk_sigs = {_fk_sig(fk) for fk in model_fks}
             for fk in snap_fks:
                 if _fk_sig(fk) not in model_fk_sigs:
+                    _ref_table = fk.get("referenced_table") or fk.get("referred_table", "")
+                    _ref_cols = fk.get("referenced_columns") or fk.get("referred_columns", [])
                     upgrade_ops.append(Op(
                         object_type="drop_foreign_key",
                         upgrade_attrs={
                             "table": tname,
                             "columns": fk["columns"],
-                            "referenced_table": fk["referenced_table"],
-                            "referenced_columns": fk["referenced_columns"],
+                            "referenced_table": _ref_table,
+                            "referenced_columns": _ref_cols,
                         },
                         rollback_attrs={
                             "table": tname,
                             "columns": fk["columns"],
-                            "referenced_table": fk["referenced_table"],
-                            "referenced_columns": fk["referenced_columns"],
+                            "referenced_table": _ref_table,
+                            "referenced_columns": _ref_cols,
                             "on_delete": fk.get("on_delete", "NO ACTION"),
                             "on_update": fk.get("on_update", "NO ACTION"),
                             "deferrable": bool(fk.get("deferrable", False)),
+                            "initially_deferred": bool(fk.get("initially_deferred", False)),
                             "match": fk.get("match"),
                         },
                     ))
@@ -249,18 +277,19 @@ class ConstraintHandler(ObjectHandler):
                         upgrade_attrs={
                             "table": tname,
                             "columns": fk["columns"],
-                            "referenced_table": fk["referenced_table"],
-                            "referenced_columns": fk["referenced_columns"],
+                            "referenced_table": _ref_table,
+                            "referenced_columns": _ref_cols,
                             "on_delete": fk.get("on_delete", "NO ACTION"),
                             "on_update": fk.get("on_update", "NO ACTION"),
                             "deferrable": bool(fk.get("deferrable", False)),
+                            "initially_deferred": bool(fk.get("initially_deferred", False)),
                             "match": fk.get("match"),
                         },
                         rollback_attrs={
                             "table": tname,
                             "columns": fk["columns"],
-                            "referenced_table": fk["referenced_table"],
-                            "referenced_columns": fk["referenced_columns"],
+                            "referenced_table": _ref_table,
+                            "referenced_columns": _ref_cols,
                         },
                     ))
             for fk in model_fks:
@@ -268,10 +297,14 @@ class ConstraintHandler(ObjectHandler):
                     _ref_table = fk.get("referenced_table") or fk.get("referred_table", "")
                     _snap_tables = (self._snapshot or {}).get("tables", {})
                     _snap_tbl = _snap_tables.get(_ref_table)
-                    if _snap_tbl is None:
-                        continue
-                    _snap_ref_cols = _snap_tbl.get("columns", {})
+                    _model_ref = model_spec.get(_ref_table)
                     _ref_cols_check = fk.get("referred_columns", fk.get("referenced_columns", []))
+                    if _snap_tbl is None:
+                        if _model_ref is None:
+                            continue
+                        _snap_ref_cols = set(_ref_cols_check)
+                    else:
+                        _snap_ref_cols = _snap_tbl.get("columns", {})
                     if not all(c in _snap_ref_cols for c in _ref_cols_check):
                         continue
                     _ref_cols = fk.get("referenced_columns", fk.get("referred_columns", []))
@@ -285,6 +318,7 @@ class ConstraintHandler(ObjectHandler):
                             "on_delete": fk.get("on_delete", "NO ACTION"),
                             "on_update": fk.get("on_update", "NO ACTION"),
                             "deferrable": fk.get("deferrable", False),
+                            "initially_deferred": fk.get("initially_deferred", False),
                             "match": fk.get("match"),
                         },
                         rollback_attrs={

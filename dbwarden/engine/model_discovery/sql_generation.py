@@ -32,6 +32,53 @@ def _qualified_name(name: str, schema: str | None) -> str:
     return name
 
 
+def _append_postgresql_column_meta(col_def: str, column) -> tuple[str, bool, bool]:
+    pg_meta = column.pg_meta or {}
+    identity = pg_meta.get("identity") or pg_meta.get("pg_identity")
+    generated = pg_meta.get("generated") or pg_meta.get("pg_generated")
+    has_identity = bool(identity)
+    has_generated = bool(generated)
+    if has_identity:
+        identity_sql = "ALWAYS" if str(identity).lower() == "always" else "BY DEFAULT"
+        identity_options: list[str] = []
+        for key, sql_key in (
+            ("identity_start", "START WITH"),
+            ("pg_identity_start", "START WITH"),
+            ("identity_increment", "INCREMENT BY"),
+            ("pg_identity_increment", "INCREMENT BY"),
+            ("identity_min", "MINVALUE"),
+            ("pg_identity_min", "MINVALUE"),
+            ("identity_max", "MAXVALUE"),
+            ("pg_identity_max", "MAXVALUE"),
+        ):
+            if pg_meta.get(key) is not None:
+                identity_options.append(f"{sql_key} {pg_meta[key]}")
+        col_def += f" GENERATED {identity_sql} AS IDENTITY"
+        if identity_options:
+            col_def += " (" + " ".join(identity_options) + ")"
+    elif has_generated:
+        col_def += f" GENERATED ALWAYS AS ({generated}) STORED"
+    return col_def, has_identity, has_generated
+
+
+def _postgres_serial_type(column, col_type: str, *, allow_composite: bool = True) -> str:
+    if not column.primary_key or column.autoincrement not in (True, "auto"):
+        return col_type
+    if not allow_composite:
+        return col_type
+    pg_meta = column.pg_meta or {}
+    if pg_meta.get("identity") or pg_meta.get("pg_identity"):
+        return col_type
+    normalized = col_type.lower().replace(" ", "")
+    if normalized in ("biginteger", "bigint"):
+        return "BIGSERIAL"
+    if normalized in ("integer", "int", "int4"):
+        return "SERIAL"
+    if normalized in ("smallinteger", "smallint", "int2"):
+        return "SMALLSERIAL"
+    return col_type
+
+
 def generate_add_column_sql(
     table_name: str, column: ModelTable, db_name: str | None = None,
     schema: str | None = None,
@@ -46,6 +93,7 @@ def generate_add_column_sql(
         col_type = _render_mysql_column_type(column.type, column.my_meta)
     elif backend == "postgresql":
         col_type = _render_postgres_column_type(column)
+        col_type = _postgres_serial_type(column, col_type)
     else:
         col_type = column.type
     is_serial = (
@@ -72,6 +120,10 @@ def generate_add_column_sql(
         qname = _qualified_name(table_name, schema)
         col_name = column.name
     sql = f"ALTER TABLE {qname} ADD COLUMN {col_name} {col_type}"
+    if backend == "postgresql":
+        sql, has_identity, has_generated = _append_postgresql_column_meta(sql, column)
+        if has_generated:
+            default_sql = ""
     if nullable_sql:
         sql += f" {nullable_sql}"
     if default_sql:
@@ -110,6 +162,9 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
 
     column_defs = []
 
+    primary_key_columns = [col.name for col in table.columns if col.primary_key]
+    composite_primary_key = backend != "clickhouse" and len(primary_key_columns) > 1
+
     for col in table.columns:
         if backend == "clickhouse":
             col_type = col.ch_meta.get("ch_type", col.type)
@@ -117,6 +172,7 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             col_type = _render_mysql_column_type(col.type, col.my_meta)
         elif backend == "postgresql":
             col_type = _render_postgres_column_type(col)
+            col_type = _postgres_serial_type(col, col_type, allow_composite=not composite_primary_key)
         else:
             col_type = col.type
         col_name = _quote_pg(col.name) if backend == "postgresql" else col.name
@@ -127,13 +183,17 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             else False
         )
 
+        has_identity = False
+        has_generated = False
+        if backend == "postgresql":
+            col_def, has_identity, has_generated = _append_postgresql_column_meta(col_def, col)
         if not col.nullable and not is_serial and backend != "clickhouse":
             col_def += " NOT NULL"
-        if backend != "clickhouse" and col.primary_key:
+        if backend != "clickhouse" and col.primary_key and not composite_primary_key:
             col_def += " PRIMARY KEY"
         elif col.unique:
             col_def += " UNIQUE"
-        if backend != "clickhouse" and col.default and not is_serial:
+        if backend != "clickhouse" and col.default and not is_serial and not has_identity and not has_generated:
             col_def += f" DEFAULT {col.default}"
         if backend == "clickhouse":
             for key, keyword in (
@@ -166,6 +226,10 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
     if backend == "clickhouse":
         column_defs.extend(f"    {projection_sql}" for projection_sql in _render_clickhouse_projections(table))
 
+    if composite_primary_key:
+        pk_cols = ", ".join(_quote_pg(c) if backend == "postgresql" else c for c in primary_key_columns)
+        column_defs.append(f"    PRIMARY KEY ({pk_cols})")
+
     columns_sql = ",\n".join(column_defs)
     if backend == "postgresql":
         qtable = _quote_pg(table.name)
@@ -178,6 +242,11 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
         sql = _generate_clickhouse_materialized_view_sql(table, columns_sql)
     elif backend == "postgresql" and table.object_type in ("view", "materialized_view"):
         return generate_create_view_sql(table, qname)
+    elif backend == "postgresql" and table.pg_table and table.pg_table.get("pg_partition_of"):
+        parent = table.pg_table["pg_partition_of"]
+        bound = table.pg_table.get("pg_partition_bound") or "DEFAULT"
+        qparent = _quote_pg(parent) if "." not in parent else ".".join(_quote_pg(p) for p in parent.split("."))
+        sql = f"CREATE TABLE IF NOT EXISTS {qname} PARTITION OF {qparent} {bound}"
     else:
         unlogged = "UNLOGGED " if table.pg_table and table.pg_table.get("pg_unlogged") else ""
         sql = f"CREATE {unlogged}TABLE IF NOT EXISTS {qname} (\n{columns_sql}\n)"
@@ -216,6 +285,14 @@ def generate_create_table_sql(table: ModelTable, db_name: str | None = None) -> 
             sql += f"\nTABLESPACE {pg_tablespace}"
     if backend == "postgresql" and table.comment:
         sql += f";\nCOMMENT ON TABLE {qname} IS '{table.comment.replace(chr(39), chr(39) + chr(39))}';"
+    if backend == "postgresql":
+        for col in table.columns:
+            if col.comment:
+                col_name = _quote_pg(col.name)
+                comment = col.comment.replace(chr(39), chr(39) + chr(39))
+                if not sql.endswith(";"):
+                    sql += ";"
+                sql += f"\nCOMMENT ON COLUMN {qname}.{col_name} IS '{comment}';"
     if backend == "postgresql":
         pg_rls = table.pg_table.get("pg_rls", False)
         pg_rls_force = table.pg_table.get("pg_rls_force", False)

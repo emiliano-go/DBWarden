@@ -38,6 +38,15 @@ class PgTableHandler(ObjectHandler):
         return {}
 
     def canonicalize(self, spec: dict[str, Any]) -> dict[str, Any]:
+        for tname, pg_table in list(spec.items()):
+            pg_table.pop("backend", None)
+            if pg_table.get("pg_storage_params") is None:
+                pg_table.pop("pg_storage_params", None)
+            pg_table.pop("pg_partitions", None)
+            if pg_table.get("pg_partition_of"):
+                pg_table.pop("pg_inherits", None)
+            if not pg_table:
+                spec.pop(tname, None)
         return spec
 
     def diff(
@@ -234,12 +243,14 @@ class PgTableHandler(ObjectHandler):
             name = op.upgrade_attrs["name"]
             if ot == "add_exclude_constraint":
                 expr = op.upgrade_attrs.get("expression", "")
-                up = f"ALTER TABLE {table} ADD CONSTRAINT {name} EXCLUDE {expr};"
+                clause = expr if str(expr).lstrip().upper().startswith("EXCLUDE") else f"EXCLUDE {expr}"
+                up = f"ALTER TABLE {table} ADD CONSTRAINT {name} {clause};"
                 rb = f"ALTER TABLE {table} DROP CONSTRAINT {name};"
             else:
                 up = f"ALTER TABLE {table} DROP CONSTRAINT {name};"
                 expr = op.upgrade_attrs.get("expression", "")
-                rb = f"ALTER TABLE {table} ADD CONSTRAINT {name} EXCLUDE {expr};"
+                clause = expr if str(expr).lstrip().upper().startswith("EXCLUDE") else f"EXCLUDE {expr}"
+                rb = f"ALTER TABLE {table} ADD CONSTRAINT {name} {clause};"
             stmts.append(MigrationStatement(
                 order=StatementOrder.ALTER_TABLE_CONSTRAINT,
                 upgrade_sql=up, rollback_sql=rb,
