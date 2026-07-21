@@ -382,7 +382,7 @@ def _render_postgresql_meta(columns: list[dict], pg_meta: dict | None = None) ->
 
 
 def _render_mysql_meta(columns: list[dict], my_meta: dict | None = None) -> list[str]:
-    if not my_meta and not any(col.get("my_meta") or col.get("comment") for col in columns):
+    if not my_meta and not any(col.get("my_meta") for col in columns):
         return []
 
     lines = ["    class Meta(MyTableMeta):"]
@@ -464,7 +464,7 @@ def _generate_table_code(
     if pg_meta or any(col.get("pg_meta") for col in columns):
         lines.append("")
         lines.extend(_render_postgresql_meta(columns, pg_meta))
-    if my_meta or any(col.get("my_meta") or col.get("comment") for col in columns):
+    if my_meta or any(col.get("my_meta") for col in columns):
         lines.append("")
         lines.extend(_render_mysql_meta(columns, my_meta))
     return "\n".join(lines) + "\n"
@@ -598,11 +598,14 @@ def _format_column(col: dict) -> str:
     if col.get("foreign_key"):
         fk_opts = col.get("fk_options", {})
         fk_parts: list[str] = []
-        for opt_key, sa_key in (("ondelete", "ondelete"), ("onupdate", "onupdate"), ("deferrable", "deferrable")):
+        for opt_key, sa_key in (("ondelete", "ondelete"), ("onupdate", "onupdate"), ("deferrable", "deferrable"), ("initially", "initially")):
             val = fk_opts.get(opt_key)
             if opt_key == "deferrable":
                 if val:
                     fk_parts.append("deferrable=True")
+            elif opt_key == "initially":
+                if val:
+                    fk_parts.append(f"initially={val!r}")
             elif val and val != "NO ACTION":
                 fk_parts.append(f"{sa_key}={val!r}")
         if fk_parts:
@@ -807,14 +810,40 @@ def _extract_postgresql_meta(inspector, connection, table_name: str, raw_columns
     except Exception:
         pass
 
+    constraint_index_names: set[str] = set()
+    try:
+        rows = connection.execute(
+            text(
+                "SELECT ci.relname "
+                "FROM pg_constraint c "
+                "JOIN pg_class ci ON ci.oid = c.conindid "
+                "WHERE c.conrelid = CAST(:t AS regclass) "
+                "AND c.contype IN ('p', 'u', 'x') "
+                "AND c.conindid <> 0"
+            ),
+            {"t": table_name},
+        ).fetchall()
+        constraint_index_names = {r[0] for r in rows}
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+
     pg_indexes: list[dict[str, Any]] = []
     for idx in indexes:
+        if idx.get("name") in constraint_index_names:
+            continue
         dialect_options = idx.get("dialect_options", {})
+        columns = [col for col in idx.get("column_names", []) if col is not None]
         entry: dict[str, Any] = {
             "name": idx.get("name"),
-            "columns": list(idx.get("column_names", [])),
+            "columns": columns,
             "unique": bool(idx.get("unique", False)),
         }
+        expressions = [expr for expr in idx.get("expressions", []) if expr]
+        if expressions:
+            entry["expression"] = expressions[0] if len(expressions) == 1 else ", ".join(expressions)
         if dialect_options.get("postgresql_using"):
             entry["using"] = dialect_options["postgresql_using"]
         if dialect_options.get("postgresql_where"):
@@ -832,7 +861,7 @@ def _extract_postgresql_meta(inspector, connection, table_name: str, raw_columns
                                pg_index_column_has_property(i.indexrelid, k, 'asc') AS is_asc,
                                pg_index_column_has_property(i.indexrelid, k, 'nulls_first') AS nf
                         FROM pg_index i
-                        CROSS JOIN LATERAL generate_series(1, array_length(i.indkey, 1)) AS k
+                        CROSS JOIN LATERAL generate_series(0, i.indnkeyatts - 1) AS k
                         JOIN pg_class ci ON ci.oid = i.indexrelid
                         JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[k]
                         WHERE ci.relname = :idxname AND i.indkey[k] <> 0
@@ -935,12 +964,32 @@ def _extract_postgresql_meta(inspector, connection, table_name: str, raw_columns
             pass
 
     try:
+        part_child = connection.execute(
+            text(
+                "SELECT parent.relname AS parent_name, pg_get_expr(child.relpartbound, child.oid) AS bound "
+                "FROM pg_inherits i "
+                "JOIN pg_class child ON child.oid = i.inhrelid "
+                "JOIN pg_class parent ON parent.oid = i.inhparent "
+                "WHERE child.relname = :t AND child.relpartbound IS NOT NULL"
+            ),
+            {"t": table_name},
+        ).fetchone()
+        if part_child:
+            table_meta["pg_partition_of"] = part_child.parent_name
+            table_meta["pg_partition_bound"] = part_child.bound
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+
+    try:
         rows = connection.execute(
             text("SELECT inhparent::regclass::text FROM pg_inherits WHERE inhrelid = CAST(:t AS regclass)"),
             {"t": table_name},
         ).fetchall()
         parents = [r[0] for r in rows]
-        if parents:
+        if parents and "pg_partition_of" not in table_meta:
             table_meta["pg_inherits"] = parents[0]
     except Exception:
         try:
@@ -1251,6 +1300,16 @@ def generate_models_cmd(
         exclude_set = set()
 
     with get_db_connection(database) as connection:
+        if actual_dialect == "clickhouse":
+            original_execute = connection.execute
+
+            def _clickhouse_execute(statement: Any, *args: Any, **kwargs: Any) -> Any:
+                if isinstance(statement, str):
+                    return connection.exec_driver_sql(statement)
+                return original_execute(statement, *args, **kwargs)
+
+            connection.execute = _clickhouse_execute  # type: ignore[method-assign]
+
         from sqlalchemy import inspect
 
         inspector = inspect(connection)
@@ -1271,7 +1330,12 @@ def generate_models_cmd(
             columns_info: list[dict] = []
 
             pk_constraint = inspector.get_pk_constraint(table_name)
-            pk_columns = set(pk_constraint.get("constrained_columns", []))
+            if isinstance(pk_constraint, dict):
+                pk_columns = set(pk_constraint.get("constrained_columns", []))
+            elif isinstance(pk_constraint, (list, tuple, set)):
+                pk_columns = set(pk_constraint)
+            else:
+                pk_columns = set()
             pk_was_inferred = False
 
             unique_constraints = inspector.get_unique_constraints(table_name)
@@ -1300,11 +1364,20 @@ def generate_models_cmd(
                     if referred:
                         fk_map[constrained] = f"{fk['referred_table']}({referred})"
 
+            fk_options_map: dict[str, dict[str, Any]] = {}
+            for fk in foreign_keys_raw:
+                options = fk.get("options", {})
+                if options:
+                    for c in fk.get("constrained_columns", []):
+                        fk_options_map[c] = options
+
             for col in raw_columns:
                 col_name = col["name"]
                 col_type_str = str(col["type"])
                 col_nullable = col.get("nullable", True)
                 col_default = col.get("default")
+                if actual_dialect == "postgresql" and str(col_default or "").startswith("nextval("):
+                    col_default = None
                 col_primary = col_name in pk_columns and not pk_was_inferred
                 col_unique = col_name in unique_columns
                 col_fk = fk_map.get(col_name)
@@ -1354,13 +1427,6 @@ def generate_models_cmd(
                         entry["type"] = f"ENUM({enum_values})"
 
                 columns_info.append(entry)
-
-            fk_options_map: dict[str, dict[str, Any]] = {}
-            for fk in foreign_keys_raw:
-                options = fk.get("options", {})
-                if options:
-                    for c in fk.get("constrained_columns", []):
-                        fk_options_map[c] = options
 
             pg_meta: dict[str, Any] | None = None
             if actual_dialect == "postgresql":
@@ -1525,14 +1591,14 @@ def _extract_ch_meta(connection, table_name: str) -> dict:
     if not row:
         return {}
 
-    from dbwarden.engine.safety import (
-        _parse_tuple_expression,
+    from dbwarden.engine.backends.clickhouse.parse import (
         _clean_expression,
-        _parse_ttl_expressions,
-        _parse_projection_queries,
-        _parse_mv_query,
-        _parse_zookeeper_path,
-        _parse_replica_name,
+        parse_mv_query,
+        parse_projection_queries,
+        parse_replica_name,
+        parse_ttl_expressions,
+        parse_tuple_or_list,
+        parse_zookeeper_path,
     )
     from dbwarden.databases.clickhouse.engine import ChEngineSpec
 
@@ -1550,10 +1616,10 @@ def _extract_ch_meta(connection, table_name: str) -> dict:
         options["ch_engine_raw"] = ChEngineSpec.from_engine_string(engine)
     options["ch_engine"] = engine
 
-    sorting_key = _parse_tuple_expression(getattr(row, "sorting_key", None))
+    sorting_key = parse_tuple_or_list(getattr(row, "sorting_key", None))
     if sorting_key:
         options["ch_order_by"] = sorting_key if isinstance(sorting_key, list) else [sorting_key]
-    primary_key = _parse_tuple_expression(getattr(row, "primary_key", None))
+    primary_key = parse_tuple_or_list(getattr(row, "primary_key", None))
     if primary_key:
         options["ch_primary_key"] = primary_key if isinstance(primary_key, list) else [primary_key]
     partition_key = _clean_expression(getattr(row, "partition_key", None))
@@ -1563,20 +1629,20 @@ def _extract_ch_meta(connection, table_name: str) -> dict:
     if sampling_key:
         options["ch_sample_by"] = sampling_key
 
-    ttl = _parse_ttl_expressions(create_query)
+    ttl = parse_ttl_expressions(create_query)
     if ttl:
         options["ch_ttl"] = ttl
-    projections = _parse_projection_queries(create_query)
+    projections = parse_projection_queries(create_query)
     if projections:
         options["ch_projections"] = projections
-    mv_query = _parse_mv_query(create_query)
+    mv_query = parse_mv_query(create_query)
     if mv_query:
         options["ch_select_statement"] = mv_query
         options["ch_object_type"] = "materialized_view"
-    zk_path = _parse_zookeeper_path(create_query, engine)
+    zk_path = parse_zookeeper_path(create_query, engine)
     if zk_path:
         options["ch_zookeeper_path"] = zk_path
-    replica = _parse_replica_name(create_query, engine)
+    replica = parse_replica_name(create_query, engine)
     if replica:
         options["ch_replica_name"] = replica
 
@@ -1588,34 +1654,35 @@ def _extract_ch_meta(connection, table_name: str) -> dict:
         options["ch_object_type"] = "materialized_view"
 
     # Parse SETTINGS, dict options, MV TO table from CREATE TABLE query
-    from dbwarden.engine.snapshot import (
-        _parse_clickhouse_settings,
-        _parse_clickhouse_dict_layout,
-        _parse_clickhouse_dict_source,
-        _parse_clickhouse_dict_lifetime,
-        _parse_clickhouse_dict_primary_key,
-        _parse_clickhouse_mv_to_table,
+    from dbwarden.engine.backends.clickhouse.parse import (
+        parse_dict_layout,
+        parse_dict_lifetime,
+        parse_dict_primary_key,
+        parse_dict_source,
+        parse_mv_to_table,
+        parse_settings,
     )
-    settings = _parse_clickhouse_settings(create_query)
+
+    settings = parse_settings(create_query)
     if settings:
         options["ch_settings"] = settings
 
     if engine.upper() == "DICTIONARY":
-        layout = _parse_clickhouse_dict_layout(create_query)
+        layout = parse_dict_layout(create_query)
         if layout:
             options["ch_dict_layout"] = layout
-        source = _parse_clickhouse_dict_source(create_query)
+        source = parse_dict_source(create_query)
         if source:
             options["ch_dict_source"] = source
-        lifetime = _parse_clickhouse_dict_lifetime(create_query)
+        lifetime = parse_dict_lifetime(create_query)
         if lifetime:
             options["ch_dict_lifetime"] = lifetime
-        dict_pk = _parse_clickhouse_dict_primary_key(create_query)
+        dict_pk = parse_dict_primary_key(create_query)
         if dict_pk:
             options["ch_dict_primary_key"] = dict_pk
 
     if options.get("ch_object_type") == "materialized_view":
-        to_table = _parse_clickhouse_mv_to_table(create_query)
+        to_table = parse_mv_to_table(create_query)
         if to_table:
             options["ch_to_table"] = to_table
 

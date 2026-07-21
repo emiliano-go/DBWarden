@@ -151,6 +151,16 @@ def generate_models_cmd(
         exclude_set = set()
 
     with get_db_connection(database) as connection:
+        if actual_dialect == "clickhouse":
+            original_execute = connection.execute
+
+            def _clickhouse_execute(statement: Any, *args: Any, **kwargs: Any) -> Any:
+                if isinstance(statement, str):
+                    return connection.exec_driver_sql(statement)
+                return original_execute(statement, *args, **kwargs)
+
+            connection.execute = _clickhouse_execute  # type: ignore[method-assign]
+
         from sqlalchemy import inspect
 
         inspector = inspect(connection)
@@ -171,7 +181,12 @@ def generate_models_cmd(
             columns_info: list[dict] = []
 
             pk_constraint = inspector.get_pk_constraint(table_name)
-            pk_columns = set(pk_constraint.get("constrained_columns", []))
+            if isinstance(pk_constraint, dict):
+                pk_columns = set(pk_constraint.get("constrained_columns", []))
+            elif isinstance(pk_constraint, (list, tuple, set)):
+                pk_columns = set(pk_constraint)
+            else:
+                pk_columns = set()
             pk_was_inferred = False
 
             unique_constraints = inspector.get_unique_constraints(table_name)
@@ -200,11 +215,20 @@ def generate_models_cmd(
                     if referred:
                         fk_map[constrained] = f"{fk['referred_table']}({referred})"
 
+            fk_options_map: dict[str, dict[str, Any]] = {}
+            for fk in foreign_keys_raw:
+                options = fk.get("options", {})
+                if options:
+                    for c in fk.get("constrained_columns", []):
+                        fk_options_map[c] = options
+
             for col in raw_columns:
                 col_name = col["name"]
                 col_type_str = str(col["type"])
                 col_nullable = col.get("nullable", True)
                 col_default = col.get("default")
+                if actual_dialect == "postgresql" and str(col_default or "").startswith("nextval("):
+                    col_default = None
                 col_primary = col_name in pk_columns and not pk_was_inferred
                 col_unique = col_name in unique_columns
                 col_fk = fk_map.get(col_name)
@@ -254,13 +278,6 @@ def generate_models_cmd(
                         entry["type"] = f"ENUM({enum_values})"
 
                 columns_info.append(entry)
-
-            fk_options_map: dict[str, dict[str, Any]] = {}
-            for fk in foreign_keys_raw:
-                options = fk.get("options", {})
-                if options:
-                    for c in fk.get("constrained_columns", []):
-                        fk_options_map[c] = options
 
             pg_meta: dict[str, Any] | None = None
             if actual_dialect == "postgresql":

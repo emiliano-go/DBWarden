@@ -21,11 +21,14 @@ def _format_column(col: dict) -> str:
     if col.get("foreign_key"):
         fk_opts = col.get("fk_options", {})
         fk_parts: list[str] = []
-        for opt_key, sa_key in (("ondelete", "ondelete"), ("onupdate", "onupdate"), ("deferrable", "deferrable")):
+        for opt_key, sa_key in (("ondelete", "ondelete"), ("onupdate", "onupdate"), ("deferrable", "deferrable"), ("initially", "initially")):
             val = fk_opts.get(opt_key)
             if opt_key == "deferrable":
                 if val:
                     fk_parts.append("deferrable=True")
+            elif opt_key == "initially":
+                if val:
+                    fk_parts.append(f"initially={val!r}")
             elif val and val != "NO ACTION":
                 fk_parts.append(f"{sa_key}={val!r}")
         if fk_parts:
@@ -86,7 +89,7 @@ def _generate_table_code(
     if pg_meta or any(col.get("pg_meta") for col in columns):
         lines.append("")
         lines.extend(_render_postgresql_meta(columns, pg_meta))
-    if my_meta or any(col.get("my_meta") or col.get("comment") for col in columns):
+    if my_meta or any(col.get("my_meta") for col in columns):
         lines.append("")
         lines.extend(_render_mysql_meta(columns, my_meta))
     return "\n".join(lines) + "\n"

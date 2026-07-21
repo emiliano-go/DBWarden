@@ -40,14 +40,40 @@ def _extract_postgresql_meta(
     except Exception:
         pass
 
+    constraint_index_names: set[str] = set()
+    try:
+        rows = connection.execute(
+            text(
+                "SELECT ci.relname "
+                "FROM pg_constraint c "
+                "JOIN pg_class ci ON ci.oid = c.conindid "
+                "WHERE c.conrelid = CAST(:t AS regclass) "
+                "AND c.contype IN ('p', 'u', 'x') "
+                "AND c.conindid <> 0"
+            ),
+            {"t": table_name},
+        ).fetchall()
+        constraint_index_names = {r[0] for r in rows}
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+
     pg_indexes: list[dict[str, Any]] = []
     for idx in indexes:
+        if idx.get("name") in constraint_index_names:
+            continue
         dialect_options = idx.get("dialect_options", {})
+        columns = [col for col in idx.get("column_names", []) if col is not None]
         entry: dict[str, Any] = {
             "name": idx.get("name"),
-            "columns": list(idx.get("column_names", [])),
+            "columns": columns,
             "unique": bool(idx.get("unique", False)),
         }
+        expressions = [expr for expr in idx.get("expressions", []) if expr]
+        if expressions:
+            entry["expression"] = expressions[0] if len(expressions) == 1 else ", ".join(expressions)
         if dialect_options.get("postgresql_using"):
             entry["using"] = dialect_options["postgresql_using"]
         if dialect_options.get("postgresql_where"):
@@ -65,7 +91,7 @@ def _extract_postgresql_meta(
                                pg_index_column_has_property(i.indexrelid, k, 'asc') AS is_asc,
                                pg_index_column_has_property(i.indexrelid, k, 'nulls_first') AS nf
                         FROM pg_index i
-                        CROSS JOIN LATERAL generate_series(1, array_length(i.indkey, 1)) AS k
+                        CROSS JOIN LATERAL generate_series(0, i.indnkeyatts - 1) AS k
                         JOIN pg_class ci ON ci.oid = i.indexrelid
                         JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[k]
                         WHERE ci.relname = :idxname AND i.indkey[k] <> 0
@@ -127,14 +153,17 @@ def _extract_postgresql_meta(
             text("SELECT unnest(COALESCE(reloptions, '{}')) FROM pg_class WHERE relname = :t"),
             {"t": table_name},
         ).fetchall()
+        storage_params: dict[str, Any] = {}
         for row in rows:
             kv = row[0].split("=", 1)
             if len(kv) == 2:
-                key = f"pg_{kv[0]}"
+                key = kv[0]
                 val = kv[1]
                 if val.isdigit():
                     val = int(val)
-                table_meta[key] = val
+                storage_params[key] = val
+        if storage_params:
+            table_meta["pg_storage_params"] = storage_params
     except Exception:
         try:
             connection.rollback()
@@ -168,12 +197,32 @@ def _extract_postgresql_meta(
             pass
 
     try:
+        part_child = connection.execute(
+            text(
+                "SELECT parent.relname AS parent_name, pg_get_expr(child.relpartbound, child.oid) AS bound "
+                "FROM pg_inherits i "
+                "JOIN pg_class child ON child.oid = i.inhrelid "
+                "JOIN pg_class parent ON parent.oid = i.inhparent "
+                "WHERE child.relname = :t AND child.relpartbound IS NOT NULL"
+            ),
+            {"t": table_name},
+        ).fetchone()
+        if part_child:
+            table_meta["pg_partition_of"] = part_child.parent_name
+            table_meta["pg_partition_bound"] = part_child.bound
+    except Exception:
+        try:
+            connection.rollback()
+        except Exception:
+            pass
+
+    try:
         rows = connection.execute(
             text("SELECT inhparent::regclass::text FROM pg_inherits WHERE inhrelid = CAST(:t AS regclass)"),
             {"t": table_name},
         ).fetchall()
         parents = [r[0] for r in rows]
-        if parents:
+        if parents and "pg_partition_of" not in table_meta:
             table_meta["pg_inherits"] = parents[0]
     except Exception:
         try:

@@ -35,6 +35,7 @@ _KNOWN_FIELD_ATTRS = frozenset({
 _KNOWN_TABLE_ATTRS = frozenset({
     "comment", "indexes", "checks", "uniques", "partition", "primary_key",
     "pg_tablespace", "pg_fillfactor", "pg_unlogged", "pg_inherits",
+    "pg_partition_of", "pg_partition_bound",
     "pg_indexes", "pg_checks", "pg_uniques", "pg_excludes", "pg_partition",
     "pg_rls", "pg_policies", "pg_grants",
     "pg_view_query", "pg_view_materialized", "pg_schema",

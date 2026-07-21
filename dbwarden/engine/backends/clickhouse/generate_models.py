@@ -98,6 +98,7 @@ def _render_ch_meta(columns: list[dict], options: dict, object_type: str) -> lis
         "ch_ttl": "ttl",
         "ch_low_cardinality": "low_cardinality",
         "ch_nullable": "nullable",
+        "ch_type": "type",
     }
 
     for col in columns:
@@ -115,6 +116,15 @@ def _render_ch_meta(columns: list[dict], options: dict, object_type: str) -> lis
             if flat_key not in ch_meta:
                 continue
             val = ch_meta[flat_key]
+            if flat_key == "ch_type" and not (
+                isinstance(val, str)
+                and (
+                    val.startswith("UInt")
+                    or val.startswith("AggregateFunction(")
+                    or val.startswith("SimpleAggregateFunction(")
+                )
+            ):
+                continue
             if spec_key in ("low_cardinality", "nullable"):
                 if val:
                     ch_kwargs[spec_key] = val
@@ -170,14 +180,14 @@ def _extract_ch_meta(connection, table_name: str) -> dict:
     if not row:
         return {}
 
-    from dbwarden.engine.safety import (
-        _parse_tuple_expression,
+    from dbwarden.engine.backends.clickhouse.parse import (
         _clean_expression,
-        _parse_ttl_expressions,
-        _parse_projection_queries,
-        _parse_mv_query,
-        _parse_zookeeper_path,
-        _parse_replica_name,
+        parse_mv_query,
+        parse_projection_queries,
+        parse_replica_name,
+        parse_ttl_expressions,
+        parse_tuple_or_list,
+        parse_zookeeper_path,
     )
     from dbwarden.databases.clickhouse.engine import ChEngineSpec
 
@@ -194,10 +204,10 @@ def _extract_ch_meta(connection, table_name: str) -> dict:
         options["ch_engine_raw"] = ChEngineSpec.from_engine_string(engine)
     options["ch_engine"] = engine
 
-    sorting_key = _parse_tuple_expression(getattr(row, "sorting_key", None))
+    sorting_key = parse_tuple_or_list(getattr(row, "sorting_key", None))
     if sorting_key:
         options["ch_order_by"] = sorting_key if isinstance(sorting_key, list) else [sorting_key]
-    primary_key = _parse_tuple_expression(getattr(row, "primary_key", None))
+    primary_key = parse_tuple_or_list(getattr(row, "primary_key", None))
     if primary_key:
         options["ch_primary_key"] = primary_key if isinstance(primary_key, list) else [primary_key]
     partition_key = _clean_expression(getattr(row, "partition_key", None))
@@ -207,20 +217,20 @@ def _extract_ch_meta(connection, table_name: str) -> dict:
     if sampling_key:
         options["ch_sample_by"] = sampling_key
 
-    ttl = _parse_ttl_expressions(create_query)
+    ttl = parse_ttl_expressions(create_query)
     if ttl:
         options["ch_ttl"] = ttl
-    projections = _parse_projection_queries(create_query)
+    projections = parse_projection_queries(create_query)
     if projections:
         options["ch_projections"] = projections
-    mv_query = _parse_mv_query(create_query)
+    mv_query = parse_mv_query(create_query)
     if mv_query:
         options["ch_select_statement"] = mv_query
         options["ch_object_type"] = "materialized_view"
-    zk_path = _parse_zookeeper_path(create_query, engine)
+    zk_path = parse_zookeeper_path(create_query, engine)
     if zk_path:
         options["ch_zookeeper_path"] = zk_path
-    replica = _parse_replica_name(create_query, engine)
+    replica = parse_replica_name(create_query, engine)
     if replica:
         options["ch_replica_name"] = replica
 
@@ -231,34 +241,35 @@ def _extract_ch_meta(connection, table_name: str) -> dict:
     if create_query.strip().upper().startswith("CREATE MATERIALIZED VIEW"):
         options["ch_object_type"] = "materialized_view"
 
-    from dbwarden.engine.snapshot import (
-        _parse_clickhouse_settings,
-        _parse_clickhouse_dict_layout,
-        _parse_clickhouse_dict_source,
-        _parse_clickhouse_dict_lifetime,
-        _parse_clickhouse_dict_primary_key,
-        _parse_clickhouse_mv_to_table,
+    from dbwarden.engine.backends.clickhouse.parse import (
+        parse_dict_layout,
+        parse_dict_lifetime,
+        parse_dict_primary_key,
+        parse_dict_source,
+        parse_mv_to_table,
+        parse_settings,
     )
-    settings = _parse_clickhouse_settings(create_query)
+
+    settings = parse_settings(create_query)
     if settings:
         options["ch_settings"] = settings
 
     if engine.upper() == "DICTIONARY":
-        layout = _parse_clickhouse_dict_layout(create_query)
+        layout = parse_dict_layout(create_query)
         if layout:
             options["ch_dict_layout"] = layout
-        source = _parse_clickhouse_dict_source(create_query)
+        source = parse_dict_source(create_query)
         if source:
             options["ch_dict_source"] = source
-        lifetime = _parse_clickhouse_dict_lifetime(create_query)
+        lifetime = parse_dict_lifetime(create_query)
         if lifetime:
             options["ch_dict_lifetime"] = lifetime
-        dict_pk = _parse_clickhouse_dict_primary_key(create_query)
+        dict_pk = parse_dict_primary_key(create_query)
         if dict_pk:
             options["ch_dict_primary_key"] = dict_pk
 
     if options.get("ch_object_type") == "materialized_view":
-        to_table = _parse_clickhouse_mv_to_table(create_query)
+        to_table = parse_mv_to_table(create_query)
         if to_table:
             options["ch_to_table"] = to_table
 

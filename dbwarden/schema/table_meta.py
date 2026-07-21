@@ -28,6 +28,8 @@ class PGTableMeta(TableMeta):
     pg_fillfactor: int | None = None
     pg_tablespace: str | None = None
     pg_inherits: str | None = None
+    pg_partition_of: str | None = None
+    pg_partition_bound: str | None = None
     pg_unlogged: bool = False
     pg_checks: list[dict[str, Any]] = []
     pg_uniques: list[dict[str, Any]] = []
