@@ -6,6 +6,20 @@ from dbwarden.engine.core.protocol import ObjectHandler, Op, RunPhase
 from dbwarden.engine.snapshot import MigrationStatement, StatementOrder
 
 
+def _role_settings_clause(settings: dict[str, Any]) -> str:
+    return ", ".join(f"{k}={v}" for k, v in settings.items())
+
+
+def _create_role_sql(name: str, info: dict[str, Any]) -> str:
+    settings = info.get("settings") or {}
+    settings_clause = f" SETTINGS {_role_settings_clause(settings)}" if settings else ""
+    return f"CREATE ROLE IF NOT EXISTS {name}{settings_clause};"
+
+
+def _drop_role_sql(name: str) -> str:
+    return f"DROP ROLE IF EXISTS {name};"
+
+
 class ChRoleHandler(ObjectHandler):
     object_type: str = "ch_role"
     op_types: tuple[str, ...] = (
@@ -65,19 +79,48 @@ class ChRoleHandler(ObjectHandler):
         if op.object_type == "create_ch_role":
             stmts.append(MigrationStatement(
                 order=self.statement_order,
-                upgrade_sql=f"CREATE ROLE IF NOT EXISTS {name};",
-                rollback_sql=f"DROP ROLE IF EXISTS {name};",
+                upgrade_sql=_create_role_sql(name, op.upgrade_attrs),
+                rollback_sql=_drop_role_sql(name),
             ))
         elif op.object_type == "drop_ch_role":
+            role_info = op.rollback_attrs if "settings" in op.rollback_attrs else None
+            if role_info is not None:
+                rollback_sql = _create_role_sql(name, role_info)
+                rollback_kind = "real"
+                rollback_reason = None
+            else:
+                rollback_sql = f"-- Revert: CREATE ROLE {name};"
+                rollback_kind = "placeholder"
+                rollback_reason = "previous ClickHouse role settings were not captured"
             stmts.append(MigrationStatement(
                 order=self.statement_order,
-                upgrade_sql=f"DROP ROLE IF EXISTS {name};",
-                rollback_sql=f"-- Revert: CREATE ROLE {name};",
+                upgrade_sql=_drop_role_sql(name),
+                rollback_sql=rollback_sql,
+                rollback_kind=rollback_kind,
+                rollback_reason=rollback_reason,
             ))
         elif op.object_type == "alter_ch_role":
+            if "settings" in op.rollback_attrs:
+                upgrade_sql = "\n".join([
+                    _drop_role_sql(name),
+                    _create_role_sql(name, op.upgrade_attrs),
+                ])
+                rollback_sql = "\n".join([
+                    _drop_role_sql(name),
+                    _create_role_sql(name, op.rollback_attrs),
+                ])
+                rollback_kind = "real"
+                rollback_reason = None
+            else:
+                upgrade_sql = f"-- ALTER ROLE {name} (settings managed via profile);"
+                rollback_sql = f"-- Revert ALTER ROLE {name};"
+                rollback_kind = "placeholder"
+                rollback_reason = "previous ClickHouse role settings were not captured"
             stmts.append(MigrationStatement(
                 order=self.statement_order,
-                upgrade_sql=f"-- ALTER ROLE {name} (settings managed via profile);",
-                rollback_sql=f"-- Revert ALTER ROLE {name};",
+                upgrade_sql=upgrade_sql,
+                rollback_sql=rollback_sql,
+                rollback_kind=rollback_kind,
+                rollback_reason=rollback_reason,
             ))
         return stmts

@@ -6,6 +6,26 @@ from dbwarden.engine.core.protocol import ObjectHandler, Op, RunPhase
 from dbwarden.engine.snapshot import MigrationStatement, StatementOrder
 
 
+def _create_user_sql(name: str, info: dict[str, Any]) -> str:
+    auth = info.get("auth", "no_password")
+    host = info.get("host", "ANY")
+    parts = [f"CREATE USER IF NOT EXISTS {name} IDENTIFIED WITH {auth} HOST {host}"]
+    roles = info.get("roles") or []
+    if roles:
+        parts.append(f"TO {', '.join(str(role) for role in roles)}")
+    default_roles = info.get("default_roles") or []
+    if default_roles:
+        parts.append(f"DEFAULT ROLE {', '.join(str(role) for role in default_roles)}")
+    profile = info.get("settings_profile")
+    if profile:
+        parts.append(f"SETTINGS PROFILE {profile}")
+    return " ".join(parts) + ";"
+
+
+def _drop_user_sql(name: str) -> str:
+    return f"DROP USER IF EXISTS {name};"
+
+
 class ChUserHandler(ObjectHandler):
     object_type: str = "ch_user"
     op_types: tuple[str, ...] = (
@@ -69,34 +89,49 @@ class ChUserHandler(ObjectHandler):
         stmts: list[MigrationStatement] = []
         name = op.upgrade_attrs["name"]
         if op.object_type == "create_ch_user":
-            auth = op.upgrade_attrs.get("auth", "no_password")
-            roles = op.upgrade_attrs.get("roles", [])
-            roles_clause = f" TO {', '.join(roles)}" if roles else ""
-            host = op.upgrade_attrs.get("host", "ANY")
-            profile = op.upgrade_attrs.get("settings_profile")
-            profile_clause = f" SETTINGS PROFILE {profile}" if profile else ""
             stmts.append(MigrationStatement(
                 order=self.statement_order,
-                upgrade_sql=f"CREATE USER IF NOT EXISTS {name} IDENTIFIED WITH {auth} HOST {host}{roles_clause}{profile_clause};",
-                rollback_sql=f"DROP USER IF EXISTS {name};",
+                upgrade_sql=_create_user_sql(name, op.upgrade_attrs),
+                rollback_sql=_drop_user_sql(name),
             ))
         elif op.object_type == "drop_ch_user":
+            if "auth" in op.rollback_attrs or "host" in op.rollback_attrs:
+                rollback_sql = _create_user_sql(name, op.rollback_attrs)
+                rollback_kind = "real"
+                rollback_reason = None
+            else:
+                rollback_sql = f"-- Revert: CREATE USER {name};"
+                rollback_kind = "placeholder"
+                rollback_reason = "previous ClickHouse user definition was not captured"
             stmts.append(MigrationStatement(
                 order=self.statement_order,
-                upgrade_sql=f"DROP USER IF EXISTS {name};",
-                rollback_sql=f"-- Revert: CREATE USER {name};",
+                upgrade_sql=_drop_user_sql(name),
+                rollback_sql=rollback_sql,
+                rollback_kind=rollback_kind,
+                rollback_reason=rollback_reason,
             ))
         elif op.object_type == "alter_ch_user":
-            roles = op.upgrade_attrs.get("roles", [])
-            parts = [f"ALTER USER {name}"]
-            if roles:
-                parts.append(f"GRANTEES {', '.join(roles)}")
-            host = op.upgrade_attrs.get("host")
-            if host:
-                parts.append(f"HOST {host}")
+            if "auth" in op.rollback_attrs or "host" in op.rollback_attrs:
+                upgrade_sql = "\n".join([
+                    _drop_user_sql(name),
+                    _create_user_sql(name, op.upgrade_attrs),
+                ])
+                rollback_sql = "\n".join([
+                    _drop_user_sql(name),
+                    _create_user_sql(name, op.rollback_attrs),
+                ])
+                rollback_kind = "real"
+                rollback_reason = None
+            else:
+                upgrade_sql = f"-- ALTER USER {name};"
+                rollback_sql = f"-- Revert ALTER USER {name};"
+                rollback_kind = "placeholder"
+                rollback_reason = "previous ClickHouse user definition was not captured"
             stmts.append(MigrationStatement(
                 order=self.statement_order,
-                upgrade_sql=f"{' '.join(parts)};",
-                rollback_sql=f"-- Revert ALTER USER {name};",
+                upgrade_sql=upgrade_sql,
+                rollback_sql=rollback_sql,
+                rollback_kind=rollback_kind,
+                rollback_reason=rollback_reason,
             ))
         return stmts
