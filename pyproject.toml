@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dbwarden"
-version = "0.14.3"
+version = "0.15.0"
 description = "The SQL-first database toolkit for SQLAlchemy." 
 readme = "README.md"
 license = "MIT"
