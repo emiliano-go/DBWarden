@@ -359,6 +359,71 @@ $ dbwarden lock-status --database primary
 $ dbwarden unlock --database primary
 ```
 
+## Plugin management
+
+See the [Plugins guide](plugins/index.md) for the trust model and development docs.
+
+### `plugin list`
+
+```bash
+$ dbwarden plugin list
+$ dbwarden plugin list --format json
+```
+
+Shows discovered plugins with tier, trust/load state, registered hooks, object handlers, and lock status.
+
+Options: `--format`/`-f` (`table` or `json`, default `table`)
+
+### `plugin info`
+
+```bash
+$ dbwarden plugin info dbwarden-fastapi
+$ dbwarden plugin info dbwarden-fastapi --format json
+```
+
+Shows entry point, tier, trust/load state, hooks, official repository, approved minimum version, and lockfile provenance. Exits `1` if the plugin is not found.
+
+Options: `--format`/`-f` (`table` or `json`, default `table`)
+
+### `plugin add`
+
+```bash
+$ dbwarden plugin add dbwarden-fastapi
+$ dbwarden plugin add dbwarden-fastapi --version 0.2.0 --uv
+$ dbwarden plugin add dbwarden-example --dry-run
+```
+
+Installs a plugin. Official plugins are provenance-verified and fail closed if verification is unavailable; community plugins are installed but not trusted (run `plugin trust` next).
+
+Options: `--uv` (use `uv add` instead of pip), `--version` (pin an exact version), `--dry-run` (print the plan without installing)
+
+### `plugin remove`
+
+```bash
+$ dbwarden plugin remove dbwarden-example
+$ dbwarden plugin remove dbwarden-example --dry-run --uv
+```
+
+Uninstalls the distribution and removes its consent and lockfile entries.
+
+Options: `--uv` (use `uv remove` instead of pip), `--dry-run` (print the plan without uninstalling)
+
+### `plugin trust`
+
+```bash
+$ dbwarden plugin trust dbwarden-example
+```
+
+Records consent for the installed version of a community plugin in `.dbwarden/consent.toml`. Consent is version-specific.
+
+### `plugin untrust`
+
+```bash
+$ dbwarden plugin untrust dbwarden-example
+```
+
+Revokes consent for a community plugin.
+
 ## Utility
 
 ### `config`

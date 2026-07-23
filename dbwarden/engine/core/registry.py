@@ -3,8 +3,10 @@ from __future__ import annotations
 from typing import Any, List, Optional, Tuple
 
 from dbwarden.engine.core.protocol import ObjectHandler, Op, RunPhase
+from dbwarden.engine.core.ordering import apply_public_ordering, order_handlers
 from dbwarden.engine.core.statement_order import MigrationStatement, _assemble_migration
 from dbwarden.engine.migration_name import Change
+from dbwarden.plugin import ObjectPluginRegistry
 
 
 class RegistryDriver:
@@ -12,9 +14,21 @@ class RegistryDriver:
 
     def __init__(self) -> None:
         self._handlers: dict[str, ObjectHandler] = {}
+        self._plugin_handler_types: set[str] = set()
+        self._register_plugin_handlers()
 
     def register(self, handler: ObjectHandler) -> None:
+        apply_public_ordering(handler)
+        if handler.object_type in self._handlers and self._handlers[handler.object_type] is not handler:
+            if handler.object_type in self._plugin_handler_types:
+                return
+            raise ValueError(f"Duplicate object handler for '{handler.object_type}'")
         self._handlers[handler.object_type] = handler
+
+    def _register_plugin_handlers(self) -> None:
+        for registration in ObjectPluginRegistry.handlers().values():
+            self._plugin_handler_types.add(registration.handler.object_type)
+            self.register(registration.handler)
 
     def run(
         self,
@@ -25,7 +39,7 @@ class RegistryDriver:
         all_upgrade: list[Op] = []
         all_rollback: list[Op] = []
 
-        for handler in self._handlers.values():
+        for handler in order_handlers(self._handlers):
             snap_spec = handler.extract(snapshot)
             snap_canonical = handler.canonicalize(snap_spec)
 
@@ -52,7 +66,7 @@ class RegistryDriver:
         ops_by_type: dict[str, list[Op]] = {}
         for op in ops:
             ops_by_type.setdefault(op.object_type, []).append(op)
-        for handler in self._handlers.values():
+        for handler in order_handlers(self._handlers):
             handler_op_types = getattr(handler, "op_types", (handler.object_type,))
             for ot in handler_op_types:
                 for op in ops_by_type.get(ot, []):

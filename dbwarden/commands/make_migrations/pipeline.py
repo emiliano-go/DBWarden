@@ -33,7 +33,7 @@ from dbwarden.engine.version import (
     generate_repeatable_filename,
 )
 from dbwarden.logging import get_logger
-from dbwarden.output import console
+from dbwarden.output import error, info, success, warning
 from dbwarden.commands.make_migrations.ch_ops import (
     _check_recreate_rename_conflict,
     _resolve_clickhouse_recreate_ops,
@@ -133,9 +133,11 @@ def _run_offline_migrations(
 
     if not model_paths:
         logger.warning("No model paths found. Please set model_paths in dbwarden config")
-        console.print("No SQLAlchemy models found. Please:", style="yellow")
-        console.print("  1. Create models/ directory with your SQLAlchemy models", style="white")
-        console.print("  2. Or set model_paths in dbwarden config", style="white")
+        warning(
+            "No SQLAlchemy models found. Please:\n"
+            "1. Create models/ directory with your SQLAlchemy models\n"
+            "2. Or set model_paths in dbwarden config"
+        )
         return
 
     state_path = get_model_state_path(db_name)
@@ -143,15 +145,15 @@ def _run_offline_migrations(
     read_state_path = get_current_model_state_path(db_name)
 
     if not read_state_path.exists():
-        console.print(f"Error: {get_model_state_path(db_name)} not found.", style="red")
-        console.print("Run 'dbwarden export-models' first to establish a baseline.", style="yellow")
+        error(f"Error: {get_model_state_path(db_name)} not found.")
+        warning("Run 'dbwarden export-models' first to establish a baseline.")
         return
 
     try:
         prev_state = normalize_model_state(json.loads(read_state_path.read_text()))
     except json.JSONDecodeError:
-        console.print(f"Error: {read_state_path} contains invalid JSON.", style="red")
-        console.print("Run 'dbwarden export-models' again to regenerate the state file.", style="yellow")
+        error(f"Error: {read_state_path} contains invalid JSON.")
+        warning("Run 'dbwarden export-models' again to regenerate the state file.")
         return
     from dbwarden import __version__ as _dw_version
 
@@ -214,7 +216,7 @@ def _run_offline_migrations(
     )
 
     if not upgrade_ops:
-        console.print("No offline schema changes detected between model state and current models.", style="cyan")
+        info("No offline schema changes detected between model state and current models.")
         return
 
     from dbwarden.engine.version import get_migration_filepaths_by_version
@@ -233,7 +235,7 @@ def _run_offline_migrations(
     )
 
     if not upgrade_sql.strip():
-        console.print("No offline schema changes detected between model state and current models.", style="cyan")
+        info("No offline schema changes detected between model state and current models.")
         return
 
     from dbwarden.engine.version import get_migrations_directory as _get_migrations_dir
@@ -253,7 +255,7 @@ def _run_offline_migrations(
             filtered_rollback.append(r_sql.strip())
 
     if not filtered_statements:
-        console.print("No new migrations to generate - all models already covered by existing migrations.", style="cyan")
+        info("No new migrations to generate - all models already covered by existing migrations.")
         return
 
     safe_desc = re.sub(r"[^a-zA-Z0-9]", "_", (description or "offline_migration")).lower()
@@ -285,9 +287,9 @@ def _run_offline_migrations(
     with open(plan_path, "w") as f:
         json.dump(plan, f, indent=2, default=str)
 
-    console.print(f"Created migration file: {filepath}", style="green")
-    console.print(f"Created migration plan: {plan_path}", style="green")
-    console.print(f"Tables included: {', '.join(sorted(set(c.table for c in changes if hasattr(c, 'table') and c.table)))}", style="cyan")
+    success(f"Created migration file: {filepath}")
+    success(f"Created migration plan: {plan_path}")
+    info(f"Tables included: {', '.join(sorted(set(c.table for c in changes if hasattr(c, 'table') and c.table)))}")
 
     from dbwarden.engine.core.model_state import model_state_json_dumps
     file_state = dict(current_state)
@@ -367,7 +369,11 @@ def _prepend_pg_preamble(
         if config.database_type != "postgresql":
             return upgrade_sql, rollback_sql, changes
 
-        if config.pg_sequences or config.pg_domains or config.pg_functions or config.pg_triggers or config.pg_roles or config.pg_default_privileges or config.pg_composite_types or config.pg_extended_statistics or config.pg_event_triggers:
+        from dbwarden.plugin import ObjectPluginRegistry
+
+        _pg_extension_plugin_loaded = ObjectPluginRegistry.has_handler("pg_extension")
+        _pg_extensions = getattr(config, "pg_extensions", []) or []
+        if getattr(config, "pg_sequences", None) or getattr(config, "pg_domains", None) or getattr(config, "pg_functions", None) or getattr(config, "pg_triggers", None) or getattr(config, "pg_roles", None) or getattr(config, "pg_default_privileges", None) or getattr(config, "pg_composite_types", None) or getattr(config, "pg_extended_statistics", None) or getattr(config, "pg_event_triggers", None) or (_pg_extension_plugin_loaded and _pg_extensions):
             from dbwarden.engine.core.registry import RegistryDriver
             from dbwarden.engine.backends.postgresql.handlers import (
                 CompositeTypeHandler,
@@ -390,7 +396,7 @@ def _prepend_pg_preamble(
             _reg.register(CompositeTypeHandler())
             _reg.register(ExtendedStatisticsHandler())
             _reg.register(EventTriggerHandler())
-            _up_ops, _rb_ops = _reg.run({"domains": {}, "sequences": {}, "functions": {}, "tables": {}, "roles": {}, "default_privileges": {}, "composite_types": {}, "extended_stats": {}, "event_triggers": {}}, [], config)
+            _up_ops, _rb_ops = _reg.run({"domains": {}, "sequences": {}, "functions": {}, "tables": {}, "roles": {}, "default_privileges": {}, "composite_types": {}, "extended_stats": {}, "event_triggers": {}, "pg_extensions": {}}, [], config)
             if _up_ops:
                 _stmts = _reg.emit_all(_up_ops, db_name=db_name)
                 _pg_up = "\n".join(s.upgrade_sql for s in _stmts)
@@ -412,18 +418,20 @@ def _prepend_pg_preamble(
                         or op.upgrade_attrs.get("function_name")
                         or op.upgrade_attrs.get("role_name")
                         or op.upgrade_attrs.get("type_name")
+                        or op.upgrade_attrs.get("name")
                         or ""
                     )
-                    changes.insert(0, Change(operation=op.object_type, table=_name))
+                    _operation = "create_extension" if op.object_type == "create_pg_extension" else op.object_type
+                    changes.insert(0, Change(operation=_operation, table=_name))
 
-        if config.pg_extensions:
+        if _pg_extensions and not _pg_extension_plugin_loaded:
             ext_upgrade = "\n".join(
                 f'CREATE EXTENSION IF NOT EXISTS "{ext}";'
-                for ext in config.pg_extensions
+                for ext in _pg_extensions
             )
             ext_rollback = "\n".join(
                 f'DROP EXTENSION IF EXISTS "{ext}";'
-                for ext in reversed(config.pg_extensions)
+                for ext in reversed(_pg_extensions)
             )
             if upgrade_sql.strip():
                 upgrade_sql = ext_upgrade + "\n\n" + upgrade_sql
@@ -433,7 +441,7 @@ def _prepend_pg_preamble(
                 rollback_sql = ext_rollback + "\n\n" + rollback_sql
             else:
                 rollback_sql = ext_rollback
-            for ext in config.pg_extensions:
+            for ext in _pg_extensions:
                 changes.insert(0, Change(operation="create_extension", table=ext))
     except Exception:
         logger.exception("Failed to prepend PostgreSQL preamble; preamble objects omitted")

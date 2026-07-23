@@ -27,7 +27,7 @@ from dbwarden.metrics import (
     set_schema_version,
 )
 from dbwarden import __version__
-from dbwarden.output import console
+from dbwarden.output import error, info, section, sql as render_sql, success, warning
 from dbwarden.repositories import (
     create_migrations_table_if_not_exists,
     create_lock_table_if_not_exists,
@@ -123,7 +123,7 @@ def migrate_single(
     )
 
     if db_name:
-        console.print(f"\n=== Migrating database: {db_name} ===", style="bold cyan")
+        section(f"Migrating database: {db_name}")
 
     sandbox_provider = None
     _sandbox_cm = None
@@ -134,10 +134,7 @@ def migrate_single(
         sandbox_provider = create_sandbox_provider(config.database_type)
         sandbox_url = sandbox_provider.start()
         sandbox_db_type = sandbox_provider.get_database_type()
-        console.print(
-            f"Sandbox started: {sandbox_provider.__class__.__name__} ({sandbox_url})",
-            style="yellow",
-        )
+        warning(f"Sandbox started: {sandbox_provider.__class__.__name__} ({sandbox_url})")
         _sandbox_cm = _sandbox_ctx(sandbox_url, sandbox_db_type)
         _sandbox_cm.__enter__()
 
@@ -175,7 +172,7 @@ def migrate_single(
 
             applied = set_baseline_migration(migrations_dir, to_version, db_name)
             logger.log_baseline_set(to_version)
-            console.print(f"Baseline set at version: {to_version}", style="green")
+            success(f"Baseline set at version: {to_version}")
             if applied:
                 _write_migration_snapshot(
                     db_name=db_name,
@@ -201,7 +198,7 @@ def migrate_single(
             and not runs_always_filepaths
             and not runs_on_change_filepaths
         ):
-            console.print("Migrations are up to date.", style="cyan")
+            info("Migrations are up to date.")
             return
 
         if filepaths_by_version:
@@ -213,7 +210,7 @@ def migrate_single(
             )
 
         if dry_run:
-            console.print("[bold yellow]DRY RUN[/bold yellow] - No changes applied\n")
+            warning("DRY RUN - No changes applied")
 
         versioned_count = 0
         latest_version = "0"
@@ -233,11 +230,9 @@ def migrate_single(
                 logger.log_sql_statement(sql)
 
             if dry_run:
-                console.print(
-                    f"  [yellow]Would apply[/yellow] version {version}: {filename}"
-                )
-                for sql in sql_statements:
-                    console.print(f"    {sql}")
+                warning(f"Would apply version {version}: {filename}")
+                for statement in sql_statements:
+                    render_sql(statement)
                 continue
 
             start_time = time.time()
@@ -265,12 +260,12 @@ def migrate_single(
             observe_migration_duration(actual_db_name, version, duration)
 
         if dry_run:
-            console.print(
-                f"\n[bold]Dry-run summary:[/bold] "
+            info(
+                "Dry-run summary: "
                 f"{len(filepaths_by_version)} versioned, "
                 f"{len(runs_always_filepaths)} runs-always, "
                 f"{len(runs_on_change_filepaths)} runs-on-change "
-                "migrations would be applied.\n"
+                "migrations would be applied."
             )
             return
 
@@ -325,10 +320,7 @@ def migrate_single(
             _apply_pending_seeds_after_migrate(db_name)
 
         if versioned_count > 0:
-            console.print(
-                f"Migrations completed successfully: {versioned_count} migrations applied.",
-                style="green",
-            )
+            success(f"Migrations completed successfully: {versioned_count} migrations applied.")
             if metrics_enabled():
                 set_schema_version(actual_db_name, latest_version)
                 set_pending_migrations(actual_db_name, 0)
@@ -345,7 +337,7 @@ def migrate_single(
             release_lock(db_name)
         if sandbox_provider:
             sandbox_provider.stop()
-            console.print("Sandbox stopped.", style="yellow")
+            warning("Sandbox stopped.")
         if _sandbox_cm is not None:
             _sandbox_cm.__exit__(None, None, None)
 
@@ -368,7 +360,7 @@ def _apply_pending_seeds_after_migrate(db_name: str | None = None) -> None:
         create_seeds_table_if_not_exists(db_name)
         pending = get_pending_seeds(seeds_dir, db_name=db_name)
         if pending:
-            console.print(f"Applying {len(pending)} pending seed(s)...", style="cyan")
+            info(f"Applying {len(pending)} pending seed(s)...")
             for version, (filepath, seed_type) in sorted(pending.items()):
                 apply_single_seed(version, filepath, seed_type, db_name=db_name)
                 file_seeds_applied += 1
@@ -377,14 +369,14 @@ def _apply_pending_seeds_after_migrate(db_name: str | None = None) -> None:
     if code_seeds:
         if not file_seeds_applied:
             create_seeds_table_if_not_exists(db_name)
-        console.print(f"Applying {len(code_seeds)} pending code seed(s)...", style="cyan")
+        info(f"Applying {len(code_seeds)} pending code seed(s)...")
         for cls in code_seeds:
             apply_code_seed(cls, db_name=db_name)
 
     if file_seeds_applied or code_seeds:
-        console.print("Seeds applied successfully.", style="green")
+        success("Seeds applied successfully.")
     else:
-        console.print("Seeds are up to date.", style="cyan")
+        info("Seeds are up to date.")
 
 
 def migrate_cmd(
@@ -443,7 +435,7 @@ def migrate_cmd(
                     apply_seeds=apply_seeds,
                 )
             except Exception as e:
-                console.print(f"Error migrating database '{db_name}': {e}", style="bold red")
+                error(f"Error migrating database '{db_name}': {e}")
                 continue
     else:
         migrate_single(

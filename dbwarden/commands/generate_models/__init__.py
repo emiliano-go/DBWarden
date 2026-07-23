@@ -39,7 +39,7 @@ from dbwarden.engine.core.type_parsing import (
 )
 from dbwarden.engine.shared.format_utils import _format_meta_value
 from dbwarden.logging import get_logger
-from dbwarden.output import console
+from dbwarden.output import success, warning
 
 from dbwarden.commands.generate_models.writer import _write_models
 
@@ -172,7 +172,7 @@ def generate_models_cmd(
         target_tables = [t for t in target_tables if t not in exclude_set]
 
         if not target_tables:
-            console.print("No tables found matching the given criteria.", style="yellow")
+            warning("No tables found matching the given criteria.")
             return
 
         tables_data: list[dict] = []
@@ -373,17 +373,11 @@ def generate_models_cmd(
         base_import_path=base_import_path,
         base_class_name=base_class_name,
     )
-    console.print(
-        f"Generated {len(tables_data)} model(s) in '{output_dir}/'",
-        style="green",
-    )
+    success(f"Generated {len(tables_data)} model(s) in '{output_dir}/'")
 
     if actual_dialect == "clickhouse":
         for t in tables_data:
             if t.get("ch_options"):
                 has_engine = bool(t["ch_options"].get("ch_engine") or t["ch_options"].get("ch_engine_raw"))
                 if not has_engine:
-                    console.print(
-                        f"  WARNING: ClickHouse engine metadata for '{t['name']}' may be incomplete.",
-                        style="yellow",
-                    )
+                    warning(f"ClickHouse engine metadata for '{t['name']}' may be incomplete.")

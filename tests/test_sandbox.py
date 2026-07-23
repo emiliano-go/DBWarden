@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import tempfile
 from io import StringIO
@@ -8,6 +9,10 @@ import pytest
 
 from dbwarden.config import set_dev_mode
 from dbwarden.engine.sandbox import SQLiteSandboxProvider, create_sandbox_provider
+
+
+def _strip_ansi(value: str) -> str:
+    return re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", value)
 
 
 class TestSQLiteSandboxProvider:
@@ -104,7 +109,7 @@ class TestDryRun:
 
                 assert "DRY RUN" in output
                 assert "0001" in output
-                assert "CREATE TABLE test" in output
+                assert "CREATE TABLE test" in _strip_ansi(output)
 
                 assert not os.path.exists(db_path)
             finally:

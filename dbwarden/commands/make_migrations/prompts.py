@@ -1,5 +1,7 @@
 from typing import Any
 
+from dbwarden.output import info, render, section
+
 
 def _prompt_table_rename_confirmations(
     candidates: list[tuple[str, str, float]],
@@ -17,12 +19,12 @@ def _prompt_table_rename_confirmations(
         if answer in ("", "y", "yes"):
             confirmed.append({"old_table": old, "new_table": new})
     else:
-        print("Possible table renames detected:")
+        section("Possible Table Renames")
         for i, (old, new, ratio) in enumerate(candidates, 1):
-            print(f"  [{i}] {old} \u2192 {new}     ({int(ratio * 100):d}% columns match)")
-        print()
-        print("Treat as renames? (default: all yes)")
-        print("  - Press Enter to rename all")
+            info(f"[{i}] {old} \u2192 {new}     ({int(ratio * 100):d}% columns match)")
+        render("")
+        info("Treat as renames? (default: all yes)")
+        info("- Press Enter to rename all")
         answer = input('  - Type numbers to drop+add instead (e.g. "1" or "1 2"): ').strip()
         if not answer:
             for old, new, _ in candidates:
@@ -76,11 +78,11 @@ def _prompt_rename_confirmations(
         if answer in ("", "y", "yes"):
             confirmed.append((tbl, old, new))
     else:
-        print("Detected column renames:")
+        section("Detected Column Renames")
         for i, (tbl, old, new) in enumerate(renames, 1):
-            print(f"  [{i}] {tbl}.{old} \u2192 {tbl}.{new}")
-        print("  [s] Skip all")
-        print("  [a] Accept all")
+            info(f"[{i}] {tbl}.{old} \u2192 {tbl}.{new}")
+        info("[s] Skip all")
+        info("[a] Accept all")
         answer = input("Select renames to confirm (e.g. 1,3 or a or s): ").strip().lower()
         if answer == "a":
             confirmed.extend(renames)

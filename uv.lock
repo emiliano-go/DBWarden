@@ -342,11 +342,12 @@ wheels = [
 
 [[package]]
 name = "dbwarden"
-version = "0.14.1"
+version = "0.15.0"
 source = { editable = "." }
 dependencies = [
     { name = "attrs", marker = "sys_platform == 'linux'" },
     { name = "cattrs", marker = "sys_platform == 'linux'" },
+    { name = "packaging", marker = "sys_platform == 'linux'" },
     { name = "pyyaml", marker = "sys_platform == 'linux'" },
     { name = "rich", marker = "sys_platform == 'linux'" },
     { name = "schemap", marker = "sys_platform == 'linux'" },
@@ -410,6 +411,7 @@ requires-dist = [
     { name = "clickhouse-connect", marker = "extra == 'clickhouse'", specifier = ">=0.7.15" },
     { name = "fastapi", marker = "extra == 'fastapi'", specifier = ">=0.136.1" },
     { name = "httpx2", marker = "extra == 'dev'", specifier = ">=2.4.0" },
+    { name = "packaging", specifier = ">=24.0" },
     { name = "prometheus-client", marker = "extra == 'dev'", specifier = ">=0.21.0" },
     { name = "prometheus-client", marker = "extra == 'metrics'", specifier = ">=0.21.0" },
     { name = "psycopg2-binary", marker = "extra == 'postgres'", specifier = ">=2.9.11" },

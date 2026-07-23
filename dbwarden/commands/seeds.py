@@ -19,7 +19,7 @@ from dbwarden.engine.seeds import (
 from dbwarden.exceptions import DirectoryNotFoundError, NoSeedsError
 from dbwarden.logging import get_logger
 from dbwarden.metrics import metrics_enabled, set_seed_version
-from dbwarden.output import console
+from dbwarden.output import data_table, error, info, render, section, success, warning
 
 
 def seed_create_cmd(
@@ -29,6 +29,18 @@ def seed_create_cmd(
     verbose: bool = False,
 ) -> None:
     """Create a new seed file."""
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("seed_create"):
+        HookRegistry.execute_single(
+            "seed_create",
+            description,
+            seed_type=seed_type,
+            database=database,
+            verbose=verbose,
+        )
+        return
+
     logger = get_logger(verbose=verbose)
     config = get_database(database)
     multi_config = get_multi_db_config()
@@ -38,7 +50,7 @@ def seed_create_cmd(
     if not seeds_dir.exists():
         seeds_dir.mkdir(parents=True, exist_ok=True)
         logger.info(f"Created seeds directory: {seeds_dir}")
-        console.print(f"Created seeds directory: {seeds_dir}", style="green")
+        success(f"Created seeds directory: {seeds_dir}")
 
     version = get_next_seed_number(str(seeds_dir))
     filename = generate_seed_filename(db_name, description, version, seed_type)
@@ -53,7 +65,7 @@ def seed_create_cmd(
         f.write(template)
 
     logger.info(f"Created seed file: {filename}")
-    console.print(f"Created seed file: {filepath}", style="green")
+    success(f"Created seed file: {filepath}")
 
 
 def seed_apply_cmd(
@@ -64,6 +76,19 @@ def seed_apply_cmd(
     verbose: bool = False,
 ) -> None:
     """Apply pending seeds."""
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("seed_apply"):
+        HookRegistry.execute_single(
+            "seed_apply",
+            version=version,
+            dry_run=dry_run,
+            database=database,
+            all_databases=all_databases,
+            verbose=verbose,
+        )
+        return
+
     if all_databases:
         config = get_multi_db_config()
         for db_name in config.databases:
@@ -75,7 +100,7 @@ def seed_apply_cmd(
                     verbose=verbose,
                 )
             except Exception as e:
-                console.print(f"Error seeding database '{db_name}': {e}", style="bold red")
+                error(f"Error seeding database '{db_name}': {e}")
                 continue
     else:
         _apply_seeds_single(
@@ -106,7 +131,7 @@ def _apply_seeds_single(
     if version is not None:
         all_seeds = _get_seed_filepaths_by_version(seeds_dir)
         if version not in all_seeds:
-            console.print(f"Seed V{version} not found in seeds directory.", style="red")
+            error(f"Seed V{version} not found in seeds directory.")
             raise SystemExit(1)
         apply_single_seed(
             version=version,
@@ -119,10 +144,10 @@ def _apply_seeds_single(
 
     pending = get_pending_seeds(seeds_dir, db_name=db_name)
     if not pending:
-        console.print("All seeds are up to date.", style="cyan")
+        info("All seeds are up to date.")
         return
 
-    console.print(f"Applying {len(pending)} pending seed(s)...", style="bold cyan")
+    section(f"Applying {len(pending)} pending seed(s)")
     for ver, (fp, stype) in sorted(pending.items()):
         apply_single_seed(
             version=ver,
@@ -133,12 +158,12 @@ def _apply_seeds_single(
         )
 
     if not dry_run:
-        console.print(f"Seeds applied successfully: {len(pending)} seed(s).", style="green")
+        success(f"Seeds applied successfully: {len(pending)} seed(s).")
         if metrics_enabled():
             latest = max(pending.keys())
             set_seed_version(db_name, latest)
     else:
-        console.print(f"Dry-run: {len(pending)} seed(s) would be applied.", style="yellow")
+        warning(f"Dry-run: {len(pending)} seed(s) would be applied.")
 
 
 def seed_list_cmd(
@@ -148,6 +173,18 @@ def seed_list_cmd(
     prune: bool = False,
 ) -> None:
     """List seeds and their applied status."""
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("seed_list"):
+        HookRegistry.execute_single(
+            "seed_list",
+            database=database,
+            all_databases=all_databases,
+            verbose=verbose,
+            prune=prune,
+        )
+        return
+
     from dbwarden.repositories.seeds_repo import (
         get_all_seed_records,
         get_seeds_directory,
@@ -160,18 +197,18 @@ def seed_list_cmd(
     if all_databases:
         config = get_multi_db_config()
         for db_name in config.databases:
-            console.print(f"\n=== Seeds for database: {db_name} ===", style="bold cyan")
+            section(f"Seeds for database: {db_name}")
             try:
                 _list_seeds_single(db_name, verbose)
             except DirectoryNotFoundError:
-                console.print("  No seeds directory.", style="yellow")
+                warning("No seeds directory.")
     else:
         db_name = database or get_multi_db_config().default
-        console.print(f"\n=== Seeds for database: {db_name} ===", style="bold cyan")
+        section(f"Seeds for database: {db_name}")
         try:
             _list_seeds_single(db_name, verbose)
         except DirectoryNotFoundError:
-            console.print("  No seeds directory.", style="yellow")
+            warning("No seeds directory.")
 
 
 def _list_seeds_single(db_name: str | None = None, verbose: bool = False) -> None:
@@ -180,18 +217,26 @@ def _list_seeds_single(db_name: str | None = None, verbose: bool = False) -> Non
     seeds_dir = get_seeds_directory(db_name)
     all_seeds = _get_seed_filepaths_by_version(seeds_dir)
     if not all_seeds:
-        console.print("  No seed files found.", style="yellow")
+        warning("No seed files found.")
         return
 
     applied = get_all_seed_records(db_name)
     applied_versions = {r.version for r in applied}
 
-    for version in sorted(all_seeds.keys()):
-        fp, stype = all_seeds[version]
-        filename = Path(fp).name
-        status = "applied" if version in applied_versions else "pending"
-        color = "green" if status == "applied" else "white"
-        console.print(f"  V{version} [{status}] {filename}", style=color)
+    render(
+        data_table(
+            None,
+            ("Version", "Status", "File"),
+            (
+                (
+                    f"V{version}",
+                    "applied" if version in applied_versions else "pending",
+                    Path(all_seeds[version][0]).name,
+                )
+                for version in sorted(all_seeds.keys())
+            ),
+        )
+    )
 
 
 def seed_rollback_cmd(
@@ -202,6 +247,19 @@ def seed_rollback_cmd(
     verbose: bool = False,
 ) -> None:
     """Rollback seed tracking records."""
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("seed_rollback"):
+        HookRegistry.execute_single(
+            "seed_rollback",
+            count=count,
+            to_version=to_version,
+            database=database,
+            all_databases=all_databases,
+            verbose=verbose,
+        )
+        return
+
     if all_databases:
         config = get_multi_db_config()
         for db_name in config.databases:
@@ -213,7 +271,7 @@ def seed_rollback_cmd(
                     verbose=verbose,
                 )
             except Exception as e:
-                console.print(f"Error rolling back seeds for database '{db_name}': {e}", style="bold red")
+                error(f"Error rolling back seeds for database '{db_name}': {e}")
                 continue
     else:
         _rollback_seeds_single(
@@ -246,7 +304,7 @@ def _rollback_seeds_single(
     try:
         seeds_dir = get_seeds_directory(db_name)
     except DirectoryNotFoundError:
-        console.print("No seeds directory found. Nothing to rollback.", style="cyan")
+        info("No seeds directory found. Nothing to rollback.")
         return
 
     to_rollback = get_seeds_to_rollback(
@@ -254,16 +312,13 @@ def _rollback_seeds_single(
     )
 
     if not to_rollback:
-        console.print("Nothing to rollback.", style="cyan")
+        info("Nothing to rollback.")
         return
 
     for version in sorted(to_rollback.keys(), reverse=True):
         rollback_single_seed(version, db_name=db_name)
 
-    console.print(
-        f"Rollback completed: {len(to_rollback)} seed record(s) removed.",
-        style="green",
-    )
+    success(f"Rollback completed: {len(to_rollback)} seed record(s) removed.")
 
 
 def _prune_orphaned_seeds(database: str | None = None, all_databases: bool = False) -> None:
@@ -287,12 +342,12 @@ def _prune_orphaned_seeds(database: str | None = None, all_databases: bool = Fal
         for rec in records:
             if rec.seed_type in ("sql", "python") and rec.filename not in on_disk:
                 remove_seed_record(rec.version, db_name)
-                console.print(f"  Removed orphaned record: V{rec.version} ({rec.filename})", style="yellow")
+                warning(f"Removed orphaned record: V{rec.version} ({rec.filename})")
                 pruned += 1
         if pruned:
-            console.print(f"  Pruned {pruned} orphaned seed record(s) for {db_name}.", style="green")
+            success(f"Pruned {pruned} orphaned seed record(s) for {db_name}.")
         else:
-            console.print(f"  No orphaned seed records for {db_name}.", style="cyan")
+            info(f"No orphaned seed records for {db_name}.")
 
     if all_databases:
         config = get_multi_db_config()

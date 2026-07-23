@@ -70,6 +70,11 @@ def get_session(database: str | None = None, *, dev: bool = False) -> Callable[[
             ...
     """
 
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("session_factory"):
+        return HookRegistry.execute_single("session_factory", database, dev=dev)
+
     async def _dependency() -> AsyncGenerator[AsyncSession, None]:
         factory = _session_factory(database=database, dev=dev)
         async with factory() as session:

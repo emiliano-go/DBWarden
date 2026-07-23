@@ -10,9 +10,14 @@ _AUTO_DISCOVER_CACHE_TTL = 1.0
 
 
 def load_model_from_path(filepath: str) -> Optional[ModuleType]:
-    from dbwarden.extensions.sandbox import load_model_module
+    from dbwarden.plugin import HookRegistry
 
     base_dir = Path.cwd().resolve()
+    if HookRegistry.is_registered("load_model_module"):
+        return HookRegistry.execute_single("load_model_module", Path(filepath), base_dir)
+
+    from dbwarden.extensions.sandbox import load_model_module
+
     return load_model_module(Path(filepath), base_dir)
 
 

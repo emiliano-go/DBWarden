@@ -13,7 +13,7 @@ from dbwarden.engine.code_seeds import discover_code_seeds
 from dbwarden.engine.model_discovery import get_all_model_tables
 from dbwarden.exceptions import SeedError
 from dbwarden.logging import get_logger
-from dbwarden.output import console
+from dbwarden.output import error, info, section, success, warning
 from dbwarden.seed import Seed, _row_to_dict
 
 ROC_FILE_PREFIX = "ROC__"
@@ -40,6 +40,17 @@ def export_seeds_cmd(
         all_databases: Export seeds for every configured database.
         output_dir: Directory to write the ROC seed files (default ``seeds/``).
     """
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("seed_export"):
+        HookRegistry.execute_single(
+            "seed_export",
+            database=database,
+            all_databases=all_databases,
+            output_dir=output_dir,
+        )
+        return
+
     if all_databases:
         multi_config = get_multi_db_config()
         db_names = list(multi_config.databases)
@@ -52,7 +63,7 @@ def export_seeds_cmd(
         try:
             _export_database(db_name, output_dir)
         except Exception as e:
-            console.print(f"  Error exporting seeds for '{db_name}': {e}", style="bold red")
+            error(f"Error exporting seeds for '{db_name}': {e}")
             continue
 
 
@@ -60,7 +71,7 @@ def _export_database(
     db_name: str,
     output_dir: str,
 ) -> None:
-    console.print(f"Exporting seeds for '{db_name}'...", style="bold cyan")
+    section(f"Exporting seeds for '{db_name}'")
 
     # Load model files so Seed subclasses populate _seed_registry
     config = get_database(db_name)
@@ -70,7 +81,7 @@ def _export_database(
 
     seeds = discover_code_seeds(db_name)
     if not seeds:
-        console.print(f"  No code seeds found for '{db_name}'.", style="yellow")
+        warning(f"No code seeds found for '{db_name}'.")
         return
     dialect = sqla_sqlite_dialect()
 
@@ -82,7 +93,7 @@ def _export_database(
         if meta is None:
             continue
         if not hasattr(seed_cls, "model") or seed_cls.model is None:
-            console.print(f"  Skipping {seed_cls.__name__}: no 'model' attribute", style="yellow")
+            warning(f"Skipping {seed_cls.__name__}: no 'model' attribute")
             continue
 
         description = meta.description or seed_cls.__name__
@@ -90,19 +101,19 @@ def _export_database(
         if hasattr(seed_cls, "rows") and seed_cls.rows is not None:
             stmts = _export_row_seed(seed_cls, dialect)
             statements.extend(stmts)
-            console.print(f"  Exported {description}: {len(stmts)} row(s)", style="green")
+            success(f"Exported {description}: {len(stmts)} row(s)")
         elif hasattr(seed_cls, "generate"):
             try:
                 stmts = _export_logic_seed(seed_cls, ordered, dialect, db_name)
                 statements.extend(stmts)
-                console.print(f"  Exported {description} (logic): {len(stmts)} row(s)", style="green")
+                success(f"Exported {description} (logic): {len(stmts)} row(s)")
             except Exception as e:
-                console.print(f"  Skipping logic seed {description}: {e}", style="yellow")
+                warning(f"Skipping logic seed {description}: {e}")
         else:
-            console.print(f"  Skipping {seed_cls.__name__}: no 'rows' or 'generate()'", style="yellow")
+            warning(f"Skipping {seed_cls.__name__}: no 'rows' or 'generate()'")
 
     if not statements:
-        console.print(f"  No seed data to export for '{db_name}'.", style="yellow")
+        warning(f"No seed data to export for '{db_name}'.")
         return
 
     content = "-- upgrade\n\n" + "\n".join(statements) + "\n"
@@ -112,8 +123,8 @@ def _export_database(
     out_path.write_text(content)
 
     checksum = hashlib.sha256(content.encode()).hexdigest()[:16]
-    console.print(f"  Wrote {out_path}  (checksum: {checksum})", style="green")
-    console.print(f"  {len(statements)} statement(s) exported.", style="cyan")
+    success(f"Wrote {out_path}  (checksum: {checksum})")
+    info(f"{len(statements)} statement(s) exported.")
 
 
 def _ordered_seeds(seeds: list[type[Seed]]) -> list[type[Seed]]:
@@ -247,7 +258,7 @@ def _export_logic_seed(
         ).mappings().all()
 
     if not rows:
-        console.print(f"    Logic seed {description} produced no rows.", style="yellow")
+        warning(f"Logic seed {description} produced no rows.")
         return []
 
     statements: list[str] = []

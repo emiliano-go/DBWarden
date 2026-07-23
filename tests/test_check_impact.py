@@ -27,7 +27,7 @@ class TestCheckImpact:
 
         from dbwarden.commands.check_impact import check_impact_cmd
 
-        with patch("builtins.print") as mock_print:
+        with patch("dbwarden.output.console.print") as mock_print:
             check_impact_cmd(migration="0001", out="json")
             mock_print.assert_called_once()
             args, _ = mock_print.call_args
@@ -42,9 +42,9 @@ class TestCheckImpact:
 
         from dbwarden.commands.check_impact import check_impact_cmd
 
-        with patch("dbwarden.commands.make_migrations.console.print") as mock_print:
+        with patch("dbwarden.output.console.print") as mock_print:
             check_impact_cmd(migration="0001", out="text")
-            mock_print.assert_any_call("[green]No impact detected[/green]")
+            mock_print.assert_any_call("No impact detected", style="green")
 
     @patch("dbwarden.commands.check_impact._resolve_plan_path")
     def test_check_impact_no_plan(self, mock_resolve):
@@ -76,7 +76,7 @@ class TestCheckImpact:
 
         from dbwarden.commands.check_impact import check_impact_cmd
 
-        with patch("dbwarden.commands.make_migrations.console.print") as mock_print:
+        with patch("dbwarden.output.console.print") as mock_print:
             check_impact_cmd(migration="0001", out="text", deep=True, verbose=True)
             mock_print.assert_called()
 
@@ -117,7 +117,7 @@ class TestCheckImpact:
 
         from dbwarden.commands.check_impact import _resolve_plan_path
 
-        with patch("dbwarden.commands.make_migrations.console.print") as mock_print:
+        with patch("dbwarden.output.console.print") as mock_print:
             result = _resolve_plan_path("0001")
             assert result is None
             mock_print.assert_called()

@@ -275,14 +275,15 @@ class TestJSONLogging:
         assert isinstance(handler.formatter, JSONFormatter)
         reset_logger()
 
-    def test_logger_uses_colored_formatter_when_json_not_set(self, monkeypatch):
+    def test_logger_uses_rich_handler_when_json_not_set(self, monkeypatch):
         monkeypatch.delenv("DBWARDEN_LOG_JSON", raising=False)
-        from dbwarden.logging import ColoredFormatter, reset_logger
+        from rich.logging import RichHandler
+        from dbwarden.logging import reset_logger
 
         reset_logger()
         logger = get_logger()
         handler = logger.logger.handlers[0]
-        assert isinstance(handler.formatter, ColoredFormatter)
+        assert isinstance(handler, RichHandler)
         reset_logger()
 
     def test_logger_json_output_round_trip(self, monkeypatch):

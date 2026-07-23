@@ -30,6 +30,7 @@ classifiers = [
 dependencies = [
     "attrs>=24.2.0",
     "cattrs>=24.1.0",
+    "packaging>=24.0",
     "pyyaml>=6.0.3",
     "rich>=12.2.0",
     "schemap>=0.5.2",

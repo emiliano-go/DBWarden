@@ -130,16 +130,28 @@ Databases = [
 ]
 
 [[project.nav]]
-Extensions = [
-  {Overview = "extensions/index.md"},
-  {"FastAPI Integration" = [
-    {Overview = "fastapi/index.md"},
-    {Concepts = "fastapi/concepts.md"},
-    {"Tutorial" = [{"First Steps" = "fastapi/tutorial/first-steps.md"}, {"Session Dependency" = "fastapi/tutorial/session-dependency.md"}, {"Startup Checks" = "fastapi/tutorial/startup-checks.md"}, {"Health Endpoints" = "fastapi/tutorial/health-endpoints.md"}, {"Complete Application" = "fastapi/tutorial/complete-application.md"}]},
-    {"Advanced" = [{"Engine Lifecycle" = "fastapi/advanced/engine-lifecycle.md"}, {"Transaction Management" = "fastapi/advanced/transaction-management.md"}, {Testing = "fastapi/advanced/testing.md"}, {"Multi-Database" = "fastapi/advanced/multi-database.md"}, {"Production Patterns" = "fastapi/advanced/production-patterns.md"}]},
-    {Reference = "fastapi/reference.md"},
+Plugins = [
+  {Overview = "plugins/index.md"},
+  {Quickstart = "plugins/quickstart.md"},
+  {"Using Plugins" = [
+    {"Finding Plugins" = "plugins/using-plugins/finding-plugins.md"},
+    {Installing = "plugins/using-plugins/installing.md"},
+    {"Consent And Trust" = "plugins/using-plugins/consent-and-trust.md"},
+    {"Plugin List And Info" = "plugins/using-plugins/plugin-list-and-info.md"},
   ]},
-  {Sandbox = "extensions/sandbox.md"},
+  {Developing = [
+    {Overview = "plugins/developing/overview.md"},
+    {"Value Plugins" = "plugins/developing/value-plugins.md"},
+    {"Object Plugins" = "plugins/developing/object-plugins.md"},
+    {"Approved Standard" = "plugins/developing/approved-standard.md"},
+    {Publishing = "plugins/developing/publishing.md"},
+  ]},
+  {Reference = [
+    {"Hook Catalog" = "plugins/reference/hook-catalog.md"},
+    {"Ordering Anchors" = "plugins/reference/ordering-anchors.md"},
+    {"Plugin CLI" = "plugins/reference/plugin-cli.md"},
+  ]},
+  {FAQ = "plugins/faq.md"},
 ]
 
 [[project.nav]]

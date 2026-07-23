@@ -27,6 +27,7 @@ from dbwarden.engine.backends.clickhouse.render import (
     generate_create_dictionary_sql,
 )
 from dbwarden.engine.core.models import IndexInfo, ModelColumn, ModelTable
+from dbwarden.logging import get_logger
 from . import type_mapping as _type_mapping
 
 _get_backend_name = lambda db_name=None: _type_mapping._get_backend_name(db_name)
@@ -82,11 +83,19 @@ def extract_table_from_model(
         start = time.time()
         _apply_meta_fast(model_class)
         if debug_timing:
-            print(f"TIMING {model_class.__name__} apply_meta {time.time() - start:.3f}s", flush=True)
+            get_logger(debug_enabled=True).debug(
+                "TIMING %s apply_meta %.3fs",
+                model_class.__name__,
+                time.time() - start,
+            )
             start = time.time()
         dw_meta = read_meta(model_class)
         if debug_timing:
-            print(f"TIMING {model_class.__name__} read_meta {time.time() - start:.3f}s", flush=True)
+            get_logger(debug_enabled=True).debug(
+                "TIMING %s read_meta %.3fs",
+                model_class.__name__,
+                time.time() - start,
+            )
             start = time.time()
         backend = _get_backend_name(db_name)
         table_name = model_class.__tablename__
@@ -117,7 +126,12 @@ def extract_table_from_model(
                     "match": fk.match,
                 })
         if debug_timing:
-            print(f"TIMING {model_class.__name__} columns {len(columns)} {time.time() - start:.3f}s", flush=True)
+            get_logger(debug_enabled=True).debug(
+                "TIMING %s columns %s %.3fs",
+                model_class.__name__,
+                len(columns),
+                time.time() - start,
+            )
             start = time.time()
 
         indexes: list[IndexInfo] = []
@@ -247,7 +261,11 @@ def extract_table_from_model(
             clickhouse_options = _ch_options_from_meta(model_class)
             object_type = _detect_ch_object_type(clickhouse_options)
         if debug_timing:
-            print(f"TIMING {model_class.__name__} finalize {time.time() - start:.3f}s", flush=True)
+            get_logger(debug_enabled=True).debug(
+                "TIMING %s finalize %.3fs",
+                model_class.__name__,
+                time.time() - start,
+            )
 
         return ModelTable(
             name=table_name,

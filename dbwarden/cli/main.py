@@ -19,6 +19,12 @@ from dbwarden.commands import (
     handle_make_rollback,
     handle_migrate,
     handle_new,
+    handle_plugin_add,
+    handle_plugin_info,
+    handle_plugin_list,
+    handle_plugin_remove,
+    handle_plugin_trust,
+    handle_plugin_untrust,
     handle_recover_model_state,
     handle_rollback,
     handle_seed_apply,
@@ -33,6 +39,7 @@ from dbwarden.commands import (
     handle_settings_show_command,
 )
 from dbwarden.logging import get_logger
+from dbwarden.plugin import load_plugins
 
 app = typer.Typer(
     help="""DBWarden - Professional database migration system for SQLAlchemy models
@@ -47,10 +54,13 @@ settings_app = typer.Typer(help="View DBWarden settings")
 app.add_typer(settings_app, name="settings")
 seed_app = typer.Typer(help="Manage seed data")
 app.add_typer(seed_app, name="seed")
+plugin_app = typer.Typer(help="Manage DBWarden plugins")
+app.add_typer(plugin_app, name="plugin")
 
 
 @app.callback()
 def app_callback(
+    ctx: typer.Context,
     dev: bool = typer.Option(
         False,
         "--dev",
@@ -65,6 +75,76 @@ def app_callback(
     """Global CLI options."""
     set_dev_mode(dev)
     set_strict_translation(strict_translation)
+    if ctx.invoked_subcommand != "plugin":
+        load_plugins(interactive=True)
+
+
+@plugin_app.command("list")
+def plugin_list(
+    output_format: str = typer.Option(
+        "table", "--format", "-f", help="Output format: table (default) or json"
+    ),
+) -> None:
+    """List installed DBWarden plugins."""
+    handle_plugin_list(output_format=output_format)
+
+
+@plugin_app.command("info")
+def plugin_info(
+    dist_name: str = typer.Argument(..., help="Plugin distribution name"),
+    output_format: str = typer.Option(
+        "table", "--format", "-f", help="Output format: table (default) or json"
+    ),
+) -> None:
+    """Show plugin metadata."""
+    handle_plugin_info(dist_name, output_format=output_format)
+
+
+@plugin_app.command("trust")
+def plugin_trust(
+    dist_name: str = typer.Argument(..., help="Community plugin distribution name"),
+) -> None:
+    """Allow a community plugin to load."""
+    handle_plugin_trust(dist_name)
+
+
+@plugin_app.command("untrust")
+def plugin_untrust(
+    dist_name: str = typer.Argument(..., help="Community plugin distribution name"),
+) -> None:
+    """Remove trust for a community plugin."""
+    handle_plugin_untrust(dist_name)
+
+
+@plugin_app.command("add")
+def plugin_add(
+    dist_name: str = typer.Argument(..., help="Plugin distribution name"),
+    use_uv: bool = typer.Option(
+        False, "--uv", help="Install with `uv add` instead of pip"
+    ),
+    plugin_version: str | None = typer.Option(
+        None, "--version", help="Pin an exact version to install (e.g. 1.2.0)"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show the install plan without installing"
+    ),
+) -> None:
+    """Install a DBWarden plugin."""
+    handle_plugin_add(dist_name, use_uv=use_uv, version=plugin_version, dry_run=dry_run)
+
+
+@plugin_app.command("remove")
+def plugin_remove(
+    dist_name: str = typer.Argument(..., help="Plugin distribution name"),
+    use_uv: bool = typer.Option(
+        False, "--uv", help="Uninstall with `uv remove` instead of pip"
+    ),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Show the uninstall plan without uninstalling"
+    ),
+) -> None:
+    """Uninstall a DBWarden plugin."""
+    handle_plugin_remove(dist_name, use_uv=use_uv, dry_run=dry_run)
 
 
 @app.command()

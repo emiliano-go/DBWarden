@@ -323,6 +323,13 @@ def _import_source(source: _ResolvedSource) -> Path:
     if source.classification == "in_package":
         return _import_as_package_module(source.module_name, source.import_root)
 
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("load_config_module"):
+        base_dir = path.parent.resolve()
+        HookRegistry.execute_single("load_config_module", path, base_dir)
+        return base_dir
+
     from dbwarden.extensions.sandbox import load_config_module
 
     base_dir = path.parent.resolve()

@@ -69,6 +69,11 @@ def DBWardenHealthRouter(
     For production, set ``auth_mode="authenticated"`` or
     ``DBWARDEN_HEALTH_AUTH=authenticated``.
     """
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("health_routes"):
+        return HookRegistry.execute_single("health_routes", auth_mode=auth_mode, api_key=api_key)
+
     router = APIRouter()
     mode = os.environ.get("DBWARDEN_HEALTH_AUTH", auth_mode)
     

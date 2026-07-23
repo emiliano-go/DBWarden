@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session as SASession
 
 from dbwarden.engine.checksum import calculate_checksum
 from dbwarden.logging import get_logger
-from dbwarden.output import console
+from dbwarden.output import info, warning
 from dbwarden.repositories.seeds_repo import (
     create_seeds_table_if_not_exists,
     get_applied_seed_versions,
@@ -248,16 +248,12 @@ def apply_single_seed(
     # Checksum drift detection
     existing = get_seed_record(version, db_name)
     if existing is not None and existing.checksum and existing.checksum != checksum:
-        console.print(
-            f"  [yellow]Warning:[/yellow] Seed V{version} has been modified "
-            f"since last applied (checksum mismatch).",
-            style="yellow",
-        )
+        warning(f"Seed V{version} has been modified since last applied (checksum mismatch).")
 
-    console.print(f"  Applying seed V{version}: {filename}")
+    info(f"Applying seed V{version}: {filename}")
 
     if dry_run:
-        console.print(f"    [yellow]Would apply seed V{version}: {filename}[/yellow]")
+        warning(f"Would apply seed V{version}: {filename}")
         return
 
     from dbwarden.database.connection import get_db_connection

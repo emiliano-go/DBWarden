@@ -7,7 +7,7 @@ import pytest
 
 class TestStatus:
     @patch("dbwarden.commands.status.get_migrations_directory")
-    @patch("dbwarden.commands.status.console.print")
+    @patch("dbwarden.output.console.print")
     def test_status_single_no_migrations_dir(self, mock_print, mock_get_dir):
         mock_get_dir.side_effect = Exception("No dir")
 
@@ -20,7 +20,7 @@ class TestStatus:
     @patch("dbwarden.commands.status.migrations_table_exists")
     @patch("dbwarden.commands.status.get_migrated_versions")
     @patch("dbwarden.engine.version.get_migration_filepaths_by_version")
-    @patch("dbwarden.commands.status.console.print")
+    @patch("dbwarden.output.console.print")
     def test_status_single_applied(
         self, mock_print, mock_get_files, mock_get_versions, mock_table_exists, mock_get_dir
     ):
@@ -50,7 +50,7 @@ class TestStatus:
 
         from dbwarden.commands.status import status_single
 
-        with patch("dbwarden.commands.status.console.print"):
+        with patch("dbwarden.output.console.print"):
             status_single("test_db")
 
     @patch("dbwarden.commands.status.get_migrations_directory")
@@ -62,6 +62,6 @@ class TestStatus:
         with (
             patch("dbwarden.commands.status.migrations_table_exists", return_value=False),
             patch("dbwarden.engine.version.get_migration_filepaths_by_version", return_value={}),
-            patch("dbwarden.commands.status.console.print"),
+            patch("dbwarden.output.console.print"),
         ):
             status_single("test_db")

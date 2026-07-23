@@ -34,14 +34,14 @@ class TestRollback:
             patch("dbwarden.commands.rollback.check_lock", return_value=False),
             patch("dbwarden.commands.rollback.acquire_lock", return_value=True),
             patch("dbwarden.commands.rollback.get_latest_versions", return_value=[]),
-            patch("dbwarden.commands.rollback.console.print") as mock_print,
+            patch("dbwarden.output.console.print") as mock_print,
         ):
             mock_get_db.return_value = MagicMock()
             mock_get_db.return_value.sqlalchemy_url = "sqlite:///test.db"
             mock_get_db.return_value.database_type = "sqlite"
 
             rollback_cmd()
-            mock_print.assert_called_with("Nothing to rollback.", style="cyan")
+            mock_print.assert_any_call("Nothing to rollback.", style="cyan")
 
     def test_rollback_default_count_is_one(self):
         from dbwarden.commands.rollback import rollback_cmd
@@ -57,7 +57,7 @@ class TestRollback:
             patch("dbwarden.commands.rollback._get_versions_to_rollback", return_value={"0002": "/tmp/migrations/test__0002_roll.sql"}),
             patch("dbwarden.commands.rollback.parse_rollback_statements", return_value=["DROP TABLE users"]),
             patch("dbwarden.commands.rollback.run_migration"),
-            patch("dbwarden.commands.rollback.console.print"),
+            patch("dbwarden.output.console.print"),
         ):
             mock_get_db.return_value = MagicMock()
             mock_get_db.return_value.sqlalchemy_url = "sqlite:///test.db"

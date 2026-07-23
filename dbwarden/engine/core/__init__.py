@@ -1,5 +1,6 @@
 from dbwarden.engine.core.models import ModelColumn, IndexInfo, ModelTable
 from dbwarden.engine.core.protocol import RunPhase, Op, ObjectHandler
+from dbwarden.engine.core.ordering import Anchor, OrderingConstraint, OrderingError
 from dbwarden.engine.core.statement_order import StatementOrder, MigrationStatement
 from dbwarden.engine.core.registry import RegistryDriver
 from dbwarden.engine.core.snapshot_io import (
@@ -27,6 +28,9 @@ __all__ = [
     "RunPhase",
     "Op",
     "ObjectHandler",
+    "Anchor",
+    "OrderingConstraint",
+    "OrderingError",
     "StatementOrder",
     "MigrationStatement",
     "RegistryDriver",

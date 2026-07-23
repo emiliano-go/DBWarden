@@ -72,6 +72,31 @@ async def dbwarden_lifespan(
       to avoid cold-start latency on first requests.
     pool_warmup_size: Number of connections to acquire during warmup.
     """
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("lifespan"):
+        async with HookRegistry.execute_single(
+            "lifespan",
+            app,
+            mode=mode,
+            database=database,
+            all_databases=all_databases,
+            dev=dev,
+            strict_translation=strict_translation,
+            with_backup=with_backup,
+            backup_dir=backup_dir,
+            verbose=verbose,
+            allow_in_production=allow_in_production,
+            fail_fast=fail_fast,
+            only_dev=only_dev,
+            readiness_gate=readiness_gate,
+            apply_seeds=apply_seeds,
+            pool_warmup=pool_warmup,
+            pool_warmup_size=pool_warmup_size,
+        ):
+            yield
+        return
+
     try:
         if mode != "none":
             async with migration_context(

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from rich.table import Table
-
 from dbwarden.engine.safety import issues_to_json, load_issues
 from dbwarden.exceptions import DBDisconnectedError
-from dbwarden.output import console
+from dbwarden.output import data_table, render, success, warning
 
 
 def check_cmd(
@@ -15,15 +13,14 @@ def check_cmd(
     try:
         issues = load_issues(database=database)
     except DBDisconnectedError:
-        console.print(
-            "Database disconnected \u2014 cannot compare against live schema. "
-            "Run with models only (no live compatibility checks).",
-            style="yellow",
+        warning(
+            "Database disconnected - cannot compare against live schema. "
+            "Run with models only (no live compatibility checks)."
         )
         return
 
     if output_format == "json":
-        console.print(issues_to_json(issues), markup=False, highlight=False)
+        render(issues_to_json(issues))
     elif output_format == "txt":
         _print_issues_table(issues, database=database)
     else:
@@ -39,28 +36,22 @@ def check_cmd(
 
 def _print_issues_table(issues, database: str | None = None) -> None:
     db_label = database or "default"
-    table = Table(
-        title=f"Safety Check - {db_label}",
-        show_header=True,
-        header_style="bold magenta",
-    )
-    table.add_column("Severity", style="cyan")
-    table.add_column("Change", style="white")
-    table.add_column("Table", style="green")
-    table.add_column("Column", style="yellow")
-    table.add_column("Message", style="white")
-    table.add_column("Required Flag", style="magenta")
-
-    for issue in issues:
-        table.add_row(
-            issue.severity,
-            issue.change_type,
-            issue.table_name,
-            issue.column_name or "",
-            issue.message,
-            issue.required_flag or "",
+    render(
+        data_table(
+            f"Safety Check - {db_label}",
+            ("Severity", "Change", "Table", "Column", "Message", "Required Flag"),
+            (
+                (
+                    issue.severity,
+                    issue.change_type,
+                    issue.table_name,
+                    issue.column_name or "",
+                    issue.message,
+                    issue.required_flag or "",
+                )
+                for issue in issues
+            ),
         )
-
-    console.print(table)
+    )
     if not issues:
-        console.print("No schema changes detected.", style="green")
+        success("No schema changes detected.")

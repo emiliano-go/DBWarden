@@ -2,13 +2,11 @@ from __future__ import annotations
 
 import json
 
-from rich.table import Table
-
 from dbwarden.config import get_database, get_multi_db_config
 from dbwarden.engine.migration_name import Change
 from dbwarden.engine.version import get_migrations_directory
 from dbwarden.logging import get_logger
-from dbwarden.output import console
+from dbwarden.output import data_table, error, info, plain, render, section, sql, success, warning
 
 
 def diff_cmd(
@@ -39,14 +37,14 @@ def diff_cmd(
     )
 
     if not config.model_paths:
-        console.print("No model paths configured. Add model_paths to your dbwarden.py config.", style="yellow")
+        warning("No model paths configured. Add model_paths to your dbwarden.py config.")
         return
 
     tables = get_all_model_tables(config.model_paths, db_name=actual_db_name)
     validate_model_tables_exist(tables, config.model_tables, actual_db_name)
     tables = filter_model_tables_by_name(tables, config.model_tables)
     if not tables:
-        console.print("No SQLAlchemy models found in the configured model paths.", style="yellow")
+        warning("No SQLAlchemy models found in the configured model paths.")
         return
 
     if offline:
@@ -57,7 +55,7 @@ def diff_cmd(
         snapshot = _load_live_snapshot(database, logger)
 
     if snapshot is None:
-        console.print("Could not load schema snapshot. Run 'dbwarden migrate' to create one.", style="yellow")
+        warning("Could not load schema snapshot. Run 'dbwarden migrate' to create one.")
         return
 
     from dbwarden.engine.snapshot import (
@@ -71,7 +69,7 @@ def diff_cmd(
     )
 
     if not upgrade_ops:
-        console.print("No differences found between models and database.", style="green")
+        success("No differences found between models and database.")
         return
 
     from dbwarden.engine.snapshot import _apply_rename_intents
@@ -107,20 +105,18 @@ def _load_offline_snapshot(database: str | None) -> dict | None:
     from dbwarden.commands.make_migrations import get_current_model_state_path, get_model_state_path
 
     state_path = get_current_model_state_path(database)
-    legacy_state_path = get_model_state_path(database, legacy=True)
 
     if not state_path.exists():
-        console.print(
+        warning(
             f"No model state file found at {get_model_state_path(database)}. "
-            "Run 'dbwarden export-models' first.",
-            style="yellow",
+            "Run 'dbwarden export-models' first."
         )
         return None
     try:
         import json
         return json.loads(state_path.read_text())
     except (json.JSONDecodeError, OSError) as exc:
-        console.print(f"Failed to read model state file: {exc}", style="red")
+        error(f"Failed to read model state file: {exc}")
         return None
 
 
@@ -143,39 +139,33 @@ def _filter_migration_snapshots(database, upgrade_sql, upgrade_ops, rollback_sql
 def _display_table(changes: list[Change]) -> None:
     """Display changes as a Rich table."""
     if not changes:
-        console.print("No differences found after filtering.", style="green")
+        success("No differences found after filtering.")
         return
 
-    table = Table(title="Schema Diff", show_header=True, header_style="bold magenta")
-    table.add_column("Operation", style="cyan")
-    table.add_column("Table", style="green")
-    table.add_column("Target", style="yellow")
-    table.add_column("Severity", style="white")
-
-    for change in changes:
-        severity = _severity_for(change.operation)
-        table.add_row(
-            change.operation,
-            change.table or "",
-            change.target or "",
-            severity,
+    render(
+        data_table(
+            "Schema Diff",
+            ("Operation", "Table", "Target", "Severity"),
+            (
+                (change.operation, change.table or "", change.target or "", _severity_for(change.operation))
+                for change in changes
+            ),
         )
-
-    console.print(table)
-    console.print(f"\nTotal changes: {len(changes)}", style="bold")
+    )
+    info(f"Total changes: {len(changes)}")
 
 
 def _display_sql(upgrade_sql: str) -> None:
     """Display the generated upgrade SQL."""
     if not upgrade_sql.strip():
-        console.print("No SQL changes to display.", style="green")
+        success("No SQL changes to display.")
         return
 
     import re
     statements = [s.strip() for s in re.split(r"\n\n+", upgrade_sql) if s.strip()]
-    console.print("\nGenerated migration SQL:", style="bold cyan")
+    section("Generated Migration SQL")
     for stmt in statements:
-        console.print(f"\n{stmt}", markup=False, highlight=False)
+        sql(stmt)
 
 
 def _display_json(changes: list[Change]) -> None:
@@ -189,7 +179,7 @@ def _display_json(changes: list[Change]) -> None:
         }
         for c in changes
     ]
-    console.print(json.dumps(data, indent=2), markup=False, highlight=False)
+    plain(json.dumps(data, indent=2))
 
 
 def _severity_for(operation: str) -> str:
@@ -207,10 +197,10 @@ def lock_status_cmd(database: str | None = None) -> None:
 
     is_locked = check_lock(database)
     if is_locked:
-        console.print("Migration lock: ACTIVE", style="yellow")
-        console.print("Another migration process may be running.", style="white")
+        warning("Migration lock: ACTIVE")
+        info("Another migration process may be running.")
     else:
-        console.print("Migration lock: INACTIVE", style="green")
+        success("Migration lock: INACTIVE")
 
 
 def unlock_cmd(database: str | None = None) -> None:
@@ -218,10 +208,10 @@ def unlock_cmd(database: str | None = None) -> None:
     from dbwarden.repositories import release_lock, check_lock
 
     if not check_lock(database):
-        console.print("Migration lock is not currently held.", style="yellow")
+        warning("Migration lock is not currently held.")
         return
 
     if release_lock(database):
-        console.print("Migration lock released successfully.", style="green")
+        success("Migration lock released successfully.")
     else:
-        console.print("Failed to release migration lock.", style="bold red")
+        error("Failed to release migration lock.")

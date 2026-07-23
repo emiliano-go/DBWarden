@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 
 from dbwarden.engine.snapshot import IRREVERSIBLE_ANNOTATION
-from dbwarden.output import console
+from dbwarden.output import error, success, warning
 
 
 def _reverse_sql(sql: str) -> str:
@@ -58,7 +58,7 @@ def _reverse_sql(sql: str) -> str:
 def make_rollback_cmd(migration_file: str) -> None:
     path = Path(migration_file)
     if not path.exists():
-        console.print(f"Migration file not found: {migration_file}", style="red")
+        error(f"Migration file not found: {migration_file}")
         return
 
     content = path.read_text(encoding="utf-8")
@@ -76,7 +76,7 @@ def make_rollback_cmd(migration_file: str) -> None:
             upgrade_section += line
 
     if not upgrade_section.strip():
-        console.print("No upgrade SQL found in migration file.", style="yellow")
+        warning("No upgrade SQL found in migration file.")
         return
 
     statements = [
@@ -85,10 +85,9 @@ def make_rollback_cmd(migration_file: str) -> None:
     rollback_statements = [_reverse_sql(s) for s in statements]
     has_placeholder = any(stmt.lstrip().startswith("-- No automatic rollback generated") for stmt in rollback_statements)
     if has_placeholder and IRREVERSIBLE_ANNOTATION not in content:
-        console.print(
+        error(
             "Automatic rollback would contain placeholder SQL. Add "
-            f"'-- {IRREVERSIBLE_ANNOTATION}' only if this migration is intentionally irreversible.",
-            style="red",
+            f"'-- {IRREVERSIBLE_ANNOTATION}' only if this migration is intentionally irreversible."
         )
         return
 
@@ -98,4 +97,4 @@ def make_rollback_cmd(migration_file: str) -> None:
         encoding="utf-8",
     )
 
-    console.print(f"Created rollback file: {out_path}", style="green")
+    success(f"Created rollback file: {out_path}")

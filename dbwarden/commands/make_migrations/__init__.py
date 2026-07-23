@@ -24,7 +24,7 @@ from dbwarden.engine.version import (
     generate_repeatable_filename,
 )
 from dbwarden.logging import get_logger
-from dbwarden.output import console
+from dbwarden.output import error, info, plain, success, sql, warning
 
 from dbwarden.commands.make_migrations.ch_ops import (
     _check_recreate_rename_conflict,
@@ -103,9 +103,11 @@ def make_migrations_cmd(
 
     if not model_paths:
         logger.warning("No model paths found. Please set model_paths in warden.toml")
-        console.print("No SQLAlchemy models found. Please:", style="yellow")
-        console.print("  1. Create models/ directory with your SQLAlchemy models", style="white")
-        console.print("  2. Or set model_paths in dbwarden config", style="white")
+        warning(
+            "No SQLAlchemy models found. Please:\n"
+            "1. Create models/ directory with your SQLAlchemy models\n"
+            "2. Or set model_paths in dbwarden config"
+        )
         return
 
     logger.log_model_paths(model_paths)
@@ -116,7 +118,7 @@ def make_migrations_cmd(
 
     if not tables:
         logger.warning("No tables found in models")
-        console.print("No tables found in the specified model paths.", style="yellow")
+        warning("No tables found in the specified model paths.")
         return
 
     for table in tables:
@@ -192,10 +194,7 @@ def make_migrations_cmd(
                     table_resolved_from_map[key] = "prompt"
             else:
                 logger.warning(_format_table_rename_warning(table_candidates))
-                console.print(
-                    _format_table_rename_warning(table_candidates),
-                    style="yellow",
-                )
+                warning(_format_table_rename_warning(table_candidates))
 
         if confirmed_table_intents:
             snapshot_tables = dict(snapshot.get("tables", {}))
@@ -234,12 +233,11 @@ def make_migrations_cmd(
                     (t, o, n, f"{t}.{o}:{n}")
                     for t, o, n in auto_detected_renames
                 ))
-                console.print(
+                warning(
                     _format_rename_warning(
                         (t, o, n, f"{t}.{o}:{n}")
                         for t, o, n in auto_detected_renames
-                    ),
-                    style="yellow",
+                    )
                 )
 
     migrations_dir = get_migrations_directory(database)
@@ -272,18 +270,15 @@ def make_migrations_cmd(
     )
 
     if output_plan:
-        console.print(json.dumps(plan, indent=2), markup=False, highlight=False)
+        plain(json.dumps(plan, indent=2))
         return
 
     if output_sql:
-        console.print(upgrade_sql, markup=False, highlight=False)
+        sql(upgrade_sql)
         return
 
     if not upgrade_sql.strip():
-        console.print(
-            "No new migrations to generate - all models already covered by existing migrations.",
-            style="cyan",
-        )
+        info("No new migrations to generate - all models already covered by existing migrations.")
         return
 
     filepath = os.path.join(migrations_dir, filename)
@@ -314,9 +309,9 @@ def make_migrations_cmd(
         f.write("\n")
 
     logger.info(f"Created migration file: {filename}")
-    console.print(f"Created migration file: {filepath}", style="green")
-    console.print(f"Created migration plan: {plan_filepath}", style="green")
-    console.print(f"Tables included: {', '.join(t.name for t in tables)}", style="cyan")
+    success(f"Created migration file: {filepath}")
+    success(f"Created migration plan: {plan_filepath}")
+    info(f"Tables included: {', '.join(t.name for t in tables)}")
 
     state = model_state_to_dict(tables, dbwarden_version=__version__)
     state_payload = model_state_json_dumps(state)
@@ -403,4 +398,4 @@ def new_migration_cmd(
         f.write(content)
 
     logger.info(f"Created migration file ({migration_type}): {filename}")
-    console.print(f"Created migration file: {filepath}", style="green")
+    success(f"Created migration file: {filepath}")

@@ -6,7 +6,7 @@ from dbwarden.engine.file_parser import parse_rollback_statements
 from dbwarden.engine.version import get_migrations_directory
 from dbwarden.exceptions import LockError
 from dbwarden.logging import get_logger
-from dbwarden.output import console
+from dbwarden.output import error, info, success, warning
 from dbwarden.repositories import (
     create_lock_table_if_not_exists,
     create_migrations_table_if_not_exists,
@@ -64,7 +64,7 @@ def rollback_cmd(
         )
 
         if not latest_versions:
-            console.print("Nothing to rollback.", style="cyan")
+            info("Nothing to rollback.")
             return
 
         versions_to_rollback = _get_versions_to_rollback(
@@ -77,7 +77,7 @@ def rollback_cmd(
         for version, filepath in reversed(list(versions_to_rollback.items())):
             filename = filepath.split("/")[-1]
             if not os.path.exists(filepath):
-                console.print(f"  [red]Migration file not found: {filename}[/red]")
+                error(f"Migration file not found: {filename}")
                 missing += 1
                 continue
             sql_statements = parse_rollback_statements(filepath)
@@ -101,15 +101,9 @@ def rollback_cmd(
             reverted += 1
 
         if reverted:
-            console.print(
-                f"Rollback completed successfully: {reverted} migration(s) reverted.",
-                style="green",
-            )
+            success(f"Rollback completed successfully: {reverted} migration(s) reverted.")
         if missing:
-            console.print(
-                f"Warning: {missing} migration file(s) not found. Skipped.",
-                style="yellow",
-            )
+            warning(f"Warning: {missing} migration file(s) not found. Skipped.")
     finally:
         if lock_acquired:
             release_lock(database)

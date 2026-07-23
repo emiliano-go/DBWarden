@@ -1,8 +1,6 @@
-from rich.table import Table
-
 from dbwarden.exceptions import DBDisconnectedError
 from dbwarden.logging import get_logger
-from dbwarden.output import console
+from dbwarden.output import data_table, render, warning
 from dbwarden.repositories import get_migration_records, migrations_table_exists
 
 
@@ -15,45 +13,32 @@ def history_cmd(database: str | None = None) -> None:
     try:
         table_exists = migrations_table_exists(database)
     except DBDisconnectedError:
-        console.print(
-            "Database disconnected \u2014 cannot retrieve migration history.",
-            style="yellow",
-        )
+        warning("Database disconnected - cannot retrieve migration history.")
         return
 
     if not table_exists:
-        console.print(
-            f"[yellow]No migrations have been applied to '{db_name}' yet.[/yellow]"
-        )
+        warning(f"No migrations have been applied to '{db_name}' yet.")
         return
 
     migration_records = get_migration_records(database)
     if not migration_records:
-        console.print(
-            f"[yellow]No migrations have been applied to '{db_name}' yet.[/yellow]"
-        )
+        warning(f"No migrations have been applied to '{db_name}' yet.")
         return
 
-    table = Table(
-        title=f"Migration History - {db_name}",
-        show_header=True,
-        header_style="bold magenta",
-    )
-    table.add_column("Version", style="cyan", no_wrap=True)
-    table.add_column("Order Executed", style="green")
-    table.add_column("Description", style="white")
-    table.add_column("Applied At", style="green", no_wrap=True)
-    table.add_column("Type", style="yellow")
-
-    for record in migration_records:
-        version = record.version or "N/A"
-        table.add_row(
-            version,
-            str(record.order_executed),
-            record.description,
-            str(record.applied_at),
-            record.migration_type,
+    render(
+        data_table(
+            f"Migration History - {db_name}",
+            ("Version", "Order Executed", "Description", "Applied At", "Type"),
+            (
+                (
+                    record.version or "N/A",
+                    record.order_executed,
+                    record.description,
+                    record.applied_at,
+                    record.migration_type,
+                )
+                for record in migration_records
+            ),
         )
-
-    console.print(table)
+    )
     logger.info(f"Total migrations applied: {len(migration_records)}")

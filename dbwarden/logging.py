@@ -27,7 +27,10 @@ from enum import IntEnum
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
+from rich.logging import RichHandler
+
 from dbwarden.constants import LOG_FORMAT
+from dbwarden.output import console
 
 
 class Verbosity(IntEnum):
@@ -378,14 +381,20 @@ class DBWardenLogger:
         for handler in self.logger.handlers[:]:
             self.logger.removeHandler(handler)
 
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setLevel(logging.DEBUG if self.debug_enabled else logging.INFO)
-
         if _use_json_logging():
+            handler = logging.StreamHandler(sys.stdout)
+            handler.setLevel(logging.DEBUG if self.debug_enabled else logging.INFO)
             formatter: logging.Formatter = JSONFormatter()
+            handler.setFormatter(formatter)
         else:
-            formatter = ColoredFormatter(LOG_FORMAT)
-        handler.setFormatter(formatter)
+            handler = RichHandler(
+                console=console,
+                rich_tracebacks=True,
+                show_path=False,
+                markup=False,
+            )
+            handler.setLevel(logging.DEBUG if self.debug_enabled else logging.INFO)
+            handler.setFormatter(logging.Formatter("%(name)s - %(message)s"))
         self.logger.addHandler(handler)
 
     def _apply_logging_defaults(self, kwargs: dict[str, Any]) -> dict[str, Any]:

@@ -12,9 +12,9 @@ class TestHistory:
 
         from dbwarden.commands.history import history_cmd
 
-        with patch("dbwarden.commands.history.console") as mock_console:
+        with patch("dbwarden.output.console.print") as mock_print:
             history_cmd("test_db")
-            mock_console.print.assert_called_once()
+            mock_print.assert_called()
 
     @patch("dbwarden.commands.history.migrations_table_exists")
     @patch("dbwarden.commands.history.get_migration_records")
@@ -24,9 +24,9 @@ class TestHistory:
 
         from dbwarden.commands.history import history_cmd
 
-        with patch("dbwarden.commands.history.console") as mock_console:
+        with patch("dbwarden.output.console.print") as mock_print:
             history_cmd("test_db")
-            mock_console.print.assert_called_once()
+            mock_print.assert_called()
 
     @patch("dbwarden.commands.history.migrations_table_exists")
     @patch("dbwarden.commands.history.get_migration_records")
@@ -42,6 +42,6 @@ class TestHistory:
 
         from dbwarden.commands.history import history_cmd
 
-        with patch("dbwarden.commands.history.console") as mock_console:
+        with patch("dbwarden.output.console.print") as mock_print:
             history_cmd("test_db")
-            mock_console.print.assert_called_once()
+            mock_print.assert_called()

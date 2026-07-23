@@ -140,6 +140,11 @@ def DBWardenRouter(
     * ``GET /status``: per-database migration and seed status.
     * ``POST /migrate``: trigger migration execution (auth-guarded when enabled).
     """
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("migration_routes"):
+        return HookRegistry.execute_single("migration_routes", auth_mode=auth_mode, api_key=api_key)
+
     router = APIRouter()
     mode = os.environ.get("DBWARDEN_MIGRATE_AUTH", auth_mode)
 

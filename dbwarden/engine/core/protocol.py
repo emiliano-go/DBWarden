@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Any, List, Optional, Protocol, Tuple
 
+from dbwarden.engine.core.ordering import OrderingConstraint
 from dbwarden.engine.core.statement_order import MigrationStatement, StatementOrder
 
 
@@ -38,6 +39,7 @@ class ObjectHandler(Protocol):
     object_type: str
     run_phase: RunPhase
     statement_order: StatementOrder
+    ordering: OrderingConstraint
 
     def extract(self, snapshot: dict[str, Any]) -> dict[str, Any]:
         ...

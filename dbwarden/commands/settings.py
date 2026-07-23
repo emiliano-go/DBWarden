@@ -6,7 +6,7 @@ from typing import Any
 
 from dbwarden.config import display_value, get_multi_db_config, get_settings_source_file
 from dbwarden.config_schema import DatabaseEntry
-from dbwarden.output import console
+from dbwarden.output import kv_table, render, section
 
 
 def _display_db_type(value: str) -> str:
@@ -21,9 +21,7 @@ def _display_db_type(value: str) -> str:
 
 
 def _print_field(label: str, value: Any) -> None:
-    console.print("  •", style="bold magenta", end=" ")
-    console.print(f"{label}:", style="bold cyan", end=" ")
-    console.print(str(value), style="default", markup=False, highlight=False)
+    render(kv_table(None, ((label, value),)))
 
 
 def handle_settings_show(database: str | None = None, all_databases: bool = False) -> None:
@@ -45,7 +43,7 @@ def handle_settings_show(database: str | None = None, all_databases: bool = Fals
         label = f"Database: {name.upper()}"
         if is_default:
             label += " (default)"
-        console.print(f"\n{'-' * 30} {label} {'-' * 30}", style="bright_green")
+        section(label)
 
         _print_field("Default", str(is_default))
         _print_field("Type", _display_db_type(db_config.database_type))

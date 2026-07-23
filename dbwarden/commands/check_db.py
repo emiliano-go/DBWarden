@@ -6,7 +6,7 @@ from dbwarden.config import get_database
 from dbwarden.database.connection import get_db_connection
 from dbwarden.exceptions import DBDisconnectedError
 from dbwarden.logging import get_logger
-from dbwarden.output import console
+from dbwarden.output import data_table, plain, render, section, warning
 
 
 def check_db_cmd(output_format: str = "txt", database: str | None = None) -> None:
@@ -57,22 +57,19 @@ def check_db_cmd(output_format: str = "txt", database: str | None = None) -> Non
                     ],
                 }
     except DBDisconnectedError:
-        console.print(
-            "Database disconnected \u2014 cannot inspect live schema.",
-            style="yellow",
-        )
+        warning("Database disconnected - cannot inspect live schema.")
         return
 
-    console.print(f"\n=== Database Schema: {db_name} ===\n", style="bold cyan")
+    section(f"Database Schema: {db_name}")
 
     if output_format == "json":
         import json
 
-        console.print(json.dumps(schema_info, indent=2, default=str), style="white")
+        plain(json.dumps(schema_info, indent=2, default=str))
     elif output_format == "yaml":
         import yaml
 
-        console.print(yaml.dump(schema_info, default_flow_style=False), style="white")
+        plain(yaml.dump(schema_info, default_flow_style=False))
     elif output_format == "txt":
         _print_txt(schema_info)
     else:
@@ -82,27 +79,45 @@ def check_db_cmd(output_format: str = "txt", database: str | None = None) -> Non
 def _print_txt(schema_info: dict[str, Any]) -> None:
     """Print schema in text format."""
     for table, info in schema_info.items():
-        console.print(f"\n[bold cyan]Table: {table}[/bold cyan]")
-        console.print("-" * 50)
+        section(f"Table: {table}")
 
-        for col in info["columns"]:
-            nullable = "NULL" if col["nullable"] else "NOT NULL"
-            default = (
-                f" DEFAULT {col['default']}"
-                if col["default"] and col["default"] != "None"
-                else ""
+        render(
+            data_table(
+                "Columns",
+                ("Name", "Type", "Nullable", "Default"),
+                (
+                    (
+                        col["name"],
+                        col["type"],
+                        "NULL" if col["nullable"] else "NOT NULL",
+                        col["default"] if col["default"] and col["default"] != "None" else "",
+                    )
+                    for col in info["columns"]
+                ),
             )
-            console.print(f"  {col['name']}: {col['type']} {nullable}{default}")
+        )
 
         if info["indexes"]:
-            console.print("\n  Indexes:")
-            for idx in info["indexes"]:
-                console.print(f"    - {idx['name']}: {', '.join(idx['columns'])}")
+            render(
+                data_table(
+                    "Indexes",
+                    ("Name", "Columns"),
+                    ((idx["name"], ", ".join(idx["columns"])) for idx in info["indexes"]),
+                )
+            )
 
         if info["foreign_keys"]:
-            console.print("\n  Foreign Keys:")
-            for fk in info["foreign_keys"]:
-                console.print(
-                    f"    - {fk['name']}: {', '.join(fk['columns'])} -> "
-                    f"{fk['referred_table']}({', '.join(fk['referred_columns'])})"
+            render(
+                data_table(
+                    "Foreign Keys",
+                    ("Name", "Columns", "Reference"),
+                    (
+                        (
+                            fk["name"],
+                            ", ".join(fk["columns"]),
+                            f"{fk['referred_table']}({', '.join(fk['referred_columns'])})",
+                        )
+                        for fk in info["foreign_keys"]
+                    ),
                 )
+            )

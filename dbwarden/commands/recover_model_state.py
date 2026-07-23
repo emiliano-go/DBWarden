@@ -9,7 +9,7 @@ from dbwarden.config import get_database, get_multi_db_config
 from dbwarden.engine.core.model_state import model_state_json_dumps, model_state_to_dict
 from dbwarden.engine.core.models import ModelColumn, ModelTable
 from dbwarden.engine.version import get_migrations_directory
-from dbwarden.output import console
+from dbwarden.output import error, info, success, warning
 from dbwarden.repositories import get_migration_records
 
 
@@ -157,7 +157,7 @@ def recover_model_state_cmd(database: str | None = None) -> None:
 
     migration_records = get_migration_records(database)
     if not migration_records:
-        console.print("No applied migrations found. Nothing to recover.", style="yellow")
+        warning("No applied migrations found. Nothing to recover.")
         return
 
     migrations_dir = get_migrations_directory(database)
@@ -168,7 +168,7 @@ def recover_model_state_cmd(database: str | None = None) -> None:
     for record in migration_records:
         filepath = str(Path(migrations_dir) / record.filename)
         if not Path(filepath).exists():
-            console.print(f"  [yellow]Warning:[/yellow] migration file not found: {record.filename}")
+            warning(f"Migration file not found: {record.filename}")
             continue
 
         from dbwarden.engine.file_parser import parse_upgrade_statements
@@ -180,7 +180,7 @@ def recover_model_state_cmd(database: str | None = None) -> None:
             versioned_sqls.append((record.version or "", record.filename, statements))
 
     if not versioned_sqls and not repeatable_sqls:
-        console.print("No migration files found on disk to replay.", style="red")
+        error("No migration files found on disk to replay.")
         return
 
     from dbwarden.engine.sandbox import SQLiteSandboxProvider, create_sandbox_provider
@@ -191,23 +191,14 @@ def recover_model_state_cmd(database: str | None = None) -> None:
     else:
         try:
             sandbox_provider = create_sandbox_provider(config.database_type)
-            console.print(
-                f"Using {config.database_type} sandbox via testcontainers.",
-                style="cyan",
-            )
+            info(f"Using {config.database_type} sandbox via testcontainers.")
         except (ImportError, ValueError):
             sandbox_provider = SQLiteSandboxProvider()
-            console.print(
-                "Falling back to SQLite sandbox. Some database-specific SQL may fail.",
-                style="yellow",
-            )
+            warning("Falling back to SQLite sandbox. Some database-specific SQL may fail.")
 
     sandbox_url = sandbox_provider.start()
     sandbox_db_type = sandbox_provider.get_database_type()
-    console.print(
-        f"Sandbox started: {sandbox_provider.__class__.__name__} ({sandbox_url})",
-        style="yellow",
-    )
+    warning(f"Sandbox started: {sandbox_provider.__class__.__name__} ({sandbox_url})")
 
     from dbwarden.database.connection import get_db_connection, sandbox_override
 
@@ -228,9 +219,7 @@ def recover_model_state_cmd(database: str | None = None) -> None:
                     db_name=database,
                 )
             except Exception as e:
-                console.print(
-                    f"  [yellow]Warning:[/yellow] migration {version} {filename}: {e}"
-                )
+                warning(f"Migration {version} {filename}: {e}")
                 failed += 1
 
         for filename, statements in repeatable_sqls:
@@ -244,21 +233,13 @@ def recover_model_state_cmd(database: str | None = None) -> None:
                     db_name=database,
                 )
             except Exception as e:
-                console.print(
-                    f"  [yellow]Warning:[/yellow] repeatable {filename}: {e}"
-                )
+                warning(f"Repeatable {filename}: {e}")
                 failed += 1
 
         if versioned_sqls:
-            console.print(
-                f"Replayed {len(versioned_sqls)} versioned and {len(repeatable_sqls)} repeatable migration(s).",
-                style="green",
-            )
+            success(f"Replayed {len(versioned_sqls)} versioned and {len(repeatable_sqls)} repeatable migration(s).")
         if failed:
-            console.print(
-                f"Completed with {failed} warning(s). Model state may be incomplete.",
-                style="yellow",
-            )
+            warning(f"Completed with {failed} warning(s). Model state may be incomplete.")
 
         from dbwarden.database.connection import get_db_connection as _get_sandbox_conn
 
@@ -273,7 +254,7 @@ def recover_model_state_cmd(database: str | None = None) -> None:
             state = model_state_to_dict(_tables, dbwarden_version=__version__)
 
     sandbox_provider.stop()
-    console.print("Sandbox stopped.", style="yellow")
+    warning("Sandbox stopped.")
 
     from dbwarden.commands.make_migrations import get_model_state_path
 
@@ -289,7 +270,4 @@ def recover_model_state_cmd(database: str | None = None) -> None:
     state_path.write_text(payload)
 
     table_count = len(state.get("tables", {}))
-    console.print(
-        f"Model state recovered to {state_path} ({table_count} table(s)).",
-        style="green",
-    )
+    success(f"Model state recovered to {state_path} ({table_count} table(s)).")

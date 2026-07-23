@@ -12,6 +12,7 @@ from dbwarden.engine.model_discovery import (
 )
 from dbwarden.engine.core.model_state import model_state_json_dumps
 from dbwarden.engine.offline import model_state_to_dict
+from dbwarden.output import success
 
 
 def export_models_cmd(
@@ -64,5 +65,4 @@ def export_models_cmd(
         legacy_path.write_text(payload)
     out_path.write_text(payload)
 
-    from dbwarden.commands.make_migrations import console
-    console.print(f"Exported {len(tables)} model(s) to {out_path}", style="green")
+    success(f"Exported {len(tables)} model(s) to {out_path}")

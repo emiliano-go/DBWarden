@@ -151,7 +151,9 @@ def snapshot_diff_to_sql(
         ChUserHandler,
     )
     from dbwarden.engine.backends.mysql.handlers import MyTableHandler
+    from dbwarden.engine.core.ordering import apply_public_ordering
     from dbwarden.engine.core.protocol import Op
+    from dbwarden.plugin import ObjectPluginRegistry
     from dbwarden.logging import Verbosity, get_logger
 
     _emit_dispatch: dict[str, Any] = {}
@@ -197,6 +199,11 @@ def snapshot_diff_to_sql(
         ChUserHandler(),
         ViewHandler(),
     ):
+        for _ot in getattr(_h, "op_types", (_h.object_type,)):
+            _emit_dispatch[_ot] = _h
+    for _registration in ObjectPluginRegistry.handlers().values():
+        _h = _registration.handler
+        apply_public_ordering(_h)
         for _ot in getattr(_h, "op_types", (_h.object_type,)):
             _emit_dispatch[_ot] = _h
 

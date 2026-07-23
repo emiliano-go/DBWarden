@@ -4,7 +4,7 @@ import tempfile
 
 from dbwarden.constants import MIGRATIONS_DIR
 from dbwarden.logging import get_logger
-from dbwarden.output import console
+from dbwarden.output import success, success_panel
 
 
 def _atomic_write(path: Path, content: str) -> None:
@@ -95,18 +95,14 @@ def init_cmd(database: str | None = None) -> None:
     _ensure_settings_file(settings_path, db_name)
 
     logger.info(f"Created/updated configuration file: {settings_path}")
-    console.print(f"Created/updated configuration file: {settings_path}", style="green")
+    success(f"Created/updated configuration file: {settings_path}")
     logger.info(
         f"Initialized DBWarden migrations directory: {db_migrations_dir.absolute()}"
     )
-    console.print(
-        f"DBWarden migrations directory created: {db_migrations_dir.absolute()}",
-        style="green",
-    )
+    success(f"DBWarden migrations directory created: {db_migrations_dir.absolute()}")
 
-    console.print("\nNext steps:", style="bold cyan")
-    console.print("  1. Edit dbwarden.py with your database configuration", style="white")
-    console.print(
-        "  2. Run 'dbwarden make-migrations -d <name>' to generate migrations",
-        style="white",
+    success_panel(
+        "Next steps",
+        "1. Edit dbwarden.py with your database configuration\n"
+        "2. Run 'dbwarden make-migrations -d <name>' to generate migrations",
     )

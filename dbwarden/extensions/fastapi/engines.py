@@ -67,6 +67,11 @@ def _async_session_factory(name: str, dev: bool = False) -> async_sessionmaker[A
 def _make_session_dep(name: str, dev: bool = False):
     """Return a FastAPI dependency that yields a new AsyncSession per request."""
 
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("session_factory"):
+        return HookRegistry.execute_single("session_factory", name, dev=dev)
+
     async def _dependency() -> AsyncGenerator[AsyncSession, None]:
         factory = _async_session_factory(name, dev=dev)
         async with factory() as session:
@@ -94,6 +99,11 @@ def _sync_session_factory(name: str, dev: bool = False) -> sessionmaker[Session]
 def _make_sync_session_dep(name: str, dev: bool = False):
     """Return a FastAPI dependency that yields a new sync Session per request."""
 
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("sync_session_factory"):
+        return HookRegistry.execute_single("sync_session_factory", name, dev=dev)
+
     def _dependency() -> Generator[Session, None, None]:
         factory = _sync_session_factory(name, dev=dev)
         with factory() as session:
@@ -119,6 +129,11 @@ def _parse_clickhouse_url(url: str) -> dict[str, Any]:
 
 def _make_clickhouse_dep(name: str, dev: bool = False):
     """Return a FastAPI dependency that yields a shared AsyncClient."""
+
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("clickhouse_session_factory"):
+        return HookRegistry.execute_single("clickhouse_session_factory", name, dev=dev)
 
     async def _dependency() -> AsyncGenerator[Any, None]:
         if name not in _CLICKHOUSE_ASYNC_CLIENTS:
@@ -146,6 +161,11 @@ def _make_clickhouse_dep(name: str, dev: bool = False):
 
 def _make_sync_clickhouse_dep(name: str, dev: bool = False):
     """Return a FastAPI dependency that yields a shared sync ClickHouse client."""
+
+    from dbwarden.plugin import HookRegistry
+
+    if HookRegistry.is_registered("clickhouse_sync_session_factory"):
+        return HookRegistry.execute_single("clickhouse_sync_session_factory", name, dev=dev)
 
     def _dependency() -> Generator[Any, None, None]:
         if name not in _CLICKHOUSE_SYNC_CLIENTS:

@@ -10,6 +10,14 @@ from dbwarden.commands.init import init_cmd
 from dbwarden.commands.make_migrations import make_migrations_cmd, new_migration_cmd
 from dbwarden.commands.make_rollback import make_rollback_cmd
 from dbwarden.commands.migrate import migrate_cmd
+from dbwarden.commands.plugin_cmd import (
+    plugin_add_cmd,
+    plugin_info_cmd,
+    plugin_list_cmd,
+    plugin_remove_cmd,
+    plugin_trust_cmd,
+    plugin_untrust_cmd,
+)
 from dbwarden.commands.recover_model_state import recover_model_state_cmd
 from dbwarden.commands.rollback import rollback_cmd
 from dbwarden.commands.snapshot import snapshot_cmd
@@ -333,3 +341,36 @@ def handle_seed_export(
         all_databases=all_databases,
         output_dir=output_dir,
     )
+
+
+def handle_plugin_list(output_format: str = "table") -> None:
+    plugin_list_cmd(output_format=output_format)
+
+
+def handle_plugin_info(dist_name: str, output_format: str = "table") -> None:
+    plugin_info_cmd(dist_name, output_format=output_format)
+
+
+def handle_plugin_trust(dist_name: str) -> None:
+    plugin_trust_cmd(dist_name)
+
+
+def handle_plugin_untrust(dist_name: str) -> None:
+    plugin_untrust_cmd(dist_name)
+
+
+def handle_plugin_add(
+    dist_name: str,
+    use_uv: bool = False,
+    version: str | None = None,
+    dry_run: bool = False,
+) -> None:
+    plugin_add_cmd(dist_name, use_uv=use_uv, version=version, dry_run=dry_run)
+
+
+def handle_plugin_remove(
+    dist_name: str,
+    use_uv: bool = False,
+    dry_run: bool = False,
+) -> None:
+    plugin_remove_cmd(dist_name, use_uv=use_uv, dry_run=dry_run)
