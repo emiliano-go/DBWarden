@@ -108,7 +108,7 @@ filename = "dbwarden_pgsql_extensions-0.3.0-py3-none-any.whl"
 sha256 = "abc123..."
 tier = "official"
 verified = "provenance"
-identity = "https://github.com/dbwarden/dbwarden-pgsql-extensions"
+identity = "https://github.com/dbwarden-org/dbwarden-pgsql-extensions"
 installed_at = "2026-07-22T14:05:40.001122+00:00"
 ```
 

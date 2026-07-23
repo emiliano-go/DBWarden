@@ -325,13 +325,15 @@ def _import_source(source: _ResolvedSource) -> Path:
 
     from dbwarden.plugin import HookRegistry
 
+    base_dir = path.parent.resolve()
     if HookRegistry.is_registered("load_config_module"):
-        base_dir = path.parent.resolve()
         HookRegistry.execute_single("load_config_module", path, base_dir)
         return base_dir
 
-    from dbwarden.extensions.sandbox import load_config_module
-
-    base_dir = path.parent.resolve()
-    load_config_module(path, base_dir)
+    _unique_name = f"_dbwarden_config_{path.stem}"
+    spec = importlib.util.spec_from_file_location(_unique_name, path)
+    if spec and spec.loader:
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules[_unique_name] = mod
+        spec.loader.exec_module(mod)
     return base_dir

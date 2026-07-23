@@ -8,7 +8,6 @@ from typing import Any
 import pytest
 
 from dbwarden.engine.migration_name import Change
-from dbwarden.engine.backends.postgresql.handlers import EnumHandler
 from dbwarden.engine.snapshot import (
     MigrationStatement,
     StatementOrder,
@@ -141,33 +140,9 @@ def _inline_enum_emit(
     return statements
 
 
-def _handler_diff_sql(
-    handler: EnumHandler,
-    snapshot: dict[str, Any],
-    model_tables: list[FakeTable],
-) -> tuple[str, str, list[Change]]:
-    """Use the handler to diff and emit, returning SQL."""
-    snap_spec = handler.canonicalize(handler.extract(snapshot))
-    model_spec = handler.canonicalize(
-        handler.model_spec_from_tables(model_tables)
-    )
-    upgrade_ops, rollback_ops = handler.diff(snap_spec, model_spec)
-
-    all_stmts: list[MigrationStatement] = []
-    for op in upgrade_ops:
-        all_stmts.extend(handler.emit(op))
-    for op in rollback_ops:
-        all_stmts.extend(handler.emit(op))
-
-    up_sql, rb_sql = _assemble_migration(all_stmts)
-    return up_sql, rb_sql, []
-
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
-
-HANDLER = EnumHandler()
 
 SNAPSHOT_NO_ENUMS: dict[str, Any] = {"enums": {}}
 SNAPSHOT_MOOD: dict[str, Any] = {
@@ -303,152 +278,6 @@ MODEL_MOOD_SIZE = _make_model_table([
 
 
 # ---------------------------------------------------------------------------
-# Golden byte-equivalence tests
-# ---------------------------------------------------------------------------
-
-class TestEnumHandlerGolden:
-    @pytest.mark.parametrize(
-        "snapshot,model_tables,label",
-        [
-            (SNAPSHOT_MOOD, MODEL_MOOD_SAME, "unchanged"),
-            (SNAPSHOT_MOOD, MODEL_MOOD_PLUS_ECSTATIC, "add_value"),
-            (SNAPSHOT_MOOD, MODEL_MOOD_PLUS_MEH, "add_value_after"),
-            (SNAPSHOT_MOOD, MODEL_MOOD_TWO_COLS, "two_cols_unchanged"),
-            (
-                SNAPSHOT_MOOD,
-                MODEL_MOOD_PLUS_ECSTATIC_TWO_COLS,
-                "two_cols_add_value",
-            ),
-            (SNAPSHOT_NO_ENUMS, MODEL_MOOD_SAME, "model_only"),
-            (SNAPSHOT_NO_ENUMS, MODEL_NEW_SIZE, "fresh_create"),
-            (SNAPSHOT_MOOD, MODEL_NEW_SIZE, "create_new_enum"),
-            (SNAPSHOT_MOOD_SIZE, MODEL_MOOD_SAME, "subset_no_new"),
-            (SNAPSHOT_MOOD_SIZE, MODEL_MOOD_SIZE, "cross_enum_unchanged"),
-        ],
-    )
-    def test_sql_byte_equivalence(
-        self,
-        snapshot: dict[str, Any],
-        model_tables: list[FakeTable],
-        label: str,
-    ) -> None:
-        inline_up_ops, inline_rb_ops = _inline_enum_diff(snapshot, model_tables)
-        inline_stmts = _inline_enum_emit(inline_up_ops) + _inline_enum_emit(inline_rb_ops)
-        inline_up_sql, inline_rb_sql = _assemble_migration(inline_stmts)
-
-        handler_up_sql, handler_rb_sql, _ = _handler_diff_sql(
-            HANDLER, snapshot, model_tables
-        )
-
-        assert handler_up_sql == inline_up_sql, (
-            f"Upgrade SQL mismatch for {label}\n"
-            f"  inline:  {inline_up_sql!r}\n"
-            f"  handler: {handler_up_sql!r}"
-        )
-        assert handler_rb_sql == inline_rb_sql, (
-            f"Rollback SQL mismatch for {label}\n"
-            f"  inline:  {inline_rb_sql!r}\n"
-            f"  handler: {handler_rb_sql!r}"
-        )
-
-
-# ---------------------------------------------------------------------------
-# Contract tests for EnumHandler
-# ---------------------------------------------------------------------------
-
-class TestEnumHandlerContract:
-    def test_canonical_idempotent(self) -> None:
-        spec = {"Mood": ["Happy", "Sad"], "Size": ["Small"]}
-        c1 = HANDLER.canonicalize(spec)
-        c2 = HANDLER.canonicalize(c1)
-        assert c1 == c2
-        assert "Mood" not in c1
-        assert "mood" in c1
-
-    def test_canonical_empty(self) -> None:
-        assert HANDLER.canonicalize({}) == {}
-        assert HANDLER.canonicalize(None) == {}
-
-    def test_unchanged_produces_empty_diff(self) -> None:
-        snap_spec = HANDLER.canonicalize(HANDLER.extract(SNAPSHOT_MOOD))
-        model_spec = HANDLER.canonicalize(
-            HANDLER.model_spec_from_tables(MODEL_MOOD_SAME)
-        )
-        up, rb = HANDLER.diff(snap_spec, model_spec)
-        assert up == []
-        assert rb == []
-
-    def test_add_value_is_irreversible(self) -> None:
-        snap_spec = HANDLER.canonicalize(HANDLER.extract(SNAPSHOT_MOOD))
-        model_spec = HANDLER.canonicalize(
-            HANDLER.model_spec_from_tables(MODEL_MOOD_PLUS_ECSTATIC)
-        )
-        up, _ = HANDLER.diff(snap_spec, model_spec)
-        for op in up:
-            if op.object_type == "alter_enum_add_value":
-                assert op.irreversible
-
-    def test_create_type_is_reversible(self) -> None:
-        snap_spec = HANDLER.canonicalize(HANDLER.extract(SNAPSHOT_NO_ENUMS))
-        model_spec = HANDLER.canonicalize(
-            HANDLER.model_spec_from_tables(MODEL_NEW_SIZE)
-        )
-        up, _ = HANDLER.diff(snap_spec, model_spec)
-        for op in up:
-            if op.object_type == "create_type":
-                assert not op.irreversible
-
-    def test_two_cols_dedupe(self) -> None:
-        spec = HANDLER.model_spec_from_tables(MODEL_MOOD_TWO_COLS)
-        assert len(spec) == 1
-        assert spec.get("mood") or spec.get("Mood")
-        key = next(k for k in spec if k.lower() == "mood")
-        assert spec[key] == ["happy", "sad"]
-
-    def test_conflicting_values_raises(self) -> None:
-        bad_model = _make_model_table([
-            {
-                "name": "a",
-                "pg_meta": {
-                    "pg_type": {
-                        "kind": "enum",
-                        "type_name": "mood",
-                        "values": ["happy", "sad"],
-                    }
-                },
-            },
-            {
-                "name": "b",
-                "pg_meta": {
-                    "pg_type": {
-                        "kind": "enum",
-                        "type_name": "mood",
-                        "values": ["happy", "angry"],
-                    }
-                },
-            },
-        ])
-        with pytest.raises(ValueError, match="conflicting"):
-            HANDLER.model_spec_from_tables(bad_model)
-
-    def test_forward_then_rollback_revert_comment(self) -> None:
-        """Emit produces, Revert: for add-value ops."""
-        snap_spec = HANDLER.canonicalize(HANDLER.extract(SNAPSHOT_MOOD))
-        model_spec = HANDLER.canonicalize(
-            HANDLER.model_spec_from_tables(MODEL_MOOD_PLUS_ECSTATIC)
-        )
-        up, rb = HANDLER.diff(snap_spec, model_spec)
-        for op in up:
-            stmts = HANDLER.emit(op)
-            for stmt in stmts:
-                assert "-- Revert:" in stmt.rollback_sql
-        for op in rb:
-            stmts = HANDLER.emit(op)
-            for stmt in stmts:
-                assert "-- Revert:" in stmt.upgrade_sql
-
-
-# ---------------------------------------------------------------------------
 # Orchestration tests
 # ---------------------------------------------------------------------------
 
@@ -459,29 +288,3 @@ class TestRegistryDriver:
         up, rb = driver.run({}, [], None)
         assert up == []
         assert rb == []
-
-    def test_driver_with_enum_handler_add_value(self) -> None:
-        from dbwarden.engine.core.registry import RegistryDriver
-        driver = RegistryDriver()
-        driver.register(HANDLER)
-        up, rb = driver.run(SNAPSHOT_MOOD, MODEL_MOOD_PLUS_ECSTATIC, None)
-        assert len(up) == 1
-        assert up[0].object_type == "alter_enum_add_value"
-        assert up[0].irreversible
-
-    def test_driver_with_enum_handler_create_type(self) -> None:
-        from dbwarden.engine.core.registry import RegistryDriver
-        driver = RegistryDriver()
-        driver.register(HANDLER)
-        up, rb = driver.run(SNAPSHOT_NO_ENUMS, MODEL_NEW_SIZE, None)
-        create_types = [op for op in up if op.object_type == "create_type"]
-        assert len(create_types) == 1
-
-    def test_driver_emit_all(self) -> None:
-        from dbwarden.engine.core.registry import RegistryDriver
-        driver = RegistryDriver()
-        driver.register(HANDLER)
-        up, rb = driver.run(SNAPSHOT_MOOD, MODEL_MOOD_PLUS_ECSTATIC, None)
-        up_sql, rb_sql, _ = driver.emit_op_to_sql(up, rb)
-        assert "ALTER TYPE mood ADD VALUE IF NOT EXISTS 'ecstatic'" in up_sql
-        assert "-- Revert:" in rb_sql

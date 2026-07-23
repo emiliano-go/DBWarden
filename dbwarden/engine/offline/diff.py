@@ -407,11 +407,9 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
     _diff_enums(prev_enums, curr_enums, upgrade_ops, rollback_ops)
 
     from dbwarden.engine.backends.postgresql.handlers import (
-        GrantsHandler,
-        PoliciesHandler,
         StorageParamsHandler,
     )
-    for _handler in (StorageParamsHandler(), PoliciesHandler(), GrantsHandler()):
+    for _handler in (StorageParamsHandler(),):
         _snap_spec = _handler.extract(prev_state)
         _model_spec = _handler.extract(curr_state)
         _up, _rb = _handler.diff(

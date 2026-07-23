@@ -587,43 +587,6 @@ class TestPGConfigDriven:
         assert "users" in result
         assert "audit_trigger" in result["users"]
 
-    def test_roles_config(self):
-        from types import SimpleNamespace
-        from dbwarden.engine.backends.postgresql.handlers.role_handler import RoleHandler
-
-        config = SimpleNamespace()
-        config.pg_roles = [
-            {
-                "name": "app_user",
-                "login": True,
-                "connlimit": 100,
-            },
-        ]
-        handler = RoleHandler()
-        result = handler.model_spec_from_config(config)
-        assert "app_user" in result
-        assert result["app_user"]["login"] is True
-
-    def test_sequences_config(self):
-        from types import SimpleNamespace
-        from dbwarden.engine.backends.postgresql.handlers.sequence_handler import SequenceHandler
-
-        config = SimpleNamespace()
-        config.pg_sequences = [
-            {
-                "name": "order_number_seq",
-                "start": 1000,
-                "increment": 1,
-                "minvalue": 1,
-                "maxvalue": 999999,
-                "cycle": False,
-            },
-        ]
-        handler = SequenceHandler()
-        result = handler.model_spec_from_config(config)
-        assert "order_number_seq" in result
-        assert result["order_number_seq"]["start"] == 1000
-
     def test_event_triggers_config(self):
         from types import SimpleNamespace
         from dbwarden.engine.backends.postgresql.handlers.event_trigger_handler import EventTriggerHandler
@@ -660,25 +623,6 @@ class TestPGConfigDriven:
         assert "st_users_email_name" in result
         assert result["st_users_email_name"]["table"] == "users"
         assert result["st_users_email_name"]["kinds"] == ["ndistinct", "dependencies"]
-
-    def test_default_privileges_config(self):
-        from types import SimpleNamespace
-        from dbwarden.engine.backends.postgresql.handlers.default_privileges_handler import DefaultPrivilegesHandler
-
-        config = SimpleNamespace()
-        config.pg_default_privileges = [
-            {
-                "role": "app_user",
-                "schema": "public",
-                "object_type": "tables",
-                "privileges": ["SELECT", "INSERT"],
-            },
-        ]
-        handler = DefaultPrivilegesHandler()
-        result = handler.model_spec_from_config(config)
-        key = "public.app_user.tables"
-        assert key in result
-        assert result[key]["privileges"] == ["SELECT", "INSERT"]
 
 
 class TestPGAPISurface:

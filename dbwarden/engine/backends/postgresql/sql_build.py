@@ -103,29 +103,14 @@ def _prepend_pg_preamble(
         if config.database_type != "postgresql":
             return upgrade_sql, rollback_sql, changes
 
-        if config.pg_sequences or config.pg_domains or config.pg_functions or config.pg_triggers or config.pg_roles or config.pg_default_privileges or config.pg_composite_types or config.pg_extended_statistics or config.pg_event_triggers:
+        if any(getattr(config, attr, None) for attr in (
+            "pg_sequences", "pg_domains", "pg_functions", "pg_triggers",
+            "pg_roles", "pg_default_privileges", "pg_composite_types",
+            "pg_extended_statistics", "pg_event_triggers",
+        )):
             from dbwarden.engine.core.registry import RegistryDriver
-            from dbwarden.engine.backends.postgresql.handlers import (
-                CompositeTypeHandler,
-                DefaultPrivilegesHandler,
-                DomainHandler,
-                EventTriggerHandler,
-                ExtendedStatisticsHandler,
-                FunctionHandler,
-                RoleHandler,
-                SequenceHandler,
-                TriggerHandler,
-            )
+
             _reg = RegistryDriver()
-            _reg.register(DomainHandler())
-            _reg.register(SequenceHandler())
-            _reg.register(FunctionHandler())
-            _reg.register(TriggerHandler())
-            _reg.register(RoleHandler())
-            _reg.register(DefaultPrivilegesHandler())
-            _reg.register(CompositeTypeHandler())
-            _reg.register(ExtendedStatisticsHandler())
-            _reg.register(EventTriggerHandler())
             _up_ops, _rb_ops = _reg.run({"domains": {}, "sequences": {}, "functions": {}, "tables": {}, "roles": {}, "default_privileges": {}, "composite_types": {}, "extended_stats": {}, "event_triggers": {}}, [], config)
             if _up_ops:
                 _stmts = _reg.emit_all(_up_ops, db_name=db_name)

@@ -117,12 +117,14 @@ def _diff_constraints(
 
 
 def _diff_enums(prev_enums: dict[str, list[str]], curr_enums: dict[str, list[str]], upgrade_ops: list[dict[str, Any]], rollback_ops: list[dict[str, Any]]) -> None:
-    from dbwarden.engine.backends.postgresql.handlers import EnumHandler
-    _handler = EnumHandler()
-    _snap = _handler.canonicalize(prev_enums)
-    _model = _handler.canonicalize(curr_enums)
-    _up, _rb = _handler.diff(_snap, _model)
-    for op in _up:
-        upgrade_ops.append(op_to_dict(op))
-    for op in _rb:
-        rollback_ops.append(op_to_dict(op))
+    from dbwarden.plugin import ObjectPluginRegistry
+
+    if ObjectPluginRegistry.has_handler("enum"):
+        _handler = ObjectPluginRegistry.handlers()["enum"].handler
+        _snap = _handler.canonicalize(prev_enums)
+        _model = _handler.canonicalize(curr_enums)
+        _up, _rb = _handler.diff(_snap, _model)
+        for op in _up:
+            upgrade_ops.append(op_to_dict(op))
+        for op in _rb:
+            rollback_ops.append(op_to_dict(op))

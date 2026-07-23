@@ -1,6 +1,6 @@
 [project]
 site_name = "DBWarden Documentation"
-site_description = "DBWarden: SQL-first database migration system for Python and SQLAlchemy projects. Multi-DB migrations, impact analysis, sandbox testing, FastAPI integration, seal data management, and production safety controls."
+site_description = "DBWarden: SQL-first database migration system for Python and SQLAlchemy projects. Multi-DB migrations, impact analysis, seal data management, and production safety controls."
 site_url = "https://dbwarden.emiliano-go.com"
 docs_dir = "docs"
 site_dir = "site"
@@ -79,9 +79,7 @@ Overview = [
   {"4. Offline & CI" = "cookbook/04-offline-ci.md"},
   {"5. Schema Inspection" = "cookbook/05-schema-inspection.md"},
   {"6. Safety & Impact" = "cookbook/06-safety-impact.md"},
-  {"7. Seeds" = "cookbook/07-seeds.md"},
-  {"8. Multi-Database" = "cookbook/08-multi-database.md"},
-  {"9. FastAPI Integration" = "cookbook/09-fastapi-integration.md"},
+  {"7. Multi-Database" = "cookbook/08-multi-database.md"},
   {"10. Auto Schemas" = "cookbook/10-auto-schemas.md"},
   {"11. Observability" = "cookbook/11-observability.md"},
 ]

@@ -22,13 +22,13 @@ Official plugins are built and maintained by the DBWarden organization under the
 
 | Package | Repository | Purpose |
 |---------|------------|---------|
-| `dbwarden-fastapi` | [dbwarden/dbwarden-fastapi](https://github.com/dbwarden/dbwarden-fastapi) | FastAPI sessions, health/migration routes, lifespan. |
-| `dbwarden-pgsql-extensions` | [dbwarden/dbwarden-pgsql-extensions](https://github.com/dbwarden/dbwarden-pgsql-extensions) | PostgreSQL `CREATE EXTENSION` diffing. |
-| `dbwarden-pgsql-rbac` | [dbwarden/dbwarden-pgsql-rbac](https://github.com/dbwarden/dbwarden-pgsql-rbac) | PostgreSQL roles, grants, policies. |
-| `dbwarden-pgsql-types` | [dbwarden/dbwarden-pgsql-types](https://github.com/dbwarden/dbwarden-pgsql-types) | PostgreSQL enum/domain/composite types. |
-| `dbwarden-ch-rbac` | [dbwarden/dbwarden-ch-rbac](https://github.com/dbwarden/dbwarden-ch-rbac) | ClickHouse roles and grants. |
-| `dbwarden-seeds` | [dbwarden/dbwarden-seeds](https://github.com/dbwarden/dbwarden-seeds) | Seed command implementations. |
-| `dbwarden-sandbox` | [dbwarden/dbwarden-sandbox](https://github.com/dbwarden/dbwarden-sandbox) | Isolated model/config module loading. |
+| `dbwarden-fastapi` | [dbwarden-org/dbwarden-fastapi](https://github.com/dbwarden-org/dbwarden-fastapi) | FastAPI sessions, health/migration routes, lifespan. |
+| `dbwarden-pgsql-extensions` | [dbwarden-org/dbwarden-pgsql-extensions](https://github.com/dbwarden-org/dbwarden-pgsql-extensions) | PostgreSQL `CREATE EXTENSION` diffing. |
+| `dbwarden-pgsql-rbac` | [dbwarden-org/dbwarden-pgsql-rbac](https://github.com/dbwarden-org/dbwarden-pgsql-rbac) | PostgreSQL roles, grants, policies. |
+| `dbwarden-pgsql-types` | [dbwarden-org/dbwarden-pgsql-types](https://github.com/dbwarden-org/dbwarden-pgsql-types) | PostgreSQL enum/domain/composite types. |
+| `dbwarden-ch-rbac` | [dbwarden-org/dbwarden-ch-rbac](https://github.com/dbwarden-org/dbwarden-ch-rbac) | ClickHouse roles and grants. |
+| `dbwarden-seeds` | [dbwarden-org/dbwarden-seeds](https://github.com/dbwarden-org/dbwarden-seeds) | Seed command implementations. |
+| `dbwarden-sandbox` | [dbwarden-org/dbwarden-sandbox](https://github.com/dbwarden-org/dbwarden-sandbox) | Isolated model/config module loading. |
 
 The authoritative list is always `OFFICIAL_PLUGINS` in `dbwarden/_official.py`.
 

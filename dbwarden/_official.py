@@ -33,31 +33,31 @@ class OfficialSpec:
 OFFICIAL_PLUGINS: dict[str, OfficialSpec] = {
     "dbwarden-ch-rbac": OfficialSpec(
         pypi="dbwarden-ch-rbac",
-        repo_slug="dbwarden/dbwarden-ch-rbac",
+        repo_slug="dbwarden-org/dbwarden-ch-rbac",
     ),
     "dbwarden-fastapi": OfficialSpec(
         pypi="dbwarden-fastapi",
-        repo_slug="dbwarden/dbwarden-fastapi",
+        repo_slug="dbwarden-org/dbwarden-fastapi",
     ),
     "dbwarden-pgsql-extensions": OfficialSpec(
         pypi="dbwarden-pgsql-extensions",
-        repo_slug="dbwarden/dbwarden-pgsql-extensions",
+        repo_slug="dbwarden-org/dbwarden-pgsql-extensions",
     ),
     "dbwarden-pgsql-rbac": OfficialSpec(
         pypi="dbwarden-pgsql-rbac",
-        repo_slug="dbwarden/dbwarden-pgsql-rbac",
+        repo_slug="dbwarden-org/dbwarden-pgsql-rbac",
     ),
     "dbwarden-pgsql-types": OfficialSpec(
         pypi="dbwarden-pgsql-types",
-        repo_slug="dbwarden/dbwarden-pgsql-types",
+        repo_slug="dbwarden-org/dbwarden-pgsql-types",
     ),
     "dbwarden-sandbox": OfficialSpec(
         pypi="dbwarden-sandbox",
-        repo_slug="dbwarden/dbwarden-sandbox",
+        repo_slug="dbwarden-org/dbwarden-sandbox",
     ),
     "dbwarden-seeds": OfficialSpec(
         pypi="dbwarden-seeds",
-        repo_slug="dbwarden/dbwarden-seeds",
+        repo_slug="dbwarden-org/dbwarden-seeds",
     ),
 }
 

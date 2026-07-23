@@ -115,17 +115,10 @@ def diff_models_against_snapshot(
         ChCommentHandler,
         ChDataOpHandler,
         ChDictionaryHandler,
-        ChGrantHandler,
         ChMaterializedViewHandler,
-        ChNamedCollectionHandler,
         ChProjectionHandler,
-        ChQuotaHandler,
-        ChRoleHandler,
-        ChRowPolicyHandler,
-        ChSettingsProfileHandler,
         ChSkipIndexHandler,
         ChTableHandler,
-        ChUserHandler,
     )
     if is_ch:
         _ch_handler = ChTableHandler()
@@ -139,13 +132,6 @@ def diff_models_against_snapshot(
         _ch_driver.register(ChSkipIndexHandler())
         _ch_driver.register(ChAggTargetHandler())
         _ch_driver.register(ChDataOpHandler())
-        _ch_driver.register(ChNamedCollectionHandler())
-        _ch_driver.register(ChSettingsProfileHandler())
-        _ch_driver.register(ChRoleHandler())
-        _ch_driver.register(ChUserHandler())
-        _ch_driver.register(ChQuotaHandler())
-        _ch_driver.register(ChRowPolicyHandler())
-        _ch_driver.register(ChGrantHandler())
         _ch_driver.register(ChCommentHandler())
         _ch_up, _ch_rb = _ch_driver.run(snapshot, model_tables, None)
         _extend_ops(upgrade_ops, _ch_up)
@@ -165,49 +151,28 @@ def diff_models_against_snapshot(
     _extend_ops(upgrade_ops, _idx_up)
     _extend_ops(rollback_ops, _idx_rb)
 
-    from dbwarden.engine.backends.postgresql.handlers import EnumHandler
-    _enum_driver = RegistryDriver()
-    _enum_driver.register(EnumHandler())
-    _enum_up_ops, _enum_rb_ops = _enum_driver.run(snapshot, model_tables, None)
-    _extend_ops(upgrade_ops, _enum_up_ops)
-    _extend_ops(rollback_ops, _enum_rb_ops)
-
     from dbwarden.engine.backends.postgresql.handlers import (
-        CompositeTypeHandler,
-        DefaultPrivilegesHandler,
         EventTriggerHandler,
         ExtendedStatisticsHandler,
         FunctionHandler,
         PartitionHandler,
-        RoleHandler,
-        SequenceHandler,
         StatisticsHandler,
         TriggerHandler,
     )
     _pg_pre_driver = RegistryDriver()
-    _pg_pre_driver.register(CompositeTypeHandler())
-    _pg_pre_driver.register(DefaultPrivilegesHandler())
     _pg_pre_driver.register(EventTriggerHandler())
     _pg_pre_driver.register(ExtendedStatisticsHandler())
     _pg_pre_driver.register(FunctionHandler())
     _pg_pre_driver.register(PartitionHandler())
-    _pg_pre_driver.register(RoleHandler())
-    _pg_pre_driver.register(SequenceHandler())
     _pg_pre_driver.register(StatisticsHandler())
     _pg_pre_driver.register(TriggerHandler())
     _pg_pre_up, _pg_pre_rb = _pg_pre_driver.run(snapshot, model_tables, None)
     _extend_ops(upgrade_ops, _pg_pre_up)
     _extend_ops(rollback_ops, _pg_pre_rb)
 
-    from dbwarden.engine.backends.postgresql.handlers import (
-        GrantsHandler,
-        PoliciesHandler,
-        StorageParamsHandler,
-    )
+    from dbwarden.engine.backends.postgresql.handlers import StorageParamsHandler
     _pg5_driver = RegistryDriver()
     _pg5_driver.register(StorageParamsHandler())
-    _pg5_driver.register(PoliciesHandler())
-    _pg5_driver.register(GrantsHandler())
     _pg5_up, _pg5_rb = _pg5_driver.run(snapshot, model_tables, None)
     _extend_ops(upgrade_ops, _pg5_up)
     _extend_ops(rollback_ops, _pg5_rb)

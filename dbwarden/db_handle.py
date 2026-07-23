@@ -39,30 +39,35 @@ class DatabaseHandle:
 
     @functools.cached_property
     def async_session(self) -> Annotated[AsyncSession | AsyncClient, Depends]:
-        """FastAPI dependency annotation for async database access.
+        from dbwarden.plugin import HookRegistry, HookNotRegisteredError
 
-        Resolves to ``Annotated[AsyncSession, Depends(...)]`` for SQL databases
-        or ``Annotated[AsyncClient, Depends(...)]`` for ClickHouse.
-        """
         if self._db_type in ("postgresql", "sqlite", "mysql", "mariadb"):
             from fastapi import Depends
             from sqlalchemy.ext.asyncio import AsyncSession
 
-            from dbwarden.extensions.fastapi.engines import _make_session_dep
-
-            return Annotated[
-                AsyncSession, Depends(_make_session_dep(self._name))
-            ]
+            if HookRegistry.is_registered("session_factory"):
+                maker = HookRegistry.execute_single("session_factory", self._name)
+                return Annotated[
+                    AsyncSession, Depends(maker)
+                ]
+            raise RuntimeError(
+                f"FastAPI session factory not available. "
+                f"Install dbwarden-fastapi: `dbwarden plugin add dbwarden-fastapi`"
+            )
 
         if self._db_type == "clickhouse":
             from fastapi import Depends
             from clickhouse_connect.driver.asyncclient import AsyncClient
 
-            from dbwarden.extensions.fastapi.engines import _make_clickhouse_dep
-
-            return Annotated[
-                AsyncClient, Depends(_make_clickhouse_dep(self._name))
-            ]
+            if HookRegistry.is_registered("clickhouse_session_factory"):
+                maker = HookRegistry.execute_single("clickhouse_session_factory", self._name)
+                return Annotated[
+                    AsyncClient, Depends(maker)
+                ]
+            raise RuntimeError(
+                f"FastAPI ClickHouse session factory not available. "
+                f"Install dbwarden-fastapi: `dbwarden plugin add dbwarden-fastapi`"
+            )
 
         raise ValueError(
             f"Unsupported database_type: {self._db_type!r}. "
@@ -71,31 +76,35 @@ class DatabaseHandle:
 
     @functools.cached_property
     def sync_session(self) -> Annotated[Session | SyncClickHouseClient, Depends]:
-        """FastAPI dependency annotation for synchronous database access.
-
-        Resolves to ``Annotated[Session, Depends(...)]`` for SQL databases
-        or ``Annotated[Client, Depends(...)]`` for ClickHouse.
-        """
+        from dbwarden.plugin import HookRegistry, HookNotRegisteredError
 
         if self._db_type in ("postgresql", "sqlite", "mysql", "mariadb"):
             from fastapi import Depends
             from sqlalchemy.orm import Session
 
-            from dbwarden.extensions.fastapi.engines import _make_sync_session_dep
-
-            return Annotated[
-                Session, Depends(_make_sync_session_dep(self._name))
-            ]
+            if HookRegistry.is_registered("sync_session_factory"):
+                maker = HookRegistry.execute_single("sync_session_factory", self._name)
+                return Annotated[
+                    Session, Depends(maker)
+                ]
+            raise RuntimeError(
+                f"FastAPI sync session factory not available. "
+                f"Install dbwarden-fastapi: `dbwarden plugin add dbwarden-fastapi`"
+            )
 
         if self._db_type == "clickhouse":
             from fastapi import Depends
             from clickhouse_connect.driver.client import Client as SyncClickHouseClient
 
-            from dbwarden.extensions.fastapi.engines import _make_sync_clickhouse_dep
-
-            return Annotated[
-                SyncClickHouseClient, Depends(_make_sync_clickhouse_dep(self._name))
-            ]
+            if HookRegistry.is_registered("clickhouse_sync_session_factory"):
+                maker = HookRegistry.execute_single("clickhouse_sync_session_factory", self._name)
+                return Annotated[
+                    SyncClickHouseClient, Depends(maker)
+                ]
+            raise RuntimeError(
+                f"FastAPI ClickHouse sync session factory not available. "
+                f"Install dbwarden-fastapi: `dbwarden plugin add dbwarden-fastapi`"
+            )
 
         raise ValueError(
             f"Unsupported database_type: {self._db_type!r}. "
@@ -104,7 +113,6 @@ class DatabaseHandle:
 
     @property
     def session(self) -> Annotated[AsyncSession | AsyncClient, Depends]:
-        """Deprecated: use ``async_session`` or ``sync_session``."""
         import warnings
 
         warnings.warn(

@@ -30,7 +30,7 @@ def emit(self, op, db_name=None, **kwargs) -> list[MigrationStatement]: ...  # O
 
 ## Step By Step: A `CREATE EXTENSION` Handler
 
-The goal: converge the PostgreSQL extensions declared in config (`config.pg_extensions`) with those present in the database. This mirrors the real [`dbwarden-pgsql-extensions`](https://github.com/dbwarden/dbwarden-pgsql-extensions) `PgExtensionHandler`.
+The goal: converge the PostgreSQL extensions declared in config (`config.pg_extensions`) with those present in the database. This mirrors the real [`dbwarden-pgsql-extensions`](https://github.com/dbwarden-org/dbwarden-pgsql-extensions) `PgExtensionHandler`.
 
 ### 1. Import the public types
 

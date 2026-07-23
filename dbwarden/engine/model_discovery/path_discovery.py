@@ -10,15 +10,25 @@ _AUTO_DISCOVER_CACHE_TTL = 1.0
 
 
 def load_model_from_path(filepath: str) -> Optional[ModuleType]:
-    from dbwarden.plugin import HookRegistry
+    from dbwarden.plugin import HookRegistry, HookNotRegisteredError
 
     base_dir = Path.cwd().resolve()
     if HookRegistry.is_registered("load_model_module"):
         return HookRegistry.execute_single("load_model_module", Path(filepath), base_dir)
 
-    from dbwarden.extensions.sandbox import load_model_module
+    import importlib.util
 
-    return load_model_module(Path(filepath), base_dir)
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_dbwarden_loaded_model", str(filepath)
+        )
+        if spec is None or spec.loader is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    except FileNotFoundError:
+        return None
 
 
 def discover_models_in_directory(directory: str) -> List[str]:

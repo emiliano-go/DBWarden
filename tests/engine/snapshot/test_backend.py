@@ -34,7 +34,7 @@ from dbwarden.engine.snapshot.sql_gen import _enforce_rollback_contract
 from dbwarden.engine.model_discovery import IndexInfo, ModelColumn, ModelTable
 from dbwarden.engine.migration_name import Change
 from dbwarden.engine.offline import diff_model_states, model_state_to_dict
-from dbwarden.engine.backends.postgresql.handlers import ConstraintHandler, RoleHandler, StatisticsHandler
+from dbwarden.engine.backends.postgresql.handlers import ConstraintHandler, StatisticsHandler
 from dbwarden.engine.core.protocol import Op
 from dbwarden.logging import get_logger, reset_logger
 
@@ -50,9 +50,9 @@ def test_irreversible_rollback_warns_in_normal_mode(capsys):
         snapshot_diff_to_sql(
             [
                 {
-                    "type": "alter_enum_add_value",
-                    "enum_name": "status",
-                    "value": "archived",
+                    "type": "refresh_matview",
+                    "table": "my_view",
+                    "schema": "public",
                     "__irreversible": True,
                 }
             ],
@@ -61,91 +61,37 @@ def test_irreversible_rollback_warns_in_normal_mode(capsys):
         )
 
         captured = capsys.readouterr()
-        assert "Irreversible rollback for alter_enum_add_value" in captured.out
+        assert "Irreversible rollback for refresh_matview" in captured.out
     finally:
         reset_logger()
 
     get_logger(verbose=True)
     try:
         snapshot_diff_to_sql(
-            [{"type": "drop_role", "role_name": "app_user"}],
+            [{"type": "refresh_matview", "table": "my_view", "schema": "public"}],
             [],
             db_name=None,
         )
         captured = capsys.readouterr()
-        assert "Placeholder rollback for drop_role" in captured.out
+        assert "Irreversible rollback for refresh_matview" in captured.out
     finally:
         reset_logger()
 
 
 def test_placeholder_rollback_warns_only_in_verbose_mode(capsys):
-    reset_logger()
-    get_logger(verbose=False)
-    try:
-        snapshot_diff_to_sql(
-            [{"type": "drop_role", "role_name": "app_user"}],
-            [],
-            db_name=None,
-        )
-        captured = capsys.readouterr()
-        assert "Placeholder rollback for drop_role" not in captured.out
-    finally:
-        reset_logger()
+    pytest.skip("Placeholder rollback tests moved to plugin (drop_role in dbwarden-pg-extras)")
 
 
 def test_placeholder_rollback_fails_when_contract_is_enforced():
-    reset_logger()
-    try:
-        with pytest.raises(RollbackContractError, match="Placeholder rollback"):
-            snapshot_diff_to_sql(
-                [{"type": "drop_role", "role_name": "app_user"}],
-                [],
-                db_name=None,
-                enforce_rollback_contract=True,
-            )
-    finally:
-        reset_logger()
+    pytest.skip("Placeholder rollback tests moved to plugin (drop_role in dbwarden-pg-extras)")
 
 
 def test_known_irreversible_rollback_passes_enforced_contract(capsys):
-    reset_logger()
-    get_logger(verbose=False)
-    try:
-        _up_sql, rb_sql, _changes = snapshot_diff_to_sql(
-            [
-                {
-                    "type": "alter_enum_add_value",
-                    "enum_name": "status",
-                    "value": "archived",
-                    "__irreversible": True,
-                }
-            ],
-            [],
-            db_name=None,
-            enforce_rollback_contract=True,
-        )
-
-        captured = capsys.readouterr()
-        assert "Irreversible rollback for alter_enum_add_value" in captured.out
-        assert "-- Revert: archived was added to enum status" in rb_sql
-    finally:
-        reset_logger()
+    pytest.skip("Irreversible rollback tests moved to plugin (alter_enum_add_value in dbwarden-pg-extras)")
 
 
 def test_irreversible_acknowledgement_allows_placeholder_rollback():
-    reset_logger()
-    try:
-        _up_sql, rb_sql, _changes = snapshot_diff_to_sql(
-            [{"type": "drop_role", "role_name": "app_user"}],
-            [],
-            db_name=None,
-            enforce_rollback_contract=True,
-            acknowledge_irreversible=True,
-        )
-
-        assert "-- Revert: CREATE ROLE app_user" in rb_sql
-    finally:
-        reset_logger()
+    pytest.skip("Irreversible acknowledgement tests moved to plugin (drop_role in dbwarden-pg-extras)")
 
 
 def test_unknown_irreversible_rollback_fails_closed_set_contract():
@@ -222,13 +168,7 @@ def test_known_irreversible_comment_rollbacks_pass_closed_set_contract(op):
     ],
 )
 def test_promoted_ch_conditional_paths_fail_strict_contract_without_prior_state(op):
-    with pytest.raises(RollbackContractError, match="Placeholder rollback"):
-        snapshot_diff_to_sql(
-            [op],
-            [],
-            db_name="clickhouse",
-            enforce_rollback_contract=True,
-        )
+    pytest.skip("CH RBAC handlers moved to dbwarden-ch-extras plugin")
 
 
 def test_pg_column_statistics_rollback_restores_prior_target():
@@ -255,36 +195,11 @@ def test_pg_column_statistics_rollback_restores_default_target():
 
 
 def test_pg_role_alter_rollback_restores_prior_attrs():
-    handler = RoleHandler()
-    stmts = handler.emit(Op(
-        object_type="alter_role",
-        upgrade_attrs={
-            "role_name": "app_user",
-            "role_info": {"login": False, "createdb": True, "connlimit": 20},
-        },
-        rollback_attrs={
-            "role_name": "app_user",
-            "role_info": {"login": True, "createdb": False, "connlimit": 5},
-        },
-    ))
-
-    assert stmts[0].upgrade_sql == "ALTER ROLE app_user NOLOGIN CREATEDB CONNECTION LIMIT 20;"
-    assert stmts[0].rollback_sql == "ALTER ROLE app_user LOGIN NOCREATEDB CONNECTION LIMIT 5;"
+    pytest.skip("RoleHandler moved to dbwarden-pg-extras plugin")
 
 
 def test_pg_role_drop_rollback_recreates_prior_role():
-    handler = RoleHandler()
-    stmts = handler.emit(Op(
-        object_type="drop_role",
-        upgrade_attrs={"role_name": "app_user"},
-        rollback_attrs={
-            "role_name": "app_user",
-            "role_info": {"login": True, "inherit": False, "createrole": True},
-        },
-    ))
-
-    assert stmts[0].upgrade_sql == "DROP ROLE IF EXISTS app_user;"
-    assert stmts[0].rollback_sql == "CREATE ROLE app_user LOGIN NOINHERIT CREATEROLE;"
+    pytest.skip("RoleHandler moved to dbwarden-pg-extras plugin")
 
 
 def test_pg_role_and_statistics_pass_strict_contract_with_prior_state():
@@ -297,14 +212,6 @@ def test_pg_role_and_statistics_pass_strict_contract_with_prior_state():
                 "statistics": 1000,
                 "__rollback_attrs": {"table": "events", "column": "payload", "statistics": 100},
             },
-            {
-                "type": "drop_role",
-                "role_name": "app_user",
-                "__rollback_attrs": {
-                    "role_name": "app_user",
-                    "role_info": {"login": True},
-                },
-            },
         ],
         [],
         db_name=None,
@@ -312,7 +219,6 @@ def test_pg_role_and_statistics_pass_strict_contract_with_prior_state():
     )
 
     assert "ALTER TABLE events ALTER COLUMN payload SET STATISTICS 100;" in rb_sql
-    assert "CREATE ROLE app_user LOGIN;" in rb_sql
 
 
 class TestStatementOrder:
@@ -439,20 +345,8 @@ class TestHandlerConvergence:
                 {"type": "alter_my_table", "table": "accounts", "key": "my_engine", "from_value": None, "to_value": "InnoDB"},
                 {"type": "create_schema", "schema": "app"},
                 {"type": "drop_schema", "schema": "old_schema"},
-                {"type": "create_domain", "name": "positive_int", "domain_type": "integer"},
-                {"type": "drop_domain", "name": "positive_int"},
-                {"type": "create_sequence", "name": "user_seq"},
-                {"type": "drop_sequence", "name": "user_seq"},
                 {"type": "alter_pg_storage_param", "table": "accounts", "param": "fillfactor", "from_value": None, "to_value": "80"},
                 {"type": "alter_pg_rls", "table": "accounts", "enabled": True},
-                {"type": "add_policy", "table": "accounts", "name": "policy_self", "using": "user_id = current_user"},
-                {"type": "drop_policy", "table": "accounts", "name": "policy_self"},
-                {"type": "alter_policy", "table": "accounts", "name": "policy_self", "using": "user_id = current_user"},
-                {"type": "add_grant", "table": "accounts", "role": "app_user", "privileges": ["SELECT", "INSERT"]},
-                {"type": "revoke_grant", "table": "accounts", "role": "app_user", "privileges": ["SELECT"]},
-                {"type": "alter_enum_add_value", "enum_name": "mood", "value": "ok", "after": "happy"},
-                {"type": "create_type", "enum_name": "mood", "values": ["happy", "sad"]},
-                {"type": "drop_type", "enum_name": "mood"},
                 {"type": "alter_view", "table": "active_users", "definition": "SELECT * FROM users WHERE active"},
                 {"type": "refresh_matview", "table": "user_stats"},
             ]
@@ -1147,12 +1041,6 @@ class TestClickHouseDiff:
                 "failed_suffix": "__dbw_failed",
             },
             {
-                "type": "alter_enum_add_value",
-                "enum_name": "mood",
-                "value": "excited",
-                "after": "happy",
-            },
-            {
                 "type": "add_column",
                 "table": "audit_log",
                 "column": "action",
@@ -1174,7 +1062,6 @@ class TestClickHouseDiff:
         sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name="clickhouse")
         assert "CREATE TABLE IF NOT EXISTS events__dbw_new" in sql
         assert "RENAME TABLE events TO events__dbw_old, events__dbw_new TO events;" in sql
-        assert "ADD VALUE IF NOT EXISTS 'excited' AFTER 'happy'" in sql
         assert "ALTER TABLE audit_log ADD COLUMN action" in sql
         assert len([c for c in changes if c.operation == "recreate_ch_table"]) == 1
 
@@ -1705,133 +1592,6 @@ class TestPGBugRegression:
 
 
 
-class TestPGGrantsDiff:
-    def test_grant_added_emits_add_grant_op(self, monkeypatch):
-        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
-        snapshot = {
-            "tables": {
-                "users": {
-                    "columns": {
-                        "id": {"type": "integer", "nullable": False, "primary_key": True},
-                        "email": {"type": "varchar(255)", "nullable": True, "primary_key": False},
-                    },
-                    "primary_key": ["id"],
-                    "comment": None,
-                }
-            },
-            "enums": {},
-            "indexes": {},
-            "constraints": {},
-        }
-        model_tables = [
-            ModelTable(
-                name="users",
-                columns=[_mc("id", "INTEGER", pk=True), _mc("email", "VARCHAR(255)")],
-                pg_grants=[{"role": "app_user", "privileges": "ALL", "grantable": False}],
-            )
-        ]
-        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
-        add_grants = [op for op in upgrade if op["type"] == "add_grant"]
-        revoke_grants = [op for op in rollback if op["type"] == "revoke_grant"]
-        assert len(add_grants) == 1
-        assert add_grants[0]["role"] == "app_user"
-        assert add_grants[0]["privileges"] == "ALL"
-        assert len(revoke_grants) == 1
-        assert revoke_grants[0]["role"] == "app_user"
-
-    def test_grant_removed_emits_revoke_grant_op(self, monkeypatch):
-        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
-        snapshot = {
-            "tables": {
-                "users": {
-                    "columns": {
-                        "id": {"type": "integer", "nullable": False, "primary_key": True},
-                        "email": {"type": "varchar(255)", "nullable": True, "primary_key": False},
-                    },
-                    "primary_key": ["id"],
-                    "comment": None,
-                    "pg_grants": [{"role": "old_role", "privileges": ["SELECT"], "grantable": False}],
-                }
-            },
-            "enums": {},
-            "indexes": {},
-            "constraints": {},
-        }
-        model_tables = [
-            ModelTable(
-                name="users",
-                columns=[_mc("id", "INTEGER", pk=True), _mc("email", "VARCHAR(255)")],
-                pg_grants=[],
-            )
-        ]
-        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
-        revoke_grants = [op for op in upgrade if op["type"] == "revoke_grant"]
-        add_grants = [op for op in rollback if op["type"] == "add_grant"]
-        assert len(revoke_grants) == 1
-        assert revoke_grants[0]["role"] == "old_role"
-        assert len(add_grants) == 1
-        assert add_grants[0]["role"] == "old_role"
-
-    def test_grants_match_no_diff(self, monkeypatch):
-        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
-        snapshot = {
-            "tables": {
-                "users": {
-                    "columns": {
-                        "id": {"type": "integer", "nullable": False, "primary_key": True},
-                    },
-                    "primary_key": ["id"],
-                    "comment": None,
-                    "pg_grants": [{"role": "reader", "privileges": ["SELECT"], "grantable": False}],
-                }
-            },
-            "enums": {},
-            "indexes": {},
-            "constraints": {},
-        }
-        model_tables = [
-            ModelTable(
-                name="users",
-                columns=[_mc("id", "INTEGER", pk=True)],
-                pg_grants=[{"role": "reader", "privileges": ["SELECT"], "grantable": False}],
-            )
-        ]
-        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
-        grant_ops = [op for op in upgrade if "grant" in op["type"]]
-        assert len(grant_ops) == 0
-
-    def test_grant_changed_privileges_emits_add_and_revoke(self, monkeypatch):
-        monkeypatch.setattr("dbwarden.engine.snapshot._get_backend", lambda db_name=None: "postgresql")
-        snapshot = {
-            "tables": {
-                "users": {
-                    "columns": {
-                        "id": {"type": "integer", "nullable": False, "primary_key": True},
-                    },
-                    "primary_key": ["id"],
-                    "comment": None,
-                    "pg_grants": [{"role": "editor", "privileges": ["SELECT"], "grantable": False}],
-                }
-            },
-            "enums": {},
-            "indexes": {},
-            "constraints": {},
-        }
-        model_tables = [
-            ModelTable(
-                name="users",
-                columns=[_mc("id", "INTEGER", pk=True)],
-                pg_grants=[{"role": "editor", "privileges": ["SELECT", "INSERT"], "grantable": False}],
-            )
-        ]
-        upgrade, rollback = diff_models_against_snapshot(model_tables, snapshot)
-        add_grants = [op for op in upgrade if op["type"] == "add_grant"]
-        revoke_grants = [op for op in upgrade if op["type"] == "revoke_grant"]
-        assert len(add_grants) == 1
-        assert add_grants[0]["role"] == "editor"
-        assert len(revoke_grants) == 1
-        assert revoke_grants[0]["role"] == "editor"
-
 
 
 class TestPGSnapshotDiffToSql:
@@ -2001,246 +1761,5 @@ class TestPGSnapshotDiffToSql:
 
 
 
-class TestPGDomainSequenceOps:
-    def test_create_domain_op(self):
-        ops = [
-            {
-                "type": "create_domain",
-                "name": "positive_int",
-                "schema": "app",
-                "domain_type": "integer",
-                "not_null": True,
-                "check": "VALUE > 0",
-            },
-        ]
-        rollback_ops = [
-            {
-                "type": "drop_domain",
-                "name": "positive_int",
-                "schema": "app",
-                "domain_type": "integer",
-                "not_null": True,
-                "check": "VALUE > 0",
-            },
-        ]
-        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
-        assert "CREATE DOMAIN app.positive_int AS integer NOT NULL CHECK (VALUE > 0);" in sql
-        assert "DROP DOMAIN IF EXISTS app.positive_int;" in rb_sql
-        assert any(c.operation == "create_domain" for c in changes)
-
-    def test_drop_domain_op(self):
-        ops = [
-            {
-                "type": "drop_domain",
-                "name": "positive_int",
-                "schema": "app",
-                "domain_type": "integer",
-            },
-        ]
-        rollback_ops = [
-            {
-                "type": "create_domain",
-                "name": "positive_int",
-                "schema": "app",
-                "domain_type": "integer",
-            },
-        ]
-        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
-        assert "DROP DOMAIN IF EXISTS app.positive_int;" in sql
-        assert "CREATE DOMAIN app.positive_int AS integer;" in rb_sql
-        assert any(c.operation == "drop_domain" for c in changes)
-
-    def test_create_domain_op_with_default(self):
-        ops = [
-            {
-                "type": "create_domain",
-                "name": "my_email",
-                "schema": None,
-                "domain_type": "citext",
-                "default": "'nobody@example.com'",
-                "check": "VALUE ~* '^.+@.+$'",
-            },
-        ]
-        rollback_ops = [
-            {
-                "type": "drop_domain",
-                "name": "my_email",
-                "domain_type": "citext",
-            },
-        ]
-        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
-        assert "CREATE DOMAIN my_email AS citext DEFAULT 'nobody@example.com'" in sql
-        assert "CHECK (VALUE ~* '^.+@.+$')" in sql
-
-    def test_create_sequence_op(self):
-        ops = [
-            {
-                "type": "create_sequence",
-                "name": "order_number_seq",
-                "schema": "app",
-                "start": 1000,
-                "increment": 1,
-                "minvalue": 1,
-                "maxvalue": 999999,
-                "cycle": True,
-                "owned_by": "app.orders.id",
-            },
-        ]
-        rollback_ops = [
-            {
-                "type": "drop_sequence",
-                "name": "order_number_seq",
-                "schema": "app",
-            },
-        ]
-        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
-        assert "CREATE SEQUENCE IF NOT EXISTS app.order_number_seq" in sql
-        assert "INCREMENT BY 1" in sql
-        assert "START WITH 1000" in sql
-        assert "MINVALUE 1" in sql
-        assert "MAXVALUE 999999" in sql
-        assert "CYCLE" in sql
-        assert "OWNED BY app.orders.id" in sql
-        assert "DROP SEQUENCE IF EXISTS app.order_number_seq;" in rb_sql
-        assert any(c.operation == "create_sequence" for c in changes)
-
-    def test_drop_sequence_op(self):
-        ops = [
-            {
-                "type": "drop_sequence",
-                "name": "order_number_seq",
-                "schema": None,
-                "start": 1,
-                "increment": 1,
-            },
-        ]
-        rollback_ops = [
-            {
-                "type": "create_sequence",
-                "name": "order_number_seq",
-                "start": 1,
-                "increment": 1,
-            },
-        ]
-        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
-        assert "DROP SEQUENCE IF EXISTS order_number_seq;" in sql
-        assert "CREATE SEQUENCE IF NOT EXISTS order_number_seq" in rb_sql
-        assert "INCREMENT BY 1" in rb_sql
-        assert any(c.operation == "drop_sequence" for c in changes)
-
-    def test_create_sequence_op_minimal(self):
-        ops = [
-            {
-                "type": "create_sequence",
-                "name": "simple_seq",
-            },
-        ]
-        rollback_ops = [
-            {
-                "type": "drop_sequence",
-                "name": "simple_seq",
-            },
-        ]
-        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
-        assert "CREATE SEQUENCE IF NOT EXISTS simple_seq" in sql
-        assert "NO CYCLE" in sql
-        assert "DROP SEQUENCE IF EXISTS simple_seq;" in rb_sql
 
 
-
-class TestPGGrantsOps:
-    def test_add_grant_all_to_role(self):
-        ops = [
-            {
-                "type": "add_grant",
-                "table": "users",
-                "role": "app_user",
-                "privileges": "ALL",
-                "grantable": False,
-                "schema": "public",
-            },
-        ]
-        rollback_ops = [
-            {
-                "type": "revoke_grant",
-                "table": "users",
-                "role": "app_user",
-                "privileges": "ALL",
-                "grantable": False,
-                "schema": "public",
-            },
-        ]
-        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
-        assert "GRANT ALL ON TABLE public.users TO app_user;" in sql
-        assert "REVOKE ALL ON TABLE public.users FROM app_user;" in rb_sql
-        assert any(c.operation == "add_grant" for c in changes)
-
-    def test_add_grant_select_to_public(self):
-        ops = [
-            {
-                "type": "add_grant",
-                "table": "articles",
-                "role": "PUBLIC",
-                "privileges": ["SELECT"],
-                "grantable": False,
-            },
-        ]
-        rollback_ops = [
-            {
-                "type": "revoke_grant",
-                "table": "articles",
-                "role": "PUBLIC",
-                "privileges": ["SELECT"],
-                "grantable": False,
-            },
-        ]
-        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
-        assert "GRANT SELECT ON TABLE articles TO PUBLIC;" in sql
-        assert "REVOKE SELECT ON TABLE articles FROM PUBLIC;" in rb_sql
-
-    def test_revoke_grant_with_cascade(self):
-        ops = [
-            {
-                "type": "revoke_grant",
-                "table": "accounts",
-                "role": "admin",
-                "privileges": "ALL",
-                "grantable": True,
-            },
-        ]
-        rollback_ops = [
-            {
-                "type": "add_grant",
-                "table": "accounts",
-                "role": "admin",
-                "privileges": "ALL",
-                "grantable": True,
-            },
-        ]
-        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
-        assert 'REVOKE ALL ON TABLE accounts FROM "admin" CASCADE;' in sql
-        assert 'GRANT ALL ON TABLE accounts TO "admin" WITH GRANT OPTION;' in rb_sql
-        assert any(c.operation == "revoke_grant" for c in changes)
-
-    def test_add_grant_multiple_privileges(self):
-        ops = [
-            {
-                "type": "add_grant",
-                "table": "tasks",
-                "role": "editor",
-                "privileges": ["SELECT", "INSERT", "UPDATE"],
-                "grantable": False,
-            },
-        ]
-        rollback_ops = [
-            {
-                "type": "revoke_grant",
-                "table": "tasks",
-                "role": "editor",
-                "privileges": ["SELECT", "INSERT", "UPDATE"],
-                "grantable": False,
-            },
-        ]
-        sql, rb_sql, changes = snapshot_diff_to_sql(ops, rollback_ops, db_name=None)
-        assert "GRANT SELECT, INSERT, UPDATE ON TABLE tasks TO editor;" in sql
-        assert "REVOKE SELECT, INSERT, UPDATE ON TABLE tasks FROM editor;" in rb_sql

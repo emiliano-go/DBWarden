@@ -63,7 +63,7 @@ The `dbwarden-` prefix is shared by every plugin; a plugin's trust tier comes fr
 
 ## Project Structure
 
-Start from the [`dbwarden-plugin-template`](https://github.com/dbwarden/dbwarden-plugin-template) GitHub template (see [publishing](publishing.md#starting-from-the-template)):
+Start from the [`dbwarden-plugin-template`](https://github.com/dbwarden-org/dbwarden-plugin-template) GitHub template (see [publishing](publishing.md#starting-from-the-template)):
 
 ```text
 dbwarden-example/

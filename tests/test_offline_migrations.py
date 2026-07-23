@@ -1314,37 +1314,26 @@ def test_offline_index_ops_preserve_rollback_attrs():
     assert drop_index["__rollback_attrs"]["unique"] is True
 
 
-def test_offline_policy_ops_preserve_rollback_attrs():
-    old_policy = {
-        "name": "owners_only",
-        "role": "app_user",
-        "using": "owner_id = current_user_id()",
-    }
-    new_policy = {
-        "name": "owners_only",
-        "role": "admin_user",
-        "using": "owner_id = current_user_id()",
-    }
+def test_offline_no_policy_ops_without_plugin():
     prev = model_state_to_dict([
         ModelTable(
             name="accounts",
             columns=[_make_col("id")],
-            pg_policies=[old_policy],
+            pg_policies=[{"name": "owners_only", "role": "app_user", "using": "owner_id = current_user_id()"}],
         )
     ])
     curr = model_state_to_dict([
         ModelTable(
             name="accounts",
             columns=[_make_col("id")],
-            pg_policies=[new_policy],
+            pg_policies=[{"name": "owners_only", "role": "admin_user", "using": "owner_id = current_user_id()"}],
         )
     ])
 
     up_ops, _down_ops = diff_model_states(prev, curr)
 
-    alter_policy = next(op for op in up_ops if op["type"] == "alter_policy")
-    assert alter_policy["role"] == "admin_user"
-    assert alter_policy["__rollback_attrs"]["role"] == "app_user"
+    policy_ops = [op for op in up_ops if "policy" in op.get("type", "")]
+    assert not policy_ops
 
 
 def test_offline_none_comment_roundtrip():

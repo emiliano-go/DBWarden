@@ -50,7 +50,7 @@ dbwarden plugin list --format json
     "hooks": ["health_routes", "session_factory"],
     "object_handlers": [],
     "error": null,
-    "lock": {"verified": "provenance", "identity": "https://github.com/dbwarden/dbwarden-fastapi", "...": "..."}
+    "lock": {"verified": "provenance", "identity": "https://github.com/dbwarden-org/dbwarden-fastapi", "...": "..."}
   }
 ]
 ```
@@ -72,10 +72,10 @@ Plugin Info
   Hooks              health_routes, session_factory
   Object handlers    -
   Error
-  Repository         https://github.com/dbwarden/dbwarden-fastapi
+  Repository         https://github.com/dbwarden-org/dbwarden-fastapi
   Approved minimum
   Lock verified      provenance
-  Lock identity      https://github.com/dbwarden/dbwarden-fastapi
+  Lock identity      https://github.com/dbwarden-org/dbwarden-fastapi
 ```
 
 - For **Official** plugins, details include the repository and lockfile provenance fields.

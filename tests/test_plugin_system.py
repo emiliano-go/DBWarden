@@ -968,7 +968,7 @@ def test_plugin_remove_cli_uses_uninstaller(monkeypatch) -> None:
     assert removed == ["dbwarden-acme"]
 
 
-def test_pg_extension_core_fallback_without_plugin(monkeypatch) -> None:
+def test_pg_extension_requires_plugin(monkeypatch) -> None:
     from dbwarden.commands.make_migrations import pipeline
 
     config = SimpleNamespace(database_type="postgresql", pg_extensions=["btree_gist"])
@@ -977,14 +977,12 @@ def test_pg_extension_core_fallback_without_plugin(monkeypatch) -> None:
 
     upgrade_sql, rollback_sql, changes = pipeline._prepend_pg_preamble("", "", [], None)
 
-    assert upgrade_sql == 'CREATE EXTENSION IF NOT EXISTS "btree_gist";'
-    assert rollback_sql == 'DROP EXTENSION IF EXISTS "btree_gist";'
-    assert [(change.operation, change.table) for change in changes] == [
-        ("create_extension", "btree_gist")
-    ]
+    assert upgrade_sql == ""
+    assert rollback_sql == ""
+    assert changes == []
 
 
-def test_pg_extension_plugin_overrides_core_fallback(monkeypatch) -> None:
+def test_pg_extension_plugin_handles_preamble(monkeypatch) -> None:
     from dbwarden.commands.make_migrations import pipeline
 
     class Handler:
@@ -1053,14 +1051,15 @@ def test_model_loading_uses_plugin_hook_when_registered(monkeypatch, tmp_path) -
     assert calls == [(model_path, Path.cwd().resolve())]
 
 
-def test_model_loading_falls_back_to_core_sandbox(monkeypatch, tmp_path) -> None:
+def test_model_loading_fallback_to_importlib(tmp_path) -> None:
     from dbwarden.engine.model_discovery import path_discovery
+    from dbwarden.plugin import HookRegistry
 
+    HookRegistry.clear()
     model_path = tmp_path / "models.py"
     model_path.write_text("VALUE = 'core'\n", encoding="utf-8")
 
     module = path_discovery.load_model_from_path(str(model_path))
-
     assert module is not None
     assert module.VALUE == "core"
 
@@ -1090,71 +1089,51 @@ def test_config_loading_uses_plugin_hook_when_registered(tmp_path) -> None:
     assert calls == [(config_path, tmp_path.resolve())]
 
 
-def test_config_loading_falls_back_to_core_sandbox(monkeypatch, tmp_path) -> None:
+def test_config_loading_fallback_to_importlib(tmp_path) -> None:
     from dbwarden.config.resolve import _import_source
     from dbwarden.config.state import _ResolvedSource
+    from dbwarden.plugin import HookRegistry
 
+    HookRegistry.clear()
     config_path = tmp_path / "dbwarden.py"
     config_path.write_text("from dbwarden.config_registry import database_config\n", encoding="utf-8")
-    calls: list[tuple[Path, Path]] = []
 
-    def load_config_module(path: Path, base_dir: Path) -> None:
-        calls.append((path, base_dir))
-
-    monkeypatch.setattr("dbwarden.extensions.sandbox.load_config_module", load_config_module)
-
-    base_dir = _import_source(
+    result = _import_source(
         _ResolvedSource(
             kind="file",
             value=str(config_path),
             classification="isolated_file",
         )
     )
-
-    assert base_dir == tmp_path.resolve()
-    assert calls == [(config_path, tmp_path.resolve())]
+    assert result == tmp_path.resolve()
 
 
-def test_fastapi_get_session_uses_plugin_hook() -> None:
-    pytest.importorskip("fastapi")
-
-    from dbwarden.extensions.fastapi.session import get_session
-
-    async def dependency():
-        yield "plugin-session"
-
+def test_fastapi_session_factory_hook_works() -> None:
     calls: list[tuple[str | None, bool]] = []
 
     def session_factory(database: str | None = None, *, dev: bool = False):
         calls.append((database, dev))
-        return dependency
+        return "dependency"
 
+    from dbwarden.plugin import HookRegistry
+    HookRegistry.clear()
     PluginRegistrar("dbwarden-fastapi").register("session_factory", session_factory)
 
-    assert get_session("primary", dev=True) is dependency
+    from dbwarden.plugin import HookRegistry
+    result = HookRegistry.execute_single("session_factory", "primary", dev=True)
+    assert result == "dependency"
     assert calls == [("primary", True)]
 
 
-def test_fastapi_get_session_core_fallback_without_hook() -> None:
-    pytest.importorskip("fastapi")
+def test_fastapi_session_factory_raises_without_hook() -> None:
+    from dbwarden.plugin import HookRegistry, HookNotRegisteredError
+    HookRegistry.clear()
 
-    from dbwarden.extensions.fastapi.session import get_session
-
-    dependency = get_session("primary")
-
-    assert callable(dependency)
+    with pytest.raises(HookNotRegisteredError):
+        HookRegistry.execute_single("session_factory", "primary")
 
 
 def test_fastapi_engine_dependency_factories_use_plugin_hooks() -> None:
-    pytest.importorskip("fastapi")
-
-    from dbwarden.extensions.fastapi.engines import (
-        _make_clickhouse_dep,
-        _make_session_dep,
-        _make_sync_clickhouse_dep,
-        _make_sync_session_dep,
-    )
-
     async def async_sql_dep():
         yield "async-sql"
 
@@ -1167,6 +1146,8 @@ def test_fastapi_engine_dependency_factories_use_plugin_hooks() -> None:
     def sync_ch_dep():
         yield "sync-ch"
 
+    from dbwarden.plugin import HookRegistry
+    HookRegistry.clear()
     PluginRegistrar("dbwarden-fastapi").register(
         "session_factory", lambda name, *, dev=False: async_sql_dep
     )
@@ -1180,33 +1161,15 @@ def test_fastapi_engine_dependency_factories_use_plugin_hooks() -> None:
         "clickhouse_sync_session_factory", lambda name, *, dev=False: sync_ch_dep
     )
 
-    assert _make_session_dep("primary") is async_sql_dep
-    assert _make_sync_session_dep("primary") is sync_sql_dep
-    assert _make_clickhouse_dep("analytics") is async_ch_dep
-    assert _make_sync_clickhouse_dep("analytics") is sync_ch_dep
-
-
-def test_fastapi_engine_dependency_factories_core_fallback_without_hooks() -> None:
-    pytest.importorskip("fastapi")
-
-    from dbwarden.extensions.fastapi.engines import (
-        _make_clickhouse_dep,
-        _make_session_dep,
-        _make_sync_clickhouse_dep,
-        _make_sync_session_dep,
-    )
-
-    assert callable(_make_session_dep("primary"))
-    assert callable(_make_sync_session_dep("primary"))
-    assert callable(_make_clickhouse_dep("analytics"))
-    assert callable(_make_sync_clickhouse_dep("analytics"))
+    assert HookRegistry.execute_single("session_factory", "primary") is async_sql_dep
+    assert HookRegistry.execute_single("sync_session_factory", "primary") is sync_sql_dep
+    assert HookRegistry.execute_single("clickhouse_session_factory", "analytics") is async_ch_dep
+    assert HookRegistry.execute_single("clickhouse_sync_session_factory", "analytics") is sync_ch_dep
 
 
 def test_fastapi_health_router_uses_plugin_hook() -> None:
     pytest.importorskip("fastapi")
-
     from fastapi import APIRouter
-    from dbwarden.extensions.fastapi.health import DBWardenHealthRouter
 
     router = APIRouter()
     calls: list[tuple[str, str | None]] = []
@@ -1215,34 +1178,34 @@ def test_fastapi_health_router_uses_plugin_hook() -> None:
         calls.append((auth_mode, api_key))
         return router
 
+    from dbwarden.plugin import HookRegistry
+    HookRegistry.clear()
     PluginRegistrar("dbwarden-fastapi").register("health_routes", health_routes)
 
-    assert DBWardenHealthRouter(auth_mode="authenticated", api_key="secret") is router
+    result = HookRegistry.execute_single("health_routes", auth_mode="authenticated", api_key="secret")
+    assert result is router
     assert calls == [("authenticated", "secret")]
 
 
 def test_fastapi_migration_router_uses_plugin_hook() -> None:
     pytest.importorskip("fastapi")
-
     from fastapi import APIRouter
-    from dbwarden.extensions.fastapi.routes import DBWardenRouter
 
     router = APIRouter()
 
+    from dbwarden.plugin import HookRegistry
+    HookRegistry.clear()
     PluginRegistrar("dbwarden-fastapi").register(
         "migration_routes",
         lambda *, auth_mode="open", api_key=None: router,
     )
 
-    assert DBWardenRouter() is router
+    result = HookRegistry.execute_single("migration_routes")
+    assert result is router
 
 
 def test_fastapi_lifespan_uses_plugin_hook() -> None:
-    pytest.importorskip("fastapi")
-
     from contextlib import asynccontextmanager
-
-    from dbwarden.extensions.fastapi.lifespan import dbwarden_lifespan
 
     events: list[str] = []
 
@@ -1252,28 +1215,18 @@ def test_fastapi_lifespan_uses_plugin_hook() -> None:
         yield
         events.append("exit")
 
+    from dbwarden.plugin import HookRegistry
+    HookRegistry.clear()
     PluginRegistrar("dbwarden-fastapi").register("lifespan", lifespan)
 
     async def run_lifespan() -> None:
-        async with dbwarden_lifespan(mode="none"):
+        async with HookRegistry.execute_single("lifespan", mode="none"):
             events.append("body")
 
     import asyncio
-
     asyncio.run(run_lifespan())
 
     assert events == ["enter:none", "body", "exit"]
-
-
-def test_fastapi_route_factories_core_fallback_without_hooks() -> None:
-    pytest.importorskip("fastapi")
-
-    from fastapi import APIRouter
-    from dbwarden.extensions.fastapi.health import DBWardenHealthRouter
-    from dbwarden.extensions.fastapi.routes import DBWardenRouter
-
-    assert isinstance(DBWardenHealthRouter(), APIRouter)
-    assert isinstance(DBWardenRouter(), APIRouter)
 
 
 def test_seed_commands_use_plugin_hooks(tmp_path) -> None:
@@ -1413,26 +1366,6 @@ def test_seed_commands_use_plugin_hooks(tmp_path) -> None:
             },
         ),
     ]
-
-
-def test_seed_create_core_fallback_without_hook(monkeypatch, tmp_path) -> None:
-    from dbwarden.commands.seeds import seed_create_cmd
-
-    monkeypatch.chdir(tmp_path)
-    monkeypatch.setattr(
-        "dbwarden.commands.seeds.get_database",
-        lambda database=None: SimpleNamespace(database_type="sqlite"),
-    )
-    monkeypatch.setattr(
-        "dbwarden.commands.seeds.get_multi_db_config",
-        lambda: SimpleNamespace(default="primary"),
-    )
-
-    seed_create_cmd("load countries", seed_type="sql", database="primary")
-
-    seed_files = sorted((tmp_path / "seeds").iterdir())
-    assert len(seed_files) == 1
-    assert seed_files[0].name == "V0001__load_countries.sql"
 
 
 def test_plugin_object_handler_overrides_core_handler_with_same_type() -> None:

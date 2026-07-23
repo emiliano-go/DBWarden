@@ -6,7 +6,7 @@ description: Publish a DBWarden plugin package.
 
 ## Starting From The Template
 
-Use the [`dbwarden-plugin-template`](https://github.com/dbwarden/dbwarden-plugin-template) GitHub template repository: click **Use this template** to create your own repo, then rename the placeholders:
+Use the [`dbwarden-plugin-template`](https://github.com/dbwarden-org/dbwarden-plugin-template) GitHub template repository: click **Use this template** to create your own repo, then rename the placeholders:
 
 ```bash
 python bootstrap.py dbwarden-yourname
@@ -29,7 +29,7 @@ dbwarden-example/
     └── test_example_plugin.py
 ```
 
-Object plugins add a `handler.py` next to `__init__.py` and import it lazily inside `setup()`. The official plugins are the reference implementations: [`dbwarden-fastapi`](https://github.com/dbwarden/dbwarden-fastapi) (value), [`dbwarden-pgsql-extensions`](https://github.com/dbwarden/dbwarden-pgsql-extensions) (object).
+Object plugins add a `handler.py` next to `__init__.py` and import it lazily inside `setup()`. The official plugins are the reference implementations: [`dbwarden-fastapi`](https://github.com/dbwarden-org/dbwarden-fastapi) (value), [`dbwarden-pgsql-extensions`](https://github.com/dbwarden-org/dbwarden-pgsql-extensions) (object).
 
 ## Naming
 

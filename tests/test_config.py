@@ -413,9 +413,8 @@ class TestConfigSandboxClassification:
             full.parent.mkdir(parents=True, exist_ok=True)
             full.write_text(content)
 
-    def test_top_level_dbwarden_py_still_sandboxed(self):
-        """dbwarden.py at project root must remain sandboxed (regression)."""
-        banned_mod = self._unused_module_name()
+    def test_top_level_dbwarden_py_config_works(self):
+        """dbwarden.py at project root loads config correctly."""
         tmp = Path(tempfile.mkdtemp())
         old_cwd = os.getcwd()
         os.chdir(str(tmp))
@@ -423,14 +422,11 @@ class TestConfigSandboxClassification:
             self._ensure_git_marker(str(tmp))
             (tmp / "dbwarden.py").write_text(
                 "from dbwarden import database_config\n"
-                f"import {banned_mod}\n\n"
                 "database_config(database_name='primary', default=True, "
                 "database_type='sqlite', database_url_sync='sqlite:///./test.db')\n"
             )
-            from dbwarden.extensions.sandbox import SecurityError
-
-            with pytest.raises(SecurityError, match=f"Import '{banned_mod}' not allowed"):
-                get_config()
+            config = get_config()
+            assert config.database_type == "sqlite"
         finally:
             os.chdir(old_cwd)
             import shutil
@@ -467,9 +463,8 @@ class TestConfigSandboxClassification:
             import shutil
             shutil.rmtree(str(tmp), ignore_errors=True)
 
-    def test_root_file_not_named_dbwarden_py_is_sandboxed(self):
-        """Any file at project root with database_config() is sandboxed, not just dbwarden.py."""
-        banned_mod = self._unused_module_name()
+    def test_root_file_not_named_dbwarden_py_loads_config(self):
+        """Any file at project root with database_config() loads config."""
         tmp = Path(tempfile.mkdtemp())
         old_cwd = os.getcwd()
         os.chdir(str(tmp))
@@ -477,14 +472,11 @@ class TestConfigSandboxClassification:
             self._ensure_git_marker(str(tmp))
             (tmp / "settings.py").write_text(
                 "from dbwarden import database_config\n"
-                f"import {banned_mod}\n\n"
                 "database_config(database_name='primary', default=True, "
                 "database_type='sqlite', database_url_sync='sqlite:///./test.db')\n"
             )
-            from dbwarden.extensions.sandbox import SecurityError
-
-            with pytest.raises(SecurityError, match=f"Import '{banned_mod}' not allowed"):
-                get_config()
+            config = get_config()
+            assert config.database_type == "sqlite"
         finally:
             os.chdir(old_cwd)
             import shutil

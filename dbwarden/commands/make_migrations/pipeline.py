@@ -370,32 +370,17 @@ def _prepend_pg_preamble(
             return upgrade_sql, rollback_sql, changes
 
         from dbwarden.plugin import ObjectPluginRegistry
+        from dbwarden.engine.core.registry import RegistryDriver
 
-        _pg_extension_plugin_loaded = ObjectPluginRegistry.has_handler("pg_extension")
-        _pg_extensions = getattr(config, "pg_extensions", []) or []
-        if getattr(config, "pg_sequences", None) or getattr(config, "pg_domains", None) or getattr(config, "pg_functions", None) or getattr(config, "pg_triggers", None) or getattr(config, "pg_roles", None) or getattr(config, "pg_default_privileges", None) or getattr(config, "pg_composite_types", None) or getattr(config, "pg_extended_statistics", None) or getattr(config, "pg_event_triggers", None) or (_pg_extension_plugin_loaded and _pg_extensions):
-            from dbwarden.engine.core.registry import RegistryDriver
-            from dbwarden.engine.backends.postgresql.handlers import (
-                CompositeTypeHandler,
-                DefaultPrivilegesHandler,
-                DomainHandler,
-                EventTriggerHandler,
-                ExtendedStatisticsHandler,
-                FunctionHandler,
-                RoleHandler,
-                SequenceHandler,
-                TriggerHandler,
-            )
+        has_pg_preamble = any(getattr(config, attr, None) for attr in (
+            "pg_sequences", "pg_domains", "pg_functions", "pg_triggers",
+            "pg_roles", "pg_default_privileges", "pg_composite_types",
+            "pg_extended_statistics", "pg_event_triggers",
+        ))
+        has_pg_extension = ObjectPluginRegistry.has_handler("pg_extension") and getattr(config, "pg_extensions", None)
+
+        if has_pg_preamble or has_pg_extension:
             _reg = RegistryDriver()
-            _reg.register(DomainHandler())
-            _reg.register(SequenceHandler())
-            _reg.register(FunctionHandler())
-            _reg.register(TriggerHandler())
-            _reg.register(RoleHandler())
-            _reg.register(DefaultPrivilegesHandler())
-            _reg.register(CompositeTypeHandler())
-            _reg.register(ExtendedStatisticsHandler())
-            _reg.register(EventTriggerHandler())
             _up_ops, _rb_ops = _reg.run({"domains": {}, "sequences": {}, "functions": {}, "tables": {}, "roles": {}, "default_privileges": {}, "composite_types": {}, "extended_stats": {}, "event_triggers": {}, "pg_extensions": {}}, [], config)
             if _up_ops:
                 _stmts = _reg.emit_all(_up_ops, db_name=db_name)
@@ -423,26 +408,6 @@ def _prepend_pg_preamble(
                     )
                     _operation = "create_extension" if op.object_type == "create_pg_extension" else op.object_type
                     changes.insert(0, Change(operation=_operation, table=_name))
-
-        if _pg_extensions and not _pg_extension_plugin_loaded:
-            ext_upgrade = "\n".join(
-                f'CREATE EXTENSION IF NOT EXISTS "{ext}";'
-                for ext in _pg_extensions
-            )
-            ext_rollback = "\n".join(
-                f'DROP EXTENSION IF EXISTS "{ext}";'
-                for ext in reversed(_pg_extensions)
-            )
-            if upgrade_sql.strip():
-                upgrade_sql = ext_upgrade + "\n\n" + upgrade_sql
-            else:
-                upgrade_sql = ext_upgrade
-            if rollback_sql.strip():
-                rollback_sql = ext_rollback + "\n\n" + rollback_sql
-            else:
-                rollback_sql = ext_rollback
-            for ext in _pg_extensions:
-                changes.insert(0, Change(operation="create_extension", table=ext))
     except Exception:
         logger.exception("Failed to prepend PostgreSQL preamble; preamble objects omitted")
 
@@ -463,25 +428,14 @@ def _prepend_ch_preamble(
         if config.database_type != "clickhouse":
             return upgrade_sql, rollback_sql, changes
 
-        if config.ch_named_collections or config.ch_roles or config.ch_users or config.ch_quotas or config.ch_row_policies or config.ch_settings_profiles or config.ch_grants:
+        has_ch_preamble = any(getattr(config, attr, None) for attr in (
+            "ch_named_collections", "ch_roles", "ch_users", "ch_quotas",
+            "ch_row_policies", "ch_settings_profiles", "ch_grants",
+        ))
+        if has_ch_preamble:
             from dbwarden.engine.core.registry import RegistryDriver
-            from dbwarden.engine.backends.clickhouse.handlers import (
-                ChGrantHandler,
-                ChNamedCollectionHandler,
-                ChQuotaHandler,
-                ChRoleHandler,
-                ChRowPolicyHandler,
-                ChSettingsProfileHandler,
-                ChUserHandler,
-            )
+
             _reg = RegistryDriver()
-            _reg.register(ChNamedCollectionHandler())
-            _reg.register(ChSettingsProfileHandler())
-            _reg.register(ChRoleHandler())
-            _reg.register(ChUserHandler())
-            _reg.register(ChQuotaHandler())
-            _reg.register(ChRowPolicyHandler())
-            _reg.register(ChGrantHandler())
             _up_ops, _rb_ops = _reg.run({"named_collections": {}, "settings_profiles": {}, "roles": {}, "users": {}, "quotas": {}, "row_policies": {}, "grants": {}}, [], config)
             if _up_ops:
                 _stmts = _reg.emit_all(_up_ops, db_name=db_name)

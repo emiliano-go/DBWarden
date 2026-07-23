@@ -343,40 +343,14 @@ def migrate_single(
 
 
 def _apply_pending_seeds_after_migrate(db_name: str | None = None) -> None:
-    from dbwarden.engine.seeds import get_pending_seeds, apply_single_seed
-    from dbwarden.repositories.seeds_repo import (
-        create_seeds_table_if_not_exists,
-        get_seeds_directory,
-    )
-    from dbwarden.engine.code_seeds import get_pending_code_seeds, apply_code_seed
+    from dbwarden.plugin import HookRegistry
 
-    try:
-        seeds_dir = get_seeds_directory(db_name)
-    except Exception:
-        seeds_dir = None
-
-    file_seeds_applied = 0
-    if seeds_dir:
-        create_seeds_table_if_not_exists(db_name)
-        pending = get_pending_seeds(seeds_dir, db_name=db_name)
-        if pending:
-            info(f"Applying {len(pending)} pending seed(s)...")
-            for version, (filepath, seed_type) in sorted(pending.items()):
-                apply_single_seed(version, filepath, seed_type, db_name=db_name)
-                file_seeds_applied += 1
-
-    code_seeds = get_pending_code_seeds(db_name)
-    if code_seeds:
-        if not file_seeds_applied:
-            create_seeds_table_if_not_exists(db_name)
-        info(f"Applying {len(code_seeds)} pending code seed(s)...")
-        for cls in code_seeds:
-            apply_code_seed(cls, db_name=db_name)
-
-    if file_seeds_applied or code_seeds:
-        success("Seeds applied successfully.")
-    else:
-        info("Seeds are up to date.")
+    if HookRegistry.is_registered("seed_apply"):
+        HookRegistry.execute_single(
+            "seed_apply",
+            database=db_name,
+            verbose=False,
+        )
 
 
 def migrate_cmd(
