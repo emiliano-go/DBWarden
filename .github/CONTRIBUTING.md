@@ -141,6 +141,7 @@ git push origin feature/your-feature-name
 - At least one reviewer must approve
 - No unresolved conversations
 - Commit history should be clean and focused
+- All commits must be signed with a GPG Key
 
 ### Commit Message Format
 
