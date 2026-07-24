@@ -31,10 +31,13 @@ from dbwarden.plugin import (
 
 PLUGIN_ENTRY_GROUP = PLUGIN_GROUP
 
-# A plugin may import only the public API surface. `dbwarden.engine.core`
-# re-exports the public object-handler types; everything else under
-# `dbwarden.<subpackage>` is internal.
-ALLOWED_IMPORT_PREFIXES: tuple[str, ...] = (
+# Plugins may import anything from DBWarden core. The stable, documented
+# surfaces are `dbwarden.plugin`, `dbwarden.exceptions`, and
+# `dbwarden.engine.core` (which includes `dbwarden.engine.core.plugin_api`), and
+# building on those is what keeps a plugin working across core releases. Reaching
+# deeper is allowed where a plugin genuinely needs it, at the cost of tracking
+# core more closely.
+STABLE_IMPORT_PREFIXES: tuple[str, ...] = (
     "dbwarden.plugin",
     "dbwarden.exceptions",
     "dbwarden.engine.core",
@@ -195,19 +198,23 @@ def assert_hook_signatures(
             )
 
 
-# --- 5. no core internals imported ----------------------------------------
+# --- 5. core imports resolve ----------------------------------------------
 
-def _import_is_allowed(module: str) -> bool:
-    if not module.startswith("dbwarden"):
-        return True
+def _is_core_module(module: str) -> bool:
+    # Match on the package boundary, not the bare prefix: plugin distributions
+    # are conventionally named `dbwarden_<something>`, and their own submodules
+    # are not core.
+    return module == "dbwarden" or module.startswith("dbwarden.")
+
+
+def _is_stable_api(module: str) -> bool:
     if module == "dbwarden":
         return True
-    return any(module == p or module.startswith(p + ".") for p in ALLOWED_IMPORT_PREFIXES)
+    return any(module == p or module.startswith(p + ".") for p in STABLE_IMPORT_PREFIXES)
 
 
-def assert_no_core_internals_imported(package: str) -> None:
-    """The plugin imports only DBWarden's public API surface."""
-    violations: list[str] = []
+def _core_imports(package: str) -> list[tuple[Path, int, str]]:
+    found: list[tuple[Path, int, str]] = []
     for file in _package_source_files(package):
         tree = ast.parse(file.read_text(encoding="utf-8"), filename=str(file))
         for node in ast.walk(tree):
@@ -217,13 +224,69 @@ def assert_no_core_internals_imported(package: str) -> None:
             elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
                 modules = [node.module]
             for module in modules:
-                if not _import_is_allowed(module):
-                    violations.append(f"{file.name}:{node.lineno} imports '{module}'")
-    if violations:
+                if _is_core_module(module):
+                    found.append((file, node.lineno, module))
+    return found
+
+
+def assert_core_imports_resolve(package: str) -> None:
+    """Every ``dbwarden`` module the plugin imports exists in the installed core.
+
+    Plugins may import anything from core. What breaks a plugin is importing a
+    module that the installed core does not have, which otherwise surfaces as an
+    ImportError at load time on a user's machine rather than in CI here.
+    """
+    missing: list[str] = []
+    for file, lineno, module in _core_imports(package):
+        try:
+            if importlib.util.find_spec(module) is None:
+                missing.append(f"{file.name}:{lineno} imports '{module}' (not found)")
+        except (ImportError, AttributeError, ValueError) as exc:
+            missing.append(f"{file.name}:{lineno} imports '{module}' ({exc})")
+    if missing:
         raise ConformanceError(
-            "Plugin imports non-public DBWarden internals (allowed: "
-            f"{', '.join(ALLOWED_IMPORT_PREFIXES)}):\n  " + "\n  ".join(violations)
+            "Plugin imports DBWarden modules that the installed core does not "
+            "provide:\n  " + "\n  ".join(missing)
         )
+
+
+def assert_api_version_declared(package: str) -> None:
+    """The package declares the plugin API version it targets, and it matches.
+
+    Declaring nothing is allowed by core (it means "version 1") but not by this
+    check: a plugin that never declares gets no protection when the contract
+    moves, and the whole point of the declaration is to fail at load rather than
+    inside a migration.
+    """
+    from dbwarden.plugin import PLUGIN_API_ATTR, PLUGIN_API_VERSION
+
+    module = importlib.import_module(package)
+    declared = getattr(module, PLUGIN_API_ATTR, None)
+    if declared is None:
+        raise ConformanceError(
+            f"'{package}' does not declare {PLUGIN_API_ATTR}. "
+            f"Set `{PLUGIN_API_ATTR} = {PLUGIN_API_VERSION}` on the package so a "
+            "mismatched DBWarden is refused at load."
+        )
+    if declared != PLUGIN_API_VERSION:
+        raise ConformanceError(
+            f"'{package}' declares {PLUGIN_API_ATTR} = {declared}, but the "
+            f"installed DBWarden provides {PLUGIN_API_VERSION}. This plugin "
+            "would be refused at load."
+        )
+
+
+def core_imports_outside_stable_api(package: str) -> list[str]:
+    """Report core imports that are not on a documented stable surface.
+
+    Informational, not a failure: these are the imports most likely to need
+    attention when core releases a new version.
+    """
+    return [
+        f"{file.name}:{lineno} imports '{module}'"
+        for file, lineno, module in _core_imports(package)
+        if not _is_stable_api(module)
+    ]
 
 
 # --- 6. object handler conformance (object plugins) -----------------------

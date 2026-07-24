@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import base64
 import json
+import sys
 import urllib.error
+from contextlib import contextmanager
 from types import SimpleNamespace
 from pathlib import Path
 
@@ -1411,6 +1413,295 @@ def test_plugin_object_handler_overrides_core_handler_with_same_type() -> None:
 
     assert rollback_ops == []
     assert [op.upgrade_attrs["role_name"] for op in upgrade_ops] == ["plugin_role"]
+
+
+def _override_handler(object_type: str, emitted_role: str):
+    class Handler:
+        run_phase = RunPhase.PREAMBLE
+        ordering = OrderingConstraint(after=(Anchor.PREAMBLE,), before=(Anchor.BEFORE_TABLES,))
+
+        def extract(self, snapshot):
+            return {}
+
+        def model_spec_from_config(self, config):
+            return {emitted_role: {}}
+
+        def model_spec_from_tables(self, model_tables):
+            return {}
+
+        def canonicalize(self, spec):
+            return spec
+
+        def diff(self, snap_spec, model_spec):
+            from dbwarden.engine.core import Op
+
+            return [Op("create_role", {"role_name": emitted_role})], []
+
+        def emit(self, op, db_name=None, **kwargs):
+            return []
+
+    Handler.object_type = object_type
+    return Handler
+
+
+@contextmanager
+def capture_registry_warnings():
+    """Collect records straight off the registry logger.
+
+    Deliberately not caplog: other suites disable propagation on the `dbwarden`
+    logger, so records never reach the root handler caplog installs. Attaching
+    here makes the assertion independent of whatever global logging state the
+    rest of the run left behind.
+    """
+    import logging
+
+    records: list[logging.LogRecord] = []
+
+    class Collector(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:
+            records.append(record)
+
+    logger = logging.getLogger("dbwarden.registry")
+    handler = Collector(level=logging.WARNING)
+    logger.addHandler(handler)
+    try:
+        yield records
+    finally:
+        logger.removeHandler(handler)
+
+
+def test_plugin_override_of_core_handler_is_logged() -> None:
+    PluginRegistrar("dbwarden-pgsql-rbac").register_object_handler(
+        _override_handler("role", "plugin_role")()
+    )
+    driver = RegistryDriver()
+
+    with capture_registry_warnings() as records:
+        driver.register(_override_handler("role", "core_role")())
+
+    assert len(records) == 1
+    message = records[0].getMessage()
+    assert "dbwarden-pgsql-rbac" in message
+    assert "'role'" in message
+
+
+def test_plugin_override_is_logged_only_once_per_plugin_and_type() -> None:
+    PluginRegistrar("dbwarden-pgsql-rbac").register_object_handler(
+        _override_handler("role", "plugin_role")()
+    )
+
+    with capture_registry_warnings() as records:
+        # Drivers get built repeatedly during one diff; the user should not read
+        # the same warning ten times.
+        for _ in range(3):
+            RegistryDriver().register(_override_handler("role", "core_role")())
+
+    assert len(records) == 1
+
+
+def test_plugin_override_holds_when_driver_excludes_plugins() -> None:
+    """A core-only driver must still step aside for a plugin-claimed type.
+
+    The per-driver plugin exclusion exists so plugin ops are not emitted once per
+    driver. If it also dropped the override, core and the plugin would both emit
+    for the same object type.
+    """
+    PluginRegistrar("dbwarden-pgsql-rbac").register_object_handler(
+        _override_handler("role", "plugin_role")()
+    )
+    driver = RegistryDriver(include_plugins=False)
+    driver.register(_override_handler("role", "core_role")())
+
+    upgrade_ops, _rollback_ops = driver.run({}, [], SimpleNamespace())
+
+    assert upgrade_ops == []
+
+
+def test_plugin_declaring_no_api_version_loads() -> None:
+    """Plugins written before the contract was versioned keep working."""
+    from dbwarden.plugin import check_api_compatibility
+
+    def setup(registrar):
+        pass
+
+    check_api_compatibility(setup, "dbwarden-acme")
+
+
+def test_plugin_declaring_the_current_api_version_loads(monkeypatch) -> None:
+    from dbwarden.plugin import PLUGIN_API_ATTR, PLUGIN_API_VERSION, check_api_compatibility
+
+    def setup(registrar):
+        pass
+
+    module = sys.modules[setup.__module__]
+    monkeypatch.setattr(module, PLUGIN_API_ATTR, PLUGIN_API_VERSION, raising=False)
+
+    check_api_compatibility(setup, "dbwarden-acme")
+
+
+def test_plugin_declaring_a_different_api_version_is_refused(monkeypatch) -> None:
+    from dbwarden.plugin import (
+        PLUGIN_API_ATTR,
+        PLUGIN_API_VERSION,
+        PluginApiMismatchError,
+        check_api_compatibility,
+    )
+
+    def setup(registrar):
+        pass
+
+    module = sys.modules[setup.__module__]
+    monkeypatch.setattr(module, PLUGIN_API_ATTR, PLUGIN_API_VERSION + 1, raising=False)
+
+    with pytest.raises(PluginApiMismatchError) as excinfo:
+        check_api_compatibility(setup, "dbwarden-acme")
+
+    message = str(excinfo.value)
+    assert "dbwarden-acme" in message
+    assert str(PLUGIN_API_VERSION) in message
+
+
+def test_incompatible_plugin_is_reported_as_incompatible_not_failed(monkeypatch) -> None:
+    """The state distinguishes a wrong pairing from a broken plugin."""
+    from dbwarden.plugin import PLUGIN_API_ATTR, PLUGIN_API_VERSION, _load_plugin_entry_point
+
+    registered: list[str] = []
+
+    def setup(registrar):
+        registered.append("ran")
+
+    module = sys.modules[setup.__module__]
+    monkeypatch.setattr(module, PLUGIN_API_ATTR, PLUGIN_API_VERSION + 1, raising=False)
+
+    _load_plugin_entry_point(FakeEntryPoint("dbwarden-acme", "1.0.0", setup), "dbwarden-acme")
+
+    from dbwarden.plugin import _LOAD_ERRORS, _LOAD_STATES
+
+    assert _LOAD_STATES["dbwarden-acme"] == "incompatible"
+    assert "plugin API version" in _LOAD_ERRORS["dbwarden-acme"]
+    assert registered == [], "setup() must not run for an incompatible plugin"
+
+
+def _pipeline_override_handler():
+    """A plugin handler claiming `index`, a type core really owns.
+
+    Colliding with a real core type is the whole point: a handler for a type no
+    core handler owns is simply an addition, and would pass an override test
+    without overriding anything.
+    """
+    from dbwarden.engine.core import Op
+
+    class Overriding:
+        object_type = "index"
+        run_phase = RunPhase.DIFF
+        ordering = OrderingConstraint(after=(Anchor.AFTER_TABLES,))
+
+        def extract(self, snapshot):
+            return {}
+
+        def model_spec_from_config(self, config):
+            return {}
+
+        def model_spec_from_tables(self, model_tables):
+            return {"marker": {}}
+
+        def canonicalize(self, spec):
+            return spec
+
+        def diff(self, snap_spec, model_spec):
+            return [Op("add_index", {"table": "FROM_PLUGIN"}, {})], []
+
+        def emit(self, op, db_name=None, **kwargs):
+            return []
+
+    return Overriding()
+
+
+def test_override_replaces_core_handler_through_the_snapshot_diff() -> None:
+    """End to end: the plugin emits, core does not, and neither is doubled.
+
+    RegistryDriver-level tests do not cover this. `diff_models_against_snapshot`
+    builds around ten drivers and runs plugin handlers in a separate pass, so the
+    override and the de-duplication interact only here.
+    """
+    from dbwarden.engine.snapshot import diff_models_against_snapshot
+
+    PluginRegistrar("dbwarden-fake").register_object_handler(_pipeline_override_handler())
+
+    upgrade_ops, _rollback_ops = diff_models_against_snapshot(
+        [], {"tables": {}, "enums": {}, "indexes": {}, "constraints": {}}
+    )
+
+    index_ops = [op for op in upgrade_ops if op.get("type") == "add_index"]
+    assert len(index_ops) == 1
+    assert index_ops[0]["table"] == "FROM_PLUGIN"
+
+
+def test_override_is_announced_during_a_real_diff() -> None:
+    from dbwarden.engine.snapshot import diff_models_against_snapshot
+
+    PluginRegistrar("dbwarden-fake").register_object_handler(_pipeline_override_handler())
+
+    with capture_registry_warnings() as records:
+        diff_models_against_snapshot(
+            [], {"tables": {}, "enums": {}, "indexes": {}, "constraints": {}}
+        )
+
+    assert len(records) == 1
+    assert "index" in records[0].getMessage()
+
+
+def test_override_replaces_core_handler_through_the_offline_diff() -> None:
+    """The offline (state-based) path has the same structure and the same risk."""
+    from dbwarden.engine.offline import diff_model_states
+
+    PluginRegistrar("dbwarden-fake").register_object_handler(_pipeline_override_handler())
+
+    upgrade_ops, _rollback_ops = diff_model_states({"tables": {}}, {"tables": {}})
+
+    index_ops = [op for op in upgrade_ops if op.get("type") == "add_index"]
+    assert len(index_ops) == 1
+    assert index_ops[0]["table"] == "FROM_PLUGIN"
+
+
+def test_plugin_handler_for_a_new_type_does_not_displace_core() -> None:
+    """A type core does not own is an addition, and core keeps its own handlers."""
+    from dbwarden.engine.snapshot import diff_models_against_snapshot
+
+    from dbwarden.engine.core import Op
+
+    class NewType:
+        object_type = "widget"
+        run_phase = RunPhase.DIFF
+        ordering = OrderingConstraint(after=(Anchor.AFTER_TABLES,))
+
+        def extract(self, snapshot):
+            return {}
+
+        def model_spec_from_config(self, config):
+            return {}
+
+        def model_spec_from_tables(self, model_tables):
+            return {"w": {}}
+
+        def canonicalize(self, spec):
+            return spec
+
+        def diff(self, snap_spec, model_spec):
+            return [Op("create_widget", {"name": "w"}, {})], []
+
+        def emit(self, op, db_name=None, **kwargs):
+            return []
+
+    PluginRegistrar("dbwarden-fake").register_object_handler(NewType())
+
+    with capture_registry_warnings() as records:
+        upgrade_ops, _ = diff_models_against_snapshot(
+            [], {"tables": {}, "enums": {}, "indexes": {}, "constraints": {}}
+        )
+
+    assert [op for op in upgrade_ops if op.get("type") == "create_widget"]
+    assert records == []
 
 
 def test_core_duplicate_object_handlers_still_raise() -> None:

@@ -35,7 +35,7 @@ _CH_SETTING_KEYS: frozenset[str] = frozenset({
 })
 
 # NOTE: immutable keys (ch_partition_by, ch_primary_key, ch_sample_by) are
-# deliberately excluded — they are refused by check_immutable() before this
+# deliberately excluded; they are refused by check_immutable() before this
 # list is iterated.  Never add them back here.
 _CH_OPTION_KEYS: frozenset[str] = frozenset({
     "ch_engine",

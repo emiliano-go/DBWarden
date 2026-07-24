@@ -12,7 +12,7 @@ Rule 3: Handlers live ONLY in their own backend package.
          3a: backends/<name>/handlers/ must define only <name>'s handlers.
          3b: No package outside backends/ may define handler classes.
 
-Note: engine/model_discovery/ is intentionally exempt — it translates
+Note: engine/model_discovery/ is intentionally exempt; it translates
       models into backend-specific SQL and legitimately imports from
       engine/backends/ for type mapping, rendering, and code generation.
 """
@@ -138,7 +138,7 @@ def check_file(path: Path) -> list[str]:
 
     # Rule 3b: no handler classes outside backends/
     if "backends" not in rel.parts:
-        # Core protocol defines ObjectHandler which is a Protocol — allow it
+        # Core protocol defines ObjectHandler which is a Protocol: allow it
         if rel.name == "protocol.py" and "core" in rel.parts:
             pass
         else:

@@ -79,7 +79,7 @@ seo_html: "<title>DBWarden - DBWarden Documentation</title>\n<meta name=\"descri
 ---
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/emiliano-go/DBWarden/refs/heads/main/assets/icon.png" alt="DBWarden" width="128"/>
+  <img src="https://raw.githubusercontent.com/dbwarden-org/dbwarden/refs/heads/main/assets/icon.png" alt="DBWarden" width="128"/>
 </p>
 <p align="center">
   <strong style="font-size: 2.5em;">DBWarden</strong>
@@ -94,21 +94,21 @@ seo_html: "<title>DBWarden - DBWarden Documentation</title>\n<meta name=\"descri
   <a href="https://pypi.org/project/dbwarden/">
     <img src="https://img.shields.io/pypi/v/dbwarden?logo=pypi&logoColor=white&style=for-the-badge" alt="PyPI">
   </a>
-  <a href="https://github.com/emiliano-go/DBWarden/blob/main/LICENSE">
+  <a href="https://github.com/dbwarden-org/dbwarden/blob/main/LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-10AC84?style=for-the-badge" alt="License">
   </a>
-  <a href="https://deepwiki.com/emiliano-go/DBWarden/">
+  <a href="https://deepwiki.com/dbwarden-org/dbwarden/">
     <img src="https://img.shields.io/badge/DeepWiki-8A2BE2?logo=readthedocs&logoColor=white&style=for-the-badge" alt="DeepWiki">
   </a>
-  <a href="https://codecov.io/gh/emiliano-go/DBWarden">
-    <img src="https://img.shields.io/codecov/c/github/emiliano-go/DBWarden?logo=codecov&logoColor=white&style=for-the-badge" alt="Codecov">
+  <a href="https://codecov.io/gh/dbwarden-org/dbwarden">
+    <img src="https://img.shields.io/codecov/c/github/dbwarden-org/dbwarden?logo=codecov&logoColor=white&style=for-the-badge" alt="Codecov">
   </a>
 </p>
 
 <p align="center">
   <strong><a href="https://dbwarden.emiliano-go.com/">Full documentation</a></strong>
   &nbsp;|&nbsp;
-  <strong><a href="https://github.com/emiliano-go/DBWarden">Source Code</a></strong>
+  <strong><a href="https://github.com/dbwarden-org/dbwarden">Source Code</a></strong>
 </p>
 
 ---
@@ -123,7 +123,7 @@ There are no migration scripts to write or maintain. There is no migration runti
 - Supports PostgreSQL, MySQL, MariaDB, SQLite, and ClickHouse
 - Uses a registry driven PostgreSQL pipeline for diffs and SQL emission
 - Manages one or many databases from one typed config source
-- Adds safety tooling, schema diffing, seed tracking, status commands, and FastAPI integration
+- Adds safety tooling, schema diffing, seed tracking, and status commands
 
 - Migrations generated from your models, not written by hand
 - Plain SQL output: reviewable, committable, executable anywhere
@@ -162,15 +162,11 @@ Typical adoption path in an existing project:
 5. Optionally enable:
    - Migration impact analysis for safer deploys
    - Offline mode for CI pipelines without a database service
-   - FastAPI integration for startup validation and health checks
 
 ## Installation
 
 ```bash
 uv add dbwarden
-uv add "dbwarden[fastapi]"   # FastAPI integration
-uv add "dbwarden[metrics]"   # Prometheus metrics
-uv add "dbwarden[sandbox]"   # Docker-backed test databases
 ```
 
 Requirements: Python 3.12+, SQLAlchemy 2.0+.
@@ -182,9 +178,6 @@ Optional dependency groups:
 | `[postgres]` | Yes     | `psycopg2-binary`                    |
 | `[mysql]`    |         | `pymysql`                            |
 | `[clickhouse]` |       | `clickhouse-connect`, `aiohttp`      |
-| `[fastapi]`  |         | `fastapi`, `pydantic`, `asyncpg`, `aiosqlite` |
-| `[sandbox]`  |         | `testcontainers`                     |
-| `[metrics]`  |         | `prometheus-client`                  |
 | `[dev]`      |         | `pytest`, `zensical`, `seoslug`, `httpx2` |
 
 ## Quick start
@@ -452,83 +445,13 @@ dbwarden seed list     # shows applied seeds and checksum status
 
 **Dev mode**: Run SQLite locally against a PostgreSQL production schema with automatic SQL translation.
 
-**Sandbox and dry-run**: Test migrations in a temporary database or preview SQL without touching anything.
-
 **Multi-database**: One project, multiple databases, full isolation between them. Use `model_tables` to assign table ownership per database when sharing model paths.
-
-**Observability**: Prometheus metrics (6 families), structured JSON logging, and health/status endpoints.
 
 **Generate models**: Reverse-engineer a live database (PostgreSQL, MySQL, ClickHouse) into SQLAlchemy models with `dbwarden generate-models`.
 
 **`dbwarden diff`**: Read-only comparison tool. Outputs as Rich table, JSON, or raw SQL. Supports `--offline` mode.
 
 **Graceful disconnection**: Automatic retry logic and clear error messages when a database is unreachable.
-
----
-
-## FastAPI integration
-
-DBWarden includes optional FastAPI integration for projects that use it. It is not required.
-
-```python
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from dbwarden.extensions.fastapi import dbwarden_lifespan
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with dbwarden_lifespan(app, mode="check"):
-        yield
-
-app = FastAPI(lifespan=lifespan)
-```
-
-On startup: schema validation or auto-migration, readiness gate, connection pool warmup, optional seed application. On shutdown: engine pools and ClickHouse clients disposed.
-
-Sessions are exposed directly from the configuration object:
-
-```python
-@app.get("/users")
-async def list_users(session: primary.async_session):
-    result = await session.execute(select(User))
-    return result.scalars().all()
-```
-
-Health and management routers:
-
-```python
-from dbwarden.extensions.fastapi import DBWardenHealthRouter, DBWardenRouter
-
-app.include_router(DBWardenHealthRouter(), prefix="/health")
-app.include_router(DBWardenRouter(), prefix="/db")
-```
-
-`DBWardenHealthRouter` exposes `/liveness`, `/readiness`, and per-database status. `DBWardenRouter` exposes `GET /status` and `POST /migrate`.
-
-### Auto-generated Pydantic schemas
-
-`@auto_schema` generates `CreateSchema`, `UpdateSchema`, and `PublicSchema` from model annotations, eliminating duplicated definitions between your ORM layer and your API layer.
-
-```python
-from dbwarden.databases import auto_schema
-
-@auto_schema
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True)
-    email = Column(String(255), nullable=False)
-    password_hash = Column(String(255), nullable=False)
-
-    class Meta(TableMeta):
-        class password_hash:
-            public = False
-```
-
-```python
-user = User.CreateSchema(email="a@b.com", password_hash="secret")
-user.to_schema()  # PublicSchema excludes password_hash automatically
-```
 
 ---
 

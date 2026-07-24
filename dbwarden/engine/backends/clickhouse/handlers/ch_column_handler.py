@@ -8,7 +8,7 @@ from dbwarden.engine.snapshot import MigrationStatement, StatementOrder
 
 
 class ChColumnHandler(ObjectHandler):
-    """ClickHouse column meta changes — codec, TTL, default, materialized, alias,
+    """ClickHouse column meta changes: codec, TTL, default, materialized, alias,
     low_cardinality, nullable, and type changes.
 
     Previously handled inside the PostgreSQL ColumnHandler, which violated the

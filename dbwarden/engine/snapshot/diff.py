@@ -91,7 +91,7 @@ def diff_models_against_snapshot(
     _con_handler = ConstraintHandler()
     _con_handler._snapshot = snapshot
     _con_handler._view_tables = {t.name for t in model_tables if getattr(t, 'object_type', None) == 'view'}
-    _con_driver = RegistryDriver()
+    _con_driver = RegistryDriver(include_plugins=False)
     _con_driver.register(_con_handler)
     _con_up, _con_rb = _con_driver.run(snapshot, model_tables, None)
     _extend_ops(upgrade_ops, _con_up)
@@ -100,7 +100,7 @@ def diff_models_against_snapshot(
     from dbwarden.engine.backends.postgresql.handlers import ColumnHandler
     _col_handler = ColumnHandler()
     _col_handler._db_name = db_name
-    _col_driver = RegistryDriver()
+    _col_driver = RegistryDriver(include_plugins=False)
     _col_driver.register(_col_handler)
     _col_up, _col_rb = _col_driver.run(snapshot, model_tables, None)
     if backend_is_ch:
@@ -123,7 +123,7 @@ def diff_models_against_snapshot(
     if is_ch:
         _ch_handler = ChTableHandler()
         _ch_handler.clickhouse_engine_recreate = clickhouse_engine_recreate
-        _ch_driver = RegistryDriver()
+        _ch_driver = RegistryDriver(include_plugins=False)
         _ch_driver.register(_ch_handler)
         _ch_driver.register(ChColumnHandler())
         _ch_driver.register(ChMaterializedViewHandler())
@@ -138,54 +138,54 @@ def diff_models_against_snapshot(
         _extend_ops(rollback_ops, _ch_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import PgTableHandler
-    _pgt_driver = RegistryDriver()
+    _pgt_driver = RegistryDriver(include_plugins=False)
     _pgt_driver.register(PgTableHandler())
     _pgt_up, _pgt_rb = _pgt_driver.run(snapshot, model_tables, None)
     _extend_ops(upgrade_ops, _pgt_up)
     _extend_ops(rollback_ops, _pgt_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import IndexHandler
-    _idx_driver = RegistryDriver()
+    _idx_driver = RegistryDriver(include_plugins=False)
     _idx_driver.register(IndexHandler())
     _idx_up, _idx_rb = _idx_driver.run(snapshot, model_tables, None)
     _extend_ops(upgrade_ops, _idx_up)
     _extend_ops(rollback_ops, _idx_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import (
-        EventTriggerHandler,
-        ExtendedStatisticsHandler,
-        FunctionHandler,
         PartitionHandler,
         StatisticsHandler,
-        TriggerHandler,
     )
-    _pg_pre_driver = RegistryDriver()
-    _pg_pre_driver.register(EventTriggerHandler())
-    _pg_pre_driver.register(ExtendedStatisticsHandler())
-    _pg_pre_driver.register(FunctionHandler())
+    _pg_pre_driver = RegistryDriver(include_plugins=False)
     _pg_pre_driver.register(PartitionHandler())
     _pg_pre_driver.register(StatisticsHandler())
-    _pg_pre_driver.register(TriggerHandler())
     _pg_pre_up, _pg_pre_rb = _pg_pre_driver.run(snapshot, model_tables, None)
     _extend_ops(upgrade_ops, _pg_pre_up)
     _extend_ops(rollback_ops, _pg_pre_rb)
 
-    from dbwarden.engine.backends.postgresql.handlers import StorageParamsHandler
-    _pg5_driver = RegistryDriver()
-    _pg5_driver.register(StorageParamsHandler())
-    _pg5_up, _pg5_rb = _pg5_driver.run(snapshot, model_tables, None)
-    _extend_ops(upgrade_ops, _pg5_up)
-    _extend_ops(rollback_ops, _pg5_rb)
+    # Plugin-registered object handlers run exactly once, in their own pass.
+    # Every core driver above is scoped to the handlers it registers, so this is
+    # the only place plugin ops enter the model diff.
+    from dbwarden.plugin import ObjectPluginRegistry as _ObjectPluginRegistry
+
+    _plugin_driver = RegistryDriver(include_plugins=False)
+    _has_plugin_handlers = False
+    for _registration in _ObjectPluginRegistry.handlers().values():
+        _plugin_driver.register(_registration.handler)
+        _has_plugin_handlers = True
+    if _has_plugin_handlers:
+        _plugin_up, _plugin_rb = _plugin_driver.run(snapshot, model_tables, None)
+        _extend_ops(upgrade_ops, _plugin_up)
+        _extend_ops(rollback_ops, _plugin_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import ViewHandler
-    _view_driver = RegistryDriver()
+    _view_driver = RegistryDriver(include_plugins=False)
     _view_driver.register(ViewHandler())
     _view_up, _view_rb = _view_driver.run(snapshot, model_tables, None)
     _extend_ops(upgrade_ops, _view_up)
     _extend_ops(rollback_ops, _view_rb)
 
     from dbwarden.engine.backends.postgresql.handlers import TableHandler
-    _table_driver = RegistryDriver()
+    _table_driver = RegistryDriver(include_plugins=False)
     _table_driver.register(TableHandler())
     _table_up, _table_rb = _table_driver.run(snapshot, model_tables, None)
     _extend_ops(upgrade_ops, _table_up)
@@ -226,7 +226,7 @@ def diff_models_against_snapshot(
         rollback_ops = [op for op in rollback_ops if not _is_redundant_initial_table_op(op)]
 
     from dbwarden.engine.backends.mysql.handlers import MyTableHandler
-    _my_driver = RegistryDriver()
+    _my_driver = RegistryDriver(include_plugins=False)
     _my_driver.register(MyTableHandler())
     _my_up, _my_rb = _my_driver.run(snapshot, model_tables, None)
     _extend_ops(upgrade_ops, _my_up)

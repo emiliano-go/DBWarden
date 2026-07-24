@@ -27,7 +27,9 @@ The Rich table shows every discovered distribution with its version, tier, trust
 Column meanings:
 
 - **Trusted**: `yes` if the plugin is allowed to load (official, approved-and-current, or consented community).
-- **State**: `loaded`, `skipped` (untrusted community), `failed` (raised during `setup`), or `discovered`.
+- **State**: `loaded`, `skipped` (untrusted community), `failed` (raised during `setup`), `incompatible` (built against a different plugin API version), or `discovered`.
+
+An `incompatible` plugin is not broken: it targets a different version of the plugin contract than this DBWarden provides, so it was refused rather than allowed to register and produce migrations under the wrong assumptions. The **Error** row names both versions. Upgrade the plugin, or pin DBWarden to a release that provides the version it wants.
 - **Hooks / Objects**: the value hooks and object handler types the plugin registered. A discovered-but-skipped plugin registers nothing, so these stay empty.
 - **Lock**: the lockfile `verified` value (e.g. `provenance`) for provenance-locked installs.
 

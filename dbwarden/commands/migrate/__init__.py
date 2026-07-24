@@ -127,16 +127,27 @@ def migrate_single(
 
     sandbox_provider = None
     _sandbox_cm = None
+    _sandbox_started = False
     if sandbox:
-        from dbwarden.engine.sandbox import create_sandbox_provider
         from dbwarden.database.connection import sandbox_override as _sandbox_ctx
+        from dbwarden.plugin import HookRegistry
 
-        sandbox_provider = create_sandbox_provider(config.database_type)
-        sandbox_url = sandbox_provider.start()
-        sandbox_db_type = sandbox_provider.get_database_type()
-        warning(f"Sandbox started: {sandbox_provider.__class__.__name__} ({sandbox_url})")
+        sandbox_url: str | None = None
+        sandbox_db_type: str | None = None
+        if HookRegistry.is_registered("sandbox_provider_start"):
+            result = HookRegistry.execute_single("sandbox_provider_start", config.database_type)
+            if isinstance(result, tuple) and len(result) == 2:
+                sandbox_url, sandbox_db_type = result
+                warning(f"Sandbox started via plugin ({sandbox_db_type}): {sandbox_url}")
+        if sandbox_url is None:
+            from dbwarden.engine.sandbox import SQLiteSandboxProvider
+            sandbox_provider = SQLiteSandboxProvider()
+            sandbox_url = sandbox_provider.start()
+            sandbox_db_type = sandbox_provider.get_database_type()
+            warning(f"Sandbox started (built-in {sandbox_provider.__class__.__name__}): {sandbox_url}")
         _sandbox_cm = _sandbox_ctx(sandbox_url, sandbox_db_type)
         _sandbox_cm.__enter__()
+        _sandbox_started = True
 
     lock_acquired = False
     try:
@@ -335,8 +346,12 @@ def migrate_single(
     finally:
         if lock_acquired:
             release_lock(db_name)
-        if sandbox_provider:
-            sandbox_provider.stop()
+        if _sandbox_started:
+            from dbwarden.plugin import HookRegistry
+            if HookRegistry.is_registered("sandbox_provider_stop"):
+                HookRegistry.execute_single("sandbox_provider_stop")
+            elif sandbox_provider is not None:
+                sandbox_provider.stop()
             warning("Sandbox stopped.")
         if _sandbox_cm is not None:
             _sandbox_cm.__exit__(None, None, None)

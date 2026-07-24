@@ -183,22 +183,24 @@ def recover_model_state_cmd(database: str | None = None) -> None:
         error("No migration files found on disk to replay.")
         return
 
-    from dbwarden.engine.sandbox import SQLiteSandboxProvider, create_sandbox_provider
+    from dbwarden.plugin import HookRegistry
+    from dbwarden.engine.sandbox import SQLiteSandboxProvider
 
-    sandbox_provider: SQLiteSandboxProvider
-    if config.database_type == "sqlite":
+    sandbox_url: str | None = None
+    sandbox_db_type: str | None = None
+    sandbox_provider: SQLiteSandboxProvider | None = None
+    if HookRegistry.is_registered("sandbox_provider_start"):
+        result = HookRegistry.execute_single("sandbox_provider_start", config.database_type)
+        if isinstance(result, tuple) and len(result) == 2:
+            sandbox_url, sandbox_db_type = result
+            info(f"Using {sandbox_db_type} sandbox via plugin.")
+    if sandbox_url is None:
         sandbox_provider = SQLiteSandboxProvider()
-    else:
-        try:
-            sandbox_provider = create_sandbox_provider(config.database_type)
-            info(f"Using {config.database_type} sandbox via testcontainers.")
-        except (ImportError, ValueError):
-            sandbox_provider = SQLiteSandboxProvider()
+        sandbox_url = sandbox_provider.start()
+        sandbox_db_type = sandbox_provider.get_database_type()
+        if config.database_type != "sqlite":
             warning("Falling back to SQLite sandbox. Some database-specific SQL may fail.")
-
-    sandbox_url = sandbox_provider.start()
-    sandbox_db_type = sandbox_provider.get_database_type()
-    warning(f"Sandbox started: {sandbox_provider.__class__.__name__} ({sandbox_url})")
+    warning(f"Sandbox started ({sandbox_db_type}): {sandbox_url}")
 
     from dbwarden.database.connection import get_db_connection, sandbox_override
 
@@ -253,7 +255,10 @@ def recover_model_state_cmd(database: str | None = None) -> None:
                 _tables.append(_build_model_table_from_inspector(_inspector, _tname))
             state = model_state_to_dict(_tables, dbwarden_version=__version__)
 
-    sandbox_provider.stop()
+    if HookRegistry.is_registered("sandbox_provider_stop"):
+        HookRegistry.execute_single("sandbox_provider_stop")
+    elif sandbox_provider is not None:
+        sandbox_provider.stop()
     warning("Sandbox stopped.")
 
     from dbwarden.commands.make_migrations import get_model_state_path

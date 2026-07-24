@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-from dbwarden.logging import get_logger
-from dbwarden.output import error
-
 
 def export_seeds_cmd(
     database: str | None = None,

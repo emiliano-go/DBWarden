@@ -81,8 +81,9 @@ dbwarden-example/
 
 ## The Core Contract
 
-- Depend on the **public** `dbwarden.plugin` API (`PluginRegistrar`) and, for object plugins, the public types re-exported from `dbwarden.engine.core` (`Anchor`, `OrderingConstraint`, `Op`, `MigrationStatement`, `RunPhase`).
-- **Do not** import private internals such as `dbwarden.commands.*`, `dbwarden.database.*`, or non-exported `dbwarden.engine.*` symbols. Only official extracted-from-core packages do that, and only against a pinned core version.
+- **You may import anything from `dbwarden`.** There is no allowlist and no import check to satisfy. If your plugin needs `dbwarden.output` to render like the rest of the CLI, or `dbwarden.repositories.*` to read a tracking table, import it.
+- Three surfaces are **stable** and change only on a major version: `dbwarden.plugin` (`PluginRegistrar`, the registries, hook errors), `dbwarden.exceptions`, and `dbwarden.engine.core` including `dbwarden.engine.core.plugin_api`. Prefer them where they cover your need, since that is what you will not have to revisit on a core upgrade.
+- Anything deeper is supported but moves faster. Pin your `dbwarden` dependency to the range you test against, and run CI against those versions. `plugin_conformance.core_imports_outside_stable_api(pkg)` lists your deeper imports so an upgrade has a checklist.
 - Use public **ordering anchors**, never private `StatementOrder` integers, those are renumbered freely.
 
 ## Rules

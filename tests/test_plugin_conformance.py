@@ -14,7 +14,7 @@ from dbwarden.plugin_conformance import (
     assert_hook_signatures,
     assert_idempotent_setup,
     assert_import_has_no_side_effects,
-    assert_no_core_internals_imported,
+    assert_core_imports_resolve,
     assert_object_handler_conformance,
     assert_ordering_constraint_satisfiable,
     assert_setup_registers,
@@ -250,9 +250,9 @@ def test_assert_import_side_effect_fails(make_module):
         assert_import_has_no_side_effects(name)
 
 
-# --- 5. no core internals imported ----------------------------------------
+# --- 5. core imports resolve ----------------------------------------------
 
-def test_assert_no_core_internals_passes(make_module):
+def test_assert_core_imports_resolve_passes_on_stable_api(make_module):
     name = make_module(
         "public_plugin",
         "from dbwarden.plugin import PluginRegistrar\n"
@@ -260,15 +260,40 @@ def test_assert_no_core_internals_passes(make_module):
         "def setup(registrar):\n    pass\n",
         package=True,
     )
-    assert_no_core_internals_imported(name)
+    assert_core_imports_resolve(name)
 
 
-def test_assert_no_core_internals_fails(make_module):
+def test_assert_core_imports_resolve_allows_deeper_core_imports(make_module):
     name = make_module(
         "internal_plugin",
         "import dbwarden.engine.snapshot\n"
         "def setup(registrar):\n    pass\n",
         package=True,
     )
-    with pytest.raises(ConformanceError, match="non-public DBWarden internals"):
-        assert_no_core_internals_imported(name)
+    assert_core_imports_resolve(name)
+
+
+def test_assert_core_imports_resolve_fails_on_missing_module(make_module):
+    name = make_module(
+        "stale_plugin",
+        "import dbwarden.engine.no_such_module\n"
+        "def setup(registrar):\n    pass\n",
+        package=True,
+    )
+    with pytest.raises(ConformanceError, match="does not\\s+provide|not found"):
+        assert_core_imports_resolve(name)
+
+
+def test_core_imports_outside_stable_api_reports_without_failing(make_module):
+    from dbwarden.plugin_conformance import core_imports_outside_stable_api
+
+    name = make_module(
+        "mixed_plugin",
+        "from dbwarden.engine.core import Op\n"
+        "import dbwarden.engine.snapshot\n"
+        "def setup(registrar):\n    pass\n",
+        package=True,
+    )
+    reported = core_imports_outside_stable_api(name)
+    assert len(reported) == 1
+    assert "dbwarden.engine.snapshot" in reported[0]

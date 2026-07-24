@@ -1,4 +1,4 @@
-"""Multi-version ClickHouse drift audit — ported from /tmp/ch_multi_version_audit.py.
+"""Multi-version ClickHouse drift audit, ported from /tmp/ch_multi_version_audit.py.
 
 Spins up one container per version, creates 25+ tables/MVs/extras, extracts
 via ``_extract_clickhouse_schema_snapshot``, builds a model-side dict,
@@ -213,19 +213,19 @@ def make_cases():
 
     # ── Cases 25–36: new features ──
 
-    # Case 32: special engines — Null
+    # Case 32: special engines: Null
     add("null_table",
         "CREATE TABLE null_table (a UInt64) ENGINE = Null",
         {"engine": null(), "order_by": None},
         [{"name": "a", "type": "UInt64"}])
 
-    # Case 32b: special engines — Memory
+    # Case 32b: special engines: Memory
     add("memory_table",
         "CREATE TABLE memory_table (a UInt64) ENGINE = Memory",
         {"engine": memory(), "order_by": None},
         [{"name": "a", "type": "UInt64"}])
 
-    # Case 32c: special engines — Merge
+    # Case 32c: special engines: Merge
     add("merge_table",
         "CREATE TABLE merge_source (a UInt64) ENGINE = MergeTree ORDER BY a",
         {"engine": merge("'audit'", "'merge_source'"), "order_by": None},
@@ -238,7 +238,7 @@ def make_cases():
         {"engine": merge_tree(), "order_by": "a"},
         [{"name": "a", "type": "UInt64", "comment": "col desc"}])
 
-    # Case 34: comment removal — empty comment canonicalizes to None
+    # Case 34: comment removal: empty comment canonicalizes to None
     add("comment_empty",
         "CREATE TABLE comment_empty (a UInt64) ENGINE = MergeTree ORDER BY a",
         {"engine": merge_tree(), "order_by": "a"},
@@ -260,10 +260,10 @@ def make_cases():
     #
     # These test that render_expr() output matches what the server reports.
     # If compiled expressions diverge from server form, the whole widening is
-    # wrong — which is why these MUST be audit cases against a live server,
+    # wrong, which is why these MUST be audit cases against a live server,
     # not unit tests.
 
-    # Case 37: partition_by=func.toYYYYMM(...) — compiled expression vs server form
+    # Case 37: partition_by=func.toYYYYMM(...), compiled expression vs server form
     add("compiled_partition",
         "CREATE TABLE compiled_partition (event_date Date, amount Float64) "
         "ENGINE = MergeTree ORDER BY event_date PARTITION BY toYYYYMM(event_date)",

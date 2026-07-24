@@ -76,7 +76,7 @@ class ClusterableStatement:
 
         If the pattern is not matched the entire string is treated as
         *prefix* (no suffix), which means ``ON CLUSTER`` is appended
-        at the end — likely wrong, but safe for non-DDL pass-through.
+        at the end. Likely wrong, but safe for non-DDL pass-through.
         """
         import re
         m = re.search(

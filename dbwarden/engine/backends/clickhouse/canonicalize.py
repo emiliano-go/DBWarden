@@ -1,9 +1,9 @@
-"""ClickHouse spec canonicalization — applied to both sides before comparison.
+"""ClickHouse spec canonicalization: applied to both sides before comparison.
 
 Design
 ------
 All rules apply identically to the extract side and model side.  A helper
-called on both converges them; nothing is "the truth" — canonicalization is
+called on both converges them; nothing is "the truth"; canonicalization is
 the truth.
 
 The functions are granular so the audit harness can call them individually
@@ -81,10 +81,10 @@ def canonicalize_primary_key(spec: dict) -> dict:
 
     The server always returns ``system.tables.primary_key = sorting_key``
     when no explicit PRIMARY KEY is set.  An explicit PK identical to
-    ORDER BY is semantically a no-op.  Omitting on both sides is correct
-    — not just a papering-over.
+    ORDER BY is semantically a no-op.  Omitting on both sides is correct,
+    not just a papering-over.
 
-    Also normalises None to absent — same pattern as TTL null vs [].
+    Also normalises None to absent, same pattern as TTL null vs [].
     Compare AFTER normalizing shapes via ``_normalize_order_by`` so that
     ``"a"`` matches ``["a"]`` and ``"a, b"`` matches ``["a", "b"]``.
     """
@@ -106,7 +106,7 @@ def canonicalize_settings(spec: dict, *, defaults: dict[str, str]) -> dict:
 
     ``defaults`` is a ``{name: value}`` map snapshotted at extract time from
     ``system.merge_tree_settings WHERE changed = 0``.  Unknown settings are
-    left alone — never guess.
+    left alone; never guess.
 
     A user who explicitly declares a default value to pin it gets it stripped.
     Accepted, and identical to the PG ``MATCH SIMPLE`` precedent.
@@ -159,7 +159,7 @@ def qualify(name: str, database: str) -> str:
 
     ONE shared helper for both sides.  If ``name`` already contains ``.``
     it is returned unchanged (the extract side).  If bare, it is qualified
-    (the model side).  Two inline implementations would drift — same lesson
+    (the model side).  Two inline implementations would drift; same lesson
     as PG's ``pg_inherits`` schema-qualification.
     """
     return name if "." in name else f"{database}.{name}"
@@ -190,7 +190,7 @@ def canonicalize_mv_names(spec: dict, *, database: str) -> dict:
 def is_append_only_order_by(old: Any, new: Any) -> bool:
     """Check that an ORDER BY change is a clean append (extend-only).
 
-    ClickHouse only allows *extending* the sorting key — appending new
+    ClickHouse only allows *extending* the sorting key by appending new
     columns at the end.  Reordering, truncating, or altering existing
     columns produces invalid DDL.
 
@@ -214,7 +214,7 @@ def is_append_only_order_by(old: Any, new: Any) -> bool:
 # Only keys that produce invalid DDL when emit() tries to ALTER them.
 # Keys with existing handler paths (engine, select_statement, to_table,
 # zookeeper_path, replica_name, object_type, dictionary) are covered by the
-# recreate-flag mechanism and are NOT listed here — they are refused (or
+# recreate-flag mechanism and are NOT listed here; they are refused (or
 # allowed) by that separate gate.
 _IMMUTABLE_KEYS: frozenset[str] = frozenset({
     "ch_partition_by",
@@ -240,7 +240,7 @@ _IMMUTABLE_MESSAGES: dict[str, str] = {
     ),
     "ch_engine": (
         "Changing the table engine requires a full rebuild. "
-        "The engine is immutable in-place — create a new table with the target "
+        "The engine is immutable in-place; create a new table with the target "
         "engine, migrate data via INSERT SELECT, rename, and drop the old table. "
         "Use data_op() to author a controlled rebuild, or re-run with "
         "--clickhouse-engine-recreate to auto-generate the swap sequence."

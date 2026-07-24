@@ -113,10 +113,10 @@ if typing.TYPE_CHECKING:
 class CHTableMeta(TableMeta):
     """ClickHouse table-level metadata; inherit in ``class Meta``.
 
-    Two forms are supported — the typed builder (preferred) and loose attrs
+    Two forms are supported: the typed builder (preferred) and loose attrs
     (backward-compatible):
 
-    **Preferred — typed builder with full IDE autocomplete**::
+    **Preferred: typed builder with full IDE autocomplete**::
 
         from dbwarden import ch_table, merge_tree, ChIndexSpec
 
@@ -131,7 +131,7 @@ class CHTableMeta(TableMeta):
                 ],
             )
 
-    **Legacy — loose attributes** (still supported, no autocomplete)::
+    **Legacy: loose attributes** (still supported, no autocomplete)::
 
         class Meta(CHTableMeta):
             ch_engine = ChEngineSpec("MergeTree")

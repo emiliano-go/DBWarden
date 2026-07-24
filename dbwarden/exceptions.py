@@ -80,3 +80,20 @@ class ImmutableChangeError(DBWardenError):
     """
 
     pass
+
+
+__all__ = [
+    "ConfigurationError",
+    "DBDisconnectedError",
+    "DBWardenConfigError",
+    "DBWardenError",
+    "DatabaseError",
+    "DirectoryNotFoundError",
+    "ImmutableChangeError",
+    "LockError",
+    "NoMigrationsError",
+    "NoSeedsError",
+    "PendingMigrationsError",
+    "SeedError",
+    "VersionNotFoundError",
+]

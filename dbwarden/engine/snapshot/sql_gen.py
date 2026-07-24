@@ -110,18 +110,13 @@ def snapshot_diff_to_sql(
     from dbwarden.engine.backends.postgresql.handlers import (
         ColumnHandler,
         ConstraintHandler,
-        EventTriggerHandler,
-        ExtendedStatisticsHandler,
-        FunctionHandler,
         IndexHandler,
         PartitionHandler,
         PgTableHandler,
         RenameTableHandler,
         SchemaHandler,
         StatisticsHandler,
-        StorageParamsHandler,
         TableHandler,
-        TriggerHandler,
         ViewHandler,
     )
     from dbwarden.engine.backends.clickhouse.handlers import (
@@ -151,9 +146,6 @@ def snapshot_diff_to_sql(
         ConstraintHandler(),
         ChDataOpHandler(),
         ChDictionaryHandler(),
-        EventTriggerHandler(),
-        ExtendedStatisticsHandler(),
-        FunctionHandler(),
         IndexHandler(),
         ChMaterializedViewHandler(),
         MyTableHandler(),
@@ -164,9 +156,7 @@ def snapshot_diff_to_sql(
         SchemaHandler(),
         ChSkipIndexHandler(),
         StatisticsHandler(),
-        StorageParamsHandler(),
         TableHandler(),
-        TriggerHandler(),
         ViewHandler(),
     ):
         for _ot in getattr(_h, "op_types", (_h.object_type,)):

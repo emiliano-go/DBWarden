@@ -1,7 +1,7 @@
 """Doc-build gate: every code example in docs must be importable and pass discovery.
 
 This test extracts code from the Markdown doc files and runs them through
-model discovery — verifying they produce valid specs and register correctly.
+model discovery: verifying they produce valid specs and register correctly.
 """
 
 
@@ -10,7 +10,7 @@ def _check_doc_imports():
 
     Rather than re-parsing Markdown (fragile), we test the *patterns* that
     the doc examples demonstrate.  If a new example uses a pattern not covered
-    here, this test will NOT catch it — the docs build gate is a best-effort
+    here, this test will NOT catch it; the docs build gate is a best-effort
     check that the class API works end-to-end as documented.
     """
     # Pattern 1: MaterializedView subclass with Mode B (to= given, no columns)

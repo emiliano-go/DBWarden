@@ -289,7 +289,7 @@ def collapsing_merge_tree(
     *,
     settings: MergeTreeSettings | None = None,
 ) -> ChEngineSpec:
-    """``CollapsingMergeTree(sign_col)`` — rows with opposite sign cancel on merge."""
+    """``CollapsingMergeTree(sign_col)``: rows with opposite sign cancel on merge."""
     return ChEngineSpec("CollapsingMergeTree", args=(sign_col,))
 
 
@@ -310,7 +310,7 @@ def graphite_merge_tree(
     *,
     settings: MergeTreeSettings | None = None,
 ) -> ChEngineSpec:
-    """``GraphiteMergeTree(config_section)`` — for graphite rollup data."""
+    """``GraphiteMergeTree(config_section)``: for graphite rollup data."""
     return ChEngineSpec("GraphiteMergeTree", args=(config_section,))
 
 
@@ -466,22 +466,22 @@ def hdfs(uri: str, format: str) -> ChEngineSpec:
 
 
 def null() -> ChEngineSpec:
-    """ENGINE = Null — discards all writes. Common as an MV source."""
+    """ENGINE = Null: discards all writes. Common as an MV source."""
     return ChEngineSpec("Null")
 
 
 def memory() -> ChEngineSpec:
-    """ENGINE = Memory — non-persistent, RAM-only."""
+    """ENGINE = Memory: non-persistent, RAM-only."""
     return ChEngineSpec("Memory")
 
 
 def merge(db_regex: str, table_regex: str) -> ChEngineSpec:
-    """ENGINE = Merge(db, tables_regexp) — read-only union over matching tables."""
+    """ENGINE = Merge(db, tables_regexp): read-only union over matching tables."""
     return ChEngineSpec("Merge", args=(db_regex, table_regex))
 
 
 def set_engine() -> ChEngineSpec:
-    """ENGINE = Set — for use as the right side of IN."""
+    """ENGINE = Set: for use as the right side of IN."""
     return ChEngineSpec("Set")
 
 
@@ -491,7 +491,7 @@ def join_engine(strictness: str, kind: str, *key_cols: str) -> ChEngineSpec:
 
 
 def dictionary_engine(dict_name: str) -> ChEngineSpec:
-    """ENGINE = Dictionary(name) — exposes a dictionary as a table."""
+    """ENGINE = Dictionary(name): exposes a dictionary as a table."""
     return ChEngineSpec("Dictionary", args=(dict_name,))
 
 

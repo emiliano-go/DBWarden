@@ -123,12 +123,12 @@ def materialized_view(
 
     TWO MODES, because an MV sometimes creates a node and sometimes does not::
 
-    MODE A -- ``to`` omitted.  The class IS the target table.
+    MODE A: ``to`` omitted.  The class IS the target table.
         Emits: CREATE TABLE <__tablename__> (declared columns) ENGINE = <engine> ...
                CREATE MATERIALIZED VIEW <__tablename__>_mv TO <__tablename__> AS ...
         Requires: engine, order_by, and column declarations on the class.
 
-    MODE B -- ``to`` given.  The class IS the MV; the target already exists.
+    MODE B: ``to`` given.  The class IS the MV; the target already exists.
         Emits: CREATE MATERIALIZED VIEW <__tablename__> TO <to> AS ...
         Forbids: engine, order_by, column declarations.
 
@@ -332,10 +332,10 @@ def aggregating_view(
          ``AggregateFunction(...)`` types derived from ``aggregates``.
       2. A materialized view whose SELECT uses the matching
          ``<func>State(...)`` combinators, ``TO`` the target.
-      3. The source table (referenced, not created — it must already exist).
+      3. The source table (referenced, not created; it must already exist).
 
     Because both the target column types and the MV combinators derive from the
-    same list of ``AggExpr``, they are guaranteed consistent — the correspondence
+    same list of ``AggExpr``, they are guaranteed consistent; the correspondence
     that is manual and drift-prone in the string-SELECT form is here derived and
     safe.
 
@@ -346,7 +346,7 @@ def aggregating_view(
 
     **Class API (preferred):** use inside ``class Meta(CHViewMeta)``.  The
     target name is ``__tablename__``; the MV is ``<__tablename__>_mv``.
-    ``name`` and ``source`` are not passed — ``source`` is the model class::
+    ``name`` and ``source`` are not passed: ``source`` is the model class::
 
         class EventDaily(AggregatingView):
             __tablename__ = "event_daily"
@@ -361,7 +361,7 @@ def aggregating_view(
 
     Args:
         source: The source model class (preferred) or table name string.
-        group_by: ``GROUP BY`` keys — :class:`~sqlalchemy.sql.ColumnElement`,
+        group_by: ``GROUP BY`` keys: :class:`~sqlalchemy.sql.ColumnElement`,
             ``ch_raw()``, or strings.
         aggregates: The aggregate columns, as ``AggExpr`` (from ``agg.*``), each
             with ``.as_(alias)`` set.
@@ -413,10 +413,10 @@ def _resolve_source(source: Any) -> str:
     """Get the table name from a source reference.
 
     ``source`` may be:
-    * A model class with ``__tablename__`` — returns the tablename directly.
-    * A string class name (forward reference) — scans loaded modules for a
+    * A model class with ``__tablename__``, returns the tablename directly.
+    * A string class name (forward reference), scans loaded modules for a
       class with that name and returns its ``__tablename__``.
-    * A bare table name string — returned as-is.
+    * A bare table name string, returned as-is.
 
     Resolution happens lazily at ``to_dict()`` time, by which point all
     model classes should be loaded.
@@ -432,7 +432,7 @@ def _resolve_source(source: Any) -> str:
                 tablename = getattr(cls, "__tablename__", None)
                 if tablename:
                     return tablename
-        # No class found — treat as bare table name
+        # No class found, treat as bare table name
         return source
     tablename = getattr(source, "__tablename__", None)
     if tablename:

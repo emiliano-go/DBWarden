@@ -8,6 +8,21 @@ import pytest
 from dbwarden.logging import DBWardenLogger, LogCandidate, Verbosity, get_logger
 
 
+@pytest.fixture(autouse=True)
+def restore_dbwarden_log_propagation():
+    """Put `dbwarden.propagate` back after each test.
+
+    Several tests here silence propagation to keep captured output clean, but the
+    stdlib logger object outlives the test. Left unrestored it swallows records
+    from every `dbwarden.*` child logger for the rest of the session, which makes
+    unrelated log assertions elsewhere fail only in a full run.
+    """
+    logger = logging.getLogger("dbwarden")
+    original = logger.propagate
+    yield
+    logger.propagate = original
+
+
 class TestJSONLogging:
     """Tests for JSON logging via DBWARDEN_LOG_JSON."""
 

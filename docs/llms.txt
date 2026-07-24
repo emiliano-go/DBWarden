@@ -7,9 +7,9 @@
 - [Installation](https://dbwarden.emiliano-go.com/installation/): Installing DBWarden in your project and verifying it works correctly
 
 ## Get Started
-- [Setup](https://dbwarden.emiliano-go.com/getting-started/setup/): Initial project setup — install, initialize, define a database, verify configuration
+- [Setup](https://dbwarden.emiliano-go.com/getting-started/setup/): Initial project setup - install, initialize, define a database, verify configuration
 - [Modeling Guide](https://dbwarden.emiliano-go.com/getting-started/modeling/): Defining SQLAlchemy models that DBWarden can read to generate migration SQL
-- [Your First Migration](https://dbwarden.emiliano-go.com/getting-started/first-migration/): Core workflow — define models, generate SQL, apply, inspect, roll back
+- [Your First Migration](https://dbwarden.emiliano-go.com/getting-started/first-migration/): Core workflow - define models, generate SQL, apply, inspect, roll back
 - [Developing Locally](https://dbwarden.emiliano-go.com/getting-started/developing-locally/): Local development workflow with dev databases, safe diffs, and offline migrations
 - [Workflows](https://dbwarden.emiliano-go.com/getting-started/workflows/): Day-to-day workflows for multi-database projects, CI patterns, sandbox validation
 
@@ -28,9 +28,9 @@
 - [11. Observability](https://dbwarden.emiliano-go.com/cookbook/11-observability/): Prometheus metrics, structured JSON logging, query tracing, connection pool monitoring
 
 ## Configuration
-- [Overview](https://dbwarden.emiliano-go.com/configuration/): Python-based configuration with `database_config()` — one source for migrations, CLI, and runtime
+- [Overview](https://dbwarden.emiliano-go.com/configuration/): Python-based configuration with `database_config()` - one source for migrations, CLI, and runtime
 - [Quick Start](https://dbwarden.emiliano-go.com/configuration/quick-start/): Configure your first database in 2 minutes
-- [Concepts](https://dbwarden.emiliano-go.com/configuration/concepts/): How configuration works under the hood — type safety, runtime flexibility, IDE support
+- [Concepts](https://dbwarden.emiliano-go.com/configuration/concepts/): How configuration works under the hood - type safety, runtime flexibility, IDE support
 - [Connection URLs](https://dbwarden.emiliano-go.com/configuration/connection-urls/): Complete reference for database connection URL formats across all backends
 - [Model Discovery](https://dbwarden.emiliano-go.com/configuration/model-discovery/): How DBWarden discovers SQLAlchemy models for migration generation
 - [Multi-Database](https://dbwarden.emiliano-go.com/configuration/multi-database/): Configure multiple databases for microservices, read/write split, multi-tenancy
@@ -40,20 +40,20 @@
 - [Troubleshooting](https://dbwarden.emiliano-go.com/configuration/troubleshooting/): Solutions to common configuration issues
 
 ## Core Concepts
-- [Migration File Format](https://dbwarden.emiliano-go.com/migration-files/): Execution contract — explicit SQL files that can be reviewed, tested, and rolled back
+- [Migration File Format](https://dbwarden.emiliano-go.com/migration-files/): Execution contract - explicit SQL files that can be reviewed, tested, and rolled back
 - [SQLAlchemy Models Reference](https://dbwarden.emiliano-go.com/models/): Complete reference for all supported Meta attributes across every backend
 - [Seed Management](https://dbwarden.emiliano-go.com/seeds/): Built-in seed data management with code seeds and file-based SQL/Python seeds
 - [SQL Translation](https://dbwarden.emiliano-go.com/sql-translation/): SQL translation layer for dev workflows with different databases than production
 - [Observability](https://dbwarden.emiliano-go.com/observability/): Prometheus metrics and structured JSON logging for monitoring and debugging
-- [Architecture](https://dbwarden.emiliano-go.com/architecture-deep-dive/): Internals for contributors — layered architecture from CLI through database layers
+- [Architecture](https://dbwarden.emiliano-go.com/architecture-deep-dive/): Internals for contributors - layered architecture from CLI through database layers
 
 ## Databases
-- [Overview](https://dbwarden.emiliano-go.com/databases/): Supported backends — PostgreSQL, MySQL, MariaDB, SQLite, ClickHouse
+- [Overview](https://dbwarden.emiliano-go.com/databases/): Supported backends - PostgreSQL, MySQL, MariaDB, SQLite, ClickHouse
 - [Round Trip Support](https://dbwarden.emiliano-go.com/databases/round-trip/): Backends that support both reading and writing schema
 - [SQL Databases](https://dbwarden.emiliano-go.com/databases/sql-databases/): Backend-specific syntax, limitations, and edge cases
-- [PostgreSQL](https://dbwarden.emiliano-go.com/databases/postgresql/): First-class backend — full round-trip verification
-- [MySQL & MariaDB](https://dbwarden.emiliano-go.com/databases/mysql/): First-class backends — reverse-engineered, diffed, emitted as correct DDL
-- [ClickHouse](https://dbwarden.emiliano-go.com/databases/clickhouse/): First-class backend — full round-trip support
+- [PostgreSQL](https://dbwarden.emiliano-go.com/databases/postgresql/): First-class backend - full round-trip verification
+- [MySQL & MariaDB](https://dbwarden.emiliano-go.com/databases/mysql/): First-class backends - reverse-engineered, diffed, emitted as correct DDL
+- [ClickHouse](https://dbwarden.emiliano-go.com/databases/clickhouse/): First-class backend - full round-trip support
 
 ## FastAPI Integration
 - [Overview](https://dbwarden.emiliano-go.com/fastapi/): First-class FastAPI integration for sessions, health checks, migration management
@@ -66,7 +66,7 @@
 - [Advanced: Engine Lifecycle](https://dbwarden.emiliano-go.com/fastapi/advanced/engine-lifecycle/): Lazy engine creation, caching, session factories, lifecycle hooks
 - [Advanced: Transaction Management](https://dbwarden.emiliano-go.com/fastapi/advanced/transaction-management/): Automatic transactions, manual commit/rollback, retry patterns
 - [Advanced: Testing](https://dbwarden.emiliano-go.com/fastapi/advanced/testing/): Test DBWarden FastAPI apps with SQLite in-memory and dependency overrides
-- [Advanced: Multi-Database](https://dbwarden.emiliano-go.com/fastapi/advanced/multi-database/): Work with multiple databases in FastAPI — primary + analytics, multi-tenancy
+- [Advanced: Multi-Database](https://dbwarden.emiliano-go.com/fastapi/advanced/multi-database/): Work with multiple databases in FastAPI - primary + analytics, multi-tenancy
 - [Advanced: Production Patterns](https://dbwarden.emiliano-go.com/fastapi/advanced/production-patterns/): Pre-deploy migrations, connection pooling, logging, readiness probes
 - [API Reference](https://dbwarden.emiliano-go.com/fastapi/reference/): Complete API docs for FastAPI integration utilities
 
@@ -88,7 +88,7 @@
 - [history](https://dbwarden.emiliano-go.com/commands/history/): Migration execution history for audit and incident analysis
 - [new](https://dbwarden.emiliano-go.com/commands/new/): Create manual migration files (versioned, runs-always, runs-on-change)
 - [lock-status/unlock](https://dbwarden.emiliano-go.com/commands/lock/): Inspect and recover migration lock state
-- [seed](https://dbwarden.emiliano-go.com/commands/seed/): Manage seed data — create, apply, list, roll back, export
+- [seed](https://dbwarden.emiliano-go.com/commands/seed/): Manage seed data - create, apply, list, roll back, export
 - [settings](https://dbwarden.emiliano-go.com/commands/settings/): View current DBWarden configuration
 - [database](https://dbwarden.emiliano-go.com/commands/database/): Display configured databases
 - [version](https://dbwarden.emiliano-go.com/commands/version/): Show installed DBWarden version

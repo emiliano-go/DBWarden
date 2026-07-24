@@ -9,18 +9,18 @@ def render_expr(expr: ColumnElement | str | Any) -> str:
     """Render a SQLAlchemy expression or raw fragment to ClickHouse SQL.
 
     Accepts:
-        ColumnElement — compiled via the default SA dialect.
+        ColumnElement, compiled via the default SA dialect.
             ``func.toYYYYMM(Event.event_date)`` → ``"toYYYYMM(event_date)"``
             Simple column references emit the bare column name (no table prefix).
-        Label          — emits the compiled expression; the ``AS alias`` is
+        Label         , emits the compiled expression; the ``AS alias`` is
             added by the caller (select-item context).
-        str            — emitted verbatim (legacy equivalent to an unwrapped
-            :class:`ChRaw` — prefer ``ch_raw()`` for explicitness).
+        str           , emitted verbatim (legacy equivalent to an unwrapped
+            :class:`ChRaw`, prefer ``ch_raw()`` for explicitness).
 
     Returns:
         A ClickHouse SQL string suitable for use in DDL/DML.
 
-    NOTE — canonicalization risk:
+    NOTE, canonicalization risk:
         ``func.toYYYYMM(x)`` compiles to ``"toYYYYMM(x)"``, but the server reports
         ``"toYYYYMM(event_date)"`` in ``system.tables.partition_key``.  A mismatch
         here produces perpetual drift.  Every expression site needs an audit case

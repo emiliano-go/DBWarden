@@ -30,6 +30,30 @@ PLUGIN_GROUP = "dbwarden.plugins"
 CONSENT_PATH = Path(".dbwarden") / "consent.toml"
 LOCK_PATH = Path(".dbwarden") / "plugins.lock"
 
+# The plugin contract's own version, independent of DBWarden's release version.
+# Bump it when a change would make an existing plugin behave incorrectly rather
+# than fail loudly: a hook signature change, different semantics for a registered
+# handler, a rename on the stable surface.
+#
+# A plugin declares the contract it was built against by setting
+# `DBWARDEN_PLUGIN_API` on its package. Declaring nothing means "version 1", so
+# plugins written before this existed keep working.
+PLUGIN_API_VERSION = 1
+PLUGIN_API_ATTR = "DBWARDEN_PLUGIN_API"
+
+
+class PluginApiMismatchError(RuntimeError):
+    def __init__(self, dist_name: str, declared: Any) -> None:
+        super().__init__(
+            f"Plugin '{dist_name}' targets DBWarden plugin API version {declared}, "
+            f"but this DBWarden provides version {PLUGIN_API_VERSION}. "
+            f"Upgrade the plugin, or pin DBWarden to a version that provides "
+            f"API {declared}."
+        )
+        self.dist_name = dist_name
+        self.declared = declared
+
+
 KNOWN_VALUE_HOOKS: frozenset[str] = frozenset({
     "session_factory",
     "sync_session_factory",
@@ -45,6 +69,8 @@ KNOWN_VALUE_HOOKS: frozenset[str] = frozenset({
     "seed_export",
     "seed_list",
     "seed_rollback",
+    "sandbox_provider_start",
+    "sandbox_provider_stop",
 })
 
 MULTI_VALUE_HOOKS: frozenset[str] = frozenset({
@@ -72,6 +98,8 @@ HOOK_CALL_SPECS: dict[str, tuple[tuple[Any, ...], dict[str, Any]]] = {
     "seed_list": ((), {"database": None, "all_databases": False, "verbose": False, "prune": False}),
     "seed_rollback": ((), {"count": None, "to_version": None, "database": None, "all_databases": False, "verbose": False}),
     "seed_export": ((), {"database": None, "all_databases": False, "output_dir": "seeds"}),
+    "sandbox_provider_start": (("sqlite",), {}),
+    "sandbox_provider_stop": ((), {}),
 }
 
 
@@ -216,6 +244,11 @@ class ObjectPluginRegistry:
     @classmethod
     def clear(cls) -> None:
         cls._handlers.clear()
+        # Whatever was overriding core is gone too, so let the next override be
+        # announced again rather than suppressed by a stale dedup entry.
+        from dbwarden.engine.core.registry import reset_override_warnings
+
+        reset_override_warnings()
 
 
 class PluginRegistrar:
@@ -703,8 +736,50 @@ def prompt_community_consent(ep: EntryPoint, dist_name: str) -> bool:
     ))
 
 
+def declared_api_version(setup: Callable[..., Any]) -> Any:
+    """The plugin API version a plugin targets, or None if it declares nothing.
+
+    Read off the module the entry point resolved to, and off its top-level
+    package, so declaring `DBWARDEN_PLUGIN_API` on the package works even when
+    `setup` lives in a submodule. Nothing extra is imported: resolving the entry
+    point already imported it.
+    """
+    module_name = getattr(setup, "__module__", "") or ""
+    candidates = [module_name]
+    root = module_name.partition(".")[0]
+    if root and root != module_name:
+        candidates.append(root)
+
+    for name in candidates:
+        module = sys.modules.get(name)
+        if module is None:
+            continue
+        declared = getattr(module, PLUGIN_API_ATTR, None)
+        if declared is not None:
+            return declared
+    return None
+
+
+def check_api_compatibility(setup: Callable[..., Any], dist_name: str) -> None:
+    """Refuse a plugin built against a different plugin API version.
+
+    Refusing rather than warning: a plugin targeting another contract can still
+    import and register cleanly and then produce wrong migration SQL, which is a
+    worse failure than not loading at all.
+
+    Declaring nothing means "version 1", so plugins written before the contract
+    was versioned keep loading.
+    """
+    declared = declared_api_version(setup)
+    if declared is None:
+        return
+    if declared != PLUGIN_API_VERSION:
+        raise PluginApiMismatchError(dist_name, declared)
+
+
 def _load_one(ep: EntryPoint, dist_name: str) -> None:
     setup = ep.load()
+    check_api_compatibility(setup, dist_name)
     registrar = PluginRegistrar(plugin_name=dist_name)
     setup(registrar)
 
@@ -752,7 +827,39 @@ def _load_plugin_entry_point(ep: EntryPoint, dist_name: str) -> None:
         _load_one(ep, dist_name)
         _LOAD_STATES[dist_name] = "loaded"
         _LOAD_ERRORS.pop(dist_name, None)
+    except PluginApiMismatchError as exc:
+        # Distinct from "failed": nothing is broken, the pairing is wrong. The
+        # fix is a version change, not a bug report.
+        _LOAD_STATES[dist_name] = "incompatible"
+        _LOAD_ERRORS[dist_name] = str(exc)
+        logger.error("%s", exc)
     except Exception as exc:
         _LOAD_STATES[dist_name] = "failed"
         _LOAD_ERRORS[dist_name] = str(exc)
         logger.warning("Failed to load plugin '%s': %s", dist_name, exc)
+
+
+# The surface plugins are promised, and nothing else. This module also holds the
+# install and provenance machinery the CLI drives (`add_plugin`,
+# `verify_official_provenance`, the consent and lockfile helpers); those stay
+# importable but carry no stability promise, because promising them would mean
+# freezing how DBWarden installs things.
+#
+# tests/test_plugin_api_surface.py asserts this list exactly. Adding a name here
+# is a promise; removing one is a breaking change.
+__all__ = [
+    "HOOK_CALL_SPECS",
+    "HookConflictError",
+    "HookNotRegisteredError",
+    "HookRegistry",
+    "KNOWN_VALUE_HOOKS",
+    "MULTI_VALUE_HOOKS",
+    "ObjectHandlerConflictError",
+    "ObjectHandlerRegistration",
+    "ObjectPluginRegistry",
+    "PLUGIN_API_ATTR",
+    "PLUGIN_API_VERSION",
+    "PLUGIN_GROUP",
+    "PluginApiMismatchError",
+    "PluginRegistrar",
+]

@@ -2,6 +2,7 @@ from dbwarden.engine.core.models import ModelColumn, IndexInfo, ModelTable
 from dbwarden.engine.core.protocol import RunPhase, Op, ObjectHandler
 from dbwarden.engine.core.ordering import Anchor, OrderingConstraint, OrderingError
 from dbwarden.engine.core.statement_order import StatementOrder, MigrationStatement
+from dbwarden.engine.migration_name import Change
 from dbwarden.engine.core.registry import RegistryDriver
 from dbwarden.engine.core.snapshot_io import (
     compute_checksum,
@@ -33,6 +34,7 @@ __all__ = [
     "OrderingError",
     "StatementOrder",
     "MigrationStatement",
+    "Change",
     "RegistryDriver",
     "ModelColumn",
     "IndexInfo",

@@ -115,7 +115,7 @@ class TestClusterableStatementFromSqlMore:
         assert cs.suffix == ""
         ctx = ClusterContext(ClusterMode.ON_CLUSTER, "c")
         out = cs.render(ctx)
-        # ON CLUSTER is still appended — harmless for SQL strings that
+        # ON CLUSTER is still appended, harmless for SQL strings that
         # get post-processed by the caller; the caller (recreate builder)
         # now filters INSERT via a DDL check before calling from_sql.
         assert out == "INSERT INTO events (id) SELECT id FROM events_old ON CLUSTER 'c'"

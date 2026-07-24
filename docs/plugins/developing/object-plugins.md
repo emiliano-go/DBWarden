@@ -145,9 +145,34 @@ ordering = OrderingConstraint(after_object=("role",))  # emit after the "role" h
 
 Anchors are the **public contract**: `PREAMBLE`, `BEFORE_TABLES`, `AFTER_TABLES`, `AFTER_CONSTRAINTS`, `AFTER_INDEXES`, `POSTAMBLE`. See [ordering anchors](../reference/ordering-anchors.md) for the full map and failure modes (unknown references, cycles, impossible pairs).
 
+## Shared SQL Helpers
+
+Emitting SQL that matches core's byte-for-byte matters: a plugin that quotes identifiers differently, or that skips `ON CLUSTER`, produces migrations that disagree with the ones core generates for neighbouring objects. Rather than have you copy those rules, the shared implementations are public in `dbwarden.engine.core.plugin_api`:
+
+| Name | Use |
+|---|---|
+| `quote_pg(name)` | Quote a PostgreSQL identifier the way core does (reserved words only). |
+| `qualified_name(name, schema)` | Render `schema.name`, or bare `name` when unqualified. |
+| `build_create_policy_sql`, `build_alter_policy_sql` | Render row-level-security policy DDL. |
+| `build_grant_sql`, `build_revoke_sql` | Render `GRANT` / `REVOKE`. |
+| `emit_with_cluster`, `ClusterableStatement` | Wrap ClickHouse DDL so it honours the configured `ON CLUSTER`. |
+| `strip_secret_values`, `has_visible_secrets`, `REDACTED` | Redact secret values before they reach a snapshot. |
+
+The module sits under `dbwarden.engine.core`, so importing from it satisfies the public-API check in the [Approved standard](approved-standard.md).
+
 ## Conflicts And Overrides
 
 `object_type` is the registration key. Two *different* plugins registering the same `object_type` raises `ObjectHandlerConflictError`. A plugin handler and a core handler with the same type is allowed: the plugin handler overrides core, which is how official plugins replace built-in fallbacks (e.g. the core `CREATE EXTENSION` preamble).
+
+Overriding is a real transfer of responsibility, so DBWarden announces it rather than swapping silently:
+
+```
+WARNING  dbwarden.registry - Plugin 'dbwarden-pgsql-rbac' overrides the built-in
+handler for object type 'role'. Migration SQL for 'role' now comes from the
+plugin, not DBWarden core.
+```
+
+The warning is emitted once per plugin and object type per run. If you see one you did not expect, a plugin has taken over DDL generation for that object type, and the SQL in your migrations for it is the plugin's, not core's. Plugins requesting the Approved tier must declare their overrides in the approval issue.
 
 ## Tests
 

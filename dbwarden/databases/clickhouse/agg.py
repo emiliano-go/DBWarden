@@ -13,7 +13,7 @@ class AggExpr:
       - the target column type:      ``AggregateFunction(<func>, <types>)``
       - the MV SELECT combinator:    ``<func>State(<column>)``
 
-    Because both derive from one ``AggExpr``, they cannot drift — which is the
+    Because both derive from one ``AggExpr``, they cannot drift, which is the
     whole point of the typed door over the string door.
 
     Attributes:

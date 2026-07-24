@@ -23,16 +23,27 @@ DBWarden ships the checks as `dbwarden.plugin_conformance`, so verification is r
 | 2 | `test_import_has_no_side_effects` | `assert_import_has_no_side_effects(pkg)` | The #1 security-model violation: registering at import time bypasses the consent gate. Enforces classify-before-load. |
 | 3 | `test_setup_registers_hooks` | `assert_setup_registers(setup, value_hooks=...)` | A broken `setup()` (wrong signature, swallowed exception, forgot to register) that installs but does nothing. |
 | 4 | `test_hook_signature_compliance` | `assert_hook_signatures(setup)` | Runtime `TypeError` when core calls a hook with the documented arguments; caught at build time instead of migration time. |
-| 5 | `test_no_core_internals_imported` | `assert_no_core_internals_imported(pkg)` | Dependence on implementation details that break on core upgrades, and a plugin reaching into `dbwarden.engine.*` to manipulate the pipeline. |
-| 6 | `test_object_handler_conformance` (object plugins) | `assert_object_handler_conformance(handler, config=...)` | Handlers that crash the diff pipeline or emit malformed statements: `extract`/`canonicalize`/`diff`/`emit` must return the right types. |
-| 7 | `test_ordering_constraint_satisfiable` (object plugins) | `assert_ordering_constraint_satisfiable(handler)` | Ordering constraints that can never be satisfied (impossible anchor pair, unknown/cyclic object references) and crash generation. |
-| 8 | `test_idempotent_setup` (recommended) | `assert_idempotent_setup(setup)` | Double-loading in reloads/tests/interactive sessions: calling `setup()` twice must not raise or add new registrations. |
+| 5 | `test_core_imports_resolve` | `assert_core_imports_resolve(pkg)` | A plugin importing a DBWarden module the installed core does not have, which would otherwise fail on a user's machine instead of in CI. |
+| 6 | `test_api_version_is_declared` | `assert_api_version_declared(pkg)` | A plugin with no declared contract version, which silently keeps loading after the contract changes under it. |
+| 7 | `test_object_handler_conformance` (object plugins) | `assert_object_handler_conformance(handler, config=...)` | Handlers that crash the diff pipeline or emit malformed statements: `extract`/`canonicalize`/`diff`/`emit` must return the right types. |
+| 8 | `test_ordering_constraint_satisfiable` (object plugins) | `assert_ordering_constraint_satisfiable(handler)` | Ordering constraints that can never be satisfied (impossible anchor pair, unknown/cyclic object references) and crash generation. |
+| 9 | `test_idempotent_setup` (recommended) | `assert_idempotent_setup(setup)` | Double-loading in reloads/tests/interactive sessions: calling `setup()` twice must not raise or add new registrations. |
 
-Tests 1–5 apply to every plugin. Tests 6–7 apply to object plugins; value-only plugins mark them not applicable and say so. Test 8 is recommended and may become required.
+Tests 1 to 6 apply to every plugin. Tests 7 and 8 apply to object plugins; value-only plugins mark them not applicable and say so. Test 9 is recommended and may become required.
 
-### What the harness allows for test 5
+### What the harness checks for test 5
 
-The public API surface is `dbwarden.plugin`, `dbwarden.exceptions`, and `dbwarden.engine.core` (the public object-handler types). Any other import under `dbwarden.<subpackage>` is treated as an internal and fails the check: `dbwarden.engine.*` other than `dbwarden.engine.core`, `dbwarden.database*`, `dbwarden.commands.*`, `dbwarden.repositories.*`, and so on. Official plugins are exempt: they are trusted by provenance, not by this suite, and legitimately extract behavior from core.
+**Plugins may import anything from DBWarden core.** There is no allowlist. A plugin that needs `dbwarden.output` for consistent CLI rendering, or `dbwarden.repositories.*` to read tracking tables, should just import them.
+
+What test 5 verifies is that every `dbwarden` module you import actually exists in the core you are built against. That catches the failure that actually bites users: a plugin pinned to `dbwarden>=0.15` importing a module that moved in 0.16, discovered at load time on their machine rather than in your CI.
+
+Three surfaces are documented as stable and change only on a major version:
+
+- `dbwarden.plugin` (`PluginRegistrar`, the registries, hook errors)
+- `dbwarden.exceptions`
+- `dbwarden.engine.core`, including `dbwarden.engine.core.plugin_api`
+
+Building on those means less to revisit when core releases. Anything deeper is fair game, but pin your `dbwarden` dependency accordingly and keep CI running against the versions you claim to support. `plugin_conformance.core_imports_outside_stable_api(pkg)` lists your deeper imports so you know what to re-check on an upgrade; it reports, it does not fail.
 
 ## What This Does Not Cover
 
@@ -43,25 +54,35 @@ The public API surface is `dbwarden.plugin`, `dbwarden.exceptions`, and `dbwarde
 
 ## Submit For Approval
 
-Open an issue in the DBWarden repository using the **Plugin Approval** template with:
+Open an issue in the DBWarden repository using the **Plugin Approval** template. It asks for the repository, the distribution name and requested minimum version, what the plugin provides, the core versions you test against, a link to a green conformance run, and two things worth explaining here.
 
-```markdown
-### Plugin repository
-https://github.com/<you>/dbwarden-<name>
+### The plugin API version
 
-### Package name & requested approved version
-dbwarden-<name>, minimum 0.2.0
+The plugin contract is versioned separately from DBWarden's release version, as `dbwarden.plugin.PLUGIN_API_VERSION`. Declare the one you target on your package:
 
-### What it provides
-Value hooks: ...
-Object handlers: ...
-
-### Checklist evidence
-Link to a green CI run of tests/test_conformance.py (all required tests passing).
-
-### Compatibility
-Tested against dbwarden>=0.15.0
+```python
+DBWARDEN_PLUGIN_API = 1
 ```
+
+Core refuses to load a plugin declaring a version it does not provide, reporting it as `incompatible` with both versions named, rather than letting it register and generate migrations under assumptions that no longer hold. Declaring nothing means "version 1", so plugins written before the contract was versioned keep working; the conformance suite still requires the declaration, because a plugin that never declares gets no protection when the contract moves.
+
+The version changes only when a plugin could otherwise be *wrong* rather than loudly broken: a hook signature change, different semantics for a registered handler, a rename on the stable surface. Adding a hook or a new `plugin_api` helper does not change it.
+
+### Declaring deep imports
+
+The template asks you to paste the output of:
+
+```bash
+python -c "from dbwarden.plugin_conformance import core_imports_outside_stable_api as f; print('\n'.join(f('your_package')) or 'none')"
+```
+
+and justify each line. This is a review conversation, not a test: no automated check can tell a good reason from a bad one, which is why it belongs to a reviewer.
+
+It also runs in your favour. A justification that generalises is an argument that the stable surface is missing something, and the outcome is usually that the helper becomes public in `dbwarden.engine.core.plugin_api` rather than that you are told to stop. That is exactly how `plugin_api` acquired `quote_pg`, `qualified_name`, the grant and policy builders, and `emit_with_cluster`: official plugins needed them, so they stopped being internal. If you would switch to a public equivalent, say so.
+
+### Declaring object type overrides
+
+A plugin handler that claims an `object_type` core already handles **replaces** core for that type: migration DDL for those objects comes from the plugin. DBWarden logs a warning when this happens, but a reviewer needs to know up front. Declare any overrides and explain why replacing core is right rather than adding a new type. Overriding is legitimate (it is how official plugins supersede built-in fallbacks) and it raises the review bar.
 
 ## CI Enforcement
 

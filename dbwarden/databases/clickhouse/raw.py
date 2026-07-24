@@ -8,7 +8,7 @@ class ChRaw:
     """A raw ClickHouse SQL fragment, deliberately opted into.
 
     Wrapping a string in ``ch_raw()`` marks it as an intentional bypass of the
-    typed builder — exactly as SQLAlchemy's ``text()`` marks raw SQL. dbwarden
+    typed builder, exactly as SQLAlchemy's ``text()`` marks raw SQL. dbwarden
     will CANONICALIZE this text for diffing (whitespace, alias normalization) but
     will NOT PARSE it semantically. The user owns its correctness.
 

@@ -16,9 +16,9 @@ class ChView:
     and discovered alongside SQLAlchemy models by ``get_all_model_tables()``.
 
     Required in every non-abstract subclass:
-        ``__tablename__`` -- see the per-subclass meaning in MaterializedView
+        ``__tablename__``: see the per-subclass meaning in MaterializedView
             and AggregatingView; it is NOT uniformly "the MV".
-        ``Meta.ch`` -- a MaterializedViewSpec or AggregatingViewSpec.
+        ``Meta.ch``: a MaterializedViewSpec or AggregatingViewSpec.
 
     Example::
 
@@ -53,7 +53,7 @@ class ChView:
 
 
 class MaterializedView(ChView):
-    """A ClickHouse materialized view. Two modes -- see materialized_view().
+    """A ClickHouse materialized view. Two modes; see materialized_view().
 
     Mode A (to= omitted):  the class IS the target table; the MV is generated
         with the derived name f"{__tablename__}_mv". Columns are declared on
@@ -70,7 +70,7 @@ class AggregatingView(ChView):
     The class IS the target table. __tablename__ is the target's name; the MV
     is generated as f"{__tablename__}_mv".
 
-    Columns are NOT declared -- they are DERIVED from group_by + aggregates.
+    Columns are NOT declared; they are DERIVED from group_by + aggregates.
     Declaring them would be two shapes for one fact and would reintroduce
     exactly the drift the derived correspondence exists to prevent.
     """
@@ -167,7 +167,7 @@ def _validate_mv_engine(
         warnings.warn(
             f"Engine {engine_name!r} is not in the collapsing family "
             f"(SummingMergeTree, AggregatingMergeTree, etc.) and the SELECT "
-            f"was provided as raw SQL — the validator cannot verify "
+            f"was provided as raw SQL, so the validator cannot verify "
             f"collapse-safety. If the SELECT uses aggregate functions, this "
             f"will silently accumulate partial rows per insert. "
             f"Prefer structured select items (ColumnElement list) or a "
@@ -185,11 +185,11 @@ def get_all_ch_views(
 
     Populated by ``ChView.__init_subclass__`` at import time.  Because
     ``discover_models_in_directory`` already imports every model module,
-    importing is sufficient — no new scanning mechanism, which was the
+    importing is sufficient, with no new scanning mechanism, which was the
     strongest argument for the class form.
 
     The ``model_paths`` and ``db_name`` parameters are accepted for backward
-    compatibility but ignored — discovery is purely registry-based.
+    compatibility but ignored: discovery is purely registry-based.
 
     Returns a list of dicts, each with:
       - ``model_class``: the ``ChView`` subclass
@@ -389,7 +389,7 @@ def _has_user_columns(cls: type) -> bool:
     ``__abstract__``, ``Meta``, and dunder attrs are excluded.
 
     Works on both SQLAlchemy-DeclarativeBase subclasses (which have
-    ``__table__``) and plain ``ChView`` subclasses (which don't — see Phase B),
+    ``__table__``) and plain ``ChView`` subclasses (which don't: see Phase B),
     because it checks ``__dict__`` rather than ``__table__.c``.
     """
     from sqlalchemy import Column as SAColumn
@@ -466,7 +466,7 @@ def _validate_view_class(model_class: type) -> None:
         )
 
     # Forbid SQLAlchemy declarative base inheritance.
-    # ChView subclasses are deliberately NOT SQLAlchemy models —
+    # ChView subclasses are deliberately NOT SQLAlchemy models:
     # introducing __table__ creates a dual citizen that can be queried
     # via session AND lives in the view registry, which is the exact
     # footgun the non-SA separation was designed to prevent.
@@ -483,26 +483,26 @@ def _validate_view_class(model_class: type) -> None:
         if ch.to is None and ch.engine is None:
             raise TypeError(
                 f"{model_class.__name__}: MaterializedView in Mode A (to= omitted) "
-                f"requires engine — the class IS the target table."
+                f"requires engine; the class IS the target table."
             )
         if ch.to is not None:
-            # Mode B — the class is the MV; no columns, no engine, no order_by
+            # Mode B: the class is the MV; no columns, no engine, no order_by
             if ch.engine is not None:
                 raise TypeError(
                     f"{model_class.__name__}: MaterializedView in Mode B "
-                    f"(to= given) must not declare engine — the engine belongs "
+                    f"(to= given) must not declare engine; the engine belongs "
                     f"to the target table, which this class does not own."
                 )
             if ch.order_by is not None:
                 raise TypeError(
                     f"{model_class.__name__}: MaterializedView in Mode B "
-                    f"(to= given) must not declare order_by — it belongs to "
+                    f"(to= given) must not declare order_by; it belongs to "
                     f"the target table."
                 )
             if _has_user_columns(model_class):
                 raise TypeError(
                     f"{model_class.__name__}: MaterializedView in Mode B "
-                    f"(to= given) must not declare columns — columns belong "
+                    f"(to= given) must not declare columns, columns belong "
                     f"to the target table."
                 )
         if ch.name is not None and ch.name != tablename:

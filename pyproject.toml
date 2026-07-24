@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dbwarden"
-version = "0.15.0"
+version = "0.16.0"
 description = "The SQL-first database toolkit for SQLAlchemy." 
 readme = "README.md"
 license = "MIT"
@@ -41,9 +41,9 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://dbwarden.emiliano-go.com/"
-Repository = "https://github.com/emiliano-go/DBWarden"
+Repository = "https://github.com/dbwarden-org/dbwarden"
 Documentation = "https://dbwarden.emiliano-go.com/"
-"Bug Tracker" = "https://github.com/emiliano-go/DBWarden/issues"
+"Bug Tracker" = "https://github.com/dbwarden-org/dbwarden/issues"
 
 [project.scripts]
 dbwarden = "dbwarden.cli.main:main"
@@ -71,10 +71,6 @@ clickhouse = [
 mysql = [
     "pymysql>=1.1.0",
 ]
-metrics = [
-    "prometheus-client>=0.21.0",
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ["dbwarden"]
 
@@ -82,7 +78,7 @@ packages = ["dbwarden"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 markers = [
-    "p0: Two-cycle convergence gate — must never regress",
+    "p0: Two-cycle convergence gate that must never regress",
     "integration: Tests requiring a live ClickHouse container (--ch-integration)",
 ]
 

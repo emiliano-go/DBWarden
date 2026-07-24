@@ -44,7 +44,7 @@ def _get_pg_url() -> str:
 
 @pytest.mark.integration
 class TestPostgreSQLConvergence:
-    """Live PostgreSQL convergence test — mark with ``--pg-integration``."""
+    """Live PostgreSQL convergence test, mark with ``--pg-integration``."""
 
     @pytest.fixture(scope="class")
     def pg_url(self):

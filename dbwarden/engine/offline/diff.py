@@ -406,10 +406,22 @@ def diff_model_states(prev_state: dict, curr_state: dict) -> tuple[list[dict], l
 
     _diff_enums(prev_enums, curr_enums, upgrade_ops, rollback_ops)
 
-    from dbwarden.engine.backends.postgresql.handlers import (
-        StorageParamsHandler,
-    )
-    for _handler in (StorageParamsHandler(),):
+    from dbwarden.engine.core.protocol import RunPhase as _RunPhase
+    from dbwarden.plugin import ObjectPluginRegistry as _ObjectPluginRegistry
+
+    _state_handlers: list[Any] = []
+    # Plugin handlers that diff model state (policies, grants, ...) participate
+    # here too. PREAMBLE handlers are skipped: they diff against the config,
+    # which offline state does not carry. "enum" is already handled above.
+    for _registration in _ObjectPluginRegistry.handlers().values():
+        _plugin_handler = _registration.handler
+        if _plugin_handler.run_phase == _RunPhase.PREAMBLE:
+            continue
+        if _plugin_handler.object_type == "enum":
+            continue
+        _state_handlers.append(_plugin_handler)
+
+    for _handler in _state_handlers:
         _snap_spec = _handler.extract(prev_state)
         _model_spec = _handler.extract(curr_state)
         _up, _rb = _handler.diff(

@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from dbwarden.config import set_dev_mode
-from dbwarden.engine.sandbox import SQLiteSandboxProvider, create_sandbox_provider
+from dbwarden.engine.sandbox import SQLiteSandboxProvider
 
 
 def _strip_ansi(value: str) -> str:
@@ -37,33 +37,6 @@ class TestSQLiteSandboxProvider:
         url2 = provider.start()
         provider.stop()
         assert url1 == url2 == "sqlite:///:memory:"
-
-
-class TestCreateSandboxProvider:
-    def test_sqlite_returns_sqlite_provider(self):
-        provider = create_sandbox_provider("sqlite")
-        assert isinstance(provider, SQLiteSandboxProvider)
-
-    def test_unknown_type_raises_value_error(self):
-        import dbwarden.engine.sandbox as sb
-        if sb._HAS_TESTCONTAINERS:
-            with pytest.raises(ValueError, match="Unsupported sandbox database type"):
-                create_sandbox_provider("unknown")
-        else:
-            with pytest.raises(ImportError, match="testcontainers"):
-                create_sandbox_provider("unknown")
-
-    def test_clickhouse_without_testcontainers_raises_error(self, monkeypatch):
-        import dbwarden.engine.sandbox as sb
-        monkeypatch.setattr(sb, "_HAS_TESTCONTAINERS", False)
-        with pytest.raises(ImportError, match="testcontainers"):
-            create_sandbox_provider("clickhouse")
-
-    def test_provider_start_and_stop(self):
-        provider = create_sandbox_provider("sqlite")
-        url = provider.start()
-        assert url == "sqlite:///:memory:"
-        provider.stop()
 
 
 def _write_migration(directory: str, name: str, content: str) -> None:

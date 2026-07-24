@@ -17,7 +17,7 @@
  *
  * The Zensical "modern" theme HTML includes a hamburger button, drawer
  * checkbox (#__drawer), and overlay, but no CSS to show/hide the sidebar
- * on small screens — the sidebar is always visible as a sticky column.
+ * on small screens - the sidebar is always visible as a sticky column.
  *
  * This overrides the sidebar to a fixed overlay drawer on mobile (<1220px).
  */

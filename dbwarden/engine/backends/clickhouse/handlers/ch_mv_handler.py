@@ -15,8 +15,8 @@ class ChMaterializedViewHandler(ObjectHandler):
 
     This handler manages MV-level changes that are distinct from the table-level
     ``alter_ch_options`` handled by ``ChTableHandler``:
-      - ``MODIFY QUERY`` — in-place SELECT change (CH 24.8+)
-      - ``MODIFY REFRESH`` — refresh schedule change (refreshable MVs)
+      - ``MODIFY QUERY``, in-place SELECT change (CH 24.8+)
+      - ``MODIFY REFRESH``, refresh schedule change (refreshable MVs)
 
     Table-level MV properties (engine, order_by, settings on implicit .inner.
     storage, TTL) continue to flow through ``ChTableHandler`` as

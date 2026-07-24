@@ -153,7 +153,7 @@ def _clean_ch_engine_full(engine_full: str) -> str:
 
 @pytest.mark.integration
 class TestClickHouseConvergence:
-    """Live ClickHouse convergence test — mark with ``--ch-integration``."""
+    """Live ClickHouse convergence test, mark with ``--ch-integration``."""
 
     @pytest.fixture(scope="class")
     def ch_client(self):
@@ -242,6 +242,6 @@ class TestClickHouseConvergence:
         up_cols2, _ = ch.diff(snap_cols, model_cols)
         assert not up_cols2, f"Cycle 2 (column meta) drift: {up_cols2}"
 
-    @pytest.mark.skip(reason="no ZooKeeper/keeper in default testcontainers ClickHouse image; ReplicatedMergeTree extraction (zookeeper_path/replica_name parse) is the uncovered path — CH 24.3+ ships embedded clickhouse-keeper via config mount if needed")
+    @pytest.mark.skip(reason="no ZooKeeper/keeper in default testcontainers ClickHouse image; ReplicatedMergeTree extraction (zookeeper_path/replica_name parse) is the uncovered path: CH 24.3+ ships embedded clickhouse-keeper via config mount if needed")
     def test_replicated_merge_tree_converges(self, ch_client):
         self._create_tables(ch_client)

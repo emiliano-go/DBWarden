@@ -52,7 +52,7 @@ def main() -> int:
 
     sections = [
         "# DBWarden Documentation",
-        "> Full documentation for DBWarden \u2014 a SQL-first database migration system",
+        "> Full documentation for DBWarden - a SQL-first database migration system",
         f"> Source: {SITE_URL}",
         f"> Pages: {len(md_files)}",
         "",

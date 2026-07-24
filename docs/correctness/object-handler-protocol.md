@@ -1,12 +1,12 @@
 # ObjectHandler Protocol
 
-The `ObjectHandler` protocol is the mechanical contract that makes deterministic diffs, backend-native SQL generation, and symmetric rollbacks possible. Every backend object — tables, columns, indexes, views, roles, policies, grants, ClickHouse projections, materialized views, and more — has a dedicated handler that owns its full lifecycle: extraction, canonicalization, diffing, and SQL emission.
+The `ObjectHandler` protocol is the mechanical contract that makes deterministic diffs, backend-native SQL generation, and symmetric rollbacks possible. Every backend object - tables, columns, indexes, views, roles, policies, grants, ClickHouse projections, materialized views, and more - has a dedicated handler that owns its full lifecycle: extraction, canonicalization, diffing, and SQL emission.
 
 Without understanding the handler contract, the other correctness guarantees feel like magic. With it, they become inspectable engineering.
 
 ## The Problem It Solves
 
-Every database backend has a different DDL dialect, different catalog tables, and different type systems. PostgreSQL uses `pg_catalog`, MySQL uses `information_schema`, ClickHouse uses `system.tables`, and SQLite uses `sqlite_master`. Column types that look similar (`VARCHAR(255)`, `String`, `TEXT`) have different internal representations. Engine metadata — partitioning, sorting keys, TTL expressions — exists only in ClickHouse. Roles and policies are structured differently across PostgreSQL and ClickHouse.
+Every database backend has a different DDL dialect, different catalog tables, and different type systems. PostgreSQL uses `pg_catalog`, MySQL uses `information_schema`, ClickHouse uses `system.tables`, and SQLite uses `sqlite_master`. Column types that look similar (`VARCHAR(255)`, `String`, `TEXT`) have different internal representations. Engine metadata - partitioning, sorting keys, TTL expressions - exists only in ClickHouse. Roles and policies are structured differently across PostgreSQL and ClickHouse.
 
 Core must treat all of these uniformly without hard-coding backend knowledge into the diff engine. Adding a new object type or a new backend must not require rewriting the diff pipeline.
 
@@ -400,6 +400,6 @@ The handler protocol is the bridge between the abstract guarantees and the concr
 | **SQL generation** | `emit` produces backend-native SQL. The diff pipeline generates typed operations; the handler renders them for one specific backend and object family. |
 | **Symmetric rollback** | `diff` returns paired upgrade and rollback ops. Each Op carries both forward and reverse attributes, so rollback is structurally paired with upgrade from the start. |
 
-- [Deterministic Diff](deterministic-diff.md) — the handler's `canonicalize` method is what makes diffs stable
-- [SQL Generation](sql-generation.md) — the handler's `emit` method is what produces backend-native SQL
-- [Rollback Generation](rollback-generation.md) — the handler's `diff` method returns paired ops that make symmetric rollbacks possible
+- [Deterministic Diff](deterministic-diff.md) - the handler's `canonicalize` method is what makes diffs stable
+- [SQL Generation](sql-generation.md) - the handler's `emit` method is what produces backend-native SQL
+- [Rollback Generation](rollback-generation.md) - the handler's `diff` method returns paired ops that make symmetric rollbacks possible

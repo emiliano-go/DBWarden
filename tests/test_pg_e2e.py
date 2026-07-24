@@ -61,50 +61,7 @@ def test_partition_extraction(engine, snap):
     _drop("e2e_part_child", "e2e_part_parent")
 
 
-# ---------------------------------------------------------------------------
-# FunctionHandler
-# ---------------------------------------------------------------------------
 
-def test_function_extraction(engine, snap):
-    _drop("e2e_hello")
-    with engine.begin() as conn:
-        conn.execute(sa.text("CREATE OR REPLACE FUNCTION e2e_hello() RETURNS text "
-                             "LANGUAGE sql AS $$ SELECT 'hello'::text $$"))
-
-    fresh = _refresh()
-    from dbwarden.engine.backends.postgresql.handlers import FunctionHandler
-    spec = FunctionHandler().extract(fresh)
-    assert "e2e_hello" in spec, f"e2e_hello not found in {list(spec.keys())}"
-    entry = spec["e2e_hello"]
-    assert "definition" in entry
-    assert "e2e_hello" in entry["definition"]
-
-    _drop("e2e_hello")
-
-
-# ---------------------------------------------------------------------------
-# TriggerHandler
-# ---------------------------------------------------------------------------
-
-def test_trigger_extraction(engine, snap):
-    _drop("e2e_trigger_target", "e2e_trg_func")
-    with engine.begin() as conn:
-        conn.execute(sa.text("CREATE TABLE e2e_trigger_target (id int, name text)"))
-        conn.execute(sa.text("CREATE OR REPLACE FUNCTION e2e_trg_func() RETURNS trigger "
-                             "LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$"))
-        conn.execute(sa.text("CREATE TRIGGER e2e_trg BEFORE INSERT ON e2e_trigger_target "
-                             "FOR EACH ROW EXECUTE FUNCTION e2e_trg_func()"))
-
-    fresh = _refresh()
-    from dbwarden.engine.backends.postgresql.handlers import TriggerHandler
-    spec = TriggerHandler().extract(fresh)
-    assert "e2e_trigger_target" in spec
-    trigs = spec["e2e_trigger_target"]
-    assert "e2e_trg" in trigs
-    assert "definition" in trigs["e2e_trg"]
-    assert "e2e_trg" in trigs["e2e_trg"]["definition"]
-
-    _drop("e2e_trigger_target", "e2e_trg_func")
 
 # ---------------------------------------------------------------------------
 # StatisticsHandler
@@ -123,59 +80,6 @@ def test_statistics_extraction(engine, snap):
     assert spec["e2e_stat_test"].get("val") == 42
 
     _drop("e2e_stat_test")
-
-
-def test_extended_statistics_extraction(engine, snap):
-    _drop("e2e_stats")
-    with engine.begin() as conn:
-        conn.execute(sa.text("CREATE TABLE e2e_stats (id int, a int, b int, c int)"))
-        conn.execute(sa.text("INSERT INTO e2e_stats SELECT x, x, x*2, x*3 FROM generate_series(1, 1000) x"))
-        conn.execute(sa.text("ANALYZE e2e_stats"))
-        conn.execute(sa.text("CREATE STATISTICS e2e_s1 (dependencies) ON a, b FROM e2e_stats"))
-        conn.execute(sa.text("CREATE STATISTICS e2e_s2 (ndistinct) ON a, b, c FROM e2e_stats"))
-        conn.execute(sa.text("CREATE STATISTICS e2e_s3 ON a, b FROM e2e_stats"))
-
-    fresh = _refresh()
-    from dbwarden.engine.backends.postgresql.handlers.extended_statistics_handler import ExtendedStatisticsHandler
-    spec = ExtendedStatisticsHandler().extract(fresh)
-    assert "e2e_s1" in spec, f"e2e_s1 not found in {list(spec.keys())}"
-    assert "e2e_s2" in spec, f"e2e_s2 not found in {list(spec.keys())}"
-    assert "e2e_s3" in spec, f"e2e_s3 not found in {list(spec.keys())}"
-
-    s1 = spec["e2e_s1"]
-    assert s1["table"] == "e2e_stats"
-    assert "f" in s1["kinds"]
-    assert s1["columns"] is not None
-
-    s3 = spec["e2e_s3"]
-    assert set(s3["kinds"]) == {"d", "f", "m"}
-
-    _drop("e2e_stats")
-
-
-def test_event_trigger_extraction(engine, snap):
-    _drop("e2e_evt_trg", "e2e_evt_func")
-    with engine.begin() as conn:
-        conn.execute(sa.text("""
-            CREATE OR REPLACE FUNCTION e2e_evt_func()
-            RETURNS event_trigger AS $$ BEGIN END; $$ LANGUAGE plpgsql
-        """))
-        conn.execute(sa.text("""
-            CREATE EVENT TRIGGER e2e_evt_trg ON ddl_command_start
-            WHEN TAG IN ('CREATE TABLE')
-            EXECUTE FUNCTION e2e_evt_func()
-        """))
-
-    fresh = _refresh()
-    from dbwarden.engine.backends.postgresql.handlers.event_trigger_handler import EventTriggerHandler
-    spec = EventTriggerHandler().extract(fresh)
-    assert "e2e_evt_trg" in spec, f"e2e_evt_trg not found in {list(spec.keys())}"
-    entry = spec["e2e_evt_trg"]
-    assert entry["event"] == "ddl_command_start"
-    assert "CREATE TABLE" in entry.get("tags", [])
-    assert entry["function"]["name"] == "e2e_evt_func"
-
-    _drop("e2e_evt_trg", "e2e_evt_func")
 
 
 def test_schema_grant_extraction(engine, snap):

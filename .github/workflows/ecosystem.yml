@@ -1,0 +1,53 @@
+name: ecosystem
+
+# Runs every official plugin's test suite against core's main branch.
+#
+# Core and its plugins are separate repositories, so nothing else notices when a
+# core change breaks a plugin until a release ships and a user hits it. This is
+# the job that notices. It is nightly rather than per-push because it clones and
+# builds seven repositories.
+#
+# Approved third-party plugins are included but never block: their suites can be
+# red for reasons unrelated to this change, and core is not their maintainer.
+# Treat a red third-party result as a signal to open an issue on that plugin.
+#
+# This job tests what is on each plugin's default branch. Unreleased local work
+# is invisible to it, so run the same script with `--local <dir>` against sibling
+# working copies before pushing, which is when the answer is still useful.
+
+on:
+  schedule:
+    - cron: "0 4 * * *"
+  workflow_dispatch:
+    inputs:
+      include_approved:
+        description: "Also run approved third-party plugins"
+        type: boolean
+        default: true
+  pull_request:
+    # Changes to the plugin contract itself deserve the full check before merge.
+    paths:
+      - "dbwarden/plugin.py"
+      - "dbwarden/plugin_conformance.py"
+      - "dbwarden/_approved.py"
+      - "dbwarden/_official.py"
+      - "dbwarden/engine/core/**"
+
+jobs:
+  ecosystem:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12.7"
+
+      - name: Run plugin suites against this core
+        run: |
+          if [ "${{ github.event.inputs.include_approved }}" = "false" ]; then
+            python scripts/ecosystem-check.py
+          else
+            python scripts/ecosystem-check.py --all
+          fi

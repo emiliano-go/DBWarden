@@ -18,14 +18,14 @@ def populate(
     """Create a :class:`DataOp` that populates a materialized view's target.
 
     Scans the spec and builds the equivalent ``INSERT INTO <target> <select>``
-    SQL — exactly what a hand-written :func:`data_op` would produce, but
+    SQL, exactly what a hand-written :func:`data_op` would produce, but
     derived from the spec so it stays in sync automatically.
 
     Args:
         spec: A view spec (or dict) from which to derive the populate SQL.
         name: Optional explicit DataOp name.  If omitted, derives from the spec.
         rollback: Optional rollback SQL (e.g. ``TRUNCATE TABLE <target>``).
-            Defaults to ``None`` (irreversible — requires confirmation).
+            Defaults to ``None`` (irreversible, requires confirmation).
 
     Returns:
         A :class:`DataOp` whose ``.forward`` is ``INSERT INTO <target> <select>``.

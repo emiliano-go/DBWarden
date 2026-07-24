@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-_REDACTED = "[HIDDEN]"
+REDACTED = "[HIDDEN]"
+_REDACTED = REDACTED  # legacy alias; prefer REDACTED (re-exported as public API)
 
 
 def _secret_values(spec: dict) -> list[str]:

@@ -1,33 +1,72 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, List, Optional, Tuple
 
 from dbwarden.engine.core.protocol import ObjectHandler, Op, RunPhase
 from dbwarden.engine.core.ordering import apply_public_ordering, order_handlers
 from dbwarden.engine.core.statement_order import MigrationStatement, _assemble_migration
 from dbwarden.engine.migration_name import Change
-from dbwarden.plugin import ObjectPluginRegistry
+from dbwarden.plugin import ObjectHandlerRegistration, ObjectPluginRegistry
+
+logger = logging.getLogger("dbwarden.registry")
+
+# Overrides are announced once per (object type, plugin) per process. Drivers are
+# constructed many times per run, and a warning repeated ten times reads like ten
+# problems.
+_WARNED_OVERRIDES: set[tuple[str, str]] = set()
+
+
+def reset_override_warnings() -> None:
+    """Forget which overrides have been announced. For tests."""
+    _WARNED_OVERRIDES.clear()
+
+
+def _warn_override(object_type: str, plugin: str) -> None:
+    key = (object_type, plugin)
+    if key in _WARNED_OVERRIDES:
+        return
+    _WARNED_OVERRIDES.add(key)
+    logger.warning(
+        "Plugin '%s' overrides the built-in handler for object type '%s'. "
+        "Migration SQL for '%s' now comes from the plugin, not DBWarden core.",
+        plugin,
+        object_type,
+        object_type,
+    )
 
 
 class RegistryDriver:
     """Orchestrates all registered ObjectHandlers to produce ops and SQL."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, include_plugins: bool = True) -> None:
         self._handlers: dict[str, ObjectHandler] = {}
-        self._plugin_handler_types: set[str] = set()
-        self._register_plugin_handlers()
+        # Types claimed by plugins are tracked even when this driver does not run
+        # plugin handlers, so a core handler for a claimed type is still stepped
+        # aside for. Otherwise core and the plugin would both emit for that type.
+        self._plugin_claims: dict[str, ObjectHandlerRegistration] = {
+            registration.handler.object_type: registration
+            for registration in ObjectPluginRegistry.handlers().values()
+        }
+        if include_plugins:
+            self._register_plugin_handlers()
 
     def register(self, handler: ObjectHandler) -> None:
+        claim = self._plugin_claims.get(handler.object_type)
+        if claim is not None and claim.handler is not handler:
+            # A core handler for a type a plugin has claimed. The plugin wins;
+            # say so, because silently swapping who generates DDL for an object
+            # type is not something a user should have to read source to notice.
+            _warn_override(handler.object_type, claim.plugin)
+            return
+
         apply_public_ordering(handler)
         if handler.object_type in self._handlers and self._handlers[handler.object_type] is not handler:
-            if handler.object_type in self._plugin_handler_types:
-                return
             raise ValueError(f"Duplicate object handler for '{handler.object_type}'")
         self._handlers[handler.object_type] = handler
 
     def _register_plugin_handlers(self) -> None:
         for registration in ObjectPluginRegistry.handlers().values():
-            self._plugin_handler_types.add(registration.handler.object_type)
             self.register(registration.handler)
 
     def run(

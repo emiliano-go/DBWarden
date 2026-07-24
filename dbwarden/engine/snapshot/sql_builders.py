@@ -298,7 +298,7 @@ def _build_clickhouse_recreate_table_sql(
             excludes=to_table.excludes,
             pg_table=to_table.pg_table,
         ), db_name, cluster_ctx=cluster_ctx),
-        # INSERT INTO is non-DDL — pass through without cluster decoration
+        # INSERT INTO is non-DDL: pass through without cluster decoration
         f"INSERT INTO {new_name} ({copy_cols_sql}) SELECT {copy_cols_sql} FROM {table_name};",
         # RENAME TABLE needs from_sql because insertion point is end-of-statement
         _cluster_sql(f"RENAME TABLE {table_name} TO {preserved_name}, {new_name} TO {table_name};"),

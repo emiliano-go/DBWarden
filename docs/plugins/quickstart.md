@@ -99,7 +99,7 @@ async def users(session: AsyncSession = Depends(get_session("primary"))):
     return {"users": result.scalars().all()}
 ```
 
-When the plugin is loaded, `get_session` resolves the dependency through the plugin's `session_factory` hook; without the plugin, DBWarden falls back to its built-in factory. See the plugin's README for plugin-specific configuration.
+`get_session` resolves the dependency through the plugin's `session_factory` hook. This import path is provided by the `dbwarden-fastapi` plugin package, not by DBWarden core. See the plugin's README for configuration.
 
 ## Next Steps
 
