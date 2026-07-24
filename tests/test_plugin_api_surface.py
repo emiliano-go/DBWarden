@@ -56,10 +56,10 @@ REGISTRAR_METHODS: dict[str, str] = {
 
 HOOK_REGISTRY_METHODS: dict[str, str] = {
     "execute_single": "(hook_name: str, *args: Any, **kwargs: Any) -> Any",
-    "execute_all": "(hook_name: str, *args: Any, **kwargs: Any) -> list[typing.Any]",
+    "execute_all": "(hook_name: str, *args: Any, **kwargs: Any) -> list[Any]",
     "is_registered": "(hook_name: str) -> bool",
     "providers": "(hook_name: str) -> list[str]",
-    "hooks": "() -> dict[str, list[tuple[str, typing.Callable[..., typing.Any]]]]",
+    "hooks": "() -> dict[str, list[tuple[str, Callable[..., Any]]]]",
     "clear": "() -> None",
 }
 
@@ -188,7 +188,8 @@ def _signature(fn) -> str:
     eval_str every annotation renders as a quoted string and the snapshot would
     describe the quoting rather than the API.
     """
-    return str(inspect.signature(fn, eval_str=True))
+    sig = str(inspect.signature(fn, eval_str=True))
+    return sig.replace("typing.", "")
 
 
 @pytest.mark.parametrize("name,signature", sorted(REGISTRAR_METHODS.items()))

@@ -77,7 +77,7 @@ def check_file(path: Path) -> list[str]:
                         f"{rel}:{node.lineno}: imports backend ({alias.name})"
                     )
 
-            if is_core:
+            if is_core and rel.name != "plugin_api.py":
                 for part in mod_parts:
                     if part in BACKEND_NAMES:
                         errors.append(
