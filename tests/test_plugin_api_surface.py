@@ -188,8 +188,14 @@ def _signature(fn) -> str:
     eval_str every annotation renders as a quoted string and the snapshot would
     describe the quoting rather than the API.
     """
+    import re
+
     sig = str(inspect.signature(fn, eval_str=True))
-    return sig.replace("typing.", "")
+    # Normalize across Python versions: strip typing. prefix (3.12) and
+    # private submodule segments like pathlib._local.Path (3.13).
+    sig = sig.replace("typing.", "")
+    sig = re.sub(r"\._[a-zA-Z_][a-zA-Z0-9_]*\.", ".", sig)
+    return sig
 
 
 @pytest.mark.parametrize("name,signature", sorted(REGISTRAR_METHODS.items()))
